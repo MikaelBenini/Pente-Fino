@@ -1,0 +1,45 @@
+name: Infra
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.env.example'
+      - 'scripts/verificar-env.mjs'
+      - 'package.json'
+      - '.github/workflows/infra.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.env.example'
+
+jobs:
+  ambiente-dev:
+    name: Ambiente de desenvolvimento sobe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Criar .env a partir do modelo
+        run: cp .env.example .env
+
+      - name: Subir PostgreSQL, Redis, Evolution API e Mailpit
+        run: pnpm infra:up
+
+      - name: Verificar o ambiente
+        run: pnpm infra:verificar
+
+      - name: Logs em caso de falha
+        if: failure()
+        run: docker compose --env-file .env -f infra/docker-compose.dev.yml logs --no-color --tail 200
+
+      - name: Derrubar
+        if: always()
+        run: pnpm infra:reset

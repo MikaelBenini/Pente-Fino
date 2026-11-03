@@ -5,18 +5,32 @@ Sistema de gestão para barbearias: painel web, app do barbeiro (PWA) e bot de W
 
 ## Rodar o projeto em 3 comandos
 
-Requisitos: Node.js 24 (veja `.nvmrc`) e Git.
+Requisitos: Node.js 24 (veja `.nvmrc`), Git e Docker com Compose. Sem Docker na máquina, use o [Codespaces](#desenvolver-no-github-codespaces).
 
 ```bash
-corepack enable          # ativa o pnpm na versão do package.json
-pnpm install             # instala tudo e liga os hooks de commit
-pnpm dev                 # sobe web, API e worker
+corepack enable && pnpm install   # pnpm + dependências + hooks de commit
+cp .env.example .env              # variáveis de desenvolvimento
+pnpm dev                          # sobe banco, Redis, Evolution API, Mailpit, web, API e worker
 ```
 
-- Painel: http://localhost:3000
-- API: http://localhost:3001
+| Serviço                  | Endereço                      |
+| ------------------------ | ----------------------------- |
+| Painel                   | http://localhost:3000         |
+| API                      | http://localhost:3001         |
+| Evolution API (WhatsApp) | http://localhost:8080/manager |
+| Mailpit (e-mails)        | http://localhost:8025         |
+| PostgreSQL               | localhost:5432                |
+| Redis                    | localhost:6379                |
 
-Antes do primeiro `pnpm dev`, copie `.env.example` para `.env`. A partir da Etapa 2, o `pnpm dev` também precisa do Docker rodando (`infra/docker-compose.dev.yml`).
+Para conferir se a infraestrutura está saudável: `pnpm infra:verificar`.
+
+### Conectar o WhatsApp de teste
+
+1. Abra http://localhost:8080/manager e entre com a `EVOLUTION_API_KEY` do `.env`.
+2. Crie uma instância (ex.: `teste`) do tipo Baileys.
+3. No celular do chip de teste: WhatsApp → Aparelhos conectados → Conectar aparelho, e leia o QR Code.
+
+A sessão fica salva no volume `evolution_instancias`; não precisa ler o QR de novo ao reiniciar.
 
 > No Windows, se `corepack enable` der erro de permissão, rode
 > `corepack enable --install-directory "$env:APPDATA\npm" pnpm` no PowerShell.
@@ -27,20 +41,28 @@ Recomendado quando a máquina não roda Docker (sem WSL2 ou Hyper-V). O Codespac
 
 1. No GitHub: **Code → Codespaces → Create codespace** na branch desejada.
 2. Espere o `pos-criacao.sh` terminar (instala o pnpm e as dependências e cria o `.env`).
-3. Rode `pnpm dev`. As portas 3000 (web) e 3001 (API) abrem no navegador pela aba **Portas**.
+3. Rode `pnpm dev`. A aba **Portas** abre no navegador o painel (3000), a API (3001), a Evolution API (8080) e o Mailpit (8025).
 
 Para poupar a cota gratuita: pare o Codespace quando terminar e ajuste o tempo de inatividade em **Settings → Codespaces**.
 
 ## Comandos
 
-| Comando          | O que faz                                     |
-| ---------------- | --------------------------------------------- |
-| `pnpm dev`       | Sobe todos os apps em modo de desenvolvimento |
-| `pnpm build`     | Gera o build de todos os pacotes              |
-| `pnpm lint`      | ESLint em todos os pacotes                    |
-| `pnpm typecheck` | Checagem de tipos (TypeScript `strict`)       |
-| `pnpm test`      | Testes (Vitest)                               |
-| `pnpm format`    | Formata o código com Prettier                 |
+| Comando                | O que faz                                                      |
+| ---------------------- | -------------------------------------------------------------- |
+| `pnpm dev`             | Sobe a infraestrutura (Docker) e todos os apps                 |
+| `pnpm dev:apps`        | Só os apps, sem mexer no Docker                                |
+| `pnpm infra:up`        | Sobe PostgreSQL, Redis, Evolution API e Mailpit                |
+| `pnpm infra:down`      | Para a infraestrutura (mantém os dados)                        |
+| `pnpm infra:reset`     | Para e **apaga** os dados (banco, sessão do WhatsApp, e-mails) |
+| `pnpm infra:logs`      | Acompanha os logs dos containers                               |
+| `pnpm infra:verificar` | Testa banco, permissões, Redis, Evolution API e Mailpit        |
+| `pnpm db:migrate`      | Aplica as migrações do banco (a partir da Etapa 3)             |
+| `pnpm db:seed`         | Carrega os dados iniciais (a partir da Etapa 3)                |
+| `pnpm build`           | Gera o build de todos os pacotes                               |
+| `pnpm lint`            | ESLint em todos os pacotes                                     |
+| `pnpm typecheck`       | Checagem de tipos (TypeScript `strict`)                        |
+| `pnpm test`            | Testes (Vitest)                                                |
+| `pnpm format`          | Formata o código com Prettier                                  |
 
 Para rodar só um pacote: `pnpm --filter @pente-fino/api dev`.
 

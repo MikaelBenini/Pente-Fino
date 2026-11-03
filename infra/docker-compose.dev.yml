@@ -1,0 +1,115 @@
+# Ambiente de desenvolvimento: PostgreSQL, Redis, Evolution API e Mailpit.
+# Use pelos scripts da raiz (pnpm infra:up, pnpm dev), que passam o .env da raiz.
+# As portas ficam presas em 127.0.0.1: nada aqui fica exposto na rede.
+# Isto é só para desenvolvimento. Na VPS, banco, Redis e Evolution API nunca publicam porta.
+
+name: pente-fino-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      # Lidas pelo script de inicialização para criar bancos e usuários.
+      DB_NAME: ${DB_NAME:?defina DB_NAME no .env}
+      DB_OWNER_USER: ${DB_OWNER_USER:?defina DB_OWNER_USER no .env}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?defina DB_OWNER_PASSWORD no .env}
+      DB_APP_USER: ${DB_APP_USER:?defina DB_APP_USER no .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?defina DB_APP_PASSWORD no .env}
+      EVOLUTION_DB_USER: ${EVOLUTION_DB_USER:?defina EVOLUTION_DB_USER no .env}
+      EVOLUTION_DB_PASSWORD: ${EVOLUTION_DB_PASSWORD:?defina EVOLUTION_DB_PASSWORD no .env}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      # A partir do PostgreSQL 18 o volume fica em /var/lib/postgresql.
+      - postgres_dados:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${DB_NAME}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.8-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_dados:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  evolution:
+    # Nome e versão conferidos em https://hub.docker.com/r/evoapicloud/evolution-api
+    # (repositório oficial: github.com/evolution-foundation/evolution-api).
+    image: evoapicloud/evolution-api:v2.3.7
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: ${EVOLUTION_API_URL:-http://localhost:8080}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY no .env}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: 'true'
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${EVOLUTION_DB_USER}:${EVOLUTION_DB_PASSWORD}@postgres:5432/evolution?schema=evolution_api
+      DATABASE_CONNECTION_CLIENT_NAME: pente_fino_dev
+      CACHE_REDIS_ENABLED: 'true'
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: 'false'
+      CACHE_LOCAL_ENABLED: 'false'
+      CONFIG_SESSION_PHONE_CLIENT: Pente Fino
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      DEL_INSTANCE: 'false'
+      TELEMETRY_ENABLED: 'false'
+      LOG_LEVEL: ERROR,WARN,INFO
+    ports:
+      - '127.0.0.1:${EVOLUTION_PORT:-8080}:8080'
+    volumes:
+      - evolution_instancias:/evolution/instances
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  mailpit:
+    # Caixa de e-mail falsa: tudo que a API enviar aparece em http://localhost:8025
+    image: axllent/mailpit:v1.33
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+      MP_DATABASE: /data/mailpit.db
+      TZ: UTC
+    ports:
+      - '127.0.0.1:${SMTP_PORT:-1025}:1025'
+      - '127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025'
+    volumes:
+      - mailpit_dados:/data
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres_dados:
+  redis_dados:
+  evolution_instancias:
+  mailpit_dados:
