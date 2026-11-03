@@ -1,0 +1,38 @@
+{
+  // Ambiente de desenvolvimento no GitHub Codespaces (ou em qualquer máquina com Docker).
+  // Linux com Docker dentro, igual à VPS de produção: o docker-compose da Etapa 2 roda aqui.
+  "name": "Pente Fino",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  // 2 núcleos e 8 GB é a máquina padrão e gasta menos da cota gratuita.
+  // Se ficar lento com banco, Redis e Evolution API juntos, troque para 4 núcleos.
+  "hostRequirements": { "cpus": 2, "memory": "8gb" },
+  "containerEnv": {
+    "TZ": "UTC",
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
+    "TURBO_TELEMETRY_DISABLED": "1",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "postCreateCommand": "bash .devcontainer/pos-criacao.sh",
+  "forwardPorts": [3000, 3001],
+  "portsAttributes": {
+    "3000": { "label": "Web (painel)", "onAutoForward": "notify" },
+    "3001": { "label": "API", "onAutoForward": "silent" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker",
+        "editorconfig.editorconfig"
+      ]
+    }
+  }
+}

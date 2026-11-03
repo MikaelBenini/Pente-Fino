@@ -21,6 +21,16 @@ Antes do primeiro `pnpm dev`, copie `.env.example` para `.env`. A partir da Etap
 > No Windows, se `corepack enable` der erro de permissão, rode
 > `corepack enable --install-directory "$env:APPDATA\npm" pnpm` no PowerShell.
 
+## Desenvolver no GitHub Codespaces
+
+Recomendado quando a máquina não roda Docker (sem WSL2 ou Hyper-V). O Codespace é um Linux com Docker, igual à VPS de produção.
+
+1. No GitHub: **Code → Codespaces → Create codespace** na branch desejada.
+2. Espere o `pos-criacao.sh` terminar (instala o pnpm e as dependências e cria o `.env`).
+3. Rode `pnpm dev`. As portas 3000 (web) e 3001 (API) abrem no navegador pela aba **Portas**.
+
+Para poupar a cota gratuita: pare o Codespace quando terminar e ajuste o tempo de inatividade em **Settings → Codespaces**.
+
 ## Comandos
 
 | Comando          | O que faz                                     |
