@@ -1,0 +1,28 @@
+{
+  "name": "@pente-fino/web",
+  "version": "0.1.0",
+  "description": "Painel, app do barbeiro (PWA), TV da unidade e link público de agendamento.",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "lint": "eslint .",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.4.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "catalog:",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.4.4",
+    "tailwindcss": "^4",
+    "typescript": "catalog:"
+  }
+}
