@@ -18,6 +18,7 @@ import { FilasModule } from './filas/filas.module.js';
 import { RaizController } from './saude/raiz.controller.js';
 import { SaudeController } from './saude/saude.controller.js';
 import { ConvitesService } from './usuarios/convites.service.js';
+import { UnidadesController } from './unidades/unidades.controller.js';
 import { UsuariosController } from './usuarios/usuarios.controller.js';
 
 /** Serviços que todo módulo de negócio usa. */
@@ -69,7 +70,7 @@ export class ComumModule {}
     FilasModule,
     ComumModule,
   ],
-  controllers: [RaizController, AuthController, UsuariosController, SaudeController],
+  controllers: [RaizController, AuthController, UsuariosController, UnidadesController, SaudeController],
   providers: [
     AuthService,
     ConvitesService,

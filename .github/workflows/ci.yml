@@ -35,7 +35,7 @@ jobs:
       - run: pnpm build
 
   banco:
-    name: Banco e API (migrações, seed, RLS e e2e)
+    name: Banco, API e telas (migrações, seed, RLS e e2e)
     runs-on: ubuntu-latest
     env:
       TURBO_TELEMETRY_DISABLED: '1'
@@ -57,8 +57,8 @@ jobs:
       - name: Subir PostgreSQL e Redis
         run: docker compose --env-file .env -f infra/docker-compose.dev.yml up -d --wait --wait-timeout 120 postgres redis
 
-      - name: Compilar os pacotes de que a API depende
-        run: pnpm turbo run build --filter=@pente-fino/api^...
+      - name: Compilar API, telas e pacotes
+        run: pnpm turbo run build --filter=@pente-fino/api --filter=@pente-fino/web
 
       - name: Migrações batem com o schema.prisma (reaplicadas no banco sombra)
         working-directory: packages/db
@@ -75,6 +75,22 @@ jobs:
 
       - name: Testes de ponta a ponta da API (login, convite, senha)
         run: pnpm test:e2e
+
+      - name: Instalar o Chromium do Playwright
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Telas no navegador (menu por papel, no computador e no celular)
+        working-directory: apps/web
+        run: pnpm test:e2e
+
+      - name: Relatório do Playwright em caso de falha
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright
+          path: apps/web/test-results
+          retention-days: 7
 
       - name: Logs em caso de falha
         if: failure()

@@ -225,6 +225,24 @@ describe('convite', () => {
   });
 });
 
+describe('unidades', () => {
+  it('dono vê todas; gestor só a dele', async () => {
+    const dono = await entrar(app, cenario.emails.dono);
+    const todas = await http()
+      .get('/unidades')
+      .set('authorization', `Bearer ${dono.accessToken}`)
+      .expect(200);
+    expect(todas.body.map((u: { nome: string }) => u.nome)).toEqual(['Unidade A', 'Unidade B']);
+
+    const gestor = await entrar(app, cenario.emails.gestor);
+    const dele = await http()
+      .get('/unidades')
+      .set('authorization', `Bearer ${gestor.accessToken}`)
+      .expect(200);
+    expect(dele.body).toEqual([{ id: cenario.unidadeA, nome: 'Unidade A', ativa: true }]);
+  });
+});
+
 describe('senha', () => {
   it('esqueci a senha → link por e-mail → nova senha; sessões antigas caem', async () => {
     const antiga = await entrar(app, cenario.emails.gestor);

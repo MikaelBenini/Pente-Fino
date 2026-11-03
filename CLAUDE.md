@@ -26,6 +26,8 @@ Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linh
 - `pnpm db:migrate` (cria/aplica migrações em dev) / `pnpm db:deploy` (só aplica) / `pnpm db:seed` (modelos + conta de demonstração)
 - `pnpm test:db` — testes contra o PostgreSQL (isolamento por conta, restrições)
 - `pnpm test:e2e` — API de ponta a ponta contra PostgreSQL e Redis (login, convite, senha)
+- `pnpm --filter @pente-fino/web test:e2e` — telas no navegador (Playwright); ao lado do `pnpm dev`, use `E2E_PORTA_WEB=3100 E2E_PORTA_API=3101` após `pnpm build`
+- Telas: antes de criar ou mudar tela, carregar a skill de design; tokens de cor em `apps/web/src/app/globals.css`, componentes em `packages/ui`
 - Usuários da demonstração: `dono@demo.pentefino.dev` (e os demais `@demo.pentefino.dev`), senha `pentefino123`; documentação da API em `http://localhost:3001/docs`
 - `pnpm whatsapp:qr` — conecta o WhatsApp de teste à Evolution API local
 - `pnpm test` / `pnpm lint` / `pnpm typecheck`
