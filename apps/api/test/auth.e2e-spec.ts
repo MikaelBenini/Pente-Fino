@@ -39,6 +39,12 @@ describe('saúde e formato', () => {
     expect(r.headers['x-request-id']).toBe('caddy-12345678');
   });
 
+  it('a raiz leva à documentação fora de produção', async () => {
+    const r = await http().get('/').expect(302);
+    expect(r.headers.location).toBe('docs');
+    await http().get('/docs').expect(200);
+  });
+
   it('rota inexistente responde 404 em português', async () => {
     const r = await http().get('/nao-existe').expect(404);
     expect(r.body.erro).toEqual({ codigo: 'nao_encontrado', mensagem: 'Não encontrado.' });

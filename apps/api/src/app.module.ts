@@ -15,6 +15,7 @@ import { CONFIGURACAO, type Configuracao } from './config/configuracao.js';
 import { ConfiguracaoModule } from './config/configuracao.module.js';
 import { EmailsService } from './emails/emails.service.js';
 import { FilasModule } from './filas/filas.module.js';
+import { RaizController } from './saude/raiz.controller.js';
 import { SaudeController } from './saude/saude.controller.js';
 import { ConvitesService } from './usuarios/convites.service.js';
 import { UsuariosController } from './usuarios/usuarios.controller.js';
@@ -68,7 +69,7 @@ export class ComumModule {}
     FilasModule,
     ComumModule,
   ],
-  controllers: [AuthController, UsuariosController, SaudeController],
+  controllers: [RaizController, AuthController, UsuariosController, SaudeController],
   providers: [
     AuthService,
     ConvitesService,
