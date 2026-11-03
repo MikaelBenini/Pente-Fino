@@ -8,7 +8,7 @@ Contas, ferramentas e nomes definidos antes da primeira linha de código.
 
 **Contas**
 
-- [ ] GitHub com repositório privado
+- [x] GitHub com repositório privado
 - [ ] Domínio registrado (Registro.br para .com.br)
 - [ ] Provedor de VPS escolhido (Ubuntu 24.04 LTS, mínimo 2 vCPU e 4 GB de RAM para começar)
 - [ ] Armazenamento externo compatível com S3 para backup
@@ -19,8 +19,8 @@ Contas, ferramentas e nomes definidos antes da primeira linha de código.
 **Ferramentas no computador**
 
 - [ ] Git
-- [ ] Node.js na versão LTS ativa, instalado com nvm ou fnm
-- [ ] pnpm (ativado com `corepack enable`)
+- [x] Node.js na versão LTS ativa, instalado com nvm ou fnm
+- [x] pnpm (ativado com `corepack enable`)
 - [ ] Docker Desktop (Windows e Mac) ou Docker Engine (Linux)
 - [ ] VS Code com extensões ESLint, Prettier, Prisma, Tailwind CSS e Docker
 - [ ] Chave SSH criada com `ssh-keygen -t ed25519`
@@ -67,9 +67,9 @@ barbearia/
 - [x] Criar a API: `pnpm dlx @nestjs/cli new apps/api --package-manager pnpm --skip-git`
 - [x] Criar o worker como aplicação NestJS sem servidor HTTP
 - [x] README com como rodar o projeto em 3 comandos
-- [ ] Subir para o GitHub: `git remote add origin …` e `git push -u origin main`
-- [ ] Proteger a branch `main`: só entra por pull request com CI verde
-- [ ] Modelos de issue e de pull request; quadro de projeto com estas etapas
+- [x] Subir para o GitHub: `git remote add origin …` e `git push -u origin main`
+- [ ] Proteger a branch `main`: só entra por pull request com CI verde (bloqueado: repositório privado em conta Free exige GitHub Pro ou repositório público)
+- [x] Modelos de issue e de pull request; quadro de projeto com estas etapas
 - [x] Fluxo de trabalho: uma branch por tarefa (`feat/comanda-fechar`), pull request, merge com squash
 
 ## Etapa 2 · Ambiente local
