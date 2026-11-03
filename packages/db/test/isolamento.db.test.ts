@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { criarPrisma, naConta, type PrismaClient } from '../src/index.js';
+import { criarPrisma, naConta, type PrismaClient, type Transacao } from '../src/index.js';
 
 const envDaRaiz = new URL('../../../.env', import.meta.url);
 if (existsSync(envDaRaiz)) process.loadEnvFile(envDaRaiz);
@@ -122,6 +122,51 @@ describe('isolamento por conta (RLS)', () => {
     await expect(naConta(prisma, "x' OR 1=1 --", (tx) => tx.cliente.count())).rejects.toThrow(
       TypeError,
     );
+  });
+});
+
+describe('leituras antes de saber a conta (login e tokens)', () => {
+  const comChave = <T>(nome: string, valor: string, fn: (tx: Transacao) => Promise<T>) =>
+    prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT set_config(${nome}, ${valor}, true)`;
+      return fn(tx);
+    });
+
+  it('o e-mail declarado libera só aquele usuário, e só para leitura', async () => {
+    const email = await naConta(
+      prisma,
+      contaB,
+      async (tx) => (await tx.usuario.findFirstOrThrow()).email,
+    );
+    const vistos = await comChave('app.login_email', email, (tx) => tx.usuario.findMany());
+    expect(vistos.map((u) => u.email)).toEqual([email]);
+    const alterados = await comChave('app.login_email', email, (tx) =>
+      tx.usuario.updateMany({ where: { email }, data: { nome: 'invadido' } }),
+    );
+    expect(alterados.count).toBe(0);
+    // Nada além do usuário: nem a conta dele.
+    expect(await comChave('app.login_email', email, (tx) => tx.cliente.count())).toBe(0);
+  });
+
+  it('o hash declarado libera só aquele token', async () => {
+    const hash = randomUUID().replaceAll('-', '');
+    await naConta(prisma, contaB, async (tx) => {
+      const usuario = await tx.usuario.findFirstOrThrow();
+      await tx.tokenAcesso.create({
+        data: {
+          usuarioId: usuario.id,
+          tipo: 'convite',
+          hash,
+          expiraEm: new Date(Date.now() + 60_000),
+        },
+      });
+    });
+    expect(await comChave('app.token_hash', hash, (tx) => tx.tokenAcesso.count())).toBe(1);
+    expect(await comChave('app.token_hash', 'outro', (tx) => tx.tokenAcesso.count())).toBe(0);
+    const revogados = await comChave('app.token_hash', hash, (tx) =>
+      tx.tokenAcesso.updateMany({ where: { hash }, data: { revogadoEm: new Date() } }),
+    );
+    expect(revogados.count).toBe(0);
   });
 });
 

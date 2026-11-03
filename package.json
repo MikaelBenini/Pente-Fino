@@ -22,6 +22,7 @@
     "db:seed": "pnpm --filter @pente-fino/db db:seed",
     "db:studio": "pnpm --filter @pente-fino/db db:studio",
     "test:db": "pnpm --filter @pente-fino/db test:db",
+    "test:e2e": "pnpm --filter @pente-fino/api test:e2e",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",

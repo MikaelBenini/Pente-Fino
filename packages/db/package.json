@@ -27,6 +27,7 @@
     "db:studio": "prisma studio"
   },
   "devDependencies": {
+    "@node-rs/argon2": "2.2.2",
     "@types/node": "catalog:",
     "@types/pg": "8.23.1",
     "prisma": "7.10.1",

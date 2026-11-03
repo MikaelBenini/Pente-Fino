@@ -141,6 +141,14 @@ enum TipoNoBot {
   @@map("tipo_no_bot")
 }
 
+enum TipoToken {
+  renovacao
+  redefinir_senha
+  convite
+
+  @@map("tipo_token")
+}
+
 enum TipoModeloMensagem {
   lembrete
   confirmacao
@@ -188,6 +196,7 @@ model Conta {
   botConexoes        BotConexao[]
   botNos             BotNo[]
   modelosMensagem    ModeloMensagem[]
+  tokenAcessos       TokenAcesso[]
 
   @@map("conta")
 }
@@ -268,6 +277,7 @@ model Usuario {
   caixasFechados      CaixaDia[]          @relation("CaixaFechadoPor")
   comissoesPagas      PagamentoComissao[]
   auditorias          Auditoria[]
+  tokenAcessos        TokenAcesso[]
 
   @@index([contaId])
   @@map("usuario")
@@ -290,6 +300,33 @@ model PapelUsuario {
   @@index([contaId])
   @@index([usuarioId])
   @@map("papel_usuario")
+}
+
+/// Tokens opacos de uso único: renovação de sessão, redefinição de senha e convite.
+/// Só o hash SHA-256 fica no banco. A API acha o token pelo hash antes de saber a
+/// conta, por isso a migração "autenticacao" libera a leitura pelo hash da sessão.
+model TokenAcesso {
+  id         String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId    String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId  String    @map("usuario_id") @db.Uuid
+  tipo       TipoToken
+  hash       String    @unique
+  /// Tokens de renovação da mesma sessão (rotação) compartilham a família.
+  familia    String?   @db.Uuid
+  expiraEm   DateTime  @map("expira_em") @db.Timestamptz(3)
+  usadoEm    DateTime? @map("usado_em") @db.Timestamptz(3)
+  revogadoEm DateTime? @map("revogado_em") @db.Timestamptz(3)
+  ip         String?
+  userAgent  String?   @map("user_agent")
+  criadoEm   DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([usuarioId, tipo])
+  @@index([familia])
+  @@map("token_acesso")
 }
 
 // ─── Equipe ───────────────────────────────────────────────────────────────
