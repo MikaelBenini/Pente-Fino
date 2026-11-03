@@ -103,20 +103,20 @@ O schema da seção 5 do documento principal vira código, com isolamento por co
 
 Tudo que todo módulo vai usar, pronto antes do primeiro módulo de negócio.
 
-- [ ] Configuração validada na subida (variáveis faltando = a API não sobe)
-- [ ] Autenticação: login com senha (hash argon2), token de acesso curto e token de renovação, recuperação de senha por e-mail (o login acha o usuário pelo e-mail antes de saber a conta: precisa de uma função `SECURITY DEFINER` restrita a isso, porque o RLS esconde tudo sem `app.conta_id`; dar senha aos usuários do seed de demonstração)
-- [ ] Convite de usuário por e-mail e por link de WhatsApp
-- [ ] Guarda de papéis (dono, gestor, recepção, barbeiro) e de unidade em cada rota
-- [ ] Middleware que define `app.conta_id` na conexão do banco a cada requisição (usar `naConta()` de `@pente-fino/db`, que já faz isso por transação)
-- [ ] Interceptador de auditoria: grava antes e depois em alterações sensíveis
-- [ ] Validação de entrada com zod, usando os esquemas de `packages/shared`
-- [ ] Erros padronizados com mensagem em português para o usuário
-- [ ] Documentação automática da API (OpenAPI/Swagger) só em desenvolvimento e homologação
-- [ ] Limite de requisições no login e nas rotas públicas
-- [ ] Logs estruturados (pino) com id da requisição
-- [ ] Rota de saúde `/health` checando banco e Redis
-- [ ] Fila (BullMQ) e publicação de eventos de domínio
-- [ ] **Pronto quando:** login, convite e troca de senha funcionam de ponta a ponta com testes
+- [x] Configuração validada na subida (variáveis faltando = a API não sobe) — zod em `apps/api/src/config`; em produção recusa o segredo JWT de exemplo. O worker também valida a dele
+- [x] Autenticação: login com senha (hash argon2), token de acesso curto e token de renovação, recuperação de senha por e-mail — JWT de 15 min; renovação por token opaco de 30 dias com rotação (reuso de token já trocado encerra a sessão inteira); só o hash SHA-256 dos tokens fica no banco (`token_acesso`); o login acha o usuário pela política RLS `login_por_email`
+- [x] Convite de usuário por e-mail e por link de WhatsApp (`POST /usuarios/convites` devolve o link `wa.me` com a mensagem pronta; `POST /auth/convite` aceita criando a senha; dono convida qualquer papel, gestor só recepção e barbeiro na própria unidade)
+- [x] Guarda de papéis (dono, gestor, recepção, barbeiro) e de unidade em cada rota (`@Papeis(...)`; com `unidadeId` na requisição, o papel precisa valer nela; regras em `packages/shared/src/permissoes.ts`)
+- [x] Middleware que define `app.conta_id` na conexão do banco a cada requisição (contexto da requisição em `AsyncLocalStorage`; `banco.daConta()` abre a transação com a conta do token)
+- [x] Interceptador de auditoria: grava antes e depois em alterações sensíveis (`auditar(tx, ...)` na mesma transação, sem senha nem token; rota `@Auditada()` que não auditou vira erro em dev e alerta em produção)
+- [x] Validação de entrada com zod, usando os esquemas de `packages/shared` (`@Corpo(esquema)` valida e documenta no OpenAPI)
+- [x] Erros padronizados com mensagem em português para o usuário (`{ erro: { codigo, mensagem, campos? }, requestId }`, inclusive erros do banco e do limite de tentativas)
+- [x] Documentação automática da API (OpenAPI/Swagger) só em desenvolvimento e homologação (`/docs`; `API_DOCS=true` liga em homologação)
+- [x] Limite de requisições no login e nas rotas públicas (300/min por IP em tudo; `LIMITE_AUTH_POR_MINUTO` por IP + e-mail em login, convite e senha. Guardado em memória: basta enquanto houver uma instância da API)
+- [x] Logs estruturados (pino) com id da requisição (`X-Request-Id` aceito do Caddy ou gerado, devolvido na resposta; `authorization` e cookies ocultos)
+- [x] Rota de saúde `/health` checando banco e Redis
+- [x] Fila (BullMQ) e publicação de eventos de domínio (filas `emails` e `eventos`; o worker entrega e-mails pelo SMTP e, por enquanto, só registra os eventos)
+- [x] **Pronto quando:** login, convite e troca de senha funcionam de ponta a ponta com testes (`pnpm test:e2e`: 18 testes contra PostgreSQL e Redis reais, no CI)
 
 ## Etapa 5 · Base do front-end
 
@@ -125,9 +125,9 @@ O esqueleto das telas, a identidade visual e o app instalável no celular.
 - [ ] Tema do mapa: fundo escuro, amarelo dos módulos, verde de ação, cores dos planos; tema claro opcional
 - [ ] Fontes Barlow e Barlow Condensed
 - [ ] Biblioteca de componentes em `packages/ui`: botão, campo, tabela editável, cartão de indicador, barra de meta, etiqueta de estado, bloco de agenda, modal de confirmação
-- [ ] Telas de login, convite, recuperar senha e escolha de unidade
+- [ ] Telas de login, convite, recuperar senha e escolha de unidade (os links dos e-mails apontam para `/convite?token=` e `/redefinir-senha?token=` no `APP_URL`)
 - [ ] Menu montado pelo papel do usuário
-- [ ] Cliente HTTP com renovação automática de token; cache de dados com TanStack Query
+- [ ] Cliente HTTP com renovação automática de token; cache de dados com TanStack Query (a API devolve `refreshToken` no JSON: guardar em cookie httpOnly pelo próprio Next, nunca em `localStorage`; renovações simultâneas em duas abas contam como reuso e derrubam a sessão, então serializar a renovação)
 - [ ] Formulários com react-hook-form e os mesmos esquemas zod da API
 - [ ] Formatação em pt-BR: moeda, data, hora, telefone
 - [ ] PWA: manifesto, ícones, instalação no celular, fila local para lançamentos sem internet

@@ -18,7 +18,14 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO pente_fino_aplicacao;
 
 -- Controle de migrações do Prisma: a aplicação não toca.
-REVOKE ALL ON _prisma_migrations FROM pente_fino_aplicacao;
+-- (O banco sombra do prisma migrate dev não tem essa tabela, daí o IF.)
+DO $$
+BEGIN
+  IF to_regclass('public._prisma_migrations') IS NOT NULL THEN
+    REVOKE ALL ON _prisma_migrations FROM pente_fino_aplicacao;
+  END IF;
+END
+$$;
 
 -- Auditoria: a aplicação só lê e grava (o gatilho de imutabilidade é a segunda barreira).
 REVOKE UPDATE, DELETE ON auditoria FROM pente_fino_aplicacao;

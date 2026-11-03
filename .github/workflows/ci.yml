@@ -35,7 +35,7 @@ jobs:
       - run: pnpm build
 
   banco:
-    name: Banco de dados (migrações, seed e RLS)
+    name: Banco e API (migrações, seed, RLS e e2e)
     runs-on: ubuntu-latest
     env:
       TURBO_TELEMETRY_DISABLED: '1'
@@ -54,18 +54,18 @@ jobs:
       - name: Criar .env a partir do modelo
         run: cp .env.example .env
 
-      - name: Subir só o PostgreSQL (com o init de usuários e papéis)
-        run: docker compose --env-file .env -f infra/docker-compose.dev.yml up -d --wait --wait-timeout 120 postgres
+      - name: Subir PostgreSQL e Redis
+        run: docker compose --env-file .env -f infra/docker-compose.dev.yml up -d --wait --wait-timeout 120 postgres redis
 
-      - name: Compilar o pacote shared (usado pelo seed e pelos testes)
-        run: pnpm --filter @pente-fino/shared build
+      - name: Compilar os pacotes de que a API depende
+        run: pnpm turbo run build --filter=@pente-fino/api^...
+
+      - name: Migrações batem com o schema.prisma (reaplicadas no banco sombra)
+        working-directory: packages/db
+        run: pnpm exec prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code
 
       - name: Aplicar migrações como o dono do banco
         run: pnpm db:deploy
-
-      - name: Migrações batem com o schema.prisma
-        working-directory: packages/db
-        run: pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 
       - name: Seed de demonstração (duas vezes, para testar a recriação)
         run: pnpm db:seed && pnpm db:seed
@@ -73,6 +73,9 @@ jobs:
       - name: Testes de isolamento por conta e regras do banco
         run: pnpm test:db
 
+      - name: Testes de ponta a ponta da API (login, convite, senha)
+        run: pnpm test:e2e
+
       - name: Logs em caso de falha
         if: failure()
-        run: docker compose --env-file .env -f infra/docker-compose.dev.yml logs --no-color --tail 200 postgres
+        run: docker compose --env-file .env -f infra/docker-compose.dev.yml logs --no-color --tail 200 postgres redis

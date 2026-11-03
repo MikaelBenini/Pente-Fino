@@ -25,6 +25,8 @@ Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linh
 - `pnpm dev` — sobe tudo (precisa do Docker rodando: `infra/docker-compose.dev.yml`)
 - `pnpm db:migrate` (cria/aplica migrações em dev) / `pnpm db:deploy` (só aplica) / `pnpm db:seed` (modelos + conta de demonstração)
 - `pnpm test:db` — testes contra o PostgreSQL (isolamento por conta, restrições)
+- `pnpm test:e2e` — API de ponta a ponta contra PostgreSQL e Redis (login, convite, senha)
+- Usuários da demonstração: `dono@demo.pentefino.dev` (e os demais `@demo.pentefino.dev`), senha `pentefino123`; documentação da API em `http://localhost:3001/docs`
 - `pnpm whatsapp:qr` — conecta o WhatsApp de teste à Evolution API local
 - `pnpm test` / `pnpm lint` / `pnpm typecheck`
 

@@ -14,6 +14,7 @@ import {
   valorItem,
   type DataISO,
 } from '@pente-fino/shared';
+import { hash } from '@node-rs/argon2';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import {
@@ -31,6 +32,8 @@ const envDaRaiz = new URL('../../../.env', import.meta.url);
 if (existsSync(envDaRaiz)) process.loadEnvFile(envDaRaiz);
 
 export const CONTA_DEMO_ID = '019a4b2c-0000-7000-8000-00000000d3e0';
+/** Senha de todos os usuários da demonstração. Só existe em desenvolvimento. */
+export const SENHA_DEMO = 'pentefino123';
 const DIAS_DE_HISTORICO = 30;
 const FUSO = 'America/Sao_Paulo';
 
@@ -185,6 +188,9 @@ async function main(): Promise<void> {
     );
 
     console.log(`Conta de demonstração criada (${CONTA_DEMO_ID}).`);
+    console.log(
+      `Login: dono@demo.pentefino.dev (e os demais @demo.pentefino.dev) · senha: ${SENHA_DEMO}`,
+    );
     console.table(resumo);
   } finally {
     await prisma.$disconnect();
@@ -735,6 +741,9 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
   await tx.botConexao.create({
     data: { unidadeId: centro.id, instancia: 'teste', status: 'conectado' },
   });
+
+  // Todos os usuários da demonstração entram com a mesma senha (argon2id).
+  await tx.usuario.updateMany({ data: { senhaHash: await hash(SENHA_DEMO) } });
 
   await tx.notaCliente.createMany({
     data: [

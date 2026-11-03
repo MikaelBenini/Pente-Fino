@@ -11,10 +11,13 @@ catalog:
 
 # Pacotes que podem rodar scripts de instalação.
 allowBuilds:
+  # Telemetria do swagger-ui: negada.
+  '@scarf/scarf': false
   '@nestjs/core': true
   '@prisma/engines': true
   '@swc/core': true
   esbuild: true
+  msgpackr-extract: true
   prisma: true
   sharp: true
   unrs-resolver: true
