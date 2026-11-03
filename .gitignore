@@ -40,3 +40,6 @@ Thumbs.db
 
 # QR Code do WhatsApp de teste (pnpm whatsapp:qr)
 .whatsapp/
+
+# Cliente gerado pelo Prisma (pnpm install / prisma generate)
+packages/db/src/generated/

@@ -23,12 +23,14 @@ Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linh
 ## Comandos
 
 - `pnpm dev` — sobe tudo (precisa do Docker rodando: `infra/docker-compose.dev.yml`)
-- `pnpm db:migrate` / `pnpm db:seed`
+- `pnpm db:migrate` (cria/aplica migrações em dev) / `pnpm db:deploy` (só aplica) / `pnpm db:seed` (modelos + conta de demonstração)
+- `pnpm test:db` — testes contra o PostgreSQL (isolamento por conta, restrições)
+- `pnpm whatsapp:qr` — conecta o WhatsApp de teste à Evolution API local
 - `pnpm test` / `pnpm lint` / `pnpm typecheck`
 
 ## Regras de negócio que não podem quebrar
 
-- **Multiempresa:** toda tabela de negócio tem `conta_id`; RLS no PostgreSQL via `app.conta_id`. Nunca confiar em `conta_id` vindo do cliente. Usuário do banco da aplicação não é superusuário.
+- **Multiempresa:** toda tabela de negócio tem `conta_id`; RLS no PostgreSQL via `app.conta_id`. Nunca confiar em `conta_id` vindo do cliente. Usuário do banco da aplicação não é superusuário. Consultas de negócio sempre dentro de `naConta()` (`@pente-fino/db`); o banco preenche `conta_id` sozinho. Tabela nova com `conta_id` chama `habilitar_isolamento_conta('tabela')` na migração.
 - **Dinheiro em centavos (inteiro)**, nunca float. Datas em UTC no banco, exibição em `America/Sao_Paulo`.
 - **Lançamento único:** agendamento cria comanda prevista → barbeiro lança extras e confirma → recepção fecha. Só comanda **fechada** entra em faturamento, comissão e indicadores.
 - Estados da comanda: prevista, em_atendimento, confirmada, pendente, fechada, cancelada, reaberta. Reabrir exige permissão (dono/gestor), motivo e auditoria.

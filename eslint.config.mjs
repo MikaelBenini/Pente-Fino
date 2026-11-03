@@ -12,6 +12,7 @@ export default defineConfig([
     '**/dist/**',
     '**/coverage/**',
     '**/.turbo/**',
+    '**/generated/**',
     'apps/web/**',
   ]),
   js.configs.recommended,

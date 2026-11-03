@@ -88,26 +88,26 @@ Um comando sobe tudo que o sistema precisa no computador.
 
 O schema da seção 5 do documento principal vira código, com isolamento por conta garantido pelo próprio PostgreSQL.
 
-- [ ] `packages/db` com Prisma e o schema completo do MVP (conta, unidade, usuário, papéis, profissional, serviço, preço com vigência, cliente, agendamento, comanda, item, pagamento, caixa, despesa, auditoria)
-- [ ] Dinheiro em centavos (`Int`), datas em UTC no banco e fuso `America/Sao_Paulo` na exibição
-- [ ] Primeira migração: `pnpm prisma migrate dev --name inicial`
-- [ ] Migração SQL com políticas RLS: cada tabela filtra por `current_setting('app.conta_id')`
-- [ ] Usuário do banco da aplicação sem permissão de superusuário (senão o RLS é ignorado)
-- [ ] Índices e restrições da seção 5, incluindo a que impede dois agendamentos no mesmo horário do mesmo profissional
-- [ ] Função de consulta do preço vigente e da regra de comissão vigente numa data
-- [ ] Seed com modelos prontos: serviços comuns, categorias de despesa, menu padrão do bot, modelos de mensagem
-- [ ] Seed de demonstração: uma conta fictícia com 2 unidades, 5 barbeiros e um mês de comandas
-- [ ] **Pronto quando:** um teste conecta como conta A e não enxerga nenhuma linha da conta B
+- [x] `packages/db` com Prisma e o schema completo do MVP (conta, unidade, usuário, papéis, profissional, serviço, preço com vigência, cliente, agendamento, comanda, item, pagamento, caixa, despesa, auditoria) — Prisma 7.10.1, 27 tabelas em `packages/db/prisma/schema.prisma`, incluindo calendário, horários, bloqueios, regra de comissão, produto, categoria de despesa, comissão paga, meta, conexão e menu do bot e modelos de mensagem. Clube, estoque e conversas do bot ficam para as etapas deles
+- [x] Dinheiro em centavos (`Int`), datas em UTC no banco e fuso `America/Sao_Paulo` na exibição (percentual em pontos-base: 10000 = 100%; datas sem hora em `date`)
+- [x] Primeira migração: `pnpm prisma migrate dev --name inicial` (precedida pela migração `base`, com a função `conta_atual()` e a extensão `btree_gist`)
+- [x] Migração SQL com políticas RLS: cada tabela filtra por `current_setting('app.conta_id')` (migração `rls`: RLS ligado e forçado nas 27 tabelas; `conta_id` é preenchido pelo próprio banco; tabela nova chama `habilitar_isolamento_conta('tabela')`)
+- [x] Usuário do banco da aplicação sem permissão de superusuário (senão o RLS é ignorado) — permissões dadas nas migrações ao papel de grupo `pente_fino_aplicacao`, criado no init do PostgreSQL
+- [x] Índices e restrições da seção 5, incluindo a que impede dois agendamentos no mesmo horário do mesmo profissional (migração `restricoes`: exclusão por intervalo, CHECKs de valores e auditoria imutável)
+- [x] Função de consulta do preço vigente e da regra de comissão vigente numa data (`preco_servico_vigente` e `regra_comissao_vigente` no SQL; `precoServicoVigente` e `regraComissaoVigente` no TypeScript; regra pura `selecionarVigente` no `packages/shared`)
+- [x] Seed com modelos prontos: serviços comuns, categorias de despesa, menu padrão do bot, modelos de mensagem (`aplicarModelosIniciais` em `packages/db/src/modelos.ts`, reaproveitado no cadastro de conta da Etapa 4)
+- [x] Seed de demonstração: uma conta fictícia com 2 unidades, 5 barbeiros e um mês de comandas (`pnpm db:seed`; recria a conta de demonstração a cada execução; usuários ainda sem senha, que chega com a autenticação na Etapa 4)
+- [x] **Pronto quando:** um teste conecta como conta A e não enxerga nenhuma linha da conta B (`pnpm test:db`, job "Banco de dados" no CI)
 
 ## Etapa 4 · Base da API
 
 Tudo que todo módulo vai usar, pronto antes do primeiro módulo de negócio.
 
 - [ ] Configuração validada na subida (variáveis faltando = a API não sobe)
-- [ ] Autenticação: login com senha (hash argon2), token de acesso curto e token de renovação, recuperação de senha por e-mail
+- [ ] Autenticação: login com senha (hash argon2), token de acesso curto e token de renovação, recuperação de senha por e-mail (o login acha o usuário pelo e-mail antes de saber a conta: precisa de uma função `SECURITY DEFINER` restrita a isso, porque o RLS esconde tudo sem `app.conta_id`; dar senha aos usuários do seed de demonstração)
 - [ ] Convite de usuário por e-mail e por link de WhatsApp
 - [ ] Guarda de papéis (dono, gestor, recepção, barbeiro) e de unidade em cada rota
-- [ ] Middleware que define `app.conta_id` na conexão do banco a cada requisição
+- [ ] Middleware que define `app.conta_id` na conexão do banco a cada requisição (usar `naConta()` de `@pente-fino/db`, que já faz isso por transação)
 - [ ] Interceptador de auditoria: grava antes e depois em alterações sensíveis
 - [ ] Validação de entrada com zod, usando os esquemas de `packages/shared`
 - [ ] Erros padronizados com mensagem em português para o usuário

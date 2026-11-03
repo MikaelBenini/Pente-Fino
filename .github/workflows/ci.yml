@@ -33,3 +33,46 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  banco:
+    name: Banco de dados (migrações, seed e RLS)
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Criar .env a partir do modelo
+        run: cp .env.example .env
+
+      - name: Subir só o PostgreSQL (com o init de usuários e papéis)
+        run: docker compose --env-file .env -f infra/docker-compose.dev.yml up -d --wait --wait-timeout 120 postgres
+
+      - name: Compilar o pacote shared (usado pelo seed e pelos testes)
+        run: pnpm --filter @pente-fino/shared build
+
+      - name: Aplicar migrações como o dono do banco
+        run: pnpm db:deploy
+
+      - name: Migrações batem com o schema.prisma
+        working-directory: packages/db
+        run: pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+
+      - name: Seed de demonstração (duas vezes, para testar a recriação)
+        run: pnpm db:seed && pnpm db:seed
+
+      - name: Testes de isolamento por conta e regras do banco
+        run: pnpm test:db
+
+      - name: Logs em caso de falha
+        if: failure()
+        run: docker compose --env-file .env -f infra/docker-compose.dev.yml logs --no-color --tail 200 postgres
