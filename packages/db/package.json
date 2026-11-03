@@ -1,7 +1,7 @@
 {
   "name": "@pente-fino/db",
   "version": "0.0.1",
-  "description": "Prisma: schema, migrações, políticas RLS e seed (Prisma chega na Etapa 3).",
+  "description": "Prisma: schema, migrações, políticas RLS, modelos prontos e seed.",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
@@ -15,16 +15,29 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "postinstall": "prisma generate",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "db:migrate": "node -e \"console.log('Ainda não há migrações: o Prisma entra na Etapa 3.')\"",
-    "db:seed": "node -e \"console.log('Ainda não há seed: entra na Etapa 3.')\""
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.1",
+    "tsx": "^4.23.15",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@pente-fino/shared": "workspace:*",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "pg": "8.23.1"
   }
 }

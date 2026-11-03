@@ -1,0 +1,821 @@
+// Schema do MVP. Fonte: docs/documentacao-do-produto.md, seção 5.
+//
+// Convenções:
+// - Tabelas e colunas em snake_case no banco; modelos e campos em camelCase no código.
+// - Toda tabela de negócio tem conta_id, preenchido pelo banco com conta_atual()
+//   (lê app.conta_id da sessão). A API nunca envia conta_id. O RLS está na migração "rls".
+// - Dinheiro em centavos (Int). Percentual em pontos-base (Int): 10000 = 100%.
+// - Instantes em timestamptz (UTC). Datas sem hora (vigência, competência) em date.
+// - Relações para "pais donos" usam Cascade; referências usam NoAction, que só é
+//   conferida no fim do comando e deixa a exclusão de uma conta inteira funcionar.
+// - Restrições que o Prisma não expressa (exclusão de horário, CHECKs, índices com
+//   NULLS NOT DISTINCT) estão nas migrações SQL.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────
+
+enum Plano {
+  basico
+  pro
+  premium
+
+  @@map("plano")
+}
+
+enum StatusConta {
+  teste
+  ativa
+  suspensa
+  cancelada
+
+  @@map("status_conta")
+}
+
+enum Papel {
+  dono
+  gestor
+  recepcao
+  barbeiro
+
+  @@map("papel")
+}
+
+enum TipoItemComissao {
+  servico
+  produto
+
+  @@map("tipo_item_comissao")
+}
+
+enum TipoItemComanda {
+  servico
+  produto
+  nao_operacional
+
+  @@map("tipo_item_comanda")
+}
+
+enum StatusAgendamento {
+  agendado
+  confirmado
+  atendido
+  cancelado
+  falta
+
+  @@map("status_agendamento")
+}
+
+enum OrigemAgendamento {
+  balcao
+  bot
+  app
+  link
+
+  @@map("origem_agendamento")
+}
+
+enum StatusComanda {
+  prevista
+  em_atendimento
+  confirmada
+  pendente
+  fechada
+  cancelada
+  reaberta
+
+  @@map("status_comanda")
+}
+
+enum FormaPagamento {
+  dinheiro
+  pix
+  debito
+  credito
+  clube
+
+  @@map("forma_pagamento")
+}
+
+enum GrupoDespesa {
+  fixa
+  variavel
+  manutencao
+  investimento
+  retirada_dono
+  cartao_resgate
+
+  @@map("grupo_despesa")
+}
+
+enum TipoMeta {
+  faturamento
+  servico
+
+  @@map("tipo_meta")
+}
+
+enum StatusBotConexao {
+  desconectado
+  aguardando_qr
+  conectado
+
+  @@map("status_bot_conexao")
+}
+
+enum TipoNoBot {
+  mensagem
+  menu
+  palavra_chave
+  acao
+
+  @@map("tipo_no_bot")
+}
+
+enum TipoModeloMensagem {
+  lembrete
+  confirmacao
+  retorno
+  aniversario
+
+  @@map("tipo_modelo_mensagem")
+}
+
+// ─── Conta e acesso ───────────────────────────────────────────────────────
+
+/// Raiz do isolamento multiempresa. O RLS compara o próprio id com app.conta_id.
+model Conta {
+  id           String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  nome         String
+  logoUrl      String?     @map("logo_url")
+  plano        Plano       @default(basico)
+  status       StatusConta @default(teste)
+  criadoEm     DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  unidades           Unidade[]
+  calendarios        CalendarioUnidade[]
+  usuarios           Usuario[]
+  papeis             PapelUsuario[]
+  profissionais      Profissional[]
+  horarios           HorarioProfissional[]
+  bloqueios          BloqueioAgenda[]
+  regrasComissao     RegraComissao[]
+  servicos           Servico[]
+  precosServico      PrecoServico[]
+  produtos           Produto[]
+  clientes           Cliente[]
+  notasCliente       NotaCliente[]
+  agendamentos       Agendamento[]
+  comandas           Comanda[]
+  itensComanda       ItemComanda[]
+  pagamentos         Pagamento[]
+  caixas             CaixaDia[]
+  categoriasDespesa  CategoriaDespesa[]
+  despesas           Despesa[]
+  pagamentosComissao PagamentoComissao[]
+  metas              Meta[]
+  auditorias         Auditoria[]
+  botConexoes        BotConexao[]
+  botNos             BotNo[]
+  modelosMensagem    ModeloMensagem[]
+
+  @@map("conta")
+}
+
+model Unidade {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome         String
+  endereco     String?
+  telefone     String?
+  /// Dias da semana com expediente: 0 = domingo … 6 = sábado.
+  diasTrabalho Int[]    @default([1, 2, 3, 4, 5, 6]) @map("dias_trabalho")
+  /// Cadeiras atendendo ao mesmo tempo; alimenta a ocupação.
+  capacidade   Int      @default(1)
+  fuso         String   @default("America/Sao_Paulo")
+  ativa        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta           Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  calendario      CalendarioUnidade[]
+  papeis          PapelUsuario[]
+  profissionais   Profissional[]
+  precosServico   PrecoServico[]
+  clientesOrigem  Cliente[]
+  agendamentos    Agendamento[]
+  comandas        Comanda[]
+  caixas          CaixaDia[]
+  despesas        Despesa[]
+  metas           Meta[]
+  botConexao      BotConexao?
+  botNos          BotNo[]
+  modelosMensagem ModeloMensagem[]
+
+  @@index([contaId])
+  @@map("unidade")
+}
+
+/// Exceções ao expediente padrão (feriado, folga, dia extra). Base da projeção.
+model CalendarioUnidade {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String   @map("unidade_id") @db.Uuid
+  data         DateTime @db.Date
+  trabalha     Boolean
+  motivo       String?
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@unique([unidadeId, data])
+  @@index([contaId])
+  @@map("calendario_unidade")
+}
+
+/// E-mail único no sistema todo: o login acha a conta pelo e-mail.
+model Usuario {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome         String
+  email        String   @unique
+  telefone     String?
+  senhaHash    String?  @map("senha_hash")
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta               Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  papeis              PapelUsuario[]
+  profissionais       Profissional[]
+  notasCliente        NotaCliente[]
+  agendamentosCriados Agendamento[]       @relation("AgendamentoCriadoPor")
+  comandasFechadas    Comanda[]           @relation("ComandaFechadaPor")
+  pagamentosRecebidos Pagamento[]
+  caixasAbertos       CaixaDia[]          @relation("CaixaAbertoPor")
+  caixasFechados      CaixaDia[]          @relation("CaixaFechadoPor")
+  comissoesPagas      PagamentoComissao[]
+  auditorias          Auditoria[]
+
+  @@index([contaId])
+  @@map("usuario")
+}
+
+/// Unidade vazia = o papel vale em todas as unidades da conta.
+model PapelUsuario {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId    String   @map("usuario_id") @db.Uuid
+  papel        Papel
+  unidadeId    String?  @map("unidade_id") @db.Uuid
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  unidade Unidade? @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([usuarioId])
+  @@map("papel_usuario")
+}
+
+// ─── Equipe ───────────────────────────────────────────────────────────────
+
+/// Barbeiro é cadastro, não coluna: um usuário pode atender em mais de uma unidade.
+model Profissional {
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId    String    @map("usuario_id") @db.Uuid
+  unidadeId    String    @map("unidade_id") @db.Uuid
+  dataEntrada  DateTime  @map("data_entrada") @db.Date
+  dataSaida    DateTime? @map("data_saida") @db.Date
+  ativo        Boolean   @default(true)
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta              Conta                 @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario            Usuario               @relation(fields: [usuarioId], references: [id], onDelete: NoAction)
+  unidade            Unidade               @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
+  horarios           HorarioProfissional[]
+  bloqueios          BloqueioAgenda[]
+  regrasComissao     RegraComissao[]
+  notasCliente       NotaCliente[]
+  agendamentos       Agendamento[]
+  comandas           Comanda[]
+  itensComanda       ItemComanda[]
+  pagamentosComissao PagamentoComissao[]
+
+  @@unique([usuarioId, unidadeId])
+  @@index([contaId])
+  @@index([unidadeId])
+  @@map("profissional")
+}
+
+/// Expediente semanal. Minutos desde a meia-noite, no fuso da unidade.
+model HorarioProfissional {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  profissionalId String   @map("profissional_id") @db.Uuid
+  /// 0 = domingo … 6 = sábado.
+  diaSemana      Int      @map("dia_semana")
+  inicioMin      Int      @map("inicio_min")
+  fimMin         Int      @map("fim_min")
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([profissionalId, diaSemana])
+  @@map("horario_profissional")
+}
+
+/// Almoço, folga, compromisso: tira o horário da agenda.
+model BloqueioAgenda {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  profissionalId String   @map("profissional_id") @db.Uuid
+  inicio         DateTime @db.Timestamptz(3)
+  fim            DateTime @db.Timestamptz(3)
+  motivo         String?
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([profissionalId, inicio])
+  @@map("bloqueio_agenda")
+}
+
+/// Percentual (pontos-base) ou valor fixo, nunca os dois. Vale a partir de vigencia_inicio.
+model RegraComissao {
+  id             String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String           @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  profissionalId String           @map("profissional_id") @db.Uuid
+  tipoItem       TipoItemComissao @map("tipo_item")
+  percentualBp   Int?             @map("percentual_bp")
+  valorFixo      Int?             @map("valor_fixo")
+  vigenciaInicio DateTime         @map("vigencia_inicio") @db.Date
+  criadoEm       DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime         @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+
+  @@unique([profissionalId, tipoItem, vigenciaInicio])
+  @@index([contaId])
+  @@map("regra_comissao")
+}
+
+// ─── Catálogo ─────────────────────────────────────────────────────────────
+
+/// Peso: principal 1, extra 0, combo = soma dos inclusos. Define "atendimentos".
+model Servico {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId         String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome            String
+  categoria       String?
+  duracaoMin      Int      @map("duracao_min")
+  /// Custo de produto gasto no serviço, em centavos.
+  custoProduto    Int      @default(0) @map("custo_produto")
+  ehExtra         Boolean  @default(false) @map("eh_extra")
+  pesoAtendimento Int      @default(1) @map("peso_atendimento")
+  ativo           Boolean  @default(true)
+  criadoEm        DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm    DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta  Conta          @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  precos PrecoServico[]
+  itens  ItemComanda[]
+  metas  Meta[]
+
+  @@unique([contaId, nome])
+  @@map("servico")
+}
+
+/// Uma linha por mudança de preço. O preço vigente é a maior vigência até a data.
+model PrecoServico {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  servicoId      String   @map("servico_id") @db.Uuid
+  unidadeId      String   @map("unidade_id") @db.Uuid
+  valor          Int
+  vigenciaInicio DateTime @map("vigencia_inicio") @db.Date
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@unique([contaId, servicoId, unidadeId, vigenciaInicio])
+  @@map("preco_servico")
+}
+
+model Produto {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome         String
+  categoria    String?
+  fotoUrl      String?  @map("foto_url")
+  precoVenda   Int      @map("preco_venda")
+  custo        Int      @default(0)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  itens ItemComanda[]
+
+  @@unique([contaId, nome])
+  @@map("produto")
+}
+
+// ─── Clientes ─────────────────────────────────────────────────────────────
+
+/// Telefone em dígitos com DDI (5511999998888); único por conta quando informado.
+model Cliente {
+  id               String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId          String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome             String
+  telefone         String?
+  email            String?
+  aniversario      DateTime? @db.Date
+  unidadeOrigemId  String?   @map("unidade_origem_id") @db.Uuid
+  origemLead       String?   @map("origem_lead")
+  etapaLead        String?   @map("etapa_lead")
+  consentimentoMsg Boolean   @default(false) @map("consentimento_msg")
+  criadoEm         DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm     DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta         Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidadeOrigem Unidade?      @relation(fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
+  notas         NotaCliente[]
+  agendamentos  Agendamento[]
+  comandas      Comanda[]
+
+  @@unique([contaId, telefone])
+  @@index([contaId, nome])
+  @@map("cliente")
+}
+
+model NotaCliente {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  clienteId      String   @map("cliente_id") @db.Uuid
+  profissionalId String?  @map("profissional_id") @db.Uuid
+  autorId        String?  @map("autor_id") @db.Uuid
+  texto          String
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  cliente      Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  profissional Profissional? @relation(fields: [profissionalId], references: [id], onDelete: SetNull)
+  autor        Usuario?      @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([contaId])
+  @@index([clienteId])
+  @@map("nota_cliente")
+}
+
+// ─── Agenda e comanda ─────────────────────────────────────────────────────
+
+/// Cria a comanda prevista. Dois agendamentos ativos do mesmo profissional não se
+/// sobrepõem (restrição de exclusão na migração "restricoes").
+model Agendamento {
+  id             String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String            @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId      String            @map("unidade_id") @db.Uuid
+  profissionalId String            @map("profissional_id") @db.Uuid
+  clienteId      String?           @map("cliente_id") @db.Uuid
+  inicio         DateTime          @db.Timestamptz(3)
+  fim            DateTime          @db.Timestamptz(3)
+  status         StatusAgendamento @default(agendado)
+  origem         OrigemAgendamento @default(balcao)
+  observacao     String?
+  criadoPorId    String?           @map("criado_por_id") @db.Uuid
+  criadoEm       DateTime          @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime          @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade      Unidade      @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+  cliente      Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  criadoPor    Usuario?     @relation("AgendamentoCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  comanda      Comanda?
+
+  @@index([contaId])
+  @@index([profissionalId, inicio])
+  @@index([unidadeId, inicio])
+  @@map("agendamento")
+}
+
+/// Só comanda fechada entra em faturamento, comissão e indicadores.
+model Comanda {
+  id                 String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId            String        @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId          String        @map("unidade_id") @db.Uuid
+  clienteId          String?       @map("cliente_id") @db.Uuid
+  profissionalId     String        @map("profissional_id") @db.Uuid
+  agendamentoId      String?       @unique @map("agendamento_id") @db.Uuid
+  status             StatusComanda @default(prevista)
+  totalBruto         Int           @default(0) @map("total_bruto")
+  desconto           Int           @default(0)
+  totalLiquido       Int           @default(0) @map("total_liquido")
+  iniciadaEm         DateTime?     @map("iniciada_em") @db.Timestamptz(3)
+  confirmadaEm       DateTime?     @map("confirmada_em") @db.Timestamptz(3)
+  fechadaEm          DateTime?     @map("fechada_em") @db.Timestamptz(3)
+  fechadaPorId       String?       @map("fechada_por_id") @db.Uuid
+  canceladaEm        DateTime?     @map("cancelada_em") @db.Timestamptz(3)
+  motivoCancelamento String?       @map("motivo_cancelamento")
+  criadoEm           DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm       DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade      Unidade       @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
+  cliente      Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  profissional Profissional  @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+  agendamento  Agendamento?  @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
+  fechadaPor   Usuario?      @relation("ComandaFechadaPor", fields: [fechadaPorId], references: [id], onDelete: SetNull)
+  itens        ItemComanda[]
+  pagamentos   Pagamento[]
+
+  @@index([contaId])
+  @@index([unidadeId, status, fechadaEm])
+  @@index([profissionalId, status])
+  @@map("comanda")
+}
+
+/// Grava preço, custo, peso e comissão do momento: mudanças futuras não reescrevem o passado.
+model ItemComanda {
+  id                   String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId              String          @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  comandaId            String          @map("comanda_id") @db.Uuid
+  tipo                 TipoItemComanda
+  servicoId            String?         @map("servico_id") @db.Uuid
+  produtoId            String?         @map("produto_id") @db.Uuid
+  /// Obrigatória para receita não operacional; opcional nos demais.
+  descricao            String?
+  profissionalId       String?         @map("profissional_id") @db.Uuid
+  quantidade           Int             @default(1)
+  precoUnitario        Int             @map("preco_unitario")
+  desconto             Int             @default(0)
+  /// Custo de produto por unidade no momento do lançamento.
+  custoUnitario        Int             @default(0) @map("custo_unitario")
+  cobertoClube         Boolean         @default(false) @map("coberto_clube")
+  ehExtra              Boolean         @default(false) @map("eh_extra")
+  pesoAtendimento      Int             @default(0) @map("peso_atendimento")
+  comissaoPercentualBp Int?            @map("comissao_percentual_bp")
+  comissaoValorFixo    Int?            @map("comissao_valor_fixo")
+  comissaoValor        Int             @default(0) @map("comissao_valor")
+  criadoEm             DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm         DateTime        @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  comanda      Comanda       @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  servico      Servico?      @relation(fields: [servicoId], references: [id], onDelete: NoAction)
+  produto      Produto?      @relation(fields: [produtoId], references: [id], onDelete: NoAction)
+  profissional Profissional? @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+
+  @@index([contaId])
+  @@index([comandaId])
+  @@index([profissionalId, criadoEm])
+  @@map("item_comanda")
+}
+
+model Pagamento {
+  id            String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId       String         @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  comandaId     String         @map("comanda_id") @db.Uuid
+  forma         FormaPagamento
+  valor         Int
+  recebidoPorId String?        @map("recebido_por_id") @db.Uuid
+  criadoEm      DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta       Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  comanda     Comanda  @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  recebidoPor Usuario? @relation(fields: [recebidoPorId], references: [id], onDelete: SetNull)
+
+  @@index([contaId])
+  @@index([comandaId])
+  @@map("pagamento")
+}
+
+// ─── Financeiro ───────────────────────────────────────────────────────────
+
+model CaixaDia {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId      String    @map("unidade_id") @db.Uuid
+  data           DateTime  @db.Date
+  /// Troco deixado na gaveta ao abrir, em centavos.
+  valorAbertura  Int       @default(0) @map("valor_abertura")
+  abertoPorId    String?   @map("aberto_por_id") @db.Uuid
+  abertoEm       DateTime  @default(now()) @map("aberto_em") @db.Timestamptz(3)
+  fechadoPorId   String?   @map("fechado_por_id") @db.Uuid
+  fechadoEm      DateTime? @map("fechado_em") @db.Timestamptz(3)
+  totalSistema   Int?      @map("total_sistema")
+  totalInformado Int?      @map("total_informado")
+  divergencia    Int?
+  criadoEm       DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta      Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade    Unidade  @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
+  abertoPor  Usuario? @relation("CaixaAbertoPor", fields: [abertoPorId], references: [id], onDelete: SetNull)
+  fechadoPor Usuario? @relation("CaixaFechadoPor", fields: [fechadoPorId], references: [id], onDelete: SetNull)
+
+  @@unique([unidadeId, data])
+  @@index([contaId])
+  @@map("caixa_dia")
+}
+
+/// Investimento, retirada do dono e cartão/resgates ficam fora do % operacional.
+model CategoriaDespesa {
+  id           String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String       @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome         String
+  grupo        GrupoDespesa
+  ativa        Boolean      @default(true)
+  criadoEm     DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta    Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  despesas Despesa[]
+
+  @@unique([contaId, nome])
+  @@map("categoria_despesa")
+}
+
+/// Unidade vazia = despesa da conta (rateio fica para os relatórios).
+model Despesa {
+  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String?   @map("unidade_id") @db.Uuid
+  categoriaId  String    @map("categoria_id") @db.Uuid
+  descricao    String
+  valor        Int
+  /// Mês a que a despesa pertence (primeiro dia do mês).
+  competencia  DateTime  @db.Date
+  vencimento   DateTime? @db.Date
+  pago         Boolean   @default(false)
+  pagoEm       DateTime? @map("pago_em") @db.Timestamptz(3)
+  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta     Conta            @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade   Unidade?         @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
+  categoria CategoriaDespesa @relation(fields: [categoriaId], references: [id], onDelete: NoAction)
+
+  @@index([contaId, competencia])
+  @@index([unidadeId, competencia])
+  @@map("despesa")
+}
+
+model PagamentoComissao {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  profissionalId String   @map("profissional_id") @db.Uuid
+  periodoInicio  DateTime @map("periodo_inicio") @db.Date
+  periodoFim     DateTime @map("periodo_fim") @db.Date
+  valor          Int
+  pagoEm         DateTime @default(now()) @map("pago_em") @db.Timestamptz(3)
+  pagoPorId      String?  @map("pago_por_id") @db.Uuid
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+  pagoPor      Usuario?     @relation(fields: [pagoPorId], references: [id], onDelete: SetNull)
+
+  @@index([contaId])
+  @@index([profissionalId, periodoInicio])
+  @@map("pagamento_comissao")
+}
+
+/// O valor atual é calculado, não guardado.
+model Meta {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String   @map("unidade_id") @db.Uuid
+  /// Primeiro dia do mês.
+  mes          DateTime @db.Date
+  tipo         TipoMeta
+  servicoId    String?  @map("servico_id") @db.Uuid
+  /// Centavos (faturamento) ou quantidade (serviço).
+  objetivo     Int
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  servico Servico? @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([unidadeId, mes])
+  @@map("meta")
+}
+
+/// Imutável: um gatilho recusa UPDATE e DELETE (migração "restricoes").
+model Auditoria {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId    String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId  String?  @map("usuario_id") @db.Uuid
+  entidade   String
+  entidadeId String   @map("entidade_id") @db.Uuid
+  acao       String
+  antes      Json?
+  depois     Json?
+  motivo     String?
+  criadoEm   DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: NoAction)
+
+  @@index([contaId, entidade, entidadeId])
+  @@map("auditoria")
+}
+
+// ─── Bot do WhatsApp (sem IA) ─────────────────────────────────────────────
+
+/// Um número por unidade. "instancia" é o nome da instância na Evolution API.
+model BotConexao {
+  id           String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String           @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String           @unique @map("unidade_id") @db.Uuid
+  provedor     String           @default("evolution")
+  instancia    String           @unique
+  numero       String?
+  status       StatusBotConexao @default(desconectado)
+  criadoEm     DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime         @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@map("bot_conexao")
+}
+
+/// Nó da árvore do menu. Unidade vazia = menu padrão da conta.
+model BotNo {
+  id            String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId       String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId     String?   @map("unidade_id") @db.Uuid
+  paiId         String?   @map("pai_id") @db.Uuid
+  tipo          TipoNoBot
+  texto         String
+  opcaoNumero   Int?      @map("opcao_numero")
+  palavrasChave String[]  @default([]) @map("palavras_chave")
+  /// Ação executada pelo nó: agendar, ver_precos, falar_com_atendente, voltar_menu.
+  acao          String?
+  ordem         Int       @default(0)
+  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade? @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  pai     BotNo?   @relation("BotNoFilhos", fields: [paiId], references: [id], onDelete: Cascade)
+  filhos  BotNo[]  @relation("BotNoFilhos")
+
+  @@index([contaId])
+  @@index([paiId])
+  @@map("bot_no")
+}
+
+/// Texto com variáveis entre chaves: {cliente}, {data}, {hora}, {profissional}, {unidade}.
+/// Unidade vazia = modelo padrão da conta.
+model ModeloMensagem {
+  id           String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String             @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String?            @map("unidade_id") @db.Uuid
+  tipo         TipoModeloMensagem
+  texto        String
+  ativo        Boolean            @default(true)
+  criadoEm     DateTime           @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime           @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade? @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@map("modelo_mensagem")
+}

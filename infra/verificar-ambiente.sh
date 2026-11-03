@@ -30,13 +30,23 @@ else
   ok "usuário da aplicação não cria tabelas"
 fi
 
-psql_como "$DB_OWNER_USER" "$DB_OWNER_PASSWORD" "drop table if exists teste_permissao; create table teste_permissao (id int)" >/dev/null
-if psql_como "$DB_APP_USER" "$DB_APP_PASSWORD" "insert into teste_permissao values (1); select count(*) from teste_permissao" >/dev/null 2>&1; then
-  ok "tabela criada pelo dono fica disponível para a aplicação"
+# As permissões de dados vêm das migrações, concedidas ao papel pente_fino_aplicacao.
+if [ "$(psql_como "$DB_APP_USER" "$DB_APP_PASSWORD" "select pg_has_role(current_user, 'pente_fino_aplicacao', 'member')::text")" = "true" ]; then
+  ok "usuário da aplicação é membro de pente_fino_aplicacao"
 else
-  falha "aplicação sem acesso a tabela criada pelo dono"
+  falha "usuário da aplicação não é membro de pente_fino_aplicacao"
 fi
-psql_como "$DB_OWNER_USER" "$DB_OWNER_PASSWORD" "drop table teste_permissao" >/dev/null
+
+if [ "$(psql_como "$DB_OWNER_USER" "$DB_OWNER_PASSWORD" "select to_regclass('public.conta') is not null")" = "t" ]; then
+  # Sem app.conta_id na sessão, o RLS não libera nenhuma linha.
+  if [ "$(psql_como "$DB_APP_USER" "$DB_APP_PASSWORD" "select count(*) from conta")" = "0" ]; then
+    ok "sem conta na sessão, a aplicação não enxerga nenhuma conta (RLS)"
+  else
+    falha "aplicação enxerga contas sem app.conta_id definido"
+  fi
+else
+  echo "  info  migrações ainda não aplicadas (rode: pnpm db:deploy)"
+fi
 
 echo "Redis"
 if [ "$(compose exec -T redis redis-cli ping)" = "PONG" ]; then ok "responde ao ping"; else falha "não respondeu"; fi
