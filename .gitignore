@@ -37,3 +37,6 @@ Thumbs.db
 # Certificados e chaves
 *.pem
 *.key
+
+# QR Code do WhatsApp de teste (pnpm whatsapp:qr)
+.whatsapp/

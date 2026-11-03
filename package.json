@@ -16,6 +16,7 @@
     "infra:logs": "docker compose --env-file .env -f infra/docker-compose.dev.yml logs -f",
     "infra:ps": "docker compose --env-file .env -f infra/docker-compose.dev.yml ps",
     "infra:verificar": "bash infra/verificar-ambiente.sh",
+    "whatsapp:qr": "node scripts/whatsapp-qr.mjs",
     "db:migrate": "pnpm --filter @pente-fino/db db:migrate",
     "db:seed": "pnpm --filter @pente-fino/db db:seed",
     "build": "turbo run build",
