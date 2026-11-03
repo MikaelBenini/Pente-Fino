@@ -76,12 +76,12 @@ barbearia/
 
 Um comando sobe tudo que o sistema precisa no computador.
 
-- [ ] `infra/docker-compose.dev.yml` com PostgreSQL, Redis, Evolution API e Mailpit (caixa de e-mail falsa para testes)
-- [ ] Volumes nomeados para não perder dados ao reiniciar
-- [ ] `.env.example` com todas as variáveis: banco, Redis, JWT, URL e chave da Evolution API, e-mail, URLs públicas
-- [ ] Scripts na raiz: `pnpm dev`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm test`, `pnpm lint`
+- [x] `infra/docker-compose.dev.yml` com PostgreSQL, Redis, Evolution API e Mailpit (caixa de e-mail falsa para testes)
+- [x] Volumes nomeados para não perder dados ao reiniciar
+- [x] `.env.example` com todas as variáveis: banco, Redis, JWT, URL e chave da Evolution API, e-mail, URLs públicas
+- [x] Scripts na raiz: `pnpm dev`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm test`, `pnpm lint`
 - [ ] Conectar o WhatsApp de teste no painel da Evolution API pelo QR Code
-- [ ] Conferir o nome atual da imagem Docker da Evolution API no repositório oficial do projeto
+- [x] Conferir o nome atual da imagem Docker da Evolution API no repositório oficial do projeto (`evoapicloud/evolution-api:v2.3.7`; repositório em `evolution-foundation/evolution-api`, conferido em 03/11/2026)
 - [ ] **Pronto quando:** um colega clona o repositório, copia o `.env.example` e roda `pnpm dev` sem ajuda
 
 ## Etapa 3 · Banco de dados
