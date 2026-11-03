@@ -70,7 +70,13 @@ export class ComumModule {}
     FilasModule,
     ComumModule,
   ],
-  controllers: [RaizController, AuthController, UsuariosController, UnidadesController, SaudeController],
+  controllers: [
+    RaizController,
+    AuthController,
+    UsuariosController,
+    UnidadesController,
+    SaudeController,
+  ],
   providers: [
     AuthService,
     ConvitesService,
