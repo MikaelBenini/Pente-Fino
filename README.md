@@ -41,7 +41,7 @@ Recomendado quando a máquina não roda Docker (sem WSL2 ou Hyper-V). O Codespac
 
 1. No GitHub: **Code → Codespaces → Create codespace** na branch desejada.
 2. Espere o `pos-criacao.sh` terminar (instala o pnpm e as dependências e cria o `.env`).
-3. Rode `pnpm dev`. A aba **Portas** abre no navegador o painel (3000), a API (3001), a Evolution API (8080) e o Mailpit (8025).
+
 
 Para poupar a cota gratuita: pare o Codespace quando terminar e ajuste o tempo de inatividade em **Settings → Codespaces**.
 
