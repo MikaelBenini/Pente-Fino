@@ -18,7 +18,9 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "db:migrate": "node -e \"console.log('Ainda não há migrações: o Prisma entra na Etapa 3.')\"",
+    "db:seed": "node -e \"console.log('Ainda não há seed: entra na Etapa 3.')\""
   },
   "devDependencies": {
     "@types/node": "catalog:",
