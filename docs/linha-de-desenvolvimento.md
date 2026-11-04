@@ -152,11 +152,11 @@ A ordem segue as dependências: cada módulo usa os anteriores. Cada um sai com 
 - [x] **6.11 Despesas:** categorias (fixa, variável, manutenção, investimento, retirada do dono, cartão e resgates), competência, pago ou não (despesa da rede é do dono; gestor lança na unidade dele)
 - [x] **6.12 Indicadores:** faturamento, clientes, ticket, atendimentos, extras, % de despesas, com filtro de unidade e período (mais lucro, projeção pelo calendário, metas e lucro por serviço; regras em `packages/shared/src/indicadores.ts`)
 - [x] **6.13 App do barbeiro:** hoje, comandas, clientes, desempenho, comissões (e metas da unidade)
-- [ ] **6.14 Comanda impressa:** PDF A4 com 4 ou 6 por folha e QR code que abre a comanda
-- [ ] **6.15 Link de agendamento:** página pública da unidade, escolha de serviço, profissional e horário, confirmação por WhatsApp
-- [ ] **6.16 Importação da planilha:** modelo CSV de serviços, preços, profissionais e clientes, com prévia e relatório de erros
-- [ ] **6.17 Configuração guiada:** assistente de primeiro acesso que usa os modelos do seed
-- [ ] **6.18 Exportação para o contador:** relatório do mês em CSV e PDF
+- [x] **6.14 Comanda impressa:** PDF A4 com 4 ou 6 por folha e QR code que abre a comanda (linhas para anotar extras à mão; gerado na API com pdf-lib, sem navegador no servidor)
+- [x] **6.15 Link de agendamento:** página pública da unidade, escolha de serviço, profissional e horário, confirmação por WhatsApp (`/agendar?u=<endereço>`; liga e desliga por unidade; até 2 horários futuros por telefone; janela de 45 dias)
+- [x] **6.16 Importação da planilha:** modelo CSV de serviços, preços, profissionais e clientes, com prévia e relatório de erros (aceita ; do Excel; confere duplicados e nomes contra o cadastro)
+- [x] **6.17 Configuração guiada:** assistente de primeiro acesso que usa os modelos do seed (com cadastro de conta em `/cadastro`)
+- [x] **6.18 Exportação para o contador:** relatório do mês em CSV e PDF (CSV abre direto no Excel; células que começam com =, +, - ou @ não viram fórmula)
 
 ## Etapa 7 · Testes
 

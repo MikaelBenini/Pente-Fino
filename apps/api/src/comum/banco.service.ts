@@ -31,13 +31,15 @@ export class BancoService implements OnApplicationShutdown {
    * de um token. As políticas login_por_email e busca_por_hash liberam só essa linha.
    */
   semConta<T>(
-    chave: { loginEmail: string } | { tokenHash: string },
+    chave: { loginEmail: string } | { tokenHash: string } | { slugPublico: string },
     fn: (tx: Transacao) => Promise<T>,
   ): Promise<T> {
     const [nome, valor] =
       'loginEmail' in chave
         ? ['app.login_email', chave.loginEmail]
-        : ['app.token_hash', chave.tokenHash];
+        : 'tokenHash' in chave
+          ? ['app.token_hash', chave.tokenHash]
+          : ['app.slug_publico', chave.slugPublico];
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT set_config(${nome}, ${valor}, true)`;
       return fn(tx);

@@ -553,33 +553,35 @@ function NovoAgendamento({
       >
         {erro && <Aviso tom="erro">{erro}</Aviso>}
         <BuscaCliente id="agendar" valor={cliente} onEscolher={setCliente} />
-        <fieldset className="flex flex-col gap-1">
+        <fieldset className="min-w-0">
           <legend className="mb-1 text-sm font-medium">Serviços</legend>
-          <div className="grid gap-x-4 sm:grid-cols-2">
-            {(servicos.data ?? [])
-              .filter((s) => s.ativo)
-              .map((s) => (
-                <Marcador
-                  key={s.id}
-                  id={`agendar-servico-${s.id}`}
-                  rotulo={`${s.nome} · ${s.duracaoMin} min`}
-                  checked={escolhidos.includes(s.id)}
-                  onChange={(e) => {
-                    setHorario(null);
-                    setEscolhidos(
-                      e.target.checked
-                        ? [...escolhidos, s.id]
-                        : escolhidos.filter((x) => x !== s.id),
-                    );
-                  }}
-                />
-              ))}
+          <div className="flex flex-col gap-1">
+            <div className="grid gap-x-4 sm:grid-cols-2">
+              {(servicos.data ?? [])
+                .filter((s) => s.ativo)
+                .map((s) => (
+                  <Marcador
+                    key={s.id}
+                    id={`agendar-servico-${s.id}`}
+                    rotulo={`${s.nome} · ${s.duracaoMin} min`}
+                    checked={escolhidos.includes(s.id)}
+                    onChange={(e) => {
+                      setHorario(null);
+                      setEscolhidos(
+                        e.target.checked
+                          ? [...escolhidos, s.id]
+                          : escolhidos.filter((x) => x !== s.id),
+                      );
+                    }}
+                  />
+                ))}
+            </div>
+            {duracao > 0 && (
+              <p className="font-denso tabular-nums text-tinta-suave">
+                {duracao} min · {formatarMoeda(total)}
+              </p>
+            )}
           </div>
-          {duracao > 0 && (
-            <p className="font-denso tabular-nums text-tinta-suave">
-              {duracao} min · {formatarMoeda(total)}
-            </p>
-          )}
         </fieldset>
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo
@@ -611,44 +613,46 @@ function NovoAgendamento({
         ) : livres.isPending ? (
           <p className="text-tinta-suave">Procurando horários…</p>
         ) : (
-          <fieldset className="flex flex-col gap-3">
+          <fieldset className="min-w-0">
             <legend className="mb-1 text-sm font-medium">Horários livres</legend>
-            {(livres.data ?? []).every((l) => l.inicios.length === 0) && (
-              <p className="text-tinta-suave">
-                Nenhum horário livre neste dia. Tente outro dia ou barbeiro.
-              </p>
-            )}
-            {(livres.data ?? [])
-              .filter((l) => l.inicios.length > 0)
-              .map((l) => (
-                <div key={l.profissionalId} className="flex flex-col gap-2">
-                  <span className="text-sm font-semibold">
-                    {nomeProf.get(l.profissionalId) ?? 'Profissional'}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {l.inicios.map((inicio) => {
-                      const marcado =
-                        horario?.inicio === inicio && horario.profissionalId === l.profissionalId;
-                      return (
-                        <button
-                          key={inicio}
-                          type="button"
-                          aria-pressed={marcado}
-                          onClick={() => setHorario({ profissionalId: l.profissionalId, inicio })}
-                          className={cn(
-                            'min-h-11 min-w-16 rounded-md border px-3 font-denso text-base font-semibold tabular-nums focus-visible:outline-2 focus-visible:outline-foco',
-                            marcado
-                              ? 'border-modulo bg-modulo text-sobre-modulo'
-                              : 'border-borda hover:border-borda-forte',
-                          )}
-                        >
-                          {formatarHora(inicio)}
-                        </button>
-                      );
-                    })}
+            <div className="flex flex-col gap-3">
+              {(livres.data ?? []).every((l) => l.inicios.length === 0) && (
+                <p className="text-tinta-suave">
+                  Nenhum horário livre neste dia. Tente outro dia ou barbeiro.
+                </p>
+              )}
+              {(livres.data ?? [])
+                .filter((l) => l.inicios.length > 0)
+                .map((l) => (
+                  <div key={l.profissionalId} className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold">
+                      {nomeProf.get(l.profissionalId) ?? 'Profissional'}
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {l.inicios.map((inicio) => {
+                        const marcado =
+                          horario?.inicio === inicio && horario.profissionalId === l.profissionalId;
+                        return (
+                          <button
+                            key={inicio}
+                            type="button"
+                            aria-pressed={marcado}
+                            onClick={() => setHorario({ profissionalId: l.profissionalId, inicio })}
+                            className={cn(
+                              'min-h-11 min-w-16 rounded-md border px-3 font-denso text-base font-semibold tabular-nums focus-visible:outline-2 focus-visible:outline-foco',
+                              marcado
+                                ? 'border-modulo bg-modulo text-sobre-modulo'
+                                : 'border-borda hover:border-borda-forte',
+                            )}
+                          >
+                            {formatarHora(inicio)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+            </div>
           </fieldset>
         )}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

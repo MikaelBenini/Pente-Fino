@@ -22,6 +22,10 @@ import { UnidadesController } from './unidades/unidades.controller.js';
 import { AgendaController } from './agenda/agenda.controller.js';
 import { AgendaService } from './agenda/agenda.service.js';
 import { CaixaController } from './caixa/caixa.controller.js';
+import { ConfiguracaoController } from './configuracao/configuracao.controller.js';
+import { ExportacaoController } from './exportacao/exportacao.controller.js';
+import { ImportacaoController } from './importacao/importacao.controller.js';
+import { PublicoController } from './publico/publico.controller.js';
 import { ComissoesController } from './comissoes/comissoes.controller.js';
 import { ComissoesService } from './comissoes/comissoes.service.js';
 import { DespesasController } from './despesas/despesas.controller.js';
@@ -105,6 +109,10 @@ export class ComumModule {}
     ResultadosController,
     ComissoesController,
     MeController,
+    ConfiguracaoController,
+    ImportacaoController,
+    ExportacaoController,
+    PublicoController,
     SaudeController,
   ],
   providers: [

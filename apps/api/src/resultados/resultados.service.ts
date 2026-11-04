@@ -114,12 +114,10 @@ export class ResultadosService {
     return this.banco.daConta(async (tx) => {
       if (unidadeId && !(await tx.unidade.findUnique({ where: { id: unidadeId } })))
         throw Erros.naoEncontrado('Unidade não encontrada.');
-      const [atuais, anteriores, despAtual, despAnterior] = await Promise.all([
-        this.fechadas(tx, de, ate, filtro),
-        this.fechadas(tx, antDe, antAte, filtro),
-        this.despesas(tx, de, ate, filtro, incluiConta),
-        this.despesas(tx, antDe, antAte, filtro, incluiConta),
-      ]);
+      const atuais = await this.fechadas(tx, de, ate, filtro);
+      const anteriores = await this.fechadas(tx, antDe, antAte, filtro);
+      const despAtual = await this.despesas(tx, de, ate, filtro, incluiConta);
+      const despAnterior = await this.despesas(tx, antDe, antAte, filtro, incluiConta);
       const atual = calcularIndicadores(atuais, despAtual);
       const hoje = dataLocal(new Date());
       const mesCorrente = de === `${hoje.slice(0, 7)}-01` && ate >= hoje;

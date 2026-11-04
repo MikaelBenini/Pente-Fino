@@ -18,6 +18,7 @@ import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { data } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
+import { emSequencia } from '../comum/sequencia.js';
 
 const consultaSchema = z.object({
   unidadeId: z.uuid({ error: 'Unidade inválida.' }),
@@ -51,7 +52,7 @@ export class CaixaController {
     };
     if (!(await tx.unidade.findUnique({ where: { id: unidadeId } })))
       throw Erros.naoEncontrado('Unidade não encontrada.');
-    const [caixa, comandas] = await Promise.all([
+    const [caixa, comandas] = await emSequencia([
       tx.caixaDia.findUnique({ where: { unidadeId_data: { unidadeId, data: data(dia) } } }),
       tx.comanda.findMany({ where: doDia, include: { pagamentos: true, agendamento: true } }),
     ]);

@@ -25,7 +25,10 @@ import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
-import { data } from '../comum/escopo.js';
+import { data, exigirUnidade } from '../comum/escopo.js';
+import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { pdfComandas } from './impressao.js';
+import { umPorVez } from '../comum/sequencia.js';
 import { EventosService } from '../filas/filas.module.js';
 
 const INCLUIR = {
@@ -114,6 +117,7 @@ export class ComandasService {
   constructor(
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(EventosService) private readonly eventos: EventosService,
+    @Inject(CONFIGURACAO) private readonly config: Configuracao,
   ) {}
 
   /** Carrega e confere o acesso. Sem acesso, responde "não encontrada" (não revela que existe). */
@@ -149,6 +153,41 @@ export class ComandasService {
     const v = podeAgirNaComanda(acao, status, papeis, propria);
     if (!v.permitido) throw Erros.requisicaoInvalida('acao_nao_permitida', v.motivo!);
     return status;
+  }
+
+  /** PDF das comandas do dia (previstas e abertas primeiro, na ordem do horário). */
+  async impressao(unidadeId: string, dia: string, porFolha: 4 | 6): Promise<Uint8Array> {
+    exigirUnidade(unidadeId, ['dono', 'gestor', 'recepcao']);
+    const lista = await this.listar({ unidadeId, data: dia });
+    const ativas = lista.filter((c) => c.status !== 'cancelada');
+    const detalhes = await this.banco.daConta(async (tx) => {
+      const unidade = await tx.unidade.findUnique({ where: { id: unidadeId } });
+      if (!unidade) throw Erros.naoEncontrado('Unidade não encontrada.');
+      return {
+        unidade,
+        comandas: await umPorVez(ativas, async (c) =>
+          detalhe((await this.carregar(tx, c.id)).comanda),
+        ),
+      };
+    });
+    return pdfComandas(
+      detalhes.comandas.map((c, i) => ({
+        id: c.id,
+        numero: i + 1,
+        unidade: detalhes.unidade.nome,
+        inicio: c.inicio ? new Date(c.inicio) : null,
+        cliente: c.cliente ?? 'Cliente',
+        profissional: c.profissional,
+        itens: c.itens.map((it) => ({
+          descricao: it.quantidade > 1 ? `${it.quantidade}× ${it.descricao}` : it.descricao,
+          valor: it.quantidade * it.precoUnitario - it.desconto,
+        })),
+        total: c.totalLiquido,
+      })),
+      porFolha,
+      (id) => `${this.config.appUrl}/comandas?id=${id}`,
+      `Comandas ${dia}`,
+    );
   }
 
   async buscar(id: string): Promise<ComandaDetalhe> {

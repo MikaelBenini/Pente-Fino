@@ -141,7 +141,13 @@ async function encaminhar(
   } else {
     res = new NextResponse(resposta.status === 204 ? null : await resposta.arrayBuffer(), {
       status: resposta.status,
-      headers: tipo ? { 'content-type': tipo } : undefined,
+      headers: {
+        ...(tipo ? { 'content-type': tipo } : {}),
+        // CSV e PDF (exportação, comandas impressas) baixam com o nome certo.
+        ...(resposta.headers.get('content-disposition')
+          ? { 'content-disposition': resposta.headers.get('content-disposition')! }
+          : {}),
+      },
     });
   }
 

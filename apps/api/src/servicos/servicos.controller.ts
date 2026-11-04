@@ -30,6 +30,7 @@ import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { data, dataTexto, filtroUnidade, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
+import { emSequencia } from '../comum/sequencia.js';
 
 const servicoParcialSchema = servicoSchema.partial();
 const consultaPrecosSchema = z.object({
@@ -196,7 +197,7 @@ export class ServicosController {
     return this.banco.daConta(async (tx) => {
       const servicos = new Set(precos.map((p) => p.servicoId));
       const unidades = new Set(precos.map((p) => p.unidadeId));
-      const [nServ, nUni] = await Promise.all([
+      const [nServ, nUni] = await emSequencia([
         tx.servico.count({ where: { id: { in: [...servicos] } } }),
         tx.unidade.count({ where: { id: { in: [...unidades] } } }),
       ]);

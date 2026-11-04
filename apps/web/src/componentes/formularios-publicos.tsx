@@ -71,9 +71,14 @@ export function FormularioEntrar() {
       <Botao type="submit" disabled={!hidratado} carregando={formState.isSubmitting} larguraTotal>
         Entrar
       </Botao>
-      <Link href="/esqueci-senha" className={`${link} self-start text-sm`}>
-        Esqueci minha senha
-      </Link>
+      <div className="flex flex-wrap justify-between gap-3 text-sm">
+        <Link href="/esqueci-senha" className={link}>
+          Esqueci minha senha
+        </Link>
+        <Link href="/cadastro" className={link}>
+          Criar conta para minha barbearia
+        </Link>
+      </div>
     </form>
   );
 }

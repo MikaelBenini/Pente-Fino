@@ -26,7 +26,7 @@ export function limitesDeRequisicao(config: Configuracao): ThrottlerOptions[] {
       getTracker: (req: Record<string, unknown>) => {
         const r = req as unknown as Request;
         const corpo = (r.body ?? {}) as Record<string, unknown>;
-        const chave = [corpo.email, corpo.token, corpo.refreshToken].find(
+        const chave = [corpo.email, corpo.token, corpo.refreshToken, corpo.telefone].find(
           (v) => typeof v === 'string',
         ) as string | undefined;
         return `${r.ip}|${(chave ?? '').toLowerCase().slice(0, 64)}`;

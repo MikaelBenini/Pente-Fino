@@ -26,7 +26,7 @@ import {
   ModalConfirmacao,
   Selecao,
 } from '@pente-fino/ui';
-import { ArrowLeft, Minus, Plus, ReceiptText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, Printer, ReceiptText, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
@@ -108,6 +108,21 @@ function ListaComandas() {
             onChange={(e) => e.target.value && setDia(e.target.value)}
           />
         </div>
+        {balcao && unidadeId && (
+          <div className="flex flex-wrap gap-2">
+            {[4, 6].map((n) => (
+              <a
+                key={n}
+                href={`/api/comandas/impressao?unidadeId=${unidadeId}&data=${dia}&porFolha=${n}`}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3 focus-visible:outline-2 focus-visible:outline-foco"
+              >
+                <Printer aria-hidden className="size-4" /> Imprimir {n} por folha
+              </a>
+            ))}
+          </div>
+        )}
       </div>
       <Estado consulta={comandas}>
         {() => (
@@ -237,23 +252,27 @@ function NovaComanda({
           onChange={(e) => setProfissionalId(e.target.value)}
           opcoes={doLocal.map((p) => ({ valor: p.id, rotulo: p.nome }))}
         />
-        <fieldset className="flex flex-col gap-1">
+        <fieldset className="min-w-0">
           <legend className="mb-1 text-sm font-medium">Serviços</legend>
-          {(servicos.data ?? [])
-            .filter((s) => s.ativo && !s.ehExtra)
-            .map((s) => (
-              <Marcador
-                key={s.id}
-                id={`nova-comanda-servico-${s.id}`}
-                rotulo={`${s.nome} · ${s.duracaoMin} min`}
-                checked={escolhidos.includes(s.id)}
-                onChange={(e) =>
-                  setEscolhidos(
-                    e.target.checked ? [...escolhidos, s.id] : escolhidos.filter((x) => x !== s.id),
-                  )
-                }
-              />
-            ))}
+          <div className="flex flex-col gap-1">
+            {(servicos.data ?? [])
+              .filter((s) => s.ativo && !s.ehExtra)
+              .map((s) => (
+                <Marcador
+                  key={s.id}
+                  id={`nova-comanda-servico-${s.id}`}
+                  rotulo={`${s.nome} · ${s.duracaoMin} min`}
+                  checked={escolhidos.includes(s.id)}
+                  onChange={(e) =>
+                    setEscolhidos(
+                      e.target.checked
+                        ? [...escolhidos, s.id]
+                        : escolhidos.filter((x) => x !== s.id),
+                    )
+                  }
+                />
+              ))}
+          </div>
         </fieldset>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Botao variante="secundario" onClick={onFechar}>
@@ -665,56 +684,60 @@ function Fechamento({
             <span>Total a receber</span>
             <span>{formatarMoeda(Math.max(0, total))}</span>
           </p>
-          <fieldset className="flex flex-col gap-3">
+          <fieldset className="min-w-0">
             <legend className="mb-1 text-sm font-medium">Formas de pagamento</legend>
-            {atuais.map((l, i) => (
-              <div key={i} className="grid grid-cols-[minmax(0,1fr)_8rem_auto] items-end gap-2">
-                <Selecao
-                  id={`fechar-forma-${i}`}
-                  rotulo="Forma"
-                  value={l.forma}
-                  onChange={(e) =>
-                    setLinhas(
-                      atuais.map((x, k) =>
-                        k === i ? { ...x, forma: e.target.value as typeof l.forma } : x,
-                      ),
-                    )
-                  }
-                  opcoes={FORMAS_PAGAMENTO.map((f) => ({ valor: f, rotulo: NOME_FORMA[f] }))}
-                />
-                <Campo
-                  id={`fechar-valor-${i}`}
-                  rotulo="Valor (R$)"
-                  inputMode="decimal"
-                  value={l.valor}
-                  onChange={(e) =>
-                    setLinhas(atuais.map((x, k) => (k === i ? { ...x, valor: e.target.value } : x)))
-                  }
-                />
-                <Botao
-                  variante="fantasma"
-                  className="px-3"
-                  aria-label="Tirar esta forma"
-                  disabled={atuais.length === 1}
-                  onClick={() => setLinhas(atuais.filter((_, k) => k !== i))}
-                >
-                  <Trash2 aria-hidden className="size-4" />
-                </Botao>
-              </div>
-            ))}
-            <Botao
-              variante="secundario"
-              className="self-start"
-              disabled={atuais.length >= 4}
-              onClick={() =>
-                setLinhas([
-                  ...atuais,
-                  { forma: 'dinheiro', valor: falta > 0 ? valorParaCampo(falta) : '' },
-                ])
-              }
-            >
-              <Plus aria-hidden className="size-4" /> Dividir em outra forma
-            </Botao>
+            <div className="flex flex-col gap-3">
+              {atuais.map((l, i) => (
+                <div key={i} className="grid grid-cols-[minmax(0,1fr)_8rem_auto] items-end gap-2">
+                  <Selecao
+                    id={`fechar-forma-${i}`}
+                    rotulo="Forma"
+                    value={l.forma}
+                    onChange={(e) =>
+                      setLinhas(
+                        atuais.map((x, k) =>
+                          k === i ? { ...x, forma: e.target.value as typeof l.forma } : x,
+                        ),
+                      )
+                    }
+                    opcoes={FORMAS_PAGAMENTO.map((f) => ({ valor: f, rotulo: NOME_FORMA[f] }))}
+                  />
+                  <Campo
+                    id={`fechar-valor-${i}`}
+                    rotulo="Valor (R$)"
+                    inputMode="decimal"
+                    value={l.valor}
+                    onChange={(e) =>
+                      setLinhas(
+                        atuais.map((x, k) => (k === i ? { ...x, valor: e.target.value } : x)),
+                      )
+                    }
+                  />
+                  <Botao
+                    variante="fantasma"
+                    className="px-3"
+                    aria-label="Tirar esta forma"
+                    disabled={atuais.length === 1}
+                    onClick={() => setLinhas(atuais.filter((_, k) => k !== i))}
+                  >
+                    <Trash2 aria-hidden className="size-4" />
+                  </Botao>
+                </div>
+              ))}
+              <Botao
+                variante="secundario"
+                className="self-start"
+                disabled={atuais.length >= 4}
+                onClick={() =>
+                  setLinhas([
+                    ...atuais,
+                    { forma: 'dinheiro', valor: falta > 0 ? valorParaCampo(falta) : '' },
+                  ])
+                }
+              >
+                <Plus aria-hidden className="size-4" /> Dividir em outra forma
+              </Botao>
+            </div>
           </fieldset>
           {falta !== 0 && (
             <p role="status" className="font-denso text-lg tabular-nums text-aviso-texto">

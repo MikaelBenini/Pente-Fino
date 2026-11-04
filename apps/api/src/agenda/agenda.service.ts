@@ -19,6 +19,7 @@ import { Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade } from '../comum/escopo.js';
 import { ComandasService } from '../comandas/comandas.service.js';
 import { EventosService } from '../filas/filas.module.js';
+import { emSequencia } from '../comum/sequencia.js';
 
 const BALCAO = ['dono', 'gestor', 'recepcao'] as const;
 
@@ -59,7 +60,7 @@ export class AgendaService {
         orderBy: { usuario: { nome: 'asc' } },
       });
       const ids = profissionais.map((p) => p.id);
-      const [agendamentos, bloqueios, calendario] = await Promise.all([
+      const [agendamentos, bloqueios, calendario] = await emSequencia([
         tx.agendamento.findMany({
           where: {
             profissionalId: { in: ids },
@@ -122,7 +123,7 @@ export class AgendaService {
 
   /** Expediente do profissional no dia, respeitando dias da unidade e o calendário. */
   private async expediente(tx: Transacao, profissionalId: string, unidadeId: string, dia: string) {
-    const [prof, unidade, excecao] = await Promise.all([
+    const [prof, unidade, excecao] = await emSequencia([
       tx.profissional.findUnique({ where: { id: profissionalId }, include: { horarios: true } }),
       tx.unidade.findUnique({ where: { id: unidadeId } }),
       tx.calendarioUnidade.findUnique({
@@ -143,7 +144,7 @@ export class AgendaService {
   private async ocupados(tx: Transacao, profissionalId: string, dia: string, ignorar?: string) {
     const inicio = new Date(`${dia}T00:00:00-03:00`);
     const fim = new Date(inicio.getTime() + 86_400_000);
-    const [ags, bls] = await Promise.all([
+    const [ags, bls] = await emSequencia([
       tx.agendamento.findMany({
         where: {
           profissionalId,
@@ -166,23 +167,34 @@ export class AgendaService {
     duracaoMin: number,
     profissionalId?: string,
   ): Promise<HorarioLivre[]> {
-    return this.banco.daConta(async (tx) => {
-      const profs = await tx.profissional.findMany({
-        where: { unidadeId, ativo: true, ...(profissionalId ? { id: profissionalId } : {}) },
-      });
-      const r: HorarioLivre[] = [];
-      for (const p of profs) {
-        const inicios = horariosLivres({
-          expediente: await this.expediente(tx, p.id, unidadeId, dia),
-          ocupados: await this.ocupados(tx, p.id, dia),
-          duracaoMin,
-          passoMin: 15,
-          agora: new Date(),
-        });
-        r.push({ profissionalId: p.id, inicios: inicios.map((d) => d.toISOString()) });
-      }
-      return r;
+    return this.banco.daConta((tx) =>
+      this.calcularLivres(tx, unidadeId, dia, duracaoMin, profissionalId),
+    );
+  }
+
+  /** Horários livres numa transação já aberta (tela interna ou link público). */
+  async calcularLivres(
+    tx: Transacao,
+    unidadeId: string,
+    dia: string,
+    duracaoMin: number,
+    profissionalId?: string,
+  ): Promise<HorarioLivre[]> {
+    const profs = await tx.profissional.findMany({
+      where: { unidadeId, ativo: true, ...(profissionalId ? { id: profissionalId } : {}) },
     });
+    const r: HorarioLivre[] = [];
+    for (const p of profs) {
+      const inicios = horariosLivres({
+        expediente: await this.expediente(tx, p.id, unidadeId, dia),
+        ocupados: await this.ocupados(tx, p.id, dia),
+        duracaoMin,
+        passoMin: 15,
+        agora: new Date(),
+      });
+      r.push({ profissionalId: p.id, inicios: inicios.map((d) => d.toISOString()) });
+    }
+    return r;
   }
 
   private async validarHorario(
@@ -206,62 +218,72 @@ export class AgendaService {
   async agendar(d: NovoAgendamentoEntrada) {
     exigirUnidade(d.unidadeId, [...BALCAO]);
     const quem = Contexto.usuario();
-    const inicio = new Date(d.inicio);
-    const comandaId = await this.banco.daConta(async (tx) => {
-      const servicos = await tx.servico.findMany({
-        where: { id: { in: d.servicoIds }, ativo: true },
-      });
-      if (servicos.length !== new Set(d.servicoIds).size)
-        throw Erros.naoEncontrado('Serviço não encontrado.');
-      const duracao = d.servicoIds.reduce(
-        (s, id) => s + servicos.find((x) => x.id === id)!.duracaoMin,
-        0,
-      );
-      const fim = new Date(inicio.getTime() + duracao * 60_000);
-      await this.validarHorario(tx, d.profissionalId, d.unidadeId, inicio, fim);
-      if (d.clienteId && !(await tx.cliente.findUnique({ where: { id: d.clienteId } })))
-        throw Erros.naoEncontrado('Cliente não encontrado.');
-      const clienteId =
-        d.clienteId ?? (await this.comandas.clienteNovo(tx, d.clienteNovo!, d.unidadeId));
-      const ag = await tx.agendamento.create({
-        data: {
-          unidadeId: d.unidadeId,
-          profissionalId: d.profissionalId,
-          clienteId,
-          inicio,
-          fim,
-          origem: d.origem,
-          observacao: d.observacao ?? null,
-          criadoPorId: quem.id,
-        },
-      });
-      const comanda = await tx.comanda.create({
-        data: {
-          unidadeId: d.unidadeId,
-          profissionalId: d.profissionalId,
-          clienteId,
-          agendamentoId: ag.id,
-          status: 'prevista',
-        },
-      });
-      for (const servicoId of d.servicoIds)
-        await this.comandas.criarItem(tx, comanda, dataLocal(inicio), {
-          tipo: 'servico',
-          servicoId,
-          quantidade: 1,
-        });
-      const itens = await tx.itemComanda.findMany({ where: { comandaId: comanda.id } });
-      const bruto = itens.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
-      await tx.comanda.update({
-        where: { id: comanda.id },
-        data: { totalBruto: bruto, totalLiquido: bruto },
-      });
-      return comanda.id;
-    });
+    const comandaId = await this.banco.daConta((tx) => this.criarAgendamento(tx, d, quem.id));
     await this.eventos
       .publicar('agendamento.criado', quem.contaId, { comandaId })
       .catch(() => undefined);
     return this.comandas.buscar(comandaId);
+  }
+
+  /**
+   * Cria agendamento + comanda prevista com os serviços e preços do dia. Confere
+   * serviços, expediente, calendário, bloqueios e choque de horário. Devolve a comanda.
+   */
+  async criarAgendamento(
+    tx: Transacao,
+    d: NovoAgendamentoEntrada,
+    criadoPorId: string | null,
+  ): Promise<string> {
+    const inicio = new Date(d.inicio);
+    const servicos = await tx.servico.findMany({
+      where: { id: { in: d.servicoIds }, ativo: true },
+    });
+    if (servicos.length !== new Set(d.servicoIds).size)
+      throw Erros.naoEncontrado('Serviço não encontrado.');
+    const duracao = d.servicoIds.reduce(
+      (s, id) => s + servicos.find((x) => x.id === id)!.duracaoMin,
+      0,
+    );
+    const fim = new Date(inicio.getTime() + duracao * 60_000);
+    await this.validarHorario(tx, d.profissionalId, d.unidadeId, inicio, fim);
+    if (d.clienteId && !(await tx.cliente.findUnique({ where: { id: d.clienteId } })))
+      throw Erros.naoEncontrado('Cliente não encontrado.');
+    const clienteId =
+      d.clienteId ?? (await this.comandas.clienteNovo(tx, d.clienteNovo!, d.unidadeId));
+    const ag = await tx.agendamento.create({
+      data: {
+        unidadeId: d.unidadeId,
+        profissionalId: d.profissionalId,
+        clienteId,
+        inicio,
+        fim,
+        origem: d.origem,
+        observacao: d.observacao ?? null,
+        criadoPorId,
+      },
+    });
+    const comanda = await tx.comanda.create({
+      data: {
+        unidadeId: d.unidadeId,
+        profissionalId: d.profissionalId,
+        clienteId,
+        agendamentoId: ag.id,
+        status: 'prevista',
+      },
+    });
+    for (const servicoId of d.servicoIds)
+      await this.comandas.criarItem(tx, comanda, dataLocal(inicio), {
+        tipo: 'servico',
+        servicoId,
+        quantidade: 1,
+      });
+    const itens = await tx.itemComanda.findMany({ where: { comandaId: comanda.id } });
+    const bruto = itens.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0);
+    await tx.comanda.update({
+      where: { id: comanda.id },
+      data: { totalBruto: bruto, totalLiquido: bruto },
+    });
+    return comanda.id;
   }
 
   async remarcar(agendamentoId: string, novoInicio: string, profissionalId?: string) {

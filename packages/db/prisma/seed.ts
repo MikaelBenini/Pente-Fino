@@ -210,6 +210,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
       nome: 'Barbearia Pente Fino (demonstração)',
       plano: 'premium',
       status: 'ativa',
+      configuradaEm: new Date(),
     },
   });
 
@@ -217,6 +218,8 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
   const centro = await tx.unidade.create({
     data: {
       nome: 'Centro',
+      slug: 'demo-centro',
+      agendamentoPublico: true,
       endereco: 'Rua Augusta, 1200 - São Paulo/SP',
       telefone: '551130000001',
       diasTrabalho: [1, 2, 3, 4, 5, 6],
@@ -226,6 +229,8 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
   const jardins = await tx.unidade.create({
     data: {
       nome: 'Jardins',
+      slug: 'demo-jardins',
+      agendamentoPublico: true,
       endereco: 'Alameda Lorena, 450 - São Paulo/SP',
       telefone: '551130000002',
       diasTrabalho: [2, 3, 4, 5, 6],
