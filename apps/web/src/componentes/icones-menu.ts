@@ -1,6 +1,7 @@
 import type { IdMenu } from '@pente-fino/shared';
 import {
   CalendarDays,
+  ClipboardList,
   ChartLine,
   CircleDollarSign,
   CircleUserRound,
@@ -24,6 +25,7 @@ import {
 
 export const ICONES_MENU: Record<IdMenu, LucideIcon> = {
   inicio: Gauge,
+  dia: ClipboardList,
   hoje: Sun,
   agenda: CalendarDays,
   comandas: ReceiptText,

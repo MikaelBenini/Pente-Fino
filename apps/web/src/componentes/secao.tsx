@@ -15,6 +15,12 @@ const TEXTOS: Record<IdSecao, { pergunta: string; vazio: string; texto: string }
     texto:
       'Faturamento contra a meta, ritmo, projeção, lucro, ticket médio, ocupação e extras, calculados das comandas fechadas. Aparecem assim que a primeira comanda for fechada.',
   },
+  dia: {
+    pergunta: 'O que tem para hoje e o que já foi feito?',
+    vazio: 'A agenda e o movimento do dia aparecem aqui',
+    texto:
+      'Quem atende quem e quando, o que já foi fechado, o que ainda vai entrar, faltas, clientes novos e aniversariantes, por barbeiro.',
+  },
   hoje: {
     pergunta: 'Quem é o próximo?',
     vazio: 'Seus clientes de hoje aparecem aqui',

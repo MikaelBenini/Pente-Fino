@@ -4,6 +4,7 @@ import type { Papel } from './papeis.js';
 
 export type IdMenu =
   | 'inicio'
+  | 'dia'
   | 'hoje'
   | 'agenda'
   | 'comandas'
@@ -35,6 +36,7 @@ const GESTAO: readonly Papel[] = ['dono', 'gestor'];
 /** Ordem única que respeita a ordem de cada papel na documentação. */
 export const ITENS_MENU: readonly ItemMenu[] = [
   { id: 'inicio', rotulo: 'Início', rota: '/inicio', papeis: GESTAO },
+  { id: 'dia', rotulo: 'Resumo do dia', rota: '/dia', papeis: GESTAO },
   { id: 'hoje', rotulo: 'Hoje', rota: '/hoje', papeis: ['barbeiro'] },
   { id: 'agenda', rotulo: 'Agenda', rota: '/agenda', papeis: ['dono', 'gestor', 'recepcao'] },
   {

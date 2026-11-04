@@ -7,6 +7,7 @@ describe('menu por papel', () => {
   it('dono', () => {
     expect(rotulos(['dono'])).toEqual([
       'Início',
+      'Resumo do dia',
       'Agenda',
       'Comandas',
       'Financeiro',

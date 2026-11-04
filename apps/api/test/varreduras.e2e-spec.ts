@@ -194,6 +194,10 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
       `/profissionais/desempenho?${periodo()}&unidadeId=${a.unidadeA}`,
       `/profissionais/desempenho?${periodo()}`,
       `/profissionais/${ids.prof}/desempenho?${periodo()}`,
+      `/resumo/dia?data=${hoje}`,
+      `/resumo/dia?data=${hoje}&unidadeId=${a.unidadeA}`,
+      `/resumo/dia?data=${hoje}&profissionalId=${ids.prof}`,
+      `/resumo/mes?mes=${mes}&unidadeId=${a.unidadeA}`,
     ];
     for (const rota of rotas) {
       const r = await intruso.get(rota);
@@ -311,6 +315,8 @@ describe('permissões: cada papel tentando o que não pode', () => {
   > => ({
     barbeiro: [
       ['get', () => '/usuarios'],
+      ['get', () => `/resumo/dia?data=${hoje}`],
+      ['get', () => `/resumo/mes?mes=${mes}`],
       ['get', () => `/profissionais/desempenho?${periodo()}`],
       ['get', () => `/indicadores?${periodo()}`],
       ['get', () => `/despesas?mes=${mes}`],
@@ -372,6 +378,8 @@ describe('permissões: cada papel tentando o que não pode', () => {
     ],
     recepcao: [
       ['get', () => '/usuarios'],
+      ['get', () => `/resumo/dia?data=${hoje}`],
+      ['get', () => `/resumo/mes?mes=${mes}`],
       ['get', () => `/profissionais/desempenho?${periodo()}`],
       ['get', () => `/profissionais/${ids.prof}/desempenho?${periodo()}`],
       ['get', () => `/indicadores?${periodo()}`],
