@@ -36,7 +36,7 @@ export function Botao({
       disabled={disabled || carregando}
       aria-busy={carregando || undefined}
       className={cn(
-        'inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold transition',
+        'toque inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold transition',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
         'disabled:cursor-not-allowed disabled:opacity-55',
         VARIANTES[variante],

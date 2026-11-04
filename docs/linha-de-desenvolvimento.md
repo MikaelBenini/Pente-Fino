@@ -135,6 +135,19 @@ O esqueleto das telas, a identidade visual e o app instalável no celular.
 - [x] Estados vazios com orientação ("Cadastre seu primeiro serviço") e telas de carregamento
 - [x] **Pronto quando:** cada papel entra e vê só o menu dele, no celular e no computador (`apps/web/e2e`: Playwright com dono, gestor, recepção e barbeiro, no computador e no celular, no CI)
 
+**Acabamento e movimento (pedido em 04/11/2026)**
+
+Movimento curto e com um ritmo só, em CSS (sem biblioteca), mexendo só em `transform` e `opacity`; tudo termina visível e "reduzir movimento" desliga. Classes em `apps/web/src/app/globals.css`, conferidas por `apps/web/e2e/movimento.spec.ts`.
+
+- [x] Toda tela entra com um deslize curto (`template.tsx` do app, do site e das telas públicas)
+- [x] Barra fina no topo enquanto a próxima tela carrega
+- [x] Carregando com o desenho da tela (cartões e lista) e um brilho que passa, no lugar do piscar; só aparece se a carga demorar
+- [x] Cartões de indicadores, listas da equipe e cartões dos barbeiros chegam um após o outro
+- [x] Barras de meta e dos gráficos crescem a partir da base; troca de aba e de preço (mensal/anual) com transição
+- [x] Botões afundam de leve no toque; diálogos abrem com escala; linha da tabela acende sob o cursor
+- [x] Site: a comanda de exemplo "sai da impressora" linha a linha e a sobra é carimbada; seções sobem ao entrar na tela; cabeçalho ganha sombra ao rolar; perguntas abrem deslizando; rolagem suave nas âncoras
+- [ ] Transição entre telas com a View Transitions do React/Next quando sair do experimental
+
 ## Etapa 6 · Módulos do MVP
 
 A ordem segue as dependências: cada módulo usa os anteriores. Cada um sai com API, tela, testes e dados de demonstração.
@@ -187,7 +200,7 @@ Toda mudança passa por verificação automática antes de entrar na `main`, e t
 
 ## Etapas 9 a 15 · O produto completo antes do servidor
 
-Tudo o que a página de planos promete precisa existir antes do piloto. Cada etapa sai como os módulos da Etapa 6: API, tela, regras de cálculo em `packages/shared` com teste antes da tela, isolamento por conta (`habilitar_isolamento_conta` em toda tabela nova), linha nova na matriz de permissões, teste Playwright do fluxo principal no computador e no celular, e dados na conta de demonstração. Ao entregar um recurso, ele deixa de aparecer como "em breve" em `RECURSOS_PLANO`.
+Tudo o que a página de planos promete precisa existir antes do piloto. Cada etapa sai como os módulos da Etapa 6: API, tela, regras de cálculo em `packages/shared` com teste antes da tela, isolamento por conta (`habilitar_isolamento_conta` em toda tabela nova), linha nova na matriz de permissões, teste Playwright do fluxo principal no computador e no celular, e dados na conta de demonstração. Ao entregar um recurso, ele deixa de aparecer como "em breve" em `RECURSOS_PLANO`. Toda tela nova usa o mesmo movimento (entrada, carregando com desenho, listas escalonadas).
 
 ## Etapa 9 · Ficha do profissional e desempenho da equipe
 

@@ -79,6 +79,7 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
             className={cn(
               'min-h-11 rounded-md px-5 font-semibold transition focus-visible:outline-2 focus-visible:outline-foco',
               ciclo === c ? 'bg-superficie-3 text-tinta' : 'text-tinta-suave hover:text-tinta',
+              'transition-colors duration-200',
             )}
           >
             {c === 'mensal' ? 'Mensal' : 'Anual'}
@@ -89,7 +90,7 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
         ))}
       </div>
 
-      <ul className="grid gap-4 md:grid-cols-3">
+      <ul className="animar-escalonado grid gap-4 md:grid-cols-3">
         {PLANOS.map((p) => {
           const preco = precoPorMes(p, ciclo);
           const anual = resumoAnual(p);
@@ -98,7 +99,7 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
             <li
               key={p}
               className={cn(
-                'relative flex flex-col gap-5 rounded-xl border bg-superficie p-6',
+                'relative flex flex-col gap-5 rounded-xl border bg-superficie p-6 transition-[border-color,transform] duration-200 hover:-translate-y-0.5',
                 destaque ? 'border-modulo md:-my-3 md:py-9' : 'border-borda',
               )}
             >
@@ -116,7 +117,10 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
               </div>
               <div>
                 <p className="flex items-baseline gap-1">
-                  <span className="font-denso text-5xl font-bold tabular-nums">
+                  <span
+                    key={ciclo}
+                    className="animar-entrada font-denso text-5xl font-bold tabular-nums"
+                  >
                     {formatarMoeda(preco)}
                   </span>
                   <span className="text-tinta-suave">/mês</span>

@@ -150,7 +150,7 @@ export default function Pagina() {
       {/* Abertura: a promessa e a prova (uma comanda que mostra a sobra). */}
       <section className="border-b border-borda bg-[linear-gradient(160deg,var(--superficie-2),var(--fundo)_60%)]">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 md:grid-cols-[1.15fr_1fr] md:py-24">
-          <div className="flex flex-col items-start gap-6">
+          <div className="animar-escalonado flex flex-col items-start gap-6">
             <p className="font-denso text-lg font-semibold tracking-widest text-modulo-texto uppercase">
               Gestão de barbearia
             </p>
@@ -186,7 +186,7 @@ export default function Pagina() {
         </h2>
         <ol className="grid gap-px overflow-hidden rounded-xl border border-borda bg-borda sm:grid-cols-2 lg:grid-cols-4">
           {PASSOS.map((p, i) => (
-            <li key={p.titulo} className="flex flex-col gap-3 bg-superficie p-6">
+            <li key={p.titulo} className="revelar flex flex-col gap-3 bg-superficie p-6">
               <span className="flex items-center justify-between">
                 <p.icone aria-hidden className="size-7 text-modulo-texto" />
                 <span className="font-denso text-4xl font-bold text-tinta-fraca tabular-nums">
@@ -219,7 +219,7 @@ export default function Pagina() {
               Ver com os dados da minha barbearia
             </Link>
           </div>
-          <figure className="flex flex-col gap-4 rounded-xl border border-borda bg-fundo p-5 sm:p-6">
+          <figure className="revelar flex flex-col gap-4 rounded-xl border border-borda bg-fundo p-5 sm:p-6">
             <figcaption className="flex items-center justify-between text-sm text-tinta-suave">
               <span className="font-semibold text-tinta">Resultado do mês · Centro</span>
               <span className="rounded-sm bg-superficie-3 px-1.5">Exemplo fictício</span>
@@ -284,7 +284,10 @@ export default function Pagina() {
         </h2>
         <ul className="grid gap-4 md:grid-cols-3">
           {PAPEIS.map((p) => (
-            <li key={p.titulo} className="flex flex-col gap-3 rounded-xl border border-borda p-6">
+            <li
+              key={p.titulo}
+              className="revelar flex flex-col gap-3 rounded-xl border border-borda p-6 transition-colors hover:border-borda-forte"
+            >
               <p.icone aria-hidden className="size-7 text-modulo-texto" />
               <h3 className="text-xl font-semibold">{p.titulo}</h3>
               <p className="text-tinta-suave">{p.texto}</p>
@@ -304,7 +307,7 @@ export default function Pagina() {
           </h2>
           <dl className="grid gap-x-10 gap-y-8 md:grid-cols-2">
             {DIFERENCIAIS.map((d) => (
-              <div key={d.titulo} className="border-l-2 border-modulo pl-4">
+              <div key={d.titulo} className="revelar border-l-2 border-modulo pl-4">
                 <dt className="text-xl font-semibold">{d.titulo}</dt>
                 <dd className="mt-1 text-tinta-suave">{d.texto}</dd>
               </div>
@@ -324,7 +327,9 @@ export default function Pagina() {
             </Link>
           </p>
         </div>
-        <CartoesPlanos compacto />
+        <div className="revelar">
+          <CartoesPlanos compacto />
+        </div>
       </section>
 
       <section aria-labelledby="faq" className="mx-auto max-w-4xl px-4 pb-16 sm:px-6">

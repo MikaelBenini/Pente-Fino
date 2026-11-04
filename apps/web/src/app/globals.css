@@ -93,6 +93,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Âncoras e foco não ficam escondidos atrás do cabeçalho fixo do site. */
+  scroll-padding-top: 5rem;
 }
 
 body {
@@ -114,12 +116,265 @@ h3 {
   color: var(--sobre-modulo);
 }
 
+/*
+ * Movimento. Um ritmo só para o produto inteiro: curto, saindo do lugar e chegando
+ * parado no estado natural (nada fica invisível esperando). Só transform e opacity,
+ * que não refazem o layout. "Reduzir movimento" desliga tudo no bloco do fim.
+ */
+:root {
+  --ritmo-rapido: 160ms;
+  --ritmo: 260ms;
+  --ritmo-lento: 520ms;
+  --curva-saida: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --curva-mola: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes crescer-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes crescer-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes brilho {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+@keyframes imprimir {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes carimbo {
+  0% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Tela que acabou de abrir. */
+.animar-entrada {
+  animation: entrar var(--ritmo) var(--curva-saida) both;
+}
+/* Filhos chegando um depois do outro (cartões, listas). Até o 8º; o resto vem junto. */
+.animar-escalonado > * {
+  animation: entrar var(--ritmo) var(--curva-saida) both;
+}
+.animar-escalonado > :nth-child(2) {
+  animation-delay: 30ms;
+}
+.animar-escalonado > :nth-child(3) {
+  animation-delay: 60ms;
+}
+.animar-escalonado > :nth-child(4) {
+  animation-delay: 90ms;
+}
+.animar-escalonado > :nth-child(5) {
+  animation-delay: 120ms;
+}
+.animar-escalonado > :nth-child(6) {
+  animation-delay: 150ms;
+}
+.animar-escalonado > :nth-child(7) {
+  animation-delay: 180ms;
+}
+.animar-escalonado > :nth-child(n + 8) {
+  animation-delay: 210ms;
+}
+
+/* Barras de meta e de gráficos crescem a partir da base. */
+.animar-barra-x {
+  transform-origin: left center;
+  animation: crescer-x var(--ritmo-lento) var(--curva-saida) both;
+}
+.animar-barra-y {
+  transform-origin: center bottom;
+  animation: crescer-y var(--ritmo-lento) var(--curva-saida) both;
+}
+
+/* Carregando: um brilho que passa, no lugar do piscar. */
+.esqueleto-brilho {
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in oklab, var(--tinta) 7%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: brilho 1.4s ease-in-out infinite;
+}
+
+/* Comanda de exemplo: sai da impressora linha a linha e a sobra é carimbada. */
+.comanda-imprime {
+  animation: imprimir var(--ritmo-lento) var(--curva-saida) 120ms both;
+}
+.comanda-imprime li {
+  animation: entrar var(--ritmo) var(--curva-saida) both;
+}
+.comanda-imprime li:nth-child(1) {
+  animation-delay: 420ms;
+}
+.comanda-imprime li:nth-child(2) {
+  animation-delay: 560ms;
+}
+.comanda-imprime li:nth-child(3) {
+  animation-delay: 700ms;
+}
+.comanda-imprime [data-sobra] {
+  display: inline-block;
+  animation: carimbo var(--ritmo) var(--curva-mola) 900ms both;
+}
+
+/* Navegação: barra fina no topo enquanto a próxima tela carrega. */
+.barra-navegacao {
+  position: fixed;
+  inset: env(safe-area-inset-top, 0px) 0 auto;
+  z-index: 60;
+  height: 3px;
+  pointer-events: none;
+  background: var(--modulo);
+  box-shadow: 0 0 10px var(--modulo);
+  transform-origin: left center;
+  transform: scaleX(0);
+  opacity: 0;
+}
+.barra-navegacao[data-estado='indo'] {
+  opacity: 1;
+  animation: navegar 8s cubic-bezier(0.1, 0.6, 0.1, 1) forwards;
+}
+.barra-navegacao[data-estado='chegou'] {
+  transform: scaleX(1);
+  opacity: 0;
+  transition:
+    transform var(--ritmo-rapido) ease-out,
+    opacity var(--ritmo) ease-out 120ms;
+}
+@keyframes navegar {
+  from {
+    transform: scaleX(0.04);
+  }
+  to {
+    transform: scaleX(0.9);
+  }
+}
+
+/* Tabelas: a linha sob o cursor acende de leve, para não perder a linha ao ler. */
+.tabela-dados tbody tr {
+  transition: background-color var(--ritmo-rapido) ease-out;
+}
+@media (hover: hover) {
+  .tabela-dados tbody tr:hover {
+    background-color: color-mix(in oklab, var(--superficie-2) 70%, transparent);
+  }
+}
+
+/* Botões: um leve afundar no toque. */
+.toque {
+  transition: transform var(--ritmo-rapido) var(--curva-saida);
+}
+.toque:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Diálogos abrem com um pouco de escala; o fundo escurece junto. */
+dialog[open] {
+  animation: surgir var(--ritmo) var(--curva-saida) both;
+}
+dialog[open]::backdrop {
+  animation: entrar var(--ritmo) ease-out both;
+}
+
+/* Perguntas frequentes abrem deslizando (navegadores que já sabem animar a altura). */
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+  details::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height var(--ritmo) var(--curva-saida),
+      content-visibility var(--ritmo) allow-discrete;
+  }
+  details[open]::details-content {
+    height: auto;
+  }
+}
+
+/*
+ * Rolagem: seções do site sobem de leve ao entrar na tela, e o cabeçalho ganha borda
+ * e sombra depois que a página rola. Só onde o navegador anima pela rolagem; nos
+ * outros, tudo já aparece no lugar.
+ */
+@supports (animation-timeline: view()) {
+  .revelar {
+    animation: entrar linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 60%;
+  }
+  .cabecalho-rolagem {
+    animation: cabecalho-solto linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 96px;
+  }
+  @keyframes cabecalho-solto {
+    from {
+      border-bottom-color: transparent;
+      box-shadow: 0 0 0 transparent;
+    }
+    to {
+      border-bottom-color: var(--borda);
+      box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.55);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+  }
+  .revelar,
+  .cabecalho-rolagem,
+  .esqueleto-brilho {
+    animation: none !important;
   }
 }
 

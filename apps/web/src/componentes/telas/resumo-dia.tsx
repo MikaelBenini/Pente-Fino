@@ -227,7 +227,7 @@ function ConteudoDia({
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="animar-escalonado grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <CartaoIndicador
           rotulo="Atendidos"
           valor={`${formatarNumero(t.fechadas)} de ${formatarNumero(t.marcados)}`}
@@ -281,7 +281,7 @@ function ConteudoDia({
           texto="Cadastre os profissionais e os horários deles em Equipe."
         />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="animar-escalonado grid gap-4 xl:grid-cols-2">
           {r.profissionais.map((p) => (
             <CartaoProfissional key={p.profissionalId} p={p} filtro={filtro} />
           ))}
@@ -446,7 +446,7 @@ function Mes({
           const dias = r.dias.filter((d) => !soTrabalho || d.trabalha || d.faturamento > 0);
           return (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="animar-escalonado grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <CartaoIndicador
                   rotulo="Faturamento"
                   valor={formatarMoeda(t.faturamento)}
@@ -516,7 +516,7 @@ function Mes({
                         {d.faturamento ? formatarMoeda(d.faturamento) : '—'}
                         <span aria-hidden className="mt-1 ml-auto block h-1.5 w-full max-w-32">
                           <span
-                            className="block h-full rounded-r-[4px] bg-modulo-texto/70"
+                            className="animar-barra-x block h-full rounded-r-[4px] bg-modulo-texto/70"
                             style={{ width: `${(d.faturamento / maximo) * 100}%` }}
                           />
                         </span>

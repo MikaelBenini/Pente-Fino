@@ -51,7 +51,7 @@ export function PainelIndicadores({
   origem: string;
 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="animar-escalonado grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <CartaoIndicador
         rotulo="Faturamento"
         valor={formatarMoeda(atual.faturamento)}
