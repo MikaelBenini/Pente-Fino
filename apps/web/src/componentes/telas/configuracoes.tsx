@@ -15,10 +15,19 @@ import {
   type ContaEntrada,
   type UnidadeDetalhe,
 } from '@pente-fino/shared';
-import { Abas, Botao, Campo, Dialogo, EstadoVazio, Marcador, Selecao } from '@pente-fino/ui';
+import {
+  Abas,
+  Botao,
+  Campo,
+  CampoQuantidade,
+  Dialogo,
+  EstadoVazio,
+  Marcador,
+  Selecao,
+} from '@pente-fino/ui';
 import { CalendarOff, MapPin, Phone, Plus, Store } from 'lucide-react';
 import { useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { chaves, useAcao, useCalendario, useConta, useUnidadesDetalhe } from '@/lib/consultas';
@@ -352,14 +361,21 @@ function FormularioUnidade({
             </p>
           </div>
         </fieldset>
-        <Campo
-          id="unidade-capacidade"
-          rotulo="Cadeiras"
-          type="number"
-          inputMode="numeric"
-          dica="Quantos atendem ao mesmo tempo (ocupação)"
-          erro={formState.errors.capacidade?.message}
-          {...register('capacidade', { valueAsNumber: true })}
+        <Controller
+          control={control}
+          name="capacidade"
+          render={({ field, fieldState }) => (
+            <CampoQuantidade
+              id="unidade-capacidade"
+              rotulo="Cadeiras"
+              dica="Quantos atendem ao mesmo tempo (ocupação)"
+              min={1}
+              max={50}
+              valor={field.value ?? null}
+              onMudar={field.onChange}
+              erro={fieldState.error?.message}
+            />
+          )}
         />
         {atual && <Marcador id="unidade-ativa" rotulo="Unidade ativa" {...register('ativa')} />}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

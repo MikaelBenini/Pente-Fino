@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 import { BarraMeta, calcularBarraMeta } from './barra-meta.js';
+import { CampoQuantidade, limitarQuantidade } from './campo-quantidade.js';
 import { EtiquetaEstado } from './etiqueta-estado.js';
 import { aplicarColagem, interpretarColagem } from './tabela-editavel.js';
 
@@ -105,5 +107,45 @@ describe('componentes', () => {
       '25% da meta; pelo ritmo, hoje deveria estar em 50%',
     );
     expect(screen.getByText(/Abaixo do ritmo/)).toBeDefined();
+  });
+});
+
+describe('campo de quantidade', () => {
+  it('limita ao intervalo e arredonda', () => {
+    expect(limitarQuantidade(-3, 1, 50)).toBe(1);
+    expect(limitarQuantidade(80, 1, 50)).toBe(50);
+    expect(limitarQuantidade(2.6, 1, 50)).toBe(3);
+  });
+
+  it('não aceita negativo nem letra, e − e + respeitam o mínimo', () => {
+    const valores: (number | null)[] = [];
+    function Cadeiras() {
+      const [v, setV] = useState<number | null>(1);
+      return (
+        <CampoQuantidade
+          id="cadeiras"
+          rotulo="Cadeiras"
+          valor={v}
+          min={1}
+          max={50}
+          onMudar={(n) => {
+            valores.push(n);
+            setV(n);
+          }}
+        />
+      );
+    }
+    render(<Cadeiras />);
+    const campo = screen.getByLabelText<HTMLInputElement>('Cadeiras');
+    const menos = screen.getByRole<HTMLButtonElement>('button', { name: 'Diminuir cadeiras' });
+    expect(menos.disabled).toBe(true);
+    fireEvent.change(campo, { target: { value: '-5a' } });
+    expect(campo.value).toBe('5');
+    fireEvent.click(screen.getByRole('button', { name: 'Aumentar cadeiras' }));
+    expect(campo.value).toBe('6');
+    fireEvent.change(campo, { target: { value: '0' } });
+    fireEvent.blur(campo);
+    expect(campo.value).toBe('1');
+    expect(valores.at(-1)).toBe(1);
   });
 });

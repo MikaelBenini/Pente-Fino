@@ -1,7 +1,7 @@
 'use client';
 
 import { lerMoeda, NOMES_DIAS, NOMES_DIAS_CURTOS, valorParaCampo } from '@pente-fino/shared';
-import { Botao, Campo, EstadoVazio, Marcador } from '@pente-fino/ui';
+import { Botao, Campo, CampoQuantidade, EstadoVazio, Marcador } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
 import { CircleCheck, CircleSlash, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -126,7 +126,7 @@ function FormUnidade({
     endereco: u.endereco ?? '',
     telefone: u.telefone ?? '',
     diasTrabalho: u.diasTrabalho,
-    capacidade: String(u.capacidade),
+    capacidade: u.capacidade as number | null,
   });
   const [erro, setErro] = useState<string | null>(null);
   const salvar = useAcao(
@@ -142,7 +142,7 @@ function FormUnidade({
         e.preventDefault();
         setErro(null);
         try {
-          await salvar.mutateAsync({ ...f, capacidade: Number(f.capacidade) });
+          await salvar.mutateAsync(f);
           onSeguir();
         } catch (er) {
           setErro(mensagemDe(er));
@@ -196,13 +196,14 @@ function FormUnidade({
           </div>
         </div>
       </fieldset>
-      <Campo
+      <CampoQuantidade
         id="ci-capacidade"
         rotulo="Cadeiras"
-        type="number"
-        inputMode="numeric"
-        value={f.capacidade}
-        onChange={(e) => setF({ ...f, capacidade: e.target.value })}
+        dica="Quantos atendem ao mesmo tempo"
+        min={1}
+        max={50}
+        valor={f.capacidade}
+        onMudar={(n) => setF({ ...f, capacidade: n })}
       />
       <Botao type="submit" className="self-end" carregando={salvar.isPending}>
         Salvar e seguir

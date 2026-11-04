@@ -223,7 +223,11 @@ export const fecharComandaSchema = z.object({
         valor: centavos.min(1, { error: 'Valor precisa ser maior que zero.' }),
       }),
     )
-    .max(6),
+    .max(FORMAS_PAGAMENTO.length)
+    // Cada forma uma vez: dois cartões de crédito somam na mesma linha.
+    .refine((ps) => new Set(ps.map((p) => p.forma)).size === ps.length, {
+      error: 'Cada forma de pagamento aparece uma vez só; some os valores na mesma linha.',
+    }),
 });
 export type FecharComandaEntrada = z.infer<typeof fecharComandaSchema>;
 

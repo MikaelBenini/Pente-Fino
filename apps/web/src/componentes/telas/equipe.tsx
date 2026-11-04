@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  barbeirosSemCadastro,
   dataLocal,
   formatarData,
   formatarMoeda,
@@ -9,6 +10,7 @@ import {
   NOMES_DIAS,
   NOMES_DIAS_CURTOS,
   selecionarVigente,
+  type BarbeiroSemCadastro,
   type Papel,
   type ProfissionalDetalhe,
   type UsuarioEquipe,
@@ -84,7 +86,9 @@ function Profissionais() {
   const { unidadeAtiva } = useApp();
   const profissionais = useProfissionais();
   const unidades = useUnidadesDetalhe();
+  const usuarios = useUsuariosEquipe();
   const [novo, setNovo] = useState(false);
+  const [completar, setCompletar] = useState<BarbeiroSemCadastro | null>(null);
   const [horarios, setHorarios] = useState<ProfissionalDetalhe | null>(null);
   const [regra, setRegra] = useState<ProfissionalDetalhe | null>(null);
   const [desligar, setDesligar] = useState<ProfissionalDetalhe | null>(null);
@@ -103,12 +107,51 @@ function Profissionais() {
           (p) => unidadeAtiva === 'todas' || p.unidadeId === unidadeAtiva,
         );
         const nomeUnidade = (id: string) => unidades.data?.find((u) => u.id === id)?.nome ?? '';
+        const faltam = barbeirosSemCadastro(usuarios.data ?? [], profissionais.data!).filter(
+          (b) => unidadeAtiva === 'todas' || b.unidadeId === unidadeAtiva,
+        );
         return (
           <div className="flex flex-col gap-4">
             <Botao className="self-start" onClick={() => setNovo(true)}>
               <UserPlus aria-hidden className="size-5" /> Adicionar barbeiro
             </Botao>
             {erro && <Aviso tom="erro">{erro}</Aviso>}
+            {faltam.length > 0 && (
+              <section
+                aria-labelledby="titulo-sem-cadastro"
+                className="flex flex-col gap-3 rounded-lg border border-aviso-texto/50 bg-aviso/5 p-4"
+              >
+                <div>
+                  <h2 id="titulo-sem-cadastro" className="font-semibold text-tinta">
+                    Falta completar o cadastro
+                  </h2>
+                  <p className="text-sm text-tinta-suave">
+                    Convidados como barbeiro em “Acessos ao sistema”. Sem comissão e horários, não
+                    aparecem na agenda nem nos indicadores.
+                  </p>
+                </div>
+                <ul className="flex flex-col gap-2">
+                  {faltam.map((b) => (
+                    <li
+                      key={`${b.usuarioId}:${b.unidadeId}`}
+                      className="flex flex-wrap items-center justify-between gap-2"
+                    >
+                      <span className="min-w-0">
+                        <span className="block font-semibold">{b.nome}</span>
+                        <span className="block text-sm break-all text-tinta-suave">
+                          {b.email}
+                          {unidadeAtiva === 'todas' && ` · ${nomeUnidade(b.unidadeId)}`}
+                          {b.pendente && ' · convite pendente'}
+                        </span>
+                      </span>
+                      <Botao variante="secundario" onClick={() => setCompletar(b)}>
+                        Completar cadastro
+                      </Botao>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             {lista.length === 0 ? (
               <EstadoVazio
                 icone={Users}
@@ -224,7 +267,15 @@ function Profissionais() {
                 })}
               </ul>
             )}
-            <NovoProfissional aberto={novo} onFechar={() => setNovo(false)} />
+            <NovoProfissional
+              key={completar ? `${completar.usuarioId}:${completar.unidadeId}` : 'novo'}
+              aberto={novo || completar !== null}
+              pessoa={completar}
+              onFechar={() => {
+                setNovo(false);
+                setCompletar(null);
+              }}
+            />
             <Horarios profissional={horarios} onFechar={() => setHorarios(null)} />
             <NovaRegra profissional={regra} onFechar={() => setRegra(null)} />
             <ModalConfirmacao
@@ -252,7 +303,16 @@ function Profissionais() {
   );
 }
 
-export function NovoProfissional({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
+export function NovoProfissional({
+  aberto,
+  onFechar,
+  pessoa = null,
+}: {
+  aberto: boolean;
+  onFechar: () => void;
+  /** Já tem acesso como barbeiro: só falta a comissão e a data de entrada. */
+  pessoa?: BarbeiroSemCadastro | null;
+}) {
   const { usuario, unidadeAtiva } = useApp();
   const unidades = useUnidadesDetalhe();
   const usuarios = useUsuariosEquipe();
@@ -264,8 +324,8 @@ export function NovoProfissional({ aberto, onFechar }: { aberto: boolean; onFech
     ),
   );
   const inicial = {
-    unidadeId: unidadeAtiva !== 'todas' ? unidadeAtiva : '',
-    usuarioId: '',
+    unidadeId: pessoa?.unidadeId ?? (unidadeAtiva !== 'todas' ? unidadeAtiva : ''),
+    usuarioId: pessoa?.usuarioId ?? '',
     nome: '',
     email: '',
     telefone: '',
@@ -323,8 +383,12 @@ export function NovoProfissional({ aberto, onFechar }: { aberto: boolean; onFech
   return (
     <Dialogo
       aberto={aberto}
-      titulo="Adicionar barbeiro"
-      descricao="Quem ainda não tem acesso recebe o convite por e-mail."
+      titulo={pessoa ? `Completar cadastro de ${pessoa.nome}` : 'Adicionar barbeiro'}
+      descricao={
+        pessoa
+          ? 'Defina a data de entrada e a comissão. O horário padrão segue os dias da unidade.'
+          : 'Quem ainda não tem acesso recebe o convite por e-mail.'
+      }
       onFechar={fechar}
     >
       {convite ? (
@@ -809,6 +873,13 @@ function Convidar({ aberto, onFechar }: { aberto: boolean; onFechar: () => void 
       {feito ? (
         <div className="flex flex-col gap-4">
           <Aviso tom="sucesso">Convite enviado por e-mail.</Aviso>
+          {f.papel === 'barbeiro' && (
+            <p className="text-sm text-tinta-suave">
+              Falta a comissão e a data de entrada: na aba “Profissionais”, toque em “Completar
+              cadastro” ao lado do nome. Da próxima vez, use “Adicionar barbeiro” lá, que convida e
+              cadastra de uma vez.
+            </p>
+          )}
           {feito.linkWhatsapp && (
             <a
               href={feito.linkWhatsapp}

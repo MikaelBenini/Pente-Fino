@@ -23,3 +23,4 @@ export * from './resumo-dia.js';
 export * from './bot.js';
 export * from './esquemas-bot.js';
 export * from './whatsapp.js';
+export * from './equipe.js';

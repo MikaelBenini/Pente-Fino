@@ -254,6 +254,45 @@ O dono monta como o bot responde, sem inteligência artificial: menu numerado, p
 - [x] Aviso no painel quando a conexão cair, com o passo a passo para reconectar (faixa no topo para dono e gestor, com link para a aba Conexão; desconectar pelo painel não conta como queda)
 - [ ] **Pronto quando:** o dono conecta o número, edita o menu, testa no simulador e publica; um cliente recebe as respostas certas por número e por palavra-chave, e "SAIR" para os avisos dele (testado com a Evolution local até o envio; falta conferir com um celular de verdade lendo o QR)
 
+## Etapa 10.1 · Ajustes pedidos no teste (2026-11-04)
+
+Pedidos do dono depois de testar o sistema. Entram antes da Etapa 11, porque vários mexem em telas que a Etapa 11 vai usar (Conversas, bot, menu por papel). Itens que adiantam uma etapa futura dizem qual.
+
+**Correções**
+
+- [x] Configuração guiada e Configurações: o campo "cadeiras" (capacidade) aceita número negativo. Mínimo 1 no campo, no zod compartilhado e no banco (CHECK). As setas de subir e descer do campo numérico estão sem estilo: trocar por botões − e + do `packages/ui`, que valem para todo campo de quantidade (o zod e o CHECK já recusavam; a tela agora usa `CampoQuantidade`, que só aceita dígitos e volta para o intervalo ao sair do campo; vale também para duração e peso do serviço)
+- [x] Convidar barbeiro: quem foi convidado por "Acesso ao sistema" sem estar cadastrado em Barbeiros não aparece para adicionar em Barbeiros. Ao aceitar convite com papel barbeiro, criar o profissional ligado ao usuário. Em Barbeiros, poder escolher um usuário já convidado em vez de digitar o e-mail de novo (em vez de criar a ficha sozinho, sem comissão definida: a aba Profissionais mostra "Falta completar o cadastro" com quem tem o papel e não tem ficha, e "Completar cadastro" abre o formulário com a pessoa escolhida; regra `barbeirosSemCadastro` em `packages/shared/src/equipe.ts`; o convite de barbeiro avisa o passo seguinte)
+- [x] Fechar comanda: dá para escolher a mesma forma (ex.: crédito) duas vezes, mas há só 4 formas. Cada forma aparece uma vez: a forma já usada sai das outras listas, e "Dividir em outra forma" oferece só as que sobraram. Dois cartões de crédito somam na mesma linha. A API recusa forma repetida (zod compartilhado)
+- [x] Desempenho do barbeiro (aba do barbeiro): conferir cada métrica com a conta de demonstração (faturamento, atendimentos, clientes, ticket, extras, ocupação, comissão, retorno, rotina, evolução) e corrigir o que vier vazio ou divergente da ficha vista pelo dono (conferido pela API, barbeiro × dono: números iguais; o barbeiro não recebe margem nem a média da unidade, de propósito; avaliações chegam com a Etapa 12)
+- [ ] Demonstração com 6 meses de histórico: hoje o seed cria só o mês passado e o atual, então no mês passado todo cliente conta como novo (retorno 0%) e a evolução mostra 4 meses zerados. Cuidar dos testes que conferem os números da planilha no mês passado
+- [x] Seed: a conexão do WhatsApp do Centro começa desconectada (estava "conectado" sem celular nenhum, e o teste de conectar pelo QR falhava no CI)
+
+**Bot**
+
+- [ ] Não repetir o menu inteiro a cada resposta errada. Primeira resposta não entendida: "não entendi" curto com as opções em uma linha. Segunda seguida: oferecer o atendente. Terceira em diante: silêncio até o cliente mandar algo válido ou "menu". Contador de erros na sessão (`bot_sessao`), regra em `packages/shared/src/bot.ts` com teste
+- [ ] Respostas parecidas: aceitar o número com texto ("2", "2.", "opção 2", "dois") e o rótulo da opção sem acento ("precos", "endereco")
+- [ ] Variáveis: `{unidade}` hoje é o nome da unidade (na demonstração, "Centro"), e a boas-vindas sai "Aqui é a Centro". Criar `{barbearia}` (nome da conta) e usar nas mensagens padrão; `{unidade}` continua para quem tem mais de uma. Atualizar os textos padrão, o simulador e a lista de variáveis do construtor
+- [ ] Pedido de atendente aparece em Conversas: quando o cliente escolhe "Falar com atendente", a conversa fica marcada como esperando atendente e entra na tela Conversas da unidade, com aviso na hora (adianta a tela Conversas da Etapa 11)
+- [ ] Botões "Chamar" e "Enviar mensagem" do painel: o dono escolhe se abre o WhatsApp do aparelho (link `wa.me` com o texto pronto, como hoje) ou se o próprio bot envia pelo número da barbearia. O envio pelo bot passa pela fila `whatsapp-saida` e só sai para quem já conversou com a barbearia e não pediu SAIR, a mesma proteção do número; fica no histórico do cliente
+
+**Menu por papel**
+
+- [ ] Rever o menu lateral de cada papel (dono, gestor, recepção, barbeiro) numa tabela na matriz de permissões em `docs/`. Regra: o que a recepção vê, dono e gestor também veem. Hoje "Conversas do bot" e "Caixa do dia" estão só na recepção; passar para dono e gestor também. Separar o menu em grupos por função (Atendimento, Gestão, Bot, Conta) para não virar uma lista longa
+- [ ] Teste do menu (`packages/shared/src/menu.test.ts` e Playwright) garantindo que todo item da recepção está no menu de dono e gestor
+
+**Métricas e avaliações**
+
+- [ ] Produtos: mais vendidos (quantidade e receita), margem de cada um (preço − custo) e "vale investir": margem × giro no período, com os que vendem pouco e os que dão mais lucro por real investido em estoque. Regra em `packages/shared` com teste
+- [ ] Serviços: mais consumidos (quantidade, atendimentos e receita), ao lado do lucro por serviço que já existe
+- [ ] Avaliação do barbeiro e avaliação da barbearia (atendimento, ambiente): adiantar da Etapa 12 a tabela `avaliacao`, a pesquisa pelo bot depois do fechamento, a nota na ficha do profissional e no ranking da Equipe, e a nota da barbearia no Início e nas Métricas
+
+**Assinatura do sistema**
+
+- [ ] Conta de teste para a cobrança: no seed, uma conta com teste vencido (`expirado@demo.pentefino.dev`) e uma com fatura recusada, para testar o sistema bloqueado sem esperar 14 dias. Ambiente sandbox do Asaas no `.env.example` (adianta parte da Etapa 23)
+- [ ] Bloqueio suave ao fim do teste ou com fatura em atraso: o sistema fica só leitura, com aviso e botão para assinar; nunca apaga dado
+- [ ] Aba "Assinatura" em Configurações (só dono): plano atual, mensal ou anual, dias que restam do teste grátis, próxima cobrança, faturas (paga, em aberto, recusada) com o motivo da recusa e o botão para pagar de novo ou trocar o cartão
+- [ ] **Pronto quando:** cada item acima foi conferido na conta de demonstração, no computador e no celular, com teste nos pontos de regra (capacidade, forma de pagamento única, erros do bot, menu por papel, bloqueio por plano)
+
 ## Etapa 11 · Atendimento e agendamento pelo WhatsApp ou pelo site
 
 O cliente escolhe por onde quer marcar: conversando com o bot ou pelo link. Os dois canais usam a mesma agenda e as mesmas regras e criam a mesma comanda prevista.

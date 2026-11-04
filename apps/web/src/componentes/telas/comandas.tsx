@@ -638,6 +638,9 @@ function Fechamento({
   const valores = atuais.map((l) => lerMoeda(l.valor));
   const somado = valores.reduce<number>((s, v) => s + (v ?? 0), 0);
   const falta = total - somado;
+  // Cada forma uma vez: a usada numa linha sai das outras listas.
+  const usadas = new Set(atuais.map((l) => l.forma));
+  const livre = FORMAS_PAGAMENTO.find((f) => !usadas.has(f));
   const valido =
     desconto >= 0 &&
     desconto <= comanda.totalLiquido &&
@@ -700,7 +703,9 @@ function Fechamento({
                         ),
                       )
                     }
-                    opcoes={FORMAS_PAGAMENTO.map((f) => ({ valor: f, rotulo: NOME_FORMA[f] }))}
+                    opcoes={FORMAS_PAGAMENTO.filter((f) => f === l.forma || !usadas.has(f)).map(
+                      (f) => ({ valor: f, rotulo: NOME_FORMA[f] }),
+                    )}
                   />
                   <Campo
                     id={`fechar-valor-${i}`}
@@ -727,11 +732,12 @@ function Fechamento({
               <Botao
                 variante="secundario"
                 className="self-start"
-                disabled={atuais.length >= 4}
+                disabled={!livre}
                 onClick={() =>
+                  livre &&
                   setLinhas([
                     ...atuais,
-                    { forma: 'dinheiro', valor: falta > 0 ? valorParaCampo(falta) : '' },
+                    { forma: livre, valor: falta > 0 ? valorParaCampo(falta) : '' },
                   ])
                 }
               >

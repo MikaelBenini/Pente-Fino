@@ -769,7 +769,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
 
   // WhatsApp do Centro: a instância "teste" da Evolution API local.
   await tx.botConexao.create({
-    data: { unidadeId: centro.id, instancia: 'teste', status: 'conectado' },
+    data: { unidadeId: centro.id, instancia: 'teste', status: 'desconectado' },
   });
 
   // Todos os usuários da demonstração entram com a mesma senha (argon2id).
