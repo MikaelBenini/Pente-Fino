@@ -44,7 +44,8 @@ test('dono vai do ranking da equipe à ficha completa do barbeiro', async ({ pag
 });
 
 test('mês passado pela ficha muda o endereço e os números', async ({ page }) => {
-  await entrar(page, 'dono@demo.pentefino.dev');
+  // Gestor: o dono já entra em muitos testes e o login tem limite por minuto.
+  await entrar(page, 'gestor@demo.pentefino.dev');
   await page.goto('/equipe');
   await page
     .getByRole('table', { name: 'Desempenho da equipe' })
