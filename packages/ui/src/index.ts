@@ -3,6 +3,7 @@ export * from './barra-meta.js';
 export * from './bloco-agenda.js';
 export * from './botao.js';
 export * from './campo.js';
+export * from './campo-texto.js';
 export * from './cartao-indicador.js';
 export * from './cn.js';
 export * from './dialogo.js';

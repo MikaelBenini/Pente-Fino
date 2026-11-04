@@ -198,6 +198,7 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
       `/resumo/dia?data=${hoje}&unidadeId=${a.unidadeA}`,
       `/resumo/dia?data=${hoje}&profissionalId=${ids.prof}`,
       `/resumo/mes?mes=${mes}&unidadeId=${a.unidadeA}`,
+      `/bot`,
     ];
     for (const rota of rotas) {
       const r = await intruso.get(rota);
@@ -276,6 +277,8 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
         '/comissoes/pagamentos',
         { profissionalId: ids.prof, periodoInicio: `${mes}-01`, periodoFim: hoje, valor: 1 },
       ],
+      ['put', `/bot/horario/${a.unidadeA}`, { turnos: null }],
+      ['post', '/bot/simular', { unidadeId: a.unidadeA, entrada: 'oi', sessao: null }],
       ['post', '/caixa/abrir', { unidadeId: a.unidadeA, data: hoje, valorAbertura: 0 }],
       ['post', '/caixa/fechar', { unidadeId: a.unidadeA, data: hoje, totalInformado: 0 }],
     ];
@@ -315,6 +318,8 @@ describe('permissões: cada papel tentando o que não pode', () => {
   > => ({
     barbeiro: [
       ['get', () => '/usuarios'],
+      ['get', () => '/bot'],
+      ['post', () => '/bot/simular', { unidadeId: a.unidadeA, entrada: 'oi', sessao: null }],
       ['get', () => `/resumo/dia?data=${hoje}`],
       ['get', () => `/resumo/mes?mes=${mes}`],
       ['get', () => `/profissionais/desempenho?${periodo()}`],
@@ -378,6 +383,7 @@ describe('permissões: cada papel tentando o que não pode', () => {
     ],
     recepcao: [
       ['get', () => '/usuarios'],
+      ['get', () => '/bot'],
       ['get', () => `/resumo/dia?data=${hoje}`],
       ['get', () => `/resumo/mes?mes=${mes}`],
       ['get', () => `/profissionais/desempenho?${periodo()}`],
@@ -424,6 +430,9 @@ describe('permissões: cada papel tentando o que não pode', () => {
     ],
     gestor: [
       ['patch', () => '/conta', { nome: 'Outra' }],
+      ['put', () => '/bot/menu', { menu: { texto: 'x', opcoes: [] }, palavrasChave: [] }],
+      ['post', () => '/bot/menu/publicar'],
+      ['put', () => '/bot/mensagens', { mensagens: { boas_vindas: 'x' } }],
       ['post', () => '/unidades', { nome: 'Nova', diasTrabalho: [1], capacidade: 1 }],
       ['patch', () => `/unidades/${a.unidadeA}`, { capacidade: 9 }],
       [

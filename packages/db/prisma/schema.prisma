@@ -139,13 +139,12 @@ enum StatusBotConexao {
   @@map("status_bot_conexao")
 }
 
-enum TipoNoBot {
-  mensagem
-  menu
-  palavra_chave
-  acao
+enum StatusMenuBot {
+  rascunho
+  publicado
+  arquivado
 
-  @@map("tipo_no_bot")
+  @@map("status_menu_bot")
 }
 
 enum TipoToken {
@@ -161,6 +160,13 @@ enum TipoModeloMensagem {
   confirmacao
   retorno
   aniversario
+  boas_vindas
+  fora_horario
+  nao_entendi
+  transferencia
+  encerramento
+  saida_avisos
+  volta_avisos
 
   @@map("tipo_modelo_mensagem")
 }
@@ -208,7 +214,7 @@ model Conta {
   metas              Meta[]
   auditorias         Auditoria[]
   botConexoes        BotConexao[]
-  botNos             BotNo[]
+  botMenus           BotMenu[]
   modelosMensagem    ModeloMensagem[]
   tokenAcessos       TokenAcesso[]
 
@@ -231,6 +237,8 @@ model Unidade {
   slug               String?  @unique
   /// Link público ligado: só então a página de agendamento responde.
   agendamentoPublico Boolean  @default(false) @map("agendamento_publico")
+  /// Horário do bot: lista de turnos (TurnoBot). Vazio = segue o expediente da equipe.
+  botHorario         Json?    @map("bot_horario")
   criadoEm           DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm       DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -246,7 +254,6 @@ model Unidade {
   despesas        Despesa[]
   metas           Meta[]
   botConexao      BotConexao?
-  botNos          BotNo[]
   modelosMensagem ModeloMensagem[]
 
   @@index([contaId])
@@ -291,6 +298,7 @@ model Usuario {
   agendamentosCriados Agendamento[]       @relation("AgendamentoCriadoPor")
   comandasFechadas    Comanda[]           @relation("ComandaFechadaPor")
   comandasConfirmadas Comanda[]           @relation("ComandaConfirmadaPor")
+  botMenusPublicados  BotMenu[]           @relation("BotMenuPublicadoPor")
   pagamentosRecebidos Pagamento[]
   caixasAbertos       CaixaDia[]          @relation("CaixaAbertoPor")
   caixasFechados      CaixaDia[]          @relation("CaixaFechadoPor")
@@ -606,15 +614,15 @@ model Comanda {
   criadoEm           DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm       DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta        Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  unidade      Unidade       @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
-  cliente      Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
-  profissional Profissional  @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
-  agendamento  Agendamento?  @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
-  fechadaPor   Usuario?      @relation("ComandaFechadaPor", fields: [fechadaPorId], references: [id], onDelete: SetNull)
-  confirmadaPor Usuario?     @relation("ComandaConfirmadaPor", fields: [confirmadaPorId], references: [id], onDelete: SetNull)
-  itens        ItemComanda[]
-  pagamentos   Pagamento[]
+  conta         Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade       Unidade       @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
+  cliente       Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  profissional  Profissional  @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+  agendamento   Agendamento?  @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
+  fechadaPor    Usuario?      @relation("ComandaFechadaPor", fields: [fechadaPorId], references: [id], onDelete: SetNull)
+  confirmadaPor Usuario?      @relation("ComandaConfirmadaPor", fields: [confirmadaPorId], references: [id], onDelete: SetNull)
+  itens         ItemComanda[]
+  pagamentos    Pagamento[]
 
   @@index([contaId])
   @@index([unidadeId, status, fechadaEm])
@@ -834,30 +842,24 @@ model BotConexao {
   @@map("bot_conexao")
 }
 
-/// Nó da árvore do menu. Unidade vazia = menu padrão da conta.
-model BotNo {
-  id            String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contaId       String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
-  unidadeId     String?   @map("unidade_id") @db.Uuid
-  paiId         String?   @map("pai_id") @db.Uuid
-  tipo          TipoNoBot
-  texto         String
-  opcaoNumero   Int?      @map("opcao_numero")
-  palavrasChave String[]  @default([]) @map("palavras_chave")
-  /// Ação executada pelo nó: agendar, ver_precos, falar_com_atendente, voltar_menu.
-  acao          String?
-  ordem         Int       @default(0)
-  criadoEm      DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm  DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+/// Versões do menu do bot (sem IA). Uma em rascunho e uma publicada por conta; as
+/// publicadas antes ficam arquivadas para "voltar à versão anterior". O menu é um documento
+/// (MenuBot de @pente-fino/shared), validado antes de publicar.
+model BotMenu {
+  id             String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String        @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  status         StatusMenuBot
+  menu           Json
+  publicadoEm    DateTime?     @map("publicado_em") @db.Timestamptz(3)
+  publicadoPorId String?       @map("publicado_por_id") @db.Uuid
+  criadoEm       DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  unidade Unidade? @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
-  pai     BotNo?   @relation("BotNoFilhos", fields: [paiId], references: [id], onDelete: Cascade)
-  filhos  BotNo[]  @relation("BotNoFilhos")
+  conta        Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  publicadoPor Usuario? @relation("BotMenuPublicadoPor", fields: [publicadoPorId], references: [id], onDelete: SetNull)
 
-  @@index([contaId])
-  @@index([paiId])
-  @@map("bot_no")
+  @@index([contaId, status])
+  @@map("bot_menu")
 }
 
 /// Texto com variáveis entre chaves: {cliente}, {data}, {hora}, {profissional}, {unidade}.

@@ -238,17 +238,17 @@ O dono monta como o bot responde, sem inteligência artificial: menu numerado, p
 - [ ] Conectar o WhatsApp da unidade pelo painel: QR Code na tela Bot, estado da conexão (conectado, lendo QR, desconectado), reconectar e desconectar; um número por unidade (`bot_conexao`)
 - [ ] Webhook da Evolution API entra numa fila do worker, com segredo conferido; mensagem repetida (mesmo id) é descartada
 - [ ] Provedor atrás de uma interface (`ProvedorWhatsApp`: enviar, estado, QR), para trocar a Evolution API sem reescrever o fluxo
-- [ ] Motor de fluxo em `packages/shared`, com testes: nós de mensagem, menu numerado, palavra-chave, pergunta com resposta guardada e ação; sessão por número que expira em 30 minutos sem resposta e volta ao menu (`bot_sessao`)
-- [ ] Construtor do menu (tela Bot): árvore editável, reordenar opções, textos com variáveis (`{nome}`, `{unidade}`, `{endereco}`, `{horario}`); avisa opção repetida e caminho sem saída
-- [ ] Palavras-chave reconhecidas em qualquer ponto da conversa ("preço", "endereço", "horário", "clube"), com sinônimos, sem diferenciar acento nem maiúscula
-- [ ] Mensagens prontas editáveis: boas-vindas, fora do horário, não entendi, transferência para atendente, encerramento (`modelo_mensagem`)
-- [ ] Horário do bot por unidade (segue o expediente ou tem horário próprio); fora do horário, responde e oferece agendar mesmo assim
-- [ ] Simulador de conversa no painel: o dono testa o menu como se fosse o cliente, antes de publicar
-- [ ] Rascunho e publicação: editar não afeta quem está conversando; publicar troca a versão; dá para voltar à versão anterior
-- [ ] Menu modelo na configuração guiada: Agendar, Meus horários, Preços, Endereço e horário, Clube, Falar com atendente
-- [ ] Respostas prontas ligadas ao cadastro: preços vigentes da unidade, endereço com link do mapa, horário de funcionamento e feriados do calendário
+- [x] Motor de fluxo em `packages/shared`, com testes: nós de mensagem, menu numerado, palavra-chave, pergunta com resposta guardada e ação; sessão por número que expira em 30 minutos sem resposta e volta ao menu (`bot_sessao`) (`packages/shared/src/bot.ts`, puro e testado; os números das opções saem da ordem, então não repetem; guardar a sessão no banco chega com a conexão)
+- [x] Construtor do menu (tela Bot): árvore editável, reordenar opções, textos com variáveis (`{nome}`, `{unidade}`, `{endereco}`, `{horario}`); avisa opção repetida e caminho sem saída (tela Bot, aba Menu: submenus até 3 níveis, subir e descer opções, problemas apontados enquanto edita)
+- [x] Palavras-chave reconhecidas em qualquer ponto da conversa ("preço", "endereço", "horário", "clube"), com sinônimos, sem diferenciar acento nem maiúscula
+- [x] Mensagens prontas editáveis: boas-vindas, fora do horário, não entendi, transferência para atendente, encerramento (`modelo_mensagem`) (mais "parar avisos" e "voltar a receber")
+- [x] Horário do bot por unidade (segue o expediente ou tem horário próprio); fora do horário, responde e oferece agendar mesmo assim (feriado do calendário conta como fechado; sem expediente cadastrado, o bot não diz que está fechado)
+- [x] Simulador de conversa no painel: o dono testa o menu como se fosse o cliente, antes de publicar (com respostas rápidas, cliente cadastrado ou número novo, e "fora do horário")
+- [x] Rascunho e publicação: editar não afeta quem está conversando; publicar troca a versão; dá para voltar à versão anterior (versões em `bot_menu`; o banco garante um rascunho e um publicado por conta)
+- [x] Menu modelo na configuração guiada: Agendar, Meus horários, Preços, Endereço e horário, Clube, Falar com atendente (Agendar, Preços, Endereço e horário, Atendente; "Meus horários" e "Clube" entram nas etapas 11 e 13)
+- [x] Respostas prontas ligadas ao cadastro: preços vigentes da unidade, endereço com link do mapa, horário de funcionamento e feriados do calendário (preços vigentes da unidade, endereço com `{mapa}`, horário por extenso)
 - [ ] Cliente reconhecido pelo telefone: o bot cumprimenta pelo nome; número novo vira cliente com origem "bot"
-- [ ] Consentimento: na primeira conversa o cliente aceita receber avisos; "SAIR" a qualquer momento desliga lembretes, pesquisas e convites (`cliente.consentimento_msg`), "VOLTAR" religa; a escolha fica registrada com data
+- [ ] Consentimento: na primeira conversa o cliente aceita receber avisos; "SAIR" a qualquer momento desliga lembretes, pesquisas e convites (`cliente.consentimento_msg`), "RECEBER" religa ("voltar" é palavra de navegação do menu); a escolha fica registrada com data (a regra de SAIR e RECEBER já está no motor; gravar a escolha chega com a conexão)
 - [ ] Proteção do número: fila de envio espaçado e com intervalo aleatório, limite por minuto, nenhuma mensagem para quem nunca falou com a barbearia, nenhum envio em massa
 - [ ] Histórico de mensagens no perfil do cliente (`mensagem`), para dono, gestor e recepção
 - [ ] Aviso no painel quando a conexão cair, com o passo a passo para reconectar

@@ -20,3 +20,5 @@ export * from './publico.js';
 export * from './vigencia.js';
 export * from './desempenho.js';
 export * from './resumo-dia.js';
+export * from './bot.js';
+export * from './esquemas-bot.js';
