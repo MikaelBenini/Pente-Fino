@@ -22,6 +22,12 @@ import { UnidadesController } from './unidades/unidades.controller.js';
 import { AgendaController } from './agenda/agenda.controller.js';
 import { AgendaService } from './agenda/agenda.service.js';
 import { CaixaController } from './caixa/caixa.controller.js';
+import { ComissoesController } from './comissoes/comissoes.controller.js';
+import { ComissoesService } from './comissoes/comissoes.service.js';
+import { DespesasController } from './despesas/despesas.controller.js';
+import { MeController } from './me/me.controller.js';
+import { ResultadosController } from './resultados/resultados.controller.js';
+import { ResultadosService } from './resultados/resultados.service.js';
 import { ClientesController } from './clientes/clientes.controller.js';
 import { ComandasController } from './comandas/comandas.controller.js';
 import { ComandasService } from './comandas/comandas.service.js';
@@ -95,6 +101,10 @@ export class ComumModule {}
     AgendaController,
     ComandasController,
     CaixaController,
+    DespesasController,
+    ResultadosController,
+    ComissoesController,
+    MeController,
     SaudeController,
   ],
   providers: [
@@ -104,6 +114,8 @@ export class ComumModule {}
     ProfissionaisService,
     ComandasService,
     AgendaService,
+    ResultadosService,
+    ComissoesService,
     // Ordem das guardas: limite de requisições → login → papel e unidade.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AutenticacaoGuard },

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { Secao } from '@/componentes/secao';
+import { TelaHoje } from '@/componentes/telas/barbeiro';
 
 export const metadata: Metadata = { title: 'Hoje' };
 
 export default function Pagina() {
-  return <Secao id="hoje" />;
+  return <TelaHoje />;
 }

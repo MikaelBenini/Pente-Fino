@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { Secao } from '@/componentes/secao';
+import { TelaMetricas } from '@/componentes/telas/metricas';
 
 export const metadata: Metadata = { title: 'Métricas e metas' };
 
 export default function Pagina() {
-  return <Secao id="metricas" />;
+  return <TelaMetricas />;
 }

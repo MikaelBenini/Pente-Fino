@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { Secao } from '@/componentes/secao';
+import { TelaFinanceiro } from '@/componentes/telas/financeiro';
 
 export const metadata: Metadata = { title: 'Financeiro' };
 
 export default function Pagina() {
-  return <Secao id="financeiro" />;
+  return <TelaFinanceiro />;
 }
