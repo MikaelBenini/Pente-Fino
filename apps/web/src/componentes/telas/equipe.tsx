@@ -240,7 +240,7 @@ function Profissionais() {
   );
 }
 
-function NovoProfissional({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
+export function NovoProfissional({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
   const { usuario, unidadeAtiva } = useApp();
   const unidades = useUnidadesDetalhe();
   const usuarios = useUsuariosEquipe();

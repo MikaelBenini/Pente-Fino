@@ -22,7 +22,7 @@ import {
   ModalConfirmacao,
   Selecao,
 } from '@pente-fino/ui';
-import { Coins, Plus, ReceiptText } from 'lucide-react';
+import { Coins, FileSpreadsheet, FileText, Plus, ReceiptText } from 'lucide-react';
 import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
@@ -53,6 +53,7 @@ export function TelaFinanceiro() {
         pergunta="Quanto sobrou?"
         acao={<SeletorMes mes={mes} onMudar={setMes} />}
       />
+      <Exportar mes={mes} />
       <Abas
         rotulo="Financeiro"
         atual={aba}
@@ -63,6 +64,24 @@ export function TelaFinanceiro() {
           { id: 'comissoes', rotulo: 'Comissões', conteudo: <Comissoes mes={mes} /> },
         ]}
       />
+    </div>
+  );
+}
+
+function Exportar({ mes }: { mes: string }) {
+  const { unidadeAtiva } = useApp();
+  const unidade = unidadeAtiva !== 'todas' ? `&unidadeId=${unidadeAtiva}` : '';
+  const classe =
+    'inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3 focus-visible:outline-2 focus-visible:outline-foco';
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-tinta-suave">Para o contador:</span>
+      <a href={`/api/exportacao?mes=${mes}&formato=csv${unidade}`} className={classe}>
+        <FileSpreadsheet aria-hidden className="size-4" /> Planilha do mês (CSV)
+      </a>
+      <a href={`/api/exportacao?mes=${mes}&formato=pdf${unidade}`} className={classe}>
+        <FileText aria-hidden className="size-4" /> Resumo (PDF)
+      </a>
     </div>
   );
 }

@@ -169,6 +169,8 @@ model Conta {
   status                  StatusConta @default(teste)
   /// Esconde o telefone do cliente na tela do barbeiro (docs: matriz de permissões).
   ocultarTelefoneBarbeiro Boolean     @default(true) @map("ocultar_telefone_barbeiro")
+  /// Quando o dono terminou a configuração guiada (null = ainda não terminou).
+  configuradaEm           DateTime?   @map("configurada_em") @db.Timestamptz(3)
   criadoEm                DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm            DateTime    @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -204,19 +206,23 @@ model Conta {
 }
 
 model Unidade {
-  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
-  nome         String
-  endereco     String?
-  telefone     String?
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId            String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome               String
+  endereco           String?
+  telefone           String?
   /// Dias da semana com expediente: 0 = domingo … 6 = sábado.
-  diasTrabalho Int[]    @default([1, 2, 3, 4, 5, 6]) @map("dias_trabalho")
+  diasTrabalho       Int[]    @default([1, 2, 3, 4, 5, 6]) @map("dias_trabalho")
   /// Cadeiras atendendo ao mesmo tempo; alimenta a ocupação.
-  capacidade   Int      @default(1)
-  fuso         String   @default("America/Sao_Paulo")
-  ativa        Boolean  @default(true)
-  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  capacidade         Int      @default(1)
+  fuso               String   @default("America/Sao_Paulo")
+  ativa              Boolean  @default(true)
+  /// Endereço do link público de agendamento (/agendar?u=slug). Único no sistema.
+  slug               String?  @unique
+  /// Link público ligado: só então a página de agendamento responde.
+  agendamentoPublico Boolean  @default(false) @map("agendamento_publico")
+  criadoEm           DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm       DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   conta           Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
   calendario      CalendarioUnidade[]

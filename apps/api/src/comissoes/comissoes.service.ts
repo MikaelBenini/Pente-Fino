@@ -15,6 +15,7 @@ import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade, GESTAO } from '../comum/escopo.js';
 import { escopoUnidades, somarDias } from '../resultados/resultados.service.js';
+import { emSequencia, umPorVez } from '../comum/sequencia.js';
 
 const inicioDoDia = (d: string) => new Date(`${d}T00:00:00-03:00`);
 
@@ -30,7 +31,7 @@ export class ComissoesService {
     ate: string,
   ): Promise<ResumoComissao> {
     const periodo = { gte: inicioDoDia(de), lt: inicioDoDia(somarDias(ate, 1)) };
-    const [fechadas, abertas, pagamentos] = await Promise.all([
+    const [fechadas, abertas, pagamentos] = await emSequencia([
       tx.itemComanda.aggregate({
         _sum: { comissaoValor: true },
         where: {
@@ -100,7 +101,7 @@ export class ComissoesService {
         include: { usuario: true },
         orderBy: { usuario: { nome: 'asc' } },
       });
-      const r = await Promise.all(profs.map((p) => this.resumo(tx, p, de, ate)));
+      const r = await umPorVez(profs, (p) => this.resumo(tx, p, de, ate));
       return r.filter((x, i) => profs[i]!.ativo || x.fechado > 0 || x.aReceber > 0);
     });
   }

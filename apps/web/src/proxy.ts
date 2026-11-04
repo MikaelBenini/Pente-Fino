@@ -1,8 +1,16 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 /** Telas sem login. Convite e redefinição abrem mesmo com sessão (o link vem por e-mail). */
-const PUBLICAS = ['/entrar', '/esqueci-senha', '/redefinir-senha', '/convite', '/offline'];
-const SO_SEM_SESSAO = ['/entrar', '/esqueci-senha'];
+const PUBLICAS = [
+  '/entrar',
+  '/esqueci-senha',
+  '/redefinir-senha',
+  '/convite',
+  '/offline',
+  '/cadastro',
+  '/agendar',
+];
+const SO_SEM_SESSAO = ['/entrar', '/esqueci-senha', '/cadastro'];
 
 /**
  * Checagem otimista: só olha se existe o cookie de sessão. Quem decide se a sessão

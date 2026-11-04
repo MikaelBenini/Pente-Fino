@@ -25,8 +25,10 @@ import { aplicarErroDaApi } from '@/lib/formularios';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
+import { ImportarPlanilha, LinkAgendamento } from './link-e-importacao';
 
 export function TelaConfiguracoes() {
+  const { papeis } = useApp();
   const [aba, setAba] = useState('barbearia');
   return (
     <div className="flex flex-col gap-8">
@@ -39,6 +41,10 @@ export function TelaConfiguracoes() {
           { id: 'barbearia', rotulo: 'Barbearia', conteudo: <Barbearia /> },
           { id: 'unidades', rotulo: 'Unidades', conteudo: <Unidades /> },
           { id: 'calendario', rotulo: 'Folgas e feriados', conteudo: <Calendario /> },
+          { id: 'link', rotulo: 'Link de agendamento', conteudo: <LinkAgendamento /> },
+          ...(papeis.includes('dono')
+            ? [{ id: 'importar', rotulo: 'Importar planilha', conteudo: <ImportarPlanilha /> }]
+            : []),
         ]}
       />
     </div>
@@ -287,33 +293,35 @@ function FormularioUnidade({
           erro={formState.errors.telefone?.message}
           {...register('telefone')}
         />
-        <fieldset className="flex flex-col gap-2">
+        <fieldset className="min-w-0">
           <legend className="mb-1.5 text-sm font-medium">Dias de trabalho</legend>
-          <div className="flex flex-wrap gap-2">
-            {NOMES_DIAS_CURTOS.map((d, i) => (
-              <Marcador
-                key={d}
-                id={`unidade-dia-${i}`}
-                forma="ficha"
-                rotulo={d}
-                aria-label={NOMES_DIAS[i]}
-                checked={dias.includes(i)}
-                onChange={(e) =>
-                  setValue(
-                    'diasTrabalho',
-                    e.target.checked ? [...dias, i] : dias.filter((x) => x !== i),
-                    { shouldValidate: true },
-                  )
-                }
-              />
-            ))}
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              {NOMES_DIAS_CURTOS.map((d, i) => (
+                <Marcador
+                  key={d}
+                  id={`unidade-dia-${i}`}
+                  forma="ficha"
+                  rotulo={d}
+                  aria-label={NOMES_DIAS[i]}
+                  checked={dias.includes(i)}
+                  onChange={(e) =>
+                    setValue(
+                      'diasTrabalho',
+                      e.target.checked ? [...dias, i] : dias.filter((x) => x !== i),
+                      { shouldValidate: true },
+                    )
+                  }
+                />
+              ))}
+            </div>
+            {formState.errors.diasTrabalho && (
+              <p className="text-sm text-perigo-texto">{formState.errors.diasTrabalho.message}</p>
+            )}
+            <p className="text-sm text-tinta-suave">
+              Base da projeção do mês. Feriados e folgas ficam na aba ao lado.
+            </p>
           </div>
-          {formState.errors.diasTrabalho && (
-            <p className="text-sm text-perigo-texto">{formState.errors.diasTrabalho.message}</p>
-          )}
-          <p className="text-sm text-tinta-suave">
-            Base da projeção do mês. Feriados e folgas ficam na aba ao lado.
-          </p>
         </fieldset>
         <Campo
           id="unidade-capacidade"

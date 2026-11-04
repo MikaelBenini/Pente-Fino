@@ -28,6 +28,7 @@ import { Erros } from '../comum/erros.js';
 import { data, dataTexto, GESTAO } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { escopoUnidades } from '../resultados/resultados.service.js';
+import { umPorVez } from '../comum/sequencia.js';
 
 const consulta = z.object({
   mes: z.string().regex(/^\d{4}-\d{2}$/, { error: 'Mês inválido.' }),
@@ -109,7 +110,7 @@ export class DespesasController {
         orderBy: [{ pago: 'asc' }, { vencimento: 'asc' }, { descricao: 'asc' }],
         select: { id: true },
       });
-      return Promise.all(lista.map((d) => detalhe(tx, d.id)));
+      return umPorVez(lista, (d) => detalhe(tx, d.id));
     });
   }
 

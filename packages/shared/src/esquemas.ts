@@ -54,9 +54,21 @@ export const unidadeSchema = z.object({
     .max(50),
 });
 export type UnidadeEntrada = z.infer<typeof unidadeSchema>;
-export const unidadeParcialSchema = unidadeSchema
-  .partial()
-  .extend({ ativa: z.boolean().optional() });
+export const unidadeParcialSchema = unidadeSchema.partial().extend({
+  ativa: z.boolean().optional(),
+  /** Endereço do link público: /agendar?u=<slug>. */
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, {
+      error: 'Use letras minúsculas, números e hífen (ex.: barbearia-centro).',
+    })
+    .min(3, { error: 'Pelo menos 3 caracteres.' })
+    .max(60)
+    .optional(),
+  agendamentoPublico: z.boolean().optional(),
+});
 
 export const diaCalendarioSchema = z.object({
   trabalha: z.boolean(),
@@ -73,6 +85,8 @@ export interface UnidadeDetalhe {
   capacidade: number;
   fuso: string;
   ativa: boolean;
+  slug: string | null;
+  agendamentoPublico: boolean;
 }
 
 export interface DiaCalendario {

@@ -40,6 +40,8 @@ const SELECAO = {
   capacidade: true,
   fuso: true,
   ativa: true,
+  slug: true,
+  agendamentoPublico: true,
 } as const;
 const periodoSchema = z.object({
   de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
@@ -117,6 +119,15 @@ export class UnidadesController {
           await tx.unidade.count({ where: { ativa: true } }),
         );
         if (limite) throw Erros.requisicaoInvalida('limite_plano', limite);
+      }
+      const slugFinal = dados.slug ?? antes.slug;
+      if ((dados.agendamentoPublico ?? antes.agendamentoPublico) && !slugFinal) {
+        throw Erros.validacao([
+          {
+            campo: 'slug',
+            mensagem: 'Defina o endereço do link antes de ligar o agendamento público.',
+          },
+        ]);
       }
       const depois = await tx.unidade.update({
         where: { id: unidadeId },

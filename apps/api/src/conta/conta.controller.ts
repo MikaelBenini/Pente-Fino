@@ -6,6 +6,7 @@ import { Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Corpo } from '../comum/validacao.js';
+import { emSequencia } from '../comum/sequencia.js';
 
 @ApiTags('Conta')
 @ApiBearerAuth()
@@ -18,7 +19,7 @@ export class ContaController {
   async ver() {
     return this.banco.daConta(async (tx) => {
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: Contexto.usuario().contaId } });
-      const [unidades, profissionais] = await Promise.all([
+      const [unidades, profissionais] = await emSequencia([
         tx.unidade.count({ where: { ativa: true } }),
         tx.profissional.count({ where: { ativo: true } }),
       ]);

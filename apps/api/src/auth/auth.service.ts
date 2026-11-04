@@ -273,7 +273,8 @@ export class AuthService {
     };
   }
 
-  private async montarSessao(tx: Transacao, usuarioId: string, familia?: string): Promise<Sessao> {
+  /** Emite a sessão (JWT + token de renovação) do usuário numa transação da conta dele. */
+  async montarSessao(tx: Transacao, usuarioId: string, familia?: string): Promise<Sessao> {
     const usuario = await this.usuarioSessao(tx, usuarioId);
     const refreshToken = gerarTokenOpaco();
     const tipo: TipoToken = 'renovacao';

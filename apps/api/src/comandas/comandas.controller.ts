@@ -9,6 +9,8 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -23,12 +25,22 @@ import {
   type NovaComandaEntrada,
   type NovoItemEntrada,
 } from '@pente-fino/shared';
-import type { z } from 'zod';
+import type { Response } from 'express';
+import { z } from 'zod';
 import { Auditada } from '../auditoria/auditoria.js';
 import { Papeis } from '../auth/decoradores.js';
 import { TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { ComandasService } from './comandas.service.js';
+
+const impressaoSchema = z.object({
+  unidadeId: z.uuid({ error: 'Unidade inválida.' }),
+  data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
+  porFolha: z.coerce
+    .number()
+    .pipe(z.union([z.literal(4), z.literal(6)]))
+    .default(4),
+});
 
 @ApiTags('Comandas')
 @ApiBearerAuth()
@@ -43,6 +55,21 @@ export class ComandasController {
   })
   listar(@Consulta(consultaComandasSchema) filtro: z.infer<typeof consultaComandasSchema>) {
     return this.servico.listar(filtro);
+  }
+
+  @Get('impressao')
+  @Papeis('dono', 'gestor', 'recepcao')
+  @ApiOperation({ summary: 'PDF A4 das comandas do dia (4 ou 6 por folha), com QR code' })
+  async impressao(
+    @Consulta(impressaoSchema) c: z.infer<typeof impressaoSchema>,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const pdf = await this.servico.impressao(c.unidadeId, c.data, c.porFolha);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="comandas-${c.data}.pdf"`,
+    });
+    return new StreamableFile(Buffer.from(pdf));
   }
 
   @Get(':id')
