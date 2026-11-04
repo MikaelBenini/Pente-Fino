@@ -11,6 +11,7 @@ import type {
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { api } from './api';
 import type {
+  EstadoBot,
   ResumoDoDia,
   ResumoDoMes,
   FichaProfissional,
@@ -303,3 +304,7 @@ export const useResumoMes = (unidade: string | null, mes: string, profissional: 
         `resumo/mes?mes=${mes}${comUnidade(unidade)}${comProfissional(profissional)}`,
       ),
   });
+
+export const chaveBot = ['bot'] as const;
+/** Menu publicado e rascunho, mensagens prontas e horário das unidades. */
+export const useBot = () => useQuery({ queryKey: chaveBot, queryFn: () => api<EstadoBot>('bot') });

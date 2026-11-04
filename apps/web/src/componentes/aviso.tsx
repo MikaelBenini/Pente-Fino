@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck, Info } from 'lucide-react';
+import { CircleAlert, CircleCheck, Info, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@pente-fino/ui';
 
@@ -6,6 +6,7 @@ const TONS = {
   erro: { icone: CircleAlert, classe: 'border-perigo-texto/50 text-perigo-texto' },
   sucesso: { icone: CircleCheck, classe: 'border-acao-texto/50 text-acao-texto' },
   info: { icone: Info, classe: 'border-borda-forte text-tinta-suave' },
+  aviso: { icone: TriangleAlert, classe: 'border-aviso-texto/50 text-aviso-texto' },
 };
 
 /** Mensagem de bloco (erro geral do formulário, confirmação). Lida por leitores de tela. */

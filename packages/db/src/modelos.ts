@@ -1,6 +1,12 @@
 // Modelos prontos para uma conta nova: o dono começa com o básico cadastrado e
 // ajusta depois. Usado pelo seed e, na Etapa 4, pelo cadastro de conta.
-import { dataParaBanco, type DataISO } from '@pente-fino/shared';
+import {
+  dataParaBanco,
+  MENSAGENS_BOT_PADRAO,
+  MENU_BOT_PADRAO,
+  TIPOS_MENSAGEM_BOT,
+  type DataISO,
+} from '@pente-fino/shared';
 import type { GrupoDespesa, Prisma, TipoModeloMensagem } from './generated/prisma/client.js';
 
 type Tx = Prisma.TransactionClient;
@@ -160,83 +166,6 @@ export const MODELO_MENSAGENS: readonly { tipo: TipoModeloMensagem; texto: strin
   },
 ];
 
-/** Nó do menu padrão. Filhos de menu têm opcaoNumero; palavras-chave valem em qualquer ponto. */
-interface ModeloNoBot {
-  tipo: 'mensagem' | 'menu' | 'palavra_chave' | 'acao';
-  texto: string;
-  opcaoNumero?: number;
-  palavrasChave?: string[];
-  acao?: string;
-  filhos?: ModeloNoBot[];
-}
-
-/** Menu padrão do bot (sem IA): árvore de opções numeradas e palavras-chave. */
-export const MODELO_MENU_BOT: readonly ModeloNoBot[] = [
-  {
-    tipo: 'menu',
-    texto:
-      'Olá! Aqui é a {unidade}. Como posso ajudar?\n' +
-      '1. Agendar horário\n2. Ver preços\n3. Endereço e horário de funcionamento\n4. Falar com um atendente',
-    filhos: [
-      { tipo: 'acao', texto: 'Vamos agendar! Escolha o serviço:', opcaoNumero: 1, acao: 'agendar' },
-      { tipo: 'acao', texto: 'Nossos preços:', opcaoNumero: 2, acao: 'ver_precos' },
-      {
-        tipo: 'mensagem',
-        texto:
-          'Estamos em {endereco}. Funcionamos {horario_funcionamento}.\nDigite 0 para voltar ao menu.',
-        opcaoNumero: 3,
-      },
-      {
-        tipo: 'acao',
-        texto: 'Certo! Um atendente vai falar com você em instantes.',
-        opcaoNumero: 4,
-        acao: 'falar_com_atendente',
-      },
-    ],
-  },
-  {
-    tipo: 'palavra_chave',
-    texto: 'Nossos preços:',
-    palavrasChave: ['preço', 'preco', 'valor', 'quanto custa'],
-    acao: 'ver_precos',
-  },
-  {
-    tipo: 'palavra_chave',
-    texto: 'Vamos agendar! Escolha o serviço:',
-    palavrasChave: ['agendar', 'marcar', 'horário', 'horario'],
-    acao: 'agendar',
-  },
-  {
-    tipo: 'palavra_chave',
-    texto: 'Certo! Um atendente vai falar com você em instantes.',
-    palavrasChave: ['atendente', 'humano', 'pessoa'],
-    acao: 'falar_com_atendente',
-  },
-  {
-    tipo: 'palavra_chave',
-    texto: 'Voltando ao menu.',
-    palavrasChave: ['menu', '0', 'voltar'],
-    acao: 'voltar_menu',
-  },
-];
-
-async function criarNos(tx: Tx, nos: readonly ModeloNoBot[], paiId: string | null): Promise<void> {
-  for (const [ordem, no] of nos.entries()) {
-    const criado = await tx.botNo.create({
-      data: {
-        paiId,
-        tipo: no.tipo,
-        texto: no.texto,
-        opcaoNumero: no.opcaoNumero ?? null,
-        palavrasChave: no.palavrasChave ?? [],
-        acao: no.acao ?? null,
-        ordem,
-      },
-    });
-    if (no.filhos) await criarNos(tx, no.filhos, criado.id);
-  }
-}
-
 export interface OpcoesModelos {
   /** Unidades que recebem a tabela de preços sugerida. */
   unidadeIds: readonly string[];
@@ -268,7 +197,19 @@ export async function aplicarModelosIniciais(
     });
   }
   await tx.categoriaDespesa.createMany({ data: [...MODELO_CATEGORIAS_DESPESA] });
-  await tx.modeloMensagem.createMany({ data: [...MODELO_MENSAGENS] });
-  await criarNos(tx, MODELO_MENU_BOT, null);
+  await tx.modeloMensagem.createMany({
+    data: [
+      ...MODELO_MENSAGENS,
+      ...TIPOS_MENSAGEM_BOT.map((tipo) => ({ tipo, texto: MENSAGENS_BOT_PADRAO[tipo] })),
+    ],
+  });
+  // Menu do bot pronto e publicado: a barbearia já tem um bot que funciona e só edita.
+  await tx.botMenu.create({
+    data: {
+      status: 'publicado',
+      menu: structuredClone(MENU_BOT_PADRAO) as unknown as Prisma.InputJsonValue,
+      publicadoEm: new Date(),
+    },
+  });
   return servicos;
 }

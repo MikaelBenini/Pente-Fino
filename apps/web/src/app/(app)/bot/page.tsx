@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { Secao } from '@/componentes/secao';
+import { TelaBot } from '@/componentes/telas/bot';
 
-export const metadata: Metadata = { title: 'Bot' };
+export const metadata: Metadata = { title: 'Bot do WhatsApp' };
 
 export default function Pagina() {
-  return <Secao id="bot" />;
+  return <TelaBot />;
 }
