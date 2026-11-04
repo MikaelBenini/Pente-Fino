@@ -11,7 +11,15 @@ import {
   renovar,
   urlDaApi,
 } from '@/lib/servidor/sessao';
-import { caminhoValido, LIMITE_CORPO_BYTES, origemPermitida } from '@/lib/seguranca';
+import {
+  caminhoValido,
+  hostsDeDesenvolvimento,
+  LIMITE_CORPO_BYTES,
+  origemPermitida,
+} from '@/lib/seguranca';
+
+/** Origens extras aceitas só em desenvolvimento (Codespaces). */
+const HOSTS_EXTRAS = hostsDeDesenvolvimento(process.env);
 
 /** Rotas internas: o navegador não chama direto. */
 const BLOQUEADAS = new Set(['auth/renovar']);
@@ -54,6 +62,7 @@ async function encaminhar(
       req.headers.get('host'),
       req.headers.get('origin'),
       req.headers.get('referer'),
+      HOSTS_EXTRAS,
     )
   ) {
     return NextResponse.json(

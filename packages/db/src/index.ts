@@ -7,6 +7,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Prisma, PrismaClient } from './generated/prisma/client.js';
 
 export * from './generated/prisma/client.js';
+export * from './avisos.js';
 export * from './modelos.js';
 export * from './vigencia.js';
 

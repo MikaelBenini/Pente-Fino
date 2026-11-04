@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { caminhoValido, destinoSeguro, origemPermitida } from './seguranca';
+import { caminhoValido, destinoSeguro, hostsDeDesenvolvimento, origemPermitida } from './seguranca';
 
 describe('destinoSeguro', () => {
   it('aceita rota interna com consulta', () => {
@@ -46,5 +46,41 @@ describe('origemPermitida', () => {
       ),
     ).toBe(true);
     expect(origemPermitida('POST', 'app.pentefino.com.br', null, null)).toBe(false);
+  });
+});
+
+describe('hostsDeDesenvolvimento (Codespaces)', () => {
+  const codespace = {
+    CODESPACE_NAME: 'fluffy-space-123',
+    GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: 'app.github.dev',
+  };
+
+  it('aceita o endereço encaminhado do Codespace só fora de produção', () => {
+    const extras = hostsDeDesenvolvimento({ ...codespace, NODE_ENV: 'development' });
+    expect(extras).toEqual(['fluffy-space-123-3000.app.github.dev']);
+    expect(
+      origemPermitida(
+        'POST',
+        'localhost:3000',
+        'https://fluffy-space-123-3000.app.github.dev',
+        null,
+        extras,
+      ),
+    ).toBe(true);
+    expect(
+      origemPermitida('POST', 'localhost:3000', 'https://evil.app.github.dev', null, extras),
+    ).toBe(false);
+    expect(hostsDeDesenvolvimento({ ...codespace, NODE_ENV: 'production' })).toEqual([]);
+  });
+
+  it('fora do Codespace, ou com valores estranhos, não libera nada', () => {
+    expect(hostsDeDesenvolvimento({ NODE_ENV: 'development' })).toEqual([]);
+    expect(
+      hostsDeDesenvolvimento({
+        ...codespace,
+        CODESPACE_NAME: 'x/../evil.com#',
+        NODE_ENV: 'development',
+      }),
+    ).toEqual([]);
   });
 });
