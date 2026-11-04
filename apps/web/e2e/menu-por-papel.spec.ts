@@ -82,7 +82,8 @@ test('sem sessão, qualquer tela leva ao login e volta para ela depois', async (
 
 test('login errado mostra a mensagem da API', async ({ page }) => {
   await page.goto('/entrar');
-  await page.getByLabel('E-mail').fill('dono@demo.pentefino.dev');
+  // E-mail que nenhum outro teste usa: não divide o limite de tentativas por minuto.
+  await page.getByLabel('E-mail').fill('ninguem@demo.pentefino.dev');
   await page.getByLabel('Senha').fill('senha-errada');
   await page.getByRole('button', { name: 'Entrar' }).click();
   // O Next também tem um role=alert (anúncio de rota): olha só dentro do formulário.
