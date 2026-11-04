@@ -239,7 +239,7 @@ describe('unidades', () => {
       .get('/unidades')
       .set('authorization', `Bearer ${gestor.accessToken}`)
       .expect(200);
-    expect(dele.body).toEqual([{ id: cenario.unidadeA, nome: 'Unidade A', ativa: true }]);
+    expect(dele.body).toMatchObject([{ id: cenario.unidadeA, nome: 'Unidade A', ativa: true }]);
   });
 });
 

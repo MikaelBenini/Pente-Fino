@@ -139,11 +139,11 @@ O esqueleto das telas, a identidade visual e o app instalável no celular.
 
 A ordem segue as dependências: cada módulo usa os anteriores. Cada um sai com API, tela, testes e dados de demonstração.
 
-- [ ] **6.1 Conta e unidades:** cadastro, dias de trabalho, capacidade, calendário de folgas e feriados
-- [ ] **6.2 Usuários e papéis:** convites, troca de papel, desativar acesso
-- [ ] **6.3 Serviços:** duração, categoria, custo de produto, extra (sim/não), peso em atendimentos
-- [ ] **6.4 Preços:** tabela serviço × unidade, novo preço a partir de uma data, histórico
-- [ ] **6.5 Profissionais:** data de entrada, horários, bloqueios, regra de comissão com vigência
+- [x] **6.1 Conta e unidades:** cadastro, dias de trabalho, capacidade, calendário de folgas e feriados (limite de unidades do plano aplicado na API; tela Configurações)
+- [x] **6.2 Usuários e papéis:** convites, troca de papel, desativar acesso (gestor só mexe em recepção e barbeiro da unidade dele; a conta nunca fica sem dono; trocar papel ou desativar encerra as sessões)
+- [x] **6.3 Serviços:** duração, categoria, custo de produto, extra (sim/não), peso em atendimentos (custo visível só para dono e gestor)
+- [x] **6.4 Preços:** tabela serviço × unidade, novo preço a partir de uma data, histórico (aceita colar da planilha; vigência só de hoje em diante; mudanças programadas listadas)
+- [x] **6.5 Profissionais:** data de entrada, horários, bloqueios, regra de comissão com vigência (cadastro já convida o barbeiro novo; limite de profissionais do plano aplicado na API)
 - [ ] **6.6 Clientes:** cadastro, busca por telefone, histórico, anotações, telefone oculto para barbeiro
 - [ ] **6.7 Agenda:** visão por profissional em dia, semana e mês; agendar, remarcar, cancelar; consulta de horários livres
 - [ ] **6.8 Comanda:** criada pelo agendamento, aberta na hora, itens, ajuste, confirmação do barbeiro, pendente, cancelada por falta, reaberta com motivo e auditoria

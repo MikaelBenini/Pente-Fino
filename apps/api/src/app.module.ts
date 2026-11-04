@@ -19,6 +19,11 @@ import { RaizController } from './saude/raiz.controller.js';
 import { SaudeController } from './saude/saude.controller.js';
 import { ConvitesService } from './usuarios/convites.service.js';
 import { UnidadesController } from './unidades/unidades.controller.js';
+import { ContaController } from './conta/conta.controller.js';
+import { ProfissionaisController } from './profissionais/profissionais.controller.js';
+import { ProfissionaisService } from './profissionais/profissionais.service.js';
+import { ServicosController } from './servicos/servicos.controller.js';
+import { UsuariosService } from './usuarios/usuarios.service.js';
 import { UsuariosController } from './usuarios/usuarios.controller.js';
 
 /** Serviços que todo módulo de negócio usa. */
@@ -73,13 +78,18 @@ export class ComumModule {}
   controllers: [
     RaizController,
     AuthController,
+    ContaController,
     UsuariosController,
     UnidadesController,
+    ServicosController,
+    ProfissionaisController,
     SaudeController,
   ],
   providers: [
     AuthService,
     ConvitesService,
+    UsuariosService,
+    ProfissionaisService,
     // Ordem das guardas: limite de requisições → login → papel e unidade.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AutenticacaoGuard },

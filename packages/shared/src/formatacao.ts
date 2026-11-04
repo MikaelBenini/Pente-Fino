@@ -68,3 +68,30 @@ export function formatarTelefone(telefone: string): string {
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   return telefone;
 }
+/**
+ * Lê um valor digitado em reais e devolve centavos: "45", "45,5", "45,50", "1.234,56",
+ * "R$ 70,00", "45.50" (ponto como decimal quando só há 1 ou 2 casas). Inválido → null.
+ */
+export function lerMoeda(texto: string): number | null {
+  let t = texto.replace(/R\$|\s/g, '');
+  if (t === '' || /[^\d.,-]/.test(t)) return null;
+  const negativo = t.startsWith('-');
+  t = t.replace(/^-/, '');
+  if (t.includes(',')) {
+    const [inteiro = ''] = t.split(',');
+    // Milhar com ponto só de três em três: "1.234,56" sim, "1.2.3,4" não.
+    if (inteiro.includes('.') && !/^\d{1,3}(\.\d{3})+$/.test(inteiro)) return null;
+    t = t.replace(/\./g, '').replace(',', '.');
+  } else if (/\.\d{3}(\.|$)/.test(t)) {
+    t = t.replace(/\./g, '');
+  }
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
+  const [inteiro, decimal = ''] = t.split('.');
+  const centavos = Number(inteiro) * 100 + Number(decimal.padEnd(2, '0'));
+  return Number.isSafeInteger(centavos) ? (negativo ? -centavos : centavos) : null;
+}
+
+/** Centavos → "45,00" para preencher um campo de valor. */
+export function valorParaCampo(centavos: number): string {
+  return formatarValor(centavos);
+}

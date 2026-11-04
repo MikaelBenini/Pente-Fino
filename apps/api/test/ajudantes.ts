@@ -42,7 +42,7 @@ export async function criarCenario(): Promise<Cenario> {
 
   const { unidadeA, unidadeB } = await naConta(prisma, contaId, async (tx) => {
     await tx.conta.create({
-      data: { id: contaId, nome: `Barbearia E2E ${sufixo}`, status: 'ativa' },
+      data: { id: contaId, nome: `Barbearia E2E ${sufixo}`, status: 'ativa', plano: 'premium' },
     });
     const a = await tx.unidade.create({ data: { nome: 'Unidade A' } });
     const b = await tx.unidade.create({ data: { nome: 'Unidade B' } });
@@ -70,6 +70,32 @@ export async function criarCenario(): Promise<Cenario> {
       await naConta(prisma, contaId, (tx) => tx.conta.deleteMany({ where: { id: contaId } }));
       await prisma.$disconnect();
     },
+  };
+}
+
+/** Cliente HTTP já autenticado como o e-mail informado. */
+export async function como(app: INestApplication<App>, email: string, senha = SENHA) {
+  const { accessToken } = await entrar(app, email, senha);
+  const auth = { authorization: `Bearer ${accessToken}` };
+  const http = () => request(app.getHttpServer());
+  return {
+    get: (url: string) => http().get(url).set(auth),
+    post: (url: string, corpo?: object) =>
+      http()
+        .post(url)
+        .set(auth)
+        .send(corpo ?? {}),
+    put: (url: string, corpo?: object) =>
+      http()
+        .put(url)
+        .set(auth)
+        .send(corpo ?? {}),
+    patch: (url: string, corpo?: object) =>
+      http()
+        .patch(url)
+        .set(auth)
+        .send(corpo ?? {}),
+    delete: (url: string) => http().delete(url).set(auth),
   };
 }
 
