@@ -148,10 +148,10 @@ A ordem segue as dependências: cada módulo usa os anteriores. Cada um sai com 
 - [x] **6.7 Agenda:** visão por profissional em dia, semana e mês; agendar, remarcar, cancelar; consulta de horários livres (respeita expediente, calendário da unidade e bloqueios; o banco impede sobreposição)
 - [x] **6.8 Comanda:** criada pelo agendamento, aberta na hora, itens, ajuste, confirmação do barbeiro, pendente, cancelada por falta, reaberta com motivo e auditoria (regras de estado em `packages/shared/src/comanda.ts`; pendente = horário terminou há 15 min sem confirmação; barbeiro lança extra sem internet pela fila offline)
 - [x] **6.9 Fechamento e caixa:** várias formas de pagamento, desconto, caixa do dia, divergência (desconto rateado entre os itens; comissão calculada no fechamento pela regra vigente; caixa fechado trava o dia até o gestor reabrir)
-- [ ] **6.10 Comissões:** cálculo por item na hora do fechamento, extrato por barbeiro, marcar como paga
-- [ ] **6.11 Despesas:** categorias (fixa, variável, manutenção, investimento, retirada do dono, cartão e resgates), competência, pago ou não
-- [ ] **6.12 Indicadores:** faturamento, clientes, ticket, atendimentos, extras, % de despesas, com filtro de unidade e período
-- [ ] **6.13 App do barbeiro:** hoje, comandas, clientes, desempenho, comissões
+- [x] **6.10 Comissões:** cálculo por item na hora do fechamento, extrato por barbeiro, marcar como paga (previsto, fechado, pago e a receber; pagamento limitado ao que falta)
+- [x] **6.11 Despesas:** categorias (fixa, variável, manutenção, investimento, retirada do dono, cartão e resgates), competência, pago ou não (despesa da rede é do dono; gestor lança na unidade dele)
+- [x] **6.12 Indicadores:** faturamento, clientes, ticket, atendimentos, extras, % de despesas, com filtro de unidade e período (mais lucro, projeção pelo calendário, metas e lucro por serviço; regras em `packages/shared/src/indicadores.ts`)
+- [x] **6.13 App do barbeiro:** hoje, comandas, clientes, desempenho, comissões (e metas da unidade)
 - [ ] **6.14 Comanda impressa:** PDF A4 com 4 ou 6 por folha e QR code que abre a comanda
 - [ ] **6.15 Link de agendamento:** página pública da unidade, escolha de serviço, profissional e horário, confirmação por WhatsApp
 - [ ] **6.16 Importação da planilha:** modelo CSV de serviços, preços, profissionais e clientes, com prévia e relatório de erros
