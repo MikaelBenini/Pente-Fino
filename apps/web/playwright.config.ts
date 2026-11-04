@@ -33,7 +33,9 @@ export default defineConfig({
       command: 'node ../api/dist/main.js',
       url: `http://localhost:${PORTA_API}/health`,
       reuseExistingServer: reaproveitar,
-      env: { LOG_LEVEL: 'warn', API_PORT: String(PORTA_API) },
+      // O limite de login já é testado na API (auth.e2e-spec.ts); aqui os mesmos usuários
+      // da demonstração entram dezenas de vezes por minuto.
+      env: { LOG_LEVEL: 'warn', API_PORT: String(PORTA_API), LIMITE_AUTH_POR_MINUTO: '60' },
       timeout: 60_000,
     },
     {
