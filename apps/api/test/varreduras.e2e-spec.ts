@@ -199,6 +199,8 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
       `/resumo/dia?data=${hoje}&profissionalId=${ids.prof}`,
       `/resumo/mes?mes=${mes}&unidadeId=${a.unidadeA}`,
       `/bot`,
+      `/bot/conexao/${a.unidadeA}`,
+      `/clientes/${ids.cliente}/mensagens`,
     ];
     for (const rota of rotas) {
       const r = await intruso.get(rota);
@@ -279,6 +281,8 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
       ],
       ['put', `/bot/horario/${a.unidadeA}`, { turnos: null }],
       ['post', '/bot/simular', { unidadeId: a.unidadeA, entrada: 'oi', sessao: null }],
+      ['post', `/bot/conexao/${a.unidadeA}`],
+      ['delete', `/bot/conexao/${a.unidadeA}`],
       ['post', '/caixa/abrir', { unidadeId: a.unidadeA, data: hoje, valorAbertura: 0 }],
       ['post', '/caixa/fechar', { unidadeId: a.unidadeA, data: hoje, totalInformado: 0 }],
     ];
@@ -320,6 +324,9 @@ describe('permissões: cada papel tentando o que não pode', () => {
       ['get', () => '/usuarios'],
       ['get', () => '/bot'],
       ['post', () => '/bot/simular', { unidadeId: a.unidadeA, entrada: 'oi', sessao: null }],
+      ['get', () => `/bot/conexao/${a.unidadeA}`],
+      ['post', () => `/bot/conexao/${a.unidadeA}`],
+      ['get', () => `/clientes/${ids.cliente}/mensagens`],
       ['get', () => `/resumo/dia?data=${hoje}`],
       ['get', () => `/resumo/mes?mes=${mes}`],
       ['get', () => `/profissionais/desempenho?${periodo()}`],
@@ -384,6 +391,7 @@ describe('permissões: cada papel tentando o que não pode', () => {
     recepcao: [
       ['get', () => '/usuarios'],
       ['get', () => '/bot'],
+      ['post', () => `/bot/conexao/${a.unidadeA}`],
       ['get', () => `/resumo/dia?data=${hoje}`],
       ['get', () => `/resumo/mes?mes=${mes}`],
       ['get', () => `/profissionais/desempenho?${periodo()}`],

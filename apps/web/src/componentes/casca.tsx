@@ -10,6 +10,7 @@ import {
   CloudOff,
   Ellipsis,
   LogOut,
+  MessageCircleOff,
   Moon,
   SunMedium,
   X,
@@ -18,6 +19,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
+import { useBot } from '@/lib/consultas';
 import { useFilaOffline } from '@/lib/fila';
 import {
   NOME_PAPEL,
@@ -115,6 +117,7 @@ export function Casca({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-col">
           <BarraTopo />
           <AvisoConexao />
+          <AvisoWhatsapp />
           <main
             id="conteudo"
             className="mx-auto w-full max-w-6xl flex-1 px-[max(1rem,env(safe-area-inset-left))] pt-6 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-8 lg:pb-12"
@@ -510,6 +513,36 @@ function FolhaMais({
 }
 
 // ─── Conexão ──────────────────────────────────────────────────────────────
+
+/** Dono e gestor: o WhatsApp de uma unidade caiu e o bot parou de responder. */
+function AvisoWhatsapp() {
+  const { papeis } = useApp();
+  const pathname = usePathname();
+  const gestao = papeis.includes('dono') || papeis.includes('gestor');
+  const bot = useBot(gestao);
+  const caidas = (bot.data?.unidades ?? []).filter(
+    (u) => u.conexao?.caiuEm && u.conexao.status !== 'conectado',
+  );
+  if (!gestao || caidas.length === 0 || pathname === '/bot') return null;
+  const nomes = caidas.map((u) => u.nome).join(', ');
+  return (
+    <div
+      role="alert"
+      className="border-b border-borda bg-superficie-2 px-[max(1rem,env(safe-area-inset-left))] py-2 text-sm sm:px-8"
+    >
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <MessageCircleOff aria-hidden className="size-4 shrink-0 text-perigo-texto" />
+        <span>
+          O WhatsApp {caidas.length === 1 ? 'da' : 'das unidades'} {nomes} desconectou e o bot não
+          está respondendo.
+        </span>
+        <Link href="/bot?aba=conexao" className="font-semibold text-acao-texto underline">
+          Ver como reconectar
+        </Link>
+      </p>
+    </div>
+  );
+}
 
 function AvisoConexao() {
   const { online, pendentes, recusados } = useFilaOffline();

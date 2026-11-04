@@ -1,5 +1,6 @@
 // Entradas e respostas da API do bot (Etapa 10). Mesma validação no painel e na API.
 import { z } from 'zod';
+import type { StatusConexaoWhatsapp } from './filas.js';
 import {
   ACOES_BOT,
   MAXIMO_OPCOES,
@@ -109,7 +110,36 @@ export interface UnidadeDoBot {
   descricao: string;
   aberto: boolean;
   link: string | null;
-  conexao: { status: 'desconectado' | 'aguardando_qr' | 'conectado'; numero: string | null } | null;
+  conexao: {
+    status: StatusConexaoWhatsapp;
+    numero: string | null;
+    /** Caiu sem ninguém pedir: o painel avisa até reconectar. */
+    caiuEm: string | null;
+  } | null;
+}
+
+/** Conexão do WhatsApp de uma unidade, como a tela Bot mostra. */
+export interface ConexaoBot {
+  unidadeId: string;
+  status: StatusConexaoWhatsapp;
+  numero: string | null;
+  /** QR Code (data URL de imagem) enquanto aguarda a leitura pelo celular. */
+  qr: string | null;
+  caiuEm: string | null;
+  /** O provedor não respondeu: o estado mostrado é o último conhecido. */
+  erro: string | null;
+  /** WhatsApp de teste (sem celular): o QR é de mentira. */
+  teste: boolean;
+}
+
+/** Uma mensagem do WhatsApp no histórico do cliente. */
+export interface MensagemDoCliente {
+  id: string;
+  direcao: 'entrada' | 'saida';
+  texto: string;
+  status: 'recebida' | 'pendente' | 'enviada' | 'falhou' | 'descartada';
+  unidade: string;
+  criadoEm: string;
 }
 
 export interface EstadoBot {

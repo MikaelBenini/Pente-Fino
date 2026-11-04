@@ -59,6 +59,8 @@ export interface ClienteResumo {
 export interface ClienteDetalhe extends ClienteResumo {
   origemLead: string | null;
   consentimentoMsg: boolean;
+  /** Quando o cliente escolheu (pelo WhatsApp ou no cadastro). */
+  consentimentoEm: string | null;
   telefoneOculto: boolean;
   notas: { id: string; texto: string; autor: string | null; criadoEm: string }[];
   historico: {

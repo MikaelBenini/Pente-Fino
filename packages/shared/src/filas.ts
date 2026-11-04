@@ -2,6 +2,40 @@
 
 export const FILA_EMAILS = 'emails';
 export const FILA_EVENTOS = 'eventos';
+/** Webhook do provedor de WhatsApp, já lido e conferido pela API. */
+export const FILA_WHATSAPP_ENTRADA = 'whatsapp-entrada';
+/** Mensagens para enviar, uma por trabalho, espaçadas por número da barbearia. */
+export const FILA_WHATSAPP_SAIDA = 'whatsapp-saida';
+
+export type StatusConexaoWhatsapp = 'desconectado' | 'aguardando_qr' | 'conectado';
+
+/** O que chega do provedor, num formato que não depende dele. */
+export type EventoWhatsapp =
+  | {
+      tipo: 'mensagem';
+      instancia: string;
+      /** Id da mensagem no WhatsApp: a mesma mensagem entregue duas vezes é descartada. */
+      idExterno: string;
+      telefone: string;
+      /** Nome do perfil do WhatsApp, quando vem. */
+      nome: string | null;
+      /** Texto da mensagem; vazio para áudio, foto e figurinha. */
+      texto: string;
+      recebidaEm: string;
+    }
+  | {
+      tipo: 'conexao';
+      instancia: string;
+      status: StatusConexaoWhatsapp;
+      /** Número conectado (só dígitos), quando o provedor informa. */
+      numero: string | null;
+    };
+
+/** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
+export interface TrabalhoWhatsappSaida {
+  contaId: string;
+  mensagemId: string;
+}
 
 /** E-mail pronto para envio; o worker só entrega. */
 export interface TrabalhoEmail {

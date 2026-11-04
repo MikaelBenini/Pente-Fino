@@ -35,7 +35,13 @@ export default defineConfig({
       reuseExistingServer: reaproveitar,
       // O limite de login já é testado na API (auth.e2e-spec.ts); aqui os mesmos usuários
       // da demonstração entram dezenas de vezes por minuto.
-      env: { LOG_LEVEL: 'warn', API_PORT: String(PORTA_API), LIMITE_AUTH_POR_MINUTO: '60' },
+      env: {
+        LOG_LEVEL: 'warn',
+        API_PORT: String(PORTA_API),
+        LIMITE_AUTH_POR_MINUTO: '60',
+        // Sem WhatsApp de verdade: a tela de conexão mostra um QR de teste.
+        WHATSAPP_PROVEDOR: 'falso',
+      },
       timeout: 60_000,
     },
     {

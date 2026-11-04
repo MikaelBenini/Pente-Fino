@@ -19,13 +19,14 @@ import {
   type ClienteDetalhe,
   type ClienteEntrada,
   type ClienteResumo,
+  type MensagemDoCliente,
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import { Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
-import { data, dataTexto, TODOS } from '../comum/escopo.js';
+import { data, dataTexto, filtroUnidade, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 
 const POR_PAGINA = 50;
@@ -133,6 +134,7 @@ export class ClientesController {
         visitas: await tx.comanda.count({ where: { clienteId: id, status: 'fechada' } }),
         origemLead: c.origemLead,
         consentimentoMsg: c.consentimentoMsg,
+        consentimentoEm: c.consentimentoEm?.toISOString() ?? null,
         telefoneOculto: ocultar,
         notas: c.notas.map((n) => ({
           id: n.id,
@@ -169,6 +171,8 @@ export class ClientesController {
             aniversario: d.aniversario ? data(d.aniversario) : null,
             origemLead: d.origemLead ?? null,
             consentimentoMsg: d.consentimentoMsg ?? false,
+            // Só o aceite marcado no balcão conta como escolha; desmarcado, o bot ainda convida.
+            consentimentoEm: d.consentimentoMsg ? new Date() : null,
           },
           select: { id: true, nome: true },
         }),
@@ -185,8 +189,10 @@ export class ClientesController {
   ) {
     return this.banco
       .daConta(async (tx) => {
-        if (!(await tx.cliente.findUnique({ where: { id } })))
-          throw Erros.naoEncontrado('Cliente não encontrado.');
+        const atual = await tx.cliente.findUnique({ where: { id } });
+        if (!atual) throw Erros.naoEncontrado('Cliente não encontrado.');
+        const mudouAvisos =
+          d.consentimentoMsg !== undefined && d.consentimentoMsg !== atual.consentimentoMsg;
         return tx.cliente.update({
           where: { id },
           data: {
@@ -197,11 +203,36 @@ export class ClientesController {
               d.aniversario === undefined ? undefined : d.aniversario ? data(d.aniversario) : null,
             origemLead: d.origemLead,
             consentimentoMsg: d.consentimentoMsg,
+            consentimentoEm: mudouAvisos ? new Date() : undefined,
           },
           select: { id: true, nome: true },
         });
       })
       .catch(telefoneRepetido);
+  }
+
+  @Get(':id/mensagens')
+  @Papeis('dono', 'gestor', 'recepcao')
+  @ApiOperation({ summary: 'Mensagens do WhatsApp com o cliente (as 200 mais recentes)' })
+  async mensagens(@Param('id', ParseUUIDPipe) id: string): Promise<MensagemDoCliente[]> {
+    return this.banco.daConta(async (tx) => {
+      if (!(await tx.cliente.findUnique({ where: { id }, select: { id: true } })))
+        throw Erros.naoEncontrado('Cliente não encontrado.');
+      const ms = await tx.mensagem.findMany({
+        where: { clienteId: id, ...filtroUnidade(['dono', 'gestor', 'recepcao']) },
+        orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+        take: 200,
+        include: { unidade: { select: { nome: true } } },
+      });
+      return ms.reverse().map((m) => ({
+        id: m.id,
+        direcao: m.direcao,
+        texto: m.texto,
+        status: m.status,
+        unidade: m.unidade.nome,
+        criadoEm: m.criadoEm.toISOString(),
+      }));
+    });
   }
 
   @Post(':id/notas')

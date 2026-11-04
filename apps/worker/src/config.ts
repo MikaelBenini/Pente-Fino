@@ -13,6 +13,12 @@ const esquema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   EMAIL_FROM: z.string().min(3),
+  DATABASE_URL: z.string().startsWith('postgresql://'),
+  /** Endereço do painel, para o link de agendamento nas respostas do bot. */
+  APP_URL: z.url().transform((u) => u.replace(/\/$/, '')),
+  WHATSAPP_PROVEDOR: z.enum(['evolution', 'falso']).default('evolution'),
+  EVOLUTION_API_URL: z.url().default('http://localhost:8080'),
+  EVOLUTION_API_KEY: z.string().default(''),
 });
 
 export type ConfiguracaoWorker = z.infer<typeof esquema>;

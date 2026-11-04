@@ -25,6 +25,7 @@
     "@node-rs/argon2": "2.2.2",
     "@pente-fino/db": "workspace:*",
     "@pente-fino/shared": "workspace:*",
+    "@pente-fino/whatsapp": "workspace:*",
     "bullmq": "6.5.4",
     "ioredis": "6.0.0",
     "jose": "6.2.15",

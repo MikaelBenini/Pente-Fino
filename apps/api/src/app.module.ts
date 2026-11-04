@@ -32,6 +32,8 @@ import { DesempenhoController } from './desempenho/desempenho.controller.js';
 import { DesempenhoService } from './desempenho/desempenho.service.js';
 import { BotController } from './bot/bot.controller.js';
 import { BotService } from './bot/bot.service.js';
+import { provedorWhatsApp } from './whatsapp/provedor.js';
+import { WebhooksController } from './whatsapp/webhooks.controller.js';
 import { DespesasController } from './despesas/despesas.controller.js';
 import { ResumoController } from './resumo/resumo.controller.js';
 import { ResumoService } from './resumo/resumo.service.js';
@@ -79,7 +81,12 @@ export class ComumModule {}
             const u = Contexto.atual()?.usuario;
             return u ? { usuarioId: u.id, contaId: u.contaId } : {};
           },
-          redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+          redact: [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'req.headers["x-pente-fino-assinatura"]',
+            'res.headers["set-cookie"]',
+          ],
           autoLogging: { ignore: (req) => req.url === '/health' },
           transport:
             c.ambiente === 'development'
@@ -117,6 +124,7 @@ export class ComumModule {}
     DesempenhoController,
     ResumoController,
     BotController,
+    WebhooksController,
     MeController,
     ConfiguracaoController,
     ImportacaoController,
@@ -136,6 +144,7 @@ export class ComumModule {}
     DesempenhoService,
     ResumoService,
     BotService,
+    provedorWhatsApp,
     // Ordem das guardas: limite de requisições → login → papel e unidade.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AutenticacaoGuard },

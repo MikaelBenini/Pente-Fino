@@ -84,3 +84,23 @@ test('tela do bot não rola para o lado', async ({ page }) => {
   );
   expect(sobra).toBeLessThanOrEqual(0);
 });
+
+test('dono conecta o WhatsApp pelo QR Code e desconecta', async ({ page }, info) => {
+  test.skip(info.project.name === 'celular', 'conexão é da conta: um projeto basta');
+  await entrar(page, 'dono@demo.pentefino.dev');
+  await page.goto('/bot?aba=conexao');
+  await expect(visivel(page.getByRole('tab', { name: 'Conexão' }))).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  const centro = visivel(page.getByRole('listitem').filter({ hasText: 'Centro' })).first();
+  await centro.getByRole('button', { name: /Conectar pelo QR Code|Reconectar/ }).click();
+  const qr = centro.getByAltText(/QR Code para conectar o WhatsApp/);
+  await expect(qr).toBeVisible();
+  await expect(centro.getByText('Aparelhos conectados')).toBeVisible();
+  await expect(centro.getByText(/WhatsApp de teste/)).toBeVisible();
+  await centro.getByRole('button', { name: 'Desconectar' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Desconectar' }).click();
+  await expect(qr).toHaveCount(0);
+  await expect(centro.getByText('Desconectado')).toBeVisible();
+});

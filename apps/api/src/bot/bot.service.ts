@@ -1,16 +1,21 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { precoServicoVigente, Prisma, type Transacao } from '@pente-fino/db';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
-  dataLocal,
-  dentroDoHorario,
-  descreverHorario,
-  MENSAGENS_BOT_PADRAO,
-  MENU_BOT_PADRAO,
-  menuBotSchema,
+  contextoDaConversa,
+  instanciaDaUnidade,
+  json,
+  lerMenu,
+  mensagensDoBot,
+  menuPublicado,
+  Prisma,
+  registrarEstadoConexao,
+  situacaoDaUnidade,
+  unidadeDoBot,
+  type Transacao,
+} from '@pente-fino/db';
+import {
   responder,
-  TIPOS_MENSAGEM_BOT,
   validarMenu,
-  type ContextoConversa,
+  type ConexaoBot,
   type EstadoBot,
   type HorarioBotEntrada,
   type MensagensBot,
@@ -18,50 +23,26 @@ import {
   type MenuBot,
   type RespostaSimulacao,
   type SimularBotDados,
-  type TurnoBot,
 } from '@pente-fino/shared';
+import type { EstadoConexao, ProvedorWhatsApp } from '@pente-fino/whatsapp';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
-import { data, exigirUnidade, filtroUnidade, GESTAO } from '../comum/escopo.js';
+import { exigirUnidade, filtroUnidade, GESTAO } from '../comum/escopo.js';
 import { umPorVez } from '../comum/sequencia.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
-
-const json = (m: MenuBot) => structuredClone(m) as unknown as Prisma.InputJsonValue;
-/** O que está gravado no banco passa de novo pelo esquema: menu estragado não chega ao motor. */
-const lerMenu = (valor: unknown): MenuBot => {
-  const r = menuBotSchema.safeParse(valor);
-  return r.success ? r.data : structuredClone(MENU_BOT_PADRAO);
-};
-
-type UnidadeComEquipe = Prisma.UnidadeGetPayload<{
-  include: { profissionais: { include: { horarios: true } }; botConexao: true };
-}>;
-
-/** Expediente da equipe: nos dias da unidade, do primeiro turno que abre ao último que fecha. */
-export function expedienteDaUnidade(u: UnidadeComEquipe): TurnoBot[] {
-  const turnos: TurnoBot[] = [];
-  for (const dia of u.diasTrabalho) {
-    const doDia = u.profissionais
-      .filter((p) => p.ativo)
-      .flatMap((p) => p.horarios.filter((h) => h.diaSemana === dia));
-    if (doDia.length === 0) continue;
-    turnos.push({
-      diaSemana: dia,
-      inicioMin: Math.min(...doDia.map((h) => h.inicioMin)),
-      fimMin: Math.max(...doDia.map((h) => h.fimMin)),
-    });
-  }
-  return turnos;
-}
+import { PROVEDOR_WHATSAPP } from '../whatsapp/provedor.js';
 
 @Injectable()
 export class BotService {
   constructor(
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(PROVEDOR_WHATSAPP) private readonly provedor: ProvedorWhatsApp,
   ) {}
+
+  private readonly logger = new Logger('Bot');
 
   /** Menu e mensagens valem para a conta inteira: só o dono edita. */
   private podeEditar() {
@@ -72,89 +53,15 @@ export class BotService {
     if (!this.podeEditar()) throw Erros.semPermissao();
   }
 
-  /** Menu publicado; conta antiga sem menu recebe o padrão publicado na hora. */
-  private async publicado(tx: Transacao) {
-    const atual = await tx.botMenu.findFirst({ where: { status: 'publicado' } });
-    if (atual) return atual;
-    return tx.botMenu.create({
-      data: { status: 'publicado', menu: json(MENU_BOT_PADRAO), publicadoEm: new Date() },
-    });
-  }
-
-  private async mensagens(tx: Transacao): Promise<MensagensBot> {
-    const salvas = await tx.modeloMensagem.findMany({
-      where: { unidadeId: null, ativo: true, tipo: { in: [...TIPOS_MENSAGEM_BOT] } },
-    });
-    const m: MensagensBot = { ...MENSAGENS_BOT_PADRAO };
-    for (const s of salvas) m[s.tipo as keyof MensagensBot] = s.texto;
-    return m;
-  }
-
   private async unidade(tx: Transacao, unidadeId: string) {
-    const u = await tx.unidade.findUnique({
-      where: { id: unidadeId },
-      include: { profissionais: { include: { horarios: true } }, botConexao: true },
-    });
+    const u = await unidadeDoBot(tx, unidadeId);
     if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
     return u;
   }
 
-  /** Horário que vale, se está aberto agora (calendário incluído) e o link de agendamento. */
-  private async situacao(tx: Transacao, u: UnidadeComEquipe, agora: Date) {
-    const expediente = expedienteDaUnidade(u);
-    const horario = (u.botHorario as TurnoBot[] | null) ?? null;
-    const vale = horario ?? expediente;
-    const fechadoHoje = await tx.calendarioUnidade.findFirst({
-      where: { unidadeId: u.id, data: data(dataLocal(agora)), trabalha: false },
-    });
-    return {
-      expediente,
-      horario,
-      descricao: descreverHorario(vale),
-      // Sem horário conhecido (equipe sem expediente cadastrado), não diz que está fechado.
-      aberto: !fechadoHoje && (vale.length === 0 || dentroDoHorario(vale, agora)),
-      link:
-        u.agendamentoPublico && u.slug
-          ? `${this.config.appUrl}/agendar?u=${encodeURIComponent(u.slug)}`
-          : null,
-    };
-  }
-
-  /** O que o motor precisa saber da unidade para responder (usado também pelo WhatsApp). */
-  async contexto(
-    tx: Transacao,
-    unidadeId: string,
-    agora: Date,
-    cliente: string | null,
-  ): Promise<ContextoConversa> {
-    const u = await this.unidade(tx, unidadeId);
-    const s = await this.situacao(tx, u, agora);
-    const servicos = await tx.servico.findMany({
-      where: { ativo: true },
-      orderBy: [{ ehExtra: 'asc' }, { nome: 'asc' }],
-    });
-    const hoje = dataLocal(agora);
-    const precos = (
-      await umPorVez(servicos, async (sv) => ({
-        nome: sv.nome,
-        valor: await precoServicoVigente(tx, sv.id, u.id, hoje),
-      }))
-    ).filter((p): p is { nome: string; valor: number } => p.valor !== null);
-    return {
-      agora,
-      cliente,
-      unidade: u.nome,
-      endereco: u.endereco,
-      horario: s.descricao,
-      dentroDoHorario: s.aberto,
-      link: s.link,
-      precos,
-    };
-  }
-
   async estado(): Promise<EstadoBot> {
     return this.banco.daConta(async (tx) => {
-      const publicado = await this.publicado(tx);
+      const publicado = await menuPublicado(tx);
       const rascunho = await tx.botMenu.findFirst({ where: { status: 'rascunho' } });
       const anterior = await tx.botMenu.count({ where: { status: 'arquivado' } });
       const quem = publicado.publicadoPorId
@@ -185,9 +92,9 @@ export class BotService {
               }
             : null,
         temAnterior: anterior > 0,
-        mensagens: await this.mensagens(tx),
+        mensagens: await mensagensDoBot(tx),
         unidades: await umPorVez(unidades, async (u) => {
-          const s = await this.situacao(tx, u, agora);
+          const s = await situacaoDaUnidade(tx, u, agora, this.config.appUrl);
           return {
             id: u.id,
             nome: u.nome,
@@ -197,7 +104,11 @@ export class BotService {
             aberto: s.aberto,
             link: s.link,
             conexao: u.botConexao
-              ? { status: u.botConexao.status, numero: u.botConexao.numero }
+              ? {
+                  status: u.botConexao.status,
+                  numero: u.botConexao.numero,
+                  caiuEm: u.botConexao.caiuEm?.toISOString() ?? null,
+                }
               : null,
           };
         }),
@@ -232,7 +143,7 @@ export class BotService {
       const problemas = validarMenu(menu);
       if (problemas.length)
         throw Erros.validacao(problemas.map((p) => ({ campo: p.onde, mensagem: p.mensagem })));
-      const antes = await this.publicado(tx);
+      const antes = await menuPublicado(tx);
       await tx.botMenu.update({ where: { id: antes.id }, data: { status: 'arquivado' } });
       await tx.botMenu.update({
         where: { id: rascunho.id },
@@ -262,7 +173,7 @@ export class BotService {
       });
       if (!anterior)
         throw Erros.requisicaoInvalida('sem_anterior', 'Não há versão anterior para voltar.');
-      const atual = await this.publicado(tx);
+      const atual = await menuPublicado(tx);
       await tx.botMenu.update({ where: { id: atual.id }, data: { status: 'arquivado' } });
       await tx.botMenu.update({
         where: { id: anterior.id },
@@ -292,7 +203,7 @@ export class BotService {
           await tx.modeloMensagem.update({ where: { id: atual.id }, data: { texto, ativo: true } });
         else await tx.modeloMensagem.create({ data: { tipo: t, texto: texto! } });
       }
-      return this.mensagens(tx);
+      return mensagensDoBot(tx);
     });
   }
 
@@ -318,10 +229,116 @@ export class BotService {
         d.versao === 'rascunho'
           ? await tx.botMenu.findFirst({ where: { status: 'rascunho' } })
           : null;
-      const menu = lerMenu((rascunho ?? (await this.publicado(tx))).menu);
-      const ctx = await this.contexto(tx, d.unidadeId, new Date(), d.cliente);
+      const menu = lerMenu((rascunho ?? (await menuPublicado(tx))).menu);
+      const u = await this.unidade(tx, d.unidadeId);
+      const ctx = await contextoDaConversa(tx, u, new Date(), this.config.appUrl, {
+        cliente: d.cliente,
+        // Número novo: a primeira conversa termina com o convite para receber avisos.
+        pedirConsentimento: d.cliente === null,
+      });
       if (d.foraDoHorario) ctx.dentroDoHorario = false;
-      return responder(menu, await this.mensagens(tx), d.sessao, d.entrada, ctx);
+      return responder(menu, await mensagensDoBot(tx), d.sessao, d.entrada, ctx);
     });
+  }
+
+  // ─── Conexão do WhatsApp ────────────────────────────────────────────────
+
+  private async linhaConexao(unidadeId: string) {
+    return this.banco.daConta(async (tx) => {
+      await this.unidade(tx, unidadeId);
+      return tx.botConexao.findUnique({ where: { unidadeId } });
+    });
+  }
+
+  private resposta(
+    unidadeId: string,
+    linha: { status: ConexaoBot['status']; numero: string | null; caiuEm: Date | null } | null,
+    extra: { qr?: string | null; erro?: string | null } = {},
+  ): ConexaoBot {
+    return {
+      unidadeId,
+      status: linha?.status ?? 'desconectado',
+      numero: linha?.numero ?? null,
+      qr: linha?.status === 'aguardando_qr' ? (extra.qr ?? null) : null,
+      caiuEm: linha?.caiuEm?.toISOString() ?? null,
+      erro: extra.erro ?? null,
+      teste: this.provedor.nome === 'falso',
+    };
+  }
+
+  /** Grava o que o provedor disse e devolve como a tela mostra. */
+  private async gravar(unidadeId: string, e: EstadoConexao): Promise<ConexaoBot> {
+    const linha = await this.banco.daConta((tx) => registrarEstadoConexao(tx, unidadeId, e));
+    return this.resposta(unidadeId, linha, { qr: e.qr });
+  }
+
+  private falha(unidadeId: string, linha: Parameters<BotService['resposta']>[1], e: unknown) {
+    this.logger.warn(`WhatsApp da unidade ${unidadeId}: ${(e as Error).message}`);
+    return this.resposta(unidadeId, linha, {
+      erro: 'O serviço do WhatsApp não respondeu. Tente de novo em instantes.',
+    });
+  }
+
+  /** Estado atual (pergunta ao provedor) e o QR enquanto aguarda a leitura. */
+  async conexao(unidadeId: string): Promise<ConexaoBot> {
+    exigirUnidade(unidadeId, GESTAO);
+    const linha = await this.linhaConexao(unidadeId);
+    if (!linha) return this.resposta(unidadeId, null);
+    try {
+      return await this.gravar(unidadeId, await this.provedor.estado(linha.instancia));
+    } catch (e) {
+      return this.falha(unidadeId, linha, e);
+    }
+  }
+
+  /** Cria a instância da unidade (uma por unidade), aponta o webhook e devolve o QR. */
+  async conectar(unidadeId: string): Promise<ConexaoBot> {
+    exigirUnidade(unidadeId, GESTAO);
+    const existente = await this.linhaConexao(unidadeId);
+    const linha = await this.banco.daConta(async (tx) => {
+      if (!existente)
+        return tx.botConexao.create({
+          data: {
+            unidadeId,
+            instancia: instanciaDaUnidade(unidadeId),
+            provedor: this.provedor.nome,
+          },
+        });
+      if (existente.provedor === this.provedor.nome) return existente;
+      return tx.botConexao.update({ where: { unidadeId }, data: { provedor: this.provedor.nome } });
+    });
+    try {
+      const e = await this.provedor.conectar(linha.instancia, this.config.whatsapp.webhookUrl);
+      return await this.gravar(unidadeId, e);
+    } catch (e) {
+      return this.falha(unidadeId, linha, e);
+    }
+  }
+
+  /** Desliga o número. Gravado antes, para o aviso de "caiu" não aparecer. */
+  async desconectar(unidadeId: string): Promise<ConexaoBot> {
+    exigirUnidade(unidadeId, GESTAO);
+    const linha = await this.linhaConexao(unidadeId);
+    if (!linha) throw Erros.naoEncontrado('Esta unidade ainda não conectou o WhatsApp.');
+    const atualizada = await this.banco.daConta(async (tx) => {
+      const r = await tx.botConexao.update({
+        where: { unidadeId },
+        data: { status: 'desconectado', caiuEm: null, numero: null },
+      });
+      await auditar(tx, {
+        entidade: 'bot_conexao',
+        entidadeId: linha.id,
+        acao: 'desconectar',
+        antes: { status: linha.status, numero: linha.numero },
+        depois: { status: 'desconectado' },
+      });
+      return r;
+    });
+    try {
+      await this.provedor.desconectar(linha.instancia);
+      return this.resposta(unidadeId, atualizada);
+    } catch (e) {
+      return this.falha(unidadeId, atualizada, e);
+    }
   }
 }
