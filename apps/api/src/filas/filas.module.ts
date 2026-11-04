@@ -2,7 +2,9 @@ import { Global, Inject, Injectable, Module, type OnApplicationShutdown } from '
 import {
   FILA_EMAILS,
   FILA_EVENTOS,
+  FILA_WHATSAPP_ENTRADA,
   type EventoDominio,
+  type EventoWhatsapp,
   type NomeEvento,
   type TrabalhoEmail,
 } from '@pente-fino/shared';
@@ -24,6 +26,7 @@ const OPCOES_PADRAO: DefaultJobOptions = {
 export class Filas implements OnApplicationShutdown {
   readonly emails: Queue<TrabalhoEmail>;
   readonly eventos: Queue<EventoDominio>;
+  readonly whatsappEntrada: Queue<EventoWhatsapp>;
 
   constructor(@Inject(CONFIGURACAO) config: Configuracao) {
     const connection = { url: config.redisUrl };
@@ -35,10 +38,19 @@ export class Filas implements OnApplicationShutdown {
       connection,
       defaultJobOptions: OPCOES_PADRAO,
     });
+    this.whatsappEntrada = new Queue<EventoWhatsapp>(FILA_WHATSAPP_ENTRADA, {
+      connection,
+      // Resposta atrasada demais não serve: poucas tentativas e rápidas.
+      defaultJobOptions: {
+        ...OPCOES_PADRAO,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2_000 },
+      },
+    });
   }
 
   async onApplicationShutdown(): Promise<void> {
-    await Promise.all([this.emails.close(), this.eventos.close()]);
+    await Promise.all([this.emails.close(), this.eventos.close(), this.whatsappEntrada.close()]);
   }
 }
 

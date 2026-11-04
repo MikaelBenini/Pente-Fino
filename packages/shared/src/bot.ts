@@ -78,6 +78,7 @@ export const TIPOS_MENSAGEM_BOT = [
   'encerramento',
   'saida_avisos',
   'volta_avisos',
+  'convite_avisos',
 ] as const;
 export type TipoMensagemBot = (typeof TIPOS_MENSAGEM_BOT)[number];
 export type MensagensBot = Record<TipoMensagemBot, string>;
@@ -110,6 +111,11 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
     nome: 'Voltar a receber (RECEBER)',
     quando: 'Quando o cliente responde RECEBER depois de ter saído.',
   },
+  convite_avisos: {
+    nome: 'Convite para receber avisos',
+    quando:
+      'No fim da primeira conversa de um número que ainda não escolheu. Só quem responde RECEBER recebe lembretes.',
+  },
 };
 
 export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
@@ -122,6 +128,8 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
   saida_avisos:
     'Pronto, você não vai mais receber lembretes nem avisos. Para voltar a receber, responda RECEBER.',
   volta_avisos: 'Combinado! Você volta a receber os lembretes da {unidade}.',
+  convite_avisos:
+    'Quer receber lembretes dos seus horários por aqui? Responda RECEBER. Para parar a qualquer momento, responda SAIR.',
 };
 
 /** Menu que toda barbearia recebe pronto, para editar à vontade. */
@@ -381,6 +389,8 @@ export interface ContextoConversa {
   dentroDoHorario: boolean;
   link: string | null;
   precos: readonly { nome: string; valor: number }[];
+  /** Número que ainda não escolheu se recebe avisos: a primeira conversa termina com o convite. */
+  pedirConsentimento?: boolean;
 }
 
 export interface ResultadoConversa {
@@ -449,6 +459,11 @@ export function responder(
     consentimento: null,
     ...extra,
   });
+  // Conversa nova de quem ainda não escolheu: o convite fecha a primeira resposta.
+  const comConvite = (r: ResultadoConversa): ResultadoConversa =>
+    expirou && ctx.pedirConsentimento && !sessao.comAtendente
+      ? { ...r, respostas: [...r.respostas, msg('convite_avisos')].filter((t) => t.trim()) }
+      : r;
 
   // Avisos: valem sempre, até com atendente.
   if (texto === 'sair') return resultado([msg('saida_avisos')], { consentimento: false });
@@ -498,10 +513,10 @@ export function responder(
 
   // Palavra-chave em qualquer ponto da conversa.
   const grupo = m.palavrasChave.find((g) => g.palavras.some((p) => contem(texto, p)));
-  if (grupo) return executar(grupo.resposta, grupo.acao);
+  if (grupo) return comConvite(executar(grupo.resposta, grupo.acao));
 
-  // Conversa nova sem palavra-chave: abertura e menu.
-  if (expirou) return resultado([...abertura, menuAtual()]);
+  // Conversa nova sem palavra-chave: abertura, menu e (se for o caso) o convite.
+  if (expirou) return comConvite(resultado([...abertura, menuAtual()]));
 
   if (texto === '0') {
     sessao.caminho = sessao.caminho.slice(0, -1);

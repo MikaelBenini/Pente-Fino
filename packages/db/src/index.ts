@@ -10,6 +10,7 @@ export * from './generated/prisma/client.js';
 export * from './avisos.js';
 export * from './modelos.js';
 export * from './vigencia.js';
+export * from './bot.js';
 
 /** Cliente dentro de uma transação de naConta(). */
 export type Transacao = Prisma.TransactionClient;

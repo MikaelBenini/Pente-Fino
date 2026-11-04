@@ -6,13 +6,20 @@ import {
   formatarMoeda,
   formatarTelefone,
   type ClienteResumo,
+  type MensagemDoCliente,
 } from '@pente-fino/shared';
-import { Botao, Campo, Dialogo, EstadoVazio } from '@pente-fino/ui';
+import { Botao, Campo, cn, Dialogo, EstadoVazio } from '@pente-fino/ui';
 import { Contact, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useDeferredValue, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
-import { chavesOperacao, useAcao, useCliente, useClientes } from '@/lib/consultas';
+import {
+  chavesOperacao,
+  useAcao,
+  useCliente,
+  useClientes,
+  useMensagensCliente,
+} from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Tabela, td, th } from '../pagina';
@@ -108,6 +115,8 @@ export function TelaClientes() {
 
 function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => void }) {
   const cliente = useCliente(id);
+  const { papeis } = useApp();
+  const veConversa = papeis.some((p) => p === 'dono' || p === 'gestor' || p === 'recepcao');
   const [nota, setNota] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const anotar = useAcao(
@@ -130,7 +139,7 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
       <Estado consulta={cliente}>
         {() => (
           <div className="flex flex-col gap-6">
-            <dl className="grid gap-3 sm:grid-cols-3">
+            <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                   Telefone
@@ -151,7 +160,24 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                   Origem
                 </dt>
-                <dd>{c!.origemLead ?? '—'}</dd>
+                <dd>{c!.origemLead === 'bot' ? 'WhatsApp (bot)' : (c!.origemLead ?? '—')}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+                  Avisos pelo WhatsApp
+                </dt>
+                <dd>
+                  {c!.consentimentoMsg
+                    ? 'Recebe'
+                    : c!.consentimentoEm
+                      ? 'Não recebe'
+                      : 'Ainda não escolheu'}
+                  {c!.consentimentoEm && (
+                    <span className="block text-sm text-tinta-suave">
+                      desde {formatarData(c!.consentimentoEm)}
+                    </span>
+                  )}
+                </dd>
               </div>
             </dl>
             <section className="flex flex-col gap-2">
@@ -199,6 +225,7 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
                 ))}
               </ul>
             </section>
+            {veConversa && <ConversaWhatsapp clienteId={id!} />}
             <section className="flex flex-col gap-2">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                 Histórico
@@ -234,6 +261,65 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
         )}
       </Estado>
     </Dialogo>
+  );
+}
+
+const SITUACAO_ENVIO: Partial<Record<MensagemDoCliente['status'], string>> = {
+  pendente: 'enviando…',
+  falhou: 'não enviada',
+  descartada: 'não enviada',
+};
+
+/** Conversa do WhatsApp com o cliente, como no celular: cliente à esquerda, barbearia à direita. */
+function ConversaWhatsapp({ clienteId }: { clienteId: string }) {
+  const mensagens = useMensagensCliente(clienteId, true);
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">WhatsApp</h3>
+      <Estado consulta={mensagens}>
+        {() =>
+          mensagens.data!.length === 0 ? (
+            <p className="text-tinta-suave">Nenhuma conversa pelo WhatsApp ainda.</p>
+          ) : (
+            <ol
+              aria-label="Mensagens do WhatsApp"
+              className="flex max-h-80 flex-col gap-2 overflow-y-auto rounded-md border border-borda bg-superficie-2 p-3"
+            >
+              {mensagens.data!.map((m) => {
+                const doCliente = m.direcao === 'entrada';
+                const situacao = SITUACAO_ENVIO[m.status];
+                return (
+                  <li
+                    key={m.id}
+                    className={cn(
+                      'max-w-[85%] rounded-lg border px-3 py-2',
+                      doCliente
+                        ? 'self-start border-borda bg-superficie'
+                        : 'self-end border-acao-texto/30 bg-superficie',
+                    )}
+                  >
+                    <p className="text-sm whitespace-pre-line">
+                      {m.texto || (
+                        <span className="italic text-tinta-suave">(áudio, foto ou figurinha)</span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-xs text-tinta-suave">
+                      {doCliente ? 'Cliente' : 'Bot'} · {formatarDataHora(m.criadoEm)}
+                      {situacao && (
+                        <span className={m.status === 'pendente' ? '' : 'text-perigo-texto'}>
+                          {' '}
+                          · {situacao}
+                        </span>
+                      )}
+                    </p>
+                  </li>
+                );
+              })}
+            </ol>
+          )
+        }
+      </Estado>
+    </section>
   );
 }
 

@@ -235,9 +235,9 @@ O dono e o gestor veem tudo sobre cada profissional numa tela só, para conversa
 
 O dono monta como o bot responde, sem inteligência artificial: menu numerado, palavras-chave e mensagens prontas. Nada chega ao cliente sem ter sido configurado e testado.
 
-- [ ] Conectar o WhatsApp da unidade pelo painel: QR Code na tela Bot, estado da conexão (conectado, lendo QR, desconectado), reconectar e desconectar; um número por unidade (`bot_conexao`)
-- [ ] Webhook da Evolution API entra numa fila do worker, com segredo conferido; mensagem repetida (mesmo id) é descartada
-- [ ] Provedor atrás de uma interface (`ProvedorWhatsApp`: enviar, estado, QR), para trocar a Evolution API sem reescrever o fluxo
+- [x] Conectar o WhatsApp da unidade pelo painel: QR Code na tela Bot, estado da conexão (conectado, lendo QR, desconectado), reconectar e desconectar; um número por unidade (`bot_conexao`) (aba Conexão; dono e gestor da unidade; o QR se renova sozinho e a tela avisa quando conecta; desconectar fica na auditoria)
+- [x] Webhook da Evolution API entra numa fila do worker, com segredo conferido; mensagem repetida (mesmo id) é descartada (`POST /webhooks/whatsapp`, assinatura HMAC por instância no cabeçalho; fila `whatsapp-entrada` com o id da mensagem e índice único em `mensagem`; mudança de conexão gravada na hora)
+- [x] Provedor atrás de uma interface (`ProvedorWhatsApp`: enviar, estado, QR), para trocar a Evolution API sem reescrever o fluxo (`packages/whatsapp`, com a Evolution e um provedor falso para testes: `WHATSAPP_PROVEDOR=falso`)
 - [x] Motor de fluxo em `packages/shared`, com testes: nós de mensagem, menu numerado, palavra-chave, pergunta com resposta guardada e ação; sessão por número que expira em 30 minutos sem resposta e volta ao menu (`bot_sessao`) (`packages/shared/src/bot.ts`, puro e testado; os números das opções saem da ordem, então não repetem; guardar a sessão no banco chega com a conexão)
 - [x] Construtor do menu (tela Bot): árvore editável, reordenar opções, textos com variáveis (`{nome}`, `{unidade}`, `{endereco}`, `{horario}`); avisa opção repetida e caminho sem saída (tela Bot, aba Menu: submenus até 3 níveis, subir e descer opções, problemas apontados enquanto edita)
 - [x] Palavras-chave reconhecidas em qualquer ponto da conversa ("preço", "endereço", "horário", "clube"), com sinônimos, sem diferenciar acento nem maiúscula
@@ -247,12 +247,12 @@ O dono monta como o bot responde, sem inteligência artificial: menu numerado, p
 - [x] Rascunho e publicação: editar não afeta quem está conversando; publicar troca a versão; dá para voltar à versão anterior (versões em `bot_menu`; o banco garante um rascunho e um publicado por conta)
 - [x] Menu modelo na configuração guiada: Agendar, Meus horários, Preços, Endereço e horário, Clube, Falar com atendente (Agendar, Preços, Endereço e horário, Atendente; "Meus horários" e "Clube" entram nas etapas 11 e 13)
 - [x] Respostas prontas ligadas ao cadastro: preços vigentes da unidade, endereço com link do mapa, horário de funcionamento e feriados do calendário (preços vigentes da unidade, endereço com `{mapa}`, horário por extenso)
-- [ ] Cliente reconhecido pelo telefone: o bot cumprimenta pelo nome; número novo vira cliente com origem "bot"
-- [ ] Consentimento: na primeira conversa o cliente aceita receber avisos; "SAIR" a qualquer momento desliga lembretes, pesquisas e convites (`cliente.consentimento_msg`), "RECEBER" religa ("voltar" é palavra de navegação do menu); a escolha fica registrada com data (a regra de SAIR e RECEBER já está no motor; gravar a escolha chega com a conexão)
-- [ ] Proteção do número: fila de envio espaçado e com intervalo aleatório, limite por minuto, nenhuma mensagem para quem nunca falou com a barbearia, nenhum envio em massa
-- [ ] Histórico de mensagens no perfil do cliente (`mensagem`), para dono, gestor e recepção
-- [ ] Aviso no painel quando a conexão cair, com o passo a passo para reconectar
-- [ ] **Pronto quando:** o dono conecta o número, edita o menu, testa no simulador e publica; um cliente recebe as respostas certas por número e por palavra-chave, e "SAIR" para os avisos dele
+- [x] Cliente reconhecido pelo telefone: o bot cumprimenta pelo nome; número novo vira cliente com origem "bot" (acha com ou sem o nono dígito; o nome do perfil do WhatsApp vira o nome do cadastro)
+- [x] Consentimento: na primeira conversa o cliente aceita receber avisos; "SAIR" a qualquer momento desliga lembretes, pesquisas e convites (`cliente.consentimento_msg`), "RECEBER" religa ("voltar" é palavra de navegação do menu); a escolha fica registrada com data (aceite explícito: a primeira conversa termina com o convite "responda RECEBER", mensagem pronta editável; `cliente.consentimento_em`; o perfil do cliente mostra a escolha)
+- [x] Proteção do número: fila de envio espaçado e com intervalo aleatório, limite por minuto, nenhuma mensagem para quem nunca falou com a barbearia, nenhum envio em massa (fila `whatsapp-saida`: no máximo 30 por minuto por número, 2 s + até 1,5 s aleatório entre mensagens; mensagem para quem nunca escreveu é descartada antes de sair; não existe rota de envio em massa)
+- [x] Histórico de mensagens no perfil do cliente (`mensagem`), para dono, gestor e recepção (`GET /clientes/:id/mensagens`; enviadas, pendentes e não enviadas marcadas)
+- [x] Aviso no painel quando a conexão cair, com o passo a passo para reconectar (faixa no topo para dono e gestor, com link para a aba Conexão; desconectar pelo painel não conta como queda)
+- [ ] **Pronto quando:** o dono conecta o número, edita o menu, testa no simulador e publica; um cliente recebe as respostas certas por número e por palavra-chave, e "SAIR" para os avisos dele (testado com a Evolution local até o envio; falta conferir com um celular de verdade lendo o QR)
 
 ## Etapa 11 · Atendimento e agendamento pelo WhatsApp ou pelo site
 

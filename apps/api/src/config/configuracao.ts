@@ -40,6 +40,14 @@ const esquema = z
     LIMITE_AUTH_POR_MINUTO: z.coerce.number().int().positive().default(10),
     /** Requisições por minuto por IP em qualquer rota (o teste de carga sobe este número). */
     LIMITE_POR_MINUTO: z.coerce.number().int().positive().default(300),
+    /** evolution = Evolution API de verdade; falso = sem WhatsApp (testes e tela sem celular). */
+    WHATSAPP_PROVEDOR: z.enum(['evolution', 'falso']).default('evolution'),
+    EVOLUTION_API_URL: z.url().default('http://localhost:8080'),
+    EVOLUTION_API_KEY: z.string().default(''),
+    /** Assina o webhook de cada instância (a Evolution devolve no cabeçalho). */
+    WHATSAPP_WEBHOOK_SEGREDO: z.string().min(16),
+    /** Endereço da API visto pela Evolution. Padrão: API_URL/webhooks/whatsapp. */
+    WHATSAPP_WEBHOOK_URL: z.url().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
@@ -48,6 +56,23 @@ const esquema = z
         code: 'custom',
         path: ['JWT_ACCESS_SECRET'],
         message: 'em produção use um valor aleatório com 32+ caracteres (openssl rand -base64 48)',
+      });
+    }
+    if (
+      env.WHATSAPP_WEBHOOK_SEGREDO.length < 32 ||
+      env.WHATSAPP_WEBHOOK_SEGREDO.includes('troque')
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['WHATSAPP_WEBHOOK_SEGREDO'],
+        message: 'em produção use um valor aleatório com 32+ caracteres (openssl rand -hex 32)',
+      });
+    }
+    if (env.WHATSAPP_PROVEDOR === 'evolution' && !env.EVOLUTION_API_KEY) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['EVOLUTION_API_KEY'],
+        message: 'defina a chave da Evolution API',
       });
     }
   });
@@ -69,6 +94,13 @@ export interface Configuracao {
   nivelLog: string;
   limiteAuthPorMinuto: number;
   limitePorMinuto: number;
+  whatsapp: {
+    provedor: 'evolution' | 'falso';
+    evolutionUrl: string;
+    evolutionChave: string;
+    webhookSegredo: string;
+    webhookUrl: string;
+  };
 }
 
 export const CONFIGURACAO = Symbol('CONFIGURACAO');
@@ -100,5 +132,12 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
     nivelLog: e.LOG_LEVEL,
     limiteAuthPorMinuto: e.LIMITE_AUTH_POR_MINUTO,
     limitePorMinuto: e.LIMITE_POR_MINUTO,
+    whatsapp: {
+      provedor: e.WHATSAPP_PROVEDOR,
+      evolutionUrl: e.EVOLUTION_API_URL.replace(/\/$/, ''),
+      evolutionChave: e.EVOLUTION_API_KEY,
+      webhookSegredo: e.WHATSAPP_WEBHOOK_SEGREDO,
+      webhookUrl: e.WHATSAPP_WEBHOOK_URL ?? `${e.API_URL.replace(/\/$/, '')}/webhooks/whatsapp`,
+    },
   };
 }

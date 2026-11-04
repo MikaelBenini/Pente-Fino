@@ -16,6 +16,7 @@ import {
   mensagensBotSchema,
   menuBotSchema,
   simularBotSchema,
+  type ConexaoBot,
   type EstadoBot,
   type HorarioBotEntrada,
   type MensagensBotEntrada,
@@ -105,5 +106,28 @@ export class BotController {
   })
   simular(@Corpo(simularBotSchema) d: SimularBotDados): Promise<RespostaSimulacao> {
     return this.servico.simular(d);
+  }
+
+  @Get('conexao/:unidadeId')
+  @Papeis(...GESTAO)
+  @ApiOperation({ summary: 'Estado do WhatsApp da unidade e o QR Code enquanto aguarda a leitura' })
+  conexao(@Param('unidadeId', ParseUUIDPipe) unidadeId: string): Promise<ConexaoBot> {
+    return this.servico.conexao(unidadeId);
+  }
+
+  @Post('conexao/:unidadeId')
+  @Papeis(...GESTAO)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Conectar (ou reconectar) o WhatsApp da unidade: devolve o QR Code' })
+  conectar(@Param('unidadeId', ParseUUIDPipe) unidadeId: string): Promise<ConexaoBot> {
+    return this.servico.conectar(unidadeId);
+  }
+
+  @Delete('conexao/:unidadeId')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({ summary: 'Desconectar o WhatsApp da unidade' })
+  desconectar(@Param('unidadeId', ParseUUIDPipe) unidadeId: string): Promise<ConexaoBot> {
+    return this.servico.desconectar(unidadeId);
   }
 }

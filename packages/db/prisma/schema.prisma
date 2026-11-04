@@ -167,8 +167,26 @@ enum TipoModeloMensagem {
   encerramento
   saida_avisos
   volta_avisos
+  convite_avisos
 
   @@map("tipo_modelo_mensagem")
+}
+
+enum DirecaoMensagem {
+  entrada
+  saida
+
+  @@map("direcao_mensagem")
+}
+
+enum StatusMensagem {
+  recebida
+  pendente
+  enviada
+  falhou
+  descartada
+
+  @@map("status_mensagem")
 }
 
 // ─── Conta e acesso ───────────────────────────────────────────────────────
@@ -216,6 +234,8 @@ model Conta {
   botConexoes        BotConexao[]
   botMenus           BotMenu[]
   modelosMensagem    ModeloMensagem[]
+  botSessoes         BotSessao[]
+  mensagens          Mensagem[]
   tokenAcessos       TokenAcesso[]
 
   @@map("conta")
@@ -255,6 +275,8 @@ model Unidade {
   metas           Meta[]
   botConexao      BotConexao?
   modelosMensagem ModeloMensagem[]
+  botSessoes      BotSessao[]
+  mensagens       Mensagem[]
 
   @@index([contaId])
   @@map("unidade")
@@ -525,6 +547,8 @@ model Cliente {
   origemLead       String?   @map("origem_lead")
   etapaLead        String?   @map("etapa_lead")
   consentimentoMsg Boolean   @default(false) @map("consentimento_msg")
+  /// Quando o cliente escolheu (RECEBER ou SAIR). Vazio = ainda não escolheu: o bot convida.
+  consentimentoEm  DateTime? @map("consentimento_em") @db.Timestamptz(3)
   criadoEm         DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -533,6 +557,7 @@ model Cliente {
   notas         NotaCliente[]
   agendamentos  Agendamento[]
   comandas      Comanda[]
+  mensagens     Mensagem[]
 
   @@unique([contaId, telefone])
   @@index([contaId, nome])
@@ -832,6 +857,8 @@ model BotConexao {
   instancia    String           @unique
   numero       String?
   status       StatusBotConexao @default(desconectado)
+  /// A conexão caiu sem o dono pedir: o painel avisa até reconectar.
+  caiuEm       DateTime?        @map("caiu_em") @db.Timestamptz(3)
   criadoEm     DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime         @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -840,6 +867,49 @@ model BotConexao {
 
   @@index([contaId])
   @@map("bot_conexao")
+}
+
+/// Onde cada número está no menu do bot. Sem resposta por 30 minutos, recomeça.
+model BotSessao {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String   @map("unidade_id") @db.Uuid
+  telefone     String
+  sessao       Json
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@unique([unidadeId, telefone])
+  @@index([contaId])
+  @@map("bot_sessao")
+}
+
+/// Mensagens do WhatsApp, recebidas e enviadas. Histórico no perfil do cliente.
+model Mensagem {
+  id        String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId   String          @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId String          @map("unidade_id") @db.Uuid
+  clienteId String?         @map("cliente_id") @db.Uuid
+  telefone  String
+  direcao   DirecaoMensagem
+  texto     String
+  status    StatusMensagem
+  /// Id da mensagem no WhatsApp (recebida) ou no provedor (enviada).
+  idExterno String?         @map("id_externo")
+  erro      String?
+  enviadaEm DateTime?       @map("enviada_em") @db.Timestamptz(3)
+  criadoEm  DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  cliente Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+
+  @@unique([unidadeId, idExterno])
+  @@index([contaId, clienteId, criadoEm])
+  @@index([unidadeId, telefone, criadoEm])
+  @@map("mensagem")
 }
 
 /// Versões do menu do bot (sem IA). Uma em rascunho e uma publicada por conta; as

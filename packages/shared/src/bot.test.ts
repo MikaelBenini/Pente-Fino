@@ -174,6 +174,42 @@ describe('conversa', () => {
     expect(volta.sessao.caminho).toEqual([]);
     expect(volta.respostas[0]).toBe('Escolha:\n\n1. Serviços');
   });
+  describe('convite para receber avisos', () => {
+    const convite = MENSAGENS_BOT_PADRAO.convite_avisos;
+
+    it('número que ainda não escolheu recebe o convite no fim da primeira resposta', () => {
+      const r = fala(null, 'oi', ctx({ pedirConsentimento: true }));
+      expect(r.respostas.at(-1)).toBe(convite);
+      expect(r.respostas.length).toBeGreaterThan(1);
+    });
+
+    it('também quando a conversa começa por palavra-chave', () => {
+      const r = fala(null, 'qual o preço?', ctx({ pedirConsentimento: true }));
+      expect(r.respostas.at(-1)).toBe(convite);
+    });
+
+    it('só na abertura: no meio da conversa não repete', () => {
+      const r0 = fala(null, 'oi', ctx({ pedirConsentimento: true }));
+      const r1 = fala(r0.sessao, '2', ctx({ pedirConsentimento: true }));
+      expect(r1.respostas).not.toContain(convite);
+    });
+
+    it('quem já escolheu não recebe', () => {
+      expect(fala(null, 'oi').respostas).not.toContain(convite);
+    });
+
+    it('SAIR e RECEBER respondem só a confirmação', () => {
+      const sair = fala(null, 'SAIR', ctx({ pedirConsentimento: true }));
+      expect(sair.respostas).toEqual([MENSAGENS_BOT_PADRAO.saida_avisos]);
+      expect(sair.consentimento).toBe(false);
+    });
+
+    it('pedido de atendente na abertura não leva convite', () => {
+      const r = fala(null, 'atendente', ctx({ pedirConsentimento: true }));
+      expect(r.sessao.comAtendente).toBe(true);
+      expect(r.respostas).not.toContain(convite);
+    });
+  });
 });
 
 describe('validarMenu', () => {

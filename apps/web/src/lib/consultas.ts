@@ -11,7 +11,9 @@ import type {
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { api } from './api';
 import type {
+  ConexaoBot,
   EstadoBot,
+  MensagemDoCliente,
   ResumoDoDia,
   ResumoDoMes,
   FichaProfissional,
@@ -307,4 +309,22 @@ export const useResumoMes = (unidade: string | null, mes: string, profissional: 
 
 export const chaveBot = ['bot'] as const;
 /** Menu publicado e rascunho, mensagens prontas e horário das unidades. */
-export const useBot = () => useQuery({ queryKey: chaveBot, queryFn: () => api<EstadoBot>('bot') });
+export const useBot = (ativo = true) =>
+  useQuery({ queryKey: chaveBot, queryFn: () => api<EstadoBot>('bot'), enabled: ativo });
+
+/** Conexão do WhatsApp da unidade. Enquanto espera a leitura do QR, consulta a cada 3 s. */
+export const useConexaoBot = (unidadeId: string, ativo: boolean) =>
+  useQuery({
+    queryKey: [...chaveBot, 'conexao', unidadeId],
+    queryFn: () => api<ConexaoBot>(`bot/conexao/${unidadeId}`),
+    enabled: ativo,
+    refetchInterval: (q) => (q.state.data?.status === 'aguardando_qr' ? 3_000 : false),
+  });
+
+/** Conversa do WhatsApp com o cliente (recepção, gestor e dono). */
+export const useMensagensCliente = (clienteId: string | null, ativo: boolean) =>
+  useQuery({
+    queryKey: [...chavesOperacao.clientes, clienteId, 'mensagens'],
+    queryFn: () => api<MensagemDoCliente[]>(`clientes/${clienteId}/mensagens`),
+    enabled: !!clienteId && ativo,
+  });

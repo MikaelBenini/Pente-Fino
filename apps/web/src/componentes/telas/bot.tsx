@@ -3,6 +3,7 @@
 import {
   ACOES_BOT,
   formatarDataHora,
+  formatarTelefone,
   MAXIMO_OPCOES,
   NOME_ACAO_BOT,
   SOBRE_MENSAGEM_BOT,
@@ -10,6 +11,7 @@ import {
   validarMenu,
   VARIAVEIS_BOT,
   type AcaoBot,
+  type ConexaoBot,
   type EstadoBot,
   type GrupoPalavrasChave,
   type MensagensBot,
@@ -33,9 +35,11 @@ import {
   Trash2,
   TriangleAlert,
 } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, type FormEvent } from 'react';
 import { api, ErroApi } from '@/lib/api';
-import { chaveBot, useAcao, useBot } from '@/lib/consultas';
+import { chaveBot, useAcao, useBot, useConexaoBot } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
 
@@ -46,7 +50,9 @@ const iguais = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(
 
 export function TelaBot() {
   const bot = useBot();
-  const [aba, setAba] = useState('menu');
+  // O aviso de queda no topo do painel abre direto na aba Conexão.
+  const abaInicial = useSearchParams().get('aba') === 'conexao' ? 'conexao' : 'menu';
+  const [aba, setAba] = useState(abaInicial);
   // Fora do editor: o editor é recriado quando a versão publicada muda e a confirmação continua.
   const [retorno, setRetorno] = useState<Retorno | null>(null);
   return (
@@ -1032,39 +1038,178 @@ function Simulador({ e }: { e: EstadoBot }) {
 
 // ─── Conexão ──────────────────────────────────────────────────────────────
 
+const NOME_STATUS: Record<ConexaoBot['status'], string> = {
+  conectado: 'Conectado',
+  aguardando_qr: 'Esperando o QR Code',
+  desconectado: 'Desconectado',
+};
+
+/** Passo a passo para ler o QR Code (também serve para reconectar quando cai). */
+export function PassosParaConectar() {
+  return (
+    <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm">
+      <li>No celular da barbearia, abra o WhatsApp do número da unidade.</li>
+      <li>
+        Toque em <strong>⋮</strong> (Android) ou em <strong>Configurações</strong> (iPhone) e depois
+        em <strong>Aparelhos conectados</strong>.
+      </li>
+      <li>
+        Toque em <strong>Conectar um aparelho</strong> e aponte a câmera para o QR Code.
+      </li>
+    </ol>
+  );
+}
+
 function Conexao({ e }: { e: EstadoBot }) {
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <p className="text-tinta-suave">
         Cada unidade usa um número de WhatsApp próprio, conectado por QR Code como o WhatsApp Web.
-        Sem custo por mensagem e sem aprovação da Meta.
+        Sem custo por mensagem e sem aprovação da Meta. Use um número só da barbearia: o bot
+        responde todas as conversas dele.
       </p>
       <ul className="animar-escalonado flex flex-col gap-3">
         {e.unidades.map((u) => (
-          <li
-            key={u.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-borda bg-superficie p-4"
-          >
-            <span>
-              <span className="block font-semibold">{u.nome}</span>
-              <span className="text-sm text-tinta-suave">
-                {u.conexao?.numero ?? 'Nenhum número conectado'}
-              </span>
-            </span>
-            <Ficha tom={u.conexao?.status === 'conectado' ? 'acao' : 'neutro'}>
-              {u.conexao?.status === 'conectado'
-                ? 'Conectado'
-                : u.conexao?.status === 'aguardando_qr'
-                  ? 'Esperando o QR Code'
-                  : 'Desconectado'}
-            </Ficha>
-          </li>
+          <ConexaoUnidade key={u.id} u={u} />
         ))}
       </ul>
       <Aviso tom="info">
-        Conectar pelo QR Code aqui no painel chega na próxima entrega desta etapa. Até lá, monte e
-        teste o menu: ele já fica pronto para quando o número for conectado.
+        Para não arriscar o número, o bot só responde quem escreveu, espaça as mensagens e nunca
+        manda nada em massa.
       </Aviso>
     </div>
+  );
+}
+
+function ConexaoUnidade({ u }: { u: UnidadeDoBot }) {
+  const [aberta, setAberta] = useState(u.conexao?.status === 'aguardando_qr');
+  const [confirmar, setConfirmar] = useState(false);
+  const consulta = useConexaoBot(u.id, aberta);
+  const cliente = useQueryClient();
+  const chave = [...chaveBot, 'conexao', u.id];
+  const guardar = (c: ConexaoBot) => {
+    cliente.setQueryData(chave, c);
+    void cliente.invalidateQueries({ queryKey: chaveBot, exact: true });
+  };
+  const conectar = useMutation({
+    mutationFn: () => api<ConexaoBot>(`bot/conexao/${u.id}`, { metodo: 'POST' }),
+    onSuccess: (c) => {
+      setAberta(true);
+      guardar(c);
+    },
+  });
+  const desconectar = useMutation({
+    mutationFn: () => api<ConexaoBot>(`bot/conexao/${u.id}`, { metodo: 'DELETE' }),
+    onSuccess: (c) => {
+      setConfirmar(false);
+      guardar(c);
+    },
+  });
+
+  // O que a tela mostra: a consulta ao vivo (aberta) ou o último estado conhecido.
+  const c: Pick<ConexaoBot, 'status' | 'numero' | 'caiuEm'> & Partial<ConexaoBot> =
+    consulta.data ??
+    (u.conexao ? { ...u.conexao } : { status: 'desconectado', numero: null, caiuEm: null });
+  const conectado = c.status === 'conectado';
+  const caiu = !conectado && !!c.caiuEm;
+  // Conectou com o QR na tela: o resto do painel (estado das unidades) se atualiza.
+  const status = consulta.data?.status;
+  useEffect(() => {
+    if (status === 'conectado') void cliente.invalidateQueries({ queryKey: chaveBot, exact: true });
+  }, [status, cliente]);
+
+  return (
+    <li className="flex flex-col gap-4 rounded-lg border border-borda bg-superficie p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span>
+          <span className="block font-semibold">{u.nome}</span>
+          <span className="text-sm text-tinta-suave tabular-nums">
+            {c.numero ? formatarTelefone(c.numero) : 'Nenhum número conectado'}
+          </span>
+        </span>
+        <Ficha
+          tom={
+            conectado ? 'acao' : caiu ? 'perigo' : c.status === 'aguardando_qr' ? 'aviso' : 'neutro'
+          }
+        >
+          {caiu ? 'Caiu' : NOME_STATUS[c.status]}
+        </Ficha>
+      </div>
+
+      {caiu && (
+        <Aviso tom="erro">
+          <p className="font-semibold">
+            A conexão caiu em {formatarDataHora(c.caiuEm!)}. O bot não está respondendo.
+          </p>
+          <p className="mt-1">
+            Toque em “Reconectar” e leia o QR Code de novo. Se o celular ficou sem internet ou
+            desligado, ligue-o antes.
+          </p>
+        </Aviso>
+      )}
+
+      {c.status === 'aguardando_qr' && aberta && (
+        <div className="flex flex-col items-start gap-4 sm:flex-row">
+          <div className="grid size-56 shrink-0 place-items-center rounded-md border border-borda bg-white p-2">
+            {c.qr ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data URL gerada pela API
+              <img
+                src={c.qr}
+                alt={`QR Code para conectar o WhatsApp da ${u.nome}`}
+                className="size-full"
+              />
+            ) : (
+              <span className="text-sm text-tinta-suave">Gerando o QR Code…</span>
+            )}
+          </div>
+          <div className="flex flex-col gap-3">
+            <PassosParaConectar />
+            <p className="text-sm text-tinta-suave">
+              O QR Code muda sozinho a cada poucos segundos. Esta tela avisa quando conectar.
+            </p>
+            {c.teste && (
+              <Ficha tom="aviso">WhatsApp de teste: este QR Code não conecta de verdade</Ficha>
+            )}
+          </div>
+        </div>
+      )}
+
+      {conectado && conectar.isSuccess && (
+        <Aviso tom="sucesso">Conectado! O bot já responde as mensagens deste número.</Aviso>
+      )}
+
+      {(c.erro || conectar.error || desconectar.error) && (
+        <Aviso tom="erro">{c.erro ?? mensagemDe(conectar.error ?? desconectar.error)}</Aviso>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {!conectado && (
+          <Botao carregando={conectar.isPending} onClick={() => conectar.mutate()}>
+            {caiu || c.status === 'aguardando_qr' ? 'Reconectar' : 'Conectar pelo QR Code'}
+          </Botao>
+        )}
+        {conectado && !aberta && (
+          <Botao variante="secundario" onClick={() => setAberta(true)}>
+            Conferir conexão
+          </Botao>
+        )}
+        {(conectado || c.status === 'aguardando_qr') && (
+          <Botao variante="secundario" onClick={() => setConfirmar(true)}>
+            Desconectar
+          </Botao>
+        )}
+      </div>
+
+      <ModalConfirmacao
+        aberto={confirmar}
+        titulo={`Desconectar o WhatsApp da ${u.nome}?`}
+        descricao="O bot para de responder neste número até alguém conectar de novo pelo QR Code. As conversas no celular não são apagadas."
+        textoConfirmar="Desconectar"
+        tom="perigo"
+        carregando={desconectar.isPending}
+        onConfirmar={() => desconectar.mutate()}
+        onCancelar={() => setConfirmar(false)}
+      />
+    </li>
   );
 }

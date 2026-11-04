@@ -11,6 +11,6 @@ if (existsSync(envDaRaiz)) process.loadEnvFile(envDaRaiz);
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(WorkerModule);
   app.enableShutdownHooks();
-  new Logger('Worker').log('Worker iniciado, consumindo as filas "emails" e "eventos".');
+  new Logger('Worker').log('Worker iniciado, consumindo as filas de e-mail, eventos e WhatsApp.');
 }
 await bootstrap();
