@@ -24,7 +24,7 @@ export class ComissoesService {
   constructor(@Inject(BancoService) private readonly banco: BancoService) {}
 
   /** Resumo de um profissional no período: previsto, fechado, pago e a receber. */
-  private async resumo(
+  async resumo(
     tx: Transacao,
     profissional: { id: string; unidadeId: string; usuario: { nome: string } },
     de: string,

@@ -122,3 +122,40 @@ h3 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Impressão (ficha do profissional, relatórios): papel branco, sem menu nem botões.
+ * Quem não deve sair no papel leva data-nao-imprimir.
+ */
+@media print {
+  :root,
+  :root[data-theme='light'] {
+    --fundo: #ffffff;
+    --superficie: #ffffff;
+    --superficie-2: #f3f4f1;
+    --superficie-3: #e6e7e2;
+    --borda: #cfd1c9;
+    --borda-forte: #9c9e95;
+    --tinta: #121211;
+    --tinta-suave: #4f504a;
+    --tinta-fraca: #84857d;
+    --modulo-texto: #765c00;
+    --acao-texto: #3b6a08;
+    --aviso-texto: #934f00;
+    --perigo-texto: #b0261a;
+    color-scheme: light;
+  }
+  aside,
+  header,
+  nav,
+  [data-nao-imprimir] {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  details {
+    display: none;
+  }
+}

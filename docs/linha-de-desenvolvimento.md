@@ -193,20 +193,20 @@ Tudo o que a página de planos promete precisa existir antes do piloto. Cada eta
 
 O dono e o gestor veem tudo sobre cada profissional numa tela só, para conversar com dados e não com impressão. O barbeiro vê a mesma ficha, só a dele.
 
-- [ ] Regras novas em `packages/shared`, com teste antes da tela: taxa de retorno (cliente que volta ao mesmo profissional em até N dias; padrão 45, configurável), clientes novos e recorrentes, intervalo médio entre visitas, ocupação do profissional (minutos agendados ÷ minutos de expediente menos bloqueios), tempo real por serviço (início do atendimento até a confirmação) contra a duração cadastrada, % de comandas confirmadas pelo barbeiro antes do fechamento, faltas dos clientes dele
-- [ ] Ficha do profissional (`/equipe/:id`), aberta pela tela Equipe, com filtro de período (este mês, mês passado, intervalo) e de unidade
-- [ ] Resumo: faturamento gerado, atendimentos, clientes, ticket médio, % de extras, ocupação, comissão (prevista, a receber e paga) e quanto ele contribuiu para a meta da unidade
-- [ ] Técnica: serviços feitos (quantidade, receita, tempo real x previsto), extras e produtos que mais vende e, só para o dono, margem de cada serviço
-- [ ] Comandas atendidas: lista com data, cliente, itens, valor e estado, abrindo a comanda; reaberturas e cancelamentos destacados
-- [ ] Clientes: recorrentes (quantas vezes voltaram, última visita, intervalo habitual), novos no período, os que sumiram (passaram do intervalo habitual) e faltas
-- [ ] Rotina: comandas confirmadas no prazo, pendentes, tempo médio até confirmar e atrasos (atendimento começou depois do horário marcado)
-- [ ] Avaliações: nota média, distribuição das notas e comentários (os dados chegam com a Etapa 12; até lá a área explica como ligar a pesquisa)
-- [ ] Evolução dos últimos 6 meses e comparação com a média da unidade
-- [ ] Tela Equipe com ranking ordenável: faturamento, ticket, retorno, nota, ocupação e % de confirmação
-- [ ] Barbeiro: "Desempenho" passa a ser a mesma ficha, só a dele, sem custo nem margem e sem ver os números dos colegas; o telefone dos clientes segue a regra de ocultar
-- [ ] Exportar a ficha em PDF para a conversa de feedback
-- [ ] Permissões: dono vê todos, gestor só os da unidade dele, recepção não vê, barbeiro só a própria ficha
-- [ ] **Pronto quando:** o dono abre a ficha de um barbeiro e responde sem planilha quanto ele faturou, que serviços faz, quantos clientes voltam para ele, quais comandas atendeu e como está a nota; os números batem com os indicadores da unidade
+- [x] Regras novas em `packages/shared`, com teste antes da tela: taxa de retorno (cliente que volta ao mesmo profissional em até N dias; padrão 45, configurável), clientes novos e recorrentes, intervalo médio entre visitas, ocupação do profissional (minutos agendados ÷ minutos de expediente menos bloqueios), tempo real por serviço (início do atendimento até a confirmação) contra a duração cadastrada, % de comandas confirmadas pelo barbeiro antes do fechamento, faltas dos clientes dele (`packages/shared/src/desempenho.ts`, 100% das linhas cobertas; a comanda passou a gravar quem confirmou, `confirmada_por_id`, porque o fechamento preenche a hora da confirmação)
+- [x] Ficha do profissional (`/equipe/:id`), aberta pela tela Equipe, com filtro de período (este mês, mês passado, intervalo) e de unidade (em `/equipe/ficha?id=`, com o período na URL; a unidade é a do profissional e o ranking segue a unidade ativa)
+- [x] Resumo: faturamento gerado, atendimentos, clientes, ticket médio, % de extras, ocupação, comissão (prevista, a receber e paga) e quanto ele contribuiu para a meta da unidade
+- [x] Técnica: serviços feitos (quantidade, receita, tempo real x previsto), extras e produtos que mais vende e, só para o dono, margem de cada serviço (tempo real medido nas comandas com um serviço só, para não chutar a divisão)
+- [x] Comandas atendidas: lista com data, cliente, itens, valor e estado, abrindo a comanda; reaberturas e cancelamentos destacados
+- [x] Clientes: recorrentes (quantas vezes voltaram, última visita, intervalo habitual), novos no período, os que sumiram (passaram do intervalo habitual) e faltas (mais: botão "Chamar" no WhatsApp com a mensagem pronta e o link de agendamento, só para dono e gestor)
+- [x] Rotina: comandas confirmadas no prazo, pendentes, tempo médio até confirmar e atrasos (atendimento começou depois do horário marcado)
+- [x] Avaliações: nota média, distribuição das notas e comentários (os dados chegam com a Etapa 12; até lá a área explica como ligar a pesquisa)
+- [x] Evolução dos últimos 6 meses e comparação com a média da unidade
+- [x] Tela Equipe com ranking ordenável: faturamento, ticket, retorno, nota, ocupação e % de confirmação (aba "Desempenho", a primeira da tela; a ordenação por nota entra com a Etapa 12)
+- [x] Barbeiro: "Desempenho" passa a ser a mesma ficha, só a dele, sem custo nem margem e sem ver os números dos colegas; o telefone dos clientes segue a regra de ocultar
+- [x] Exportar a ficha em PDF para a conversa de feedback ("Imprimir ou salvar PDF": folha branca, sem menu, pelo próprio navegador)
+- [x] Permissões: dono vê todos, gestor só os da unidade dele, recepção não vê, barbeiro só a própria ficha (`apps/api/test/desempenho.e2e-spec.ts` e as varreduras de isolamento e permissão)
+- [x] **Pronto quando:** o dono abre a ficha de um barbeiro e responde sem planilha quanto ele faturou, que serviços faz, quantos clientes voltam para ele, quais comandas atendeu e como está a nota; os números batem com os indicadores da unidade (conferido com a demonstração e nos testes `apps/web/e2e/desempenho.spec.ts`)
 
 ## Etapa 10 · Bot do WhatsApp: conexão e respostas automáticas
 

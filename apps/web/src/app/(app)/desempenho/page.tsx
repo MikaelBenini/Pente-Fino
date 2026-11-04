@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { TelaDesempenho } from '@/componentes/telas/barbeiro';
+import { TelaDesempenhoBarbeiro } from '@/componentes/telas/equipe-desempenho';
 
 export const metadata: Metadata = { title: 'Desempenho' };
 
 export default function Pagina() {
-  return <TelaDesempenho />;
+  return <TelaDesempenhoBarbeiro />;
 }

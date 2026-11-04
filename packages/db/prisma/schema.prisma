@@ -290,6 +290,7 @@ model Usuario {
   notasCliente        NotaCliente[]
   agendamentosCriados Agendamento[]       @relation("AgendamentoCriadoPor")
   comandasFechadas    Comanda[]           @relation("ComandaFechadaPor")
+  comandasConfirmadas Comanda[]           @relation("ComandaConfirmadaPor")
   pagamentosRecebidos Pagamento[]
   caixasAbertos       CaixaDia[]          @relation("CaixaAbertoPor")
   caixasFechados      CaixaDia[]          @relation("CaixaFechadoPor")
@@ -596,6 +597,8 @@ model Comanda {
   totalLiquido       Int           @default(0) @map("total_liquido")
   iniciadaEm         DateTime?     @map("iniciada_em") @db.Timestamptz(3)
   confirmadaEm       DateTime?     @map("confirmada_em") @db.Timestamptz(3)
+  /// Quem apertou "confirmar" (vazio = a recepção fechou sem confirmação).
+  confirmadaPorId    String?       @map("confirmada_por_id") @db.Uuid
   fechadaEm          DateTime?     @map("fechada_em") @db.Timestamptz(3)
   fechadaPorId       String?       @map("fechada_por_id") @db.Uuid
   canceladaEm        DateTime?     @map("cancelada_em") @db.Timestamptz(3)
@@ -609,6 +612,7 @@ model Comanda {
   profissional Profissional  @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
   agendamento  Agendamento?  @relation(fields: [agendamentoId], references: [id], onDelete: SetNull)
   fechadaPor   Usuario?      @relation("ComandaFechadaPor", fields: [fechadaPorId], references: [id], onDelete: SetNull)
+  confirmadaPor Usuario?     @relation("ComandaConfirmadaPor", fields: [confirmadaPorId], references: [id], onDelete: SetNull)
   itens        ItemComanda[]
   pagamentos   Pagamento[]
 

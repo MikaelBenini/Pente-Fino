@@ -321,6 +321,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     unidadeId: string;
     regras: { vigenciaInicio: DataISO; percentualBp: number }[];
     regraProduto: number;
+    usuarioId: string;
   }[] = [];
   for (const membro of EQUIPE) {
     const email = `${membro.nome.split(' ')[0]!.toLowerCase()}@demo.pentefino.dev`;
@@ -360,7 +361,13 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
         },
       ],
     });
-    barbeiros.push({ id: profissional.id, unidadeId: unidade.id, regras, regraProduto: 1000 });
+    barbeiros.push({
+      id: profissional.id,
+      unidadeId: unidade.id,
+      regras,
+      regraProduto: 1000,
+      usuarioId: usuario.id,
+    });
   }
 
   // Clientes com telefone único.
@@ -473,8 +480,10 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
           desconto: chance(0.04) ? 500 : 0,
           percentual: regraServico.percentualBp,
         });
+        let duracaoPrevista = principal.duracaoMin;
         if (status !== 'prevista' && chance(0.28)) {
           const extra = servicoPorNome.get(sortear(extras))!;
+          duracaoPrevista += extra.duracaoMin;
           linhas.push({
             tipo: 'servico',
             servicoId: extra.id,
@@ -528,7 +537,22 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
           });
         }
         const totalLiquido = totalBruto - desconto;
-        const fechadaEm = adicionarMinutos(fim, inteiro(1, 10));
+        let fechadaEm = adicionarMinutos(fim, inteiro(1, 10));
+        // Rotina realista para a ficha do profissional: às vezes começa atrasado, o tempo
+        // real varia e 1 em 10 a recepção fecha sem o barbeiro confirmar.
+        const atendeu = status !== 'prevista' && status !== 'cancelada';
+        const iniciadaEm = atendeu
+          ? adicionarMinutos(inicio, chance(0.15) ? inteiro(11, 25) : inteiro(0, 6))
+          : null;
+        const confirmou = status === 'fechada' && chance(0.9);
+        const confirmadaEm =
+          status === 'fechada'
+            ? confirmou
+              ? adicionarMinutos(iniciadaEm!, duracaoPrevista + inteiro(-6, 8))
+              : fechadaEm
+            : null;
+        if (confirmadaEm && confirmadaEm > fechadaEm)
+          fechadaEm = adicionarMinutos(confirmadaEm, inteiro(1, 5));
 
         comandas.push({
           id: comandaId,
@@ -540,8 +564,9 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
           totalBruto,
           desconto,
           totalLiquido,
-          iniciadaEm: status === 'prevista' || status === 'cancelada' ? null : inicio,
-          confirmadaEm: status === 'fechada' ? fim : null,
+          iniciadaEm,
+          confirmadaEm,
+          confirmadaPorId: confirmou ? barbeiro.usuarioId : null,
           fechadaEm: status === 'fechada' ? fechadaEm : null,
           fechadaPorId: status === 'fechada' ? recepcaoDa[unidade.id]! : null,
           canceladaEm: status === 'cancelada' ? fim : null,

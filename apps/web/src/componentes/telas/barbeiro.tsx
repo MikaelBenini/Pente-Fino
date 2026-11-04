@@ -1,21 +1,15 @@
 'use client';
 
-import {
-  formatarFracao,
-  formatarHora,
-  formatarMoeda,
-  formatarNumero,
-  statusEfetivo,
-} from '@pente-fino/shared';
+import { formatarHora, formatarMoeda, formatarNumero, statusEfetivo } from '@pente-fino/shared';
 import { BarraMeta, BlocoAgenda, CartaoIndicador, EstadoVazio } from '@pente-fino/ui';
 import { CalendarCheck, Target } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useMeComissoes, useMeDesempenho, useMeHoje } from '@/lib/consultas';
-import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
+import { useMeComissoes, useMeHoje } from '@/lib/consultas';
+import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
-import { comparar, SeletorMes } from '../indicadores';
+import { SeletorMes } from '../indicadores';
 import { CabecalhoPagina, Estado } from '../pagina';
 import { TabelaExtrato } from './financeiro';
 
@@ -115,66 +109,6 @@ export function TelaHoje() {
                 </section>
               )}
             </>
-          );
-        }}
-      </Estado>
-    </div>
-  );
-}
-
-export function TelaDesempenho() {
-  const [mes, setMes] = useState(mesAtual());
-  const d = useMeDesempenho(mes);
-  return (
-    <div className="flex flex-col gap-6">
-      <CabecalhoPagina
-        titulo="Desempenho"
-        pergunta={`Como foi ${nomeDoMes(mes)}?`}
-        acao={<SeletorMes mes={mes} onMudar={setMes} />}
-      />
-      <Estado consulta={d}>
-        {() => {
-          const { atual: a, anterior: b } = d.data!;
-          const vs = 'vs. mês anterior';
-          return (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <CartaoIndicador
-                rotulo="Comissão"
-                valor={formatarMoeda(a.comissao)}
-                comparacao={comparar(a.comissao, b.comissao, vs)}
-                origem="Comissão dos itens das suas comandas fechadas no mês."
-              />
-              <CartaoIndicador
-                rotulo="Clientes"
-                valor={formatarNumero(a.clientes)}
-                comparacao={comparar(a.clientes, b.clientes, vs)}
-                origem="Comandas fechadas com você, com pelo menos um serviço."
-              />
-              <CartaoIndicador
-                rotulo="Ticket médio"
-                valor={formatarMoeda(a.ticketMedio)}
-                comparacao={comparar(a.ticketMedio, b.ticketMedio, vs)}
-                origem="Seu faturamento ÷ seus clientes."
-              />
-              <CartaoIndicador
-                rotulo="Faturamento"
-                valor={formatarMoeda(a.faturamento)}
-                comparacao={comparar(a.faturamento, b.faturamento, vs)}
-                origem="Serviços e produtos das suas comandas fechadas."
-              />
-              <CartaoIndicador
-                rotulo="Atendimentos"
-                valor={formatarNumero(a.atendimentos)}
-                comparacao={comparar(a.atendimentos, b.atendimentos, vs)}
-                origem="Soma do peso dos serviços."
-              />
-              <CartaoIndicador
-                rotulo="Extras"
-                valor={formatarFracao(a.percentualExtras)}
-                comparacao={comparar(a.percentualExtras, b.percentualExtras, vs, true, 'pontos')}
-                origem={`${a.extrasQuantidade} extras ÷ ${a.clientes} clientes.`}
-              />
-            </div>
           );
         }}
       </Estado>

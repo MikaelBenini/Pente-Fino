@@ -23,7 +23,8 @@ import {
   ModalConfirmacao,
   Selecao,
 } from '@pente-fino/ui';
-import { MessageCircle, Plus, UserPlus, Users } from 'lucide-react';
+import { ChartColumn, MessageCircle, Plus, UserPlus, Users } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
@@ -37,6 +38,7 @@ import { NOME_PAPEL } from '@/lib/sessao';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
+import { RankingEquipe } from './equipe-desempenho';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? e.message : 'Não foi possível concluir. Tente de novo.';
@@ -48,15 +50,19 @@ const minutos = (texto: string) => {
 };
 
 export function TelaEquipe() {
-  const [aba, setAba] = useState('profissionais');
+  const [aba, setAba] = useState('desempenho');
   return (
     <div className="flex flex-col gap-8">
-      <CabecalhoPagina titulo="Equipe" pergunta="Quem trabalha aqui e quanto ganha por serviço?" />
+      <CabecalhoPagina
+        titulo="Equipe"
+        pergunta="Quem trabalha aqui, como está indo e quanto ganha?"
+      />
       <Abas
         rotulo="Equipe"
         atual={aba}
         onTrocar={setAba}
         abas={[
+          { id: 'desempenho', rotulo: 'Desempenho', conteudo: <RankingEquipe /> },
           { id: 'profissionais', rotulo: 'Profissionais', conteudo: <Profissionais /> },
           { id: 'acessos', rotulo: 'Acessos ao sistema', conteudo: <Acessos /> },
         ]}
@@ -178,6 +184,12 @@ function Profissionais() {
                       </p>
                       {p.ativo ? (
                         <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={`/equipe/ficha?id=${p.id}`}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-superficie-3 px-4 font-semibold hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+                          >
+                            <ChartColumn aria-hidden className="size-5" /> Ver ficha
+                          </Link>
                           <Botao variante="secundario" onClick={() => setHorarios(p)}>
                             Horários
                           </Botao>

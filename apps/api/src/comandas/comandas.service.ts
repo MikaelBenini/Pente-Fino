@@ -428,6 +428,7 @@ export class ComandasService {
         data: {
           status: 'confirmada',
           confirmadaEm: new Date(),
+          confirmadaPorId: Contexto.usuario().id,
           iniciadaEm: comanda.iniciadaEm ?? new Date(),
         },
       });
