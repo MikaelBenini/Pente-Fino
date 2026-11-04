@@ -122,18 +122,18 @@ Tudo que todo módulo vai usar, pronto antes do primeiro módulo de negócio.
 
 O esqueleto das telas, a identidade visual e o app instalável no celular.
 
-- [ ] Tema do mapa: fundo escuro, amarelo dos módulos, verde de ação, cores dos planos; tema claro opcional
-- [ ] Fontes Barlow e Barlow Condensed
-- [ ] Biblioteca de componentes em `packages/ui`: botão, campo, tabela editável, cartão de indicador, barra de meta, etiqueta de estado, bloco de agenda, modal de confirmação
-- [ ] Telas de login, convite, recuperar senha e escolha de unidade (os links dos e-mails apontam para `/convite?token=` e `/redefinir-senha?token=` no `APP_URL`)
-- [ ] Menu montado pelo papel do usuário
-- [ ] Cliente HTTP com renovação automática de token; cache de dados com TanStack Query (a API devolve `refreshToken` no JSON: guardar em cookie httpOnly pelo próprio Next, nunca em `localStorage`; renovações simultâneas em duas abas contam como reuso e derrubam a sessão, então serializar a renovação)
-- [ ] Formulários com react-hook-form e os mesmos esquemas zod da API
-- [ ] Formatação em pt-BR: moeda, data, hora, telefone
-- [ ] PWA: manifesto, ícones, instalação no celular, fila local para lançamentos sem internet
-- [ ] Layout responsivo testado em celular, tablet e computador
-- [ ] Estados vazios com orientação ("Cadastre seu primeiro serviço") e telas de carregamento
-- [ ] **Pronto quando:** cada papel entra e vê só o menu dele, no celular e no computador
+- [x] Tema do mapa: fundo escuro, amarelo dos módulos, verde de ação, cores dos planos; tema claro opcional (tokens em `apps/web/src/app/globals.css`; tema claro por aparelho, no perfil e no menu)
+- [x] Fontes Barlow e Barlow Condensed (`next/font`, números tabulares nas colunas)
+- [x] Biblioteca de componentes em `packages/ui`: botão, campo, tabela editável, cartão de indicador, barra de meta, etiqueta de estado, bloco de agenda, modal de confirmação (mais estado vazio e carregamento; a tabela aceita colar da planilha)
+- [x] Telas de login, convite, recuperar senha e escolha de unidade (mais nova senha, perfil com troca de senha e página sem internet)
+- [x] Menu montado pelo papel do usuário (`menuPara` em `packages/shared`; vale o papel da unidade ativa; endereço de outro papel mostra "não faz parte do seu acesso")
+- [x] Cliente HTTP com renovação automática de token; cache de dados com TanStack Query (ponte `/api` no Next guarda os tokens em cookie httpOnly e renova no servidor, sem disputa entre abas; recusa pedidos de outra origem)
+- [x] Formulários com react-hook-form e os mesmos esquemas zod da API (erros por campo vindos da API vão para o campo certo)
+- [x] Formatação em pt-BR: moeda, data, hora, telefone (`packages/shared/src/formatacao.ts`)
+- [x] PWA: manifesto, ícones, instalação no celular, fila local para lançamentos sem internet (service worker abre as telas já vistas sem sinal; fila no IndexedDB envia na ordem quando a conexão volta)
+- [x] Layout responsivo testado em celular, tablet e computador (menu lateral no computador; barra inferior com 4 atalhos e "Mais" no celular)
+- [x] Estados vazios com orientação ("Cadastre seu primeiro serviço") e telas de carregamento
+- [x] **Pronto quando:** cada papel entra e vê só o menu dele, no celular e no computador (`apps/web/e2e`: Playwright com dono, gestor, recepção e barbeiro, no computador e no celular, no CI)
 
 ## Etapa 6 · Módulos do MVP
 

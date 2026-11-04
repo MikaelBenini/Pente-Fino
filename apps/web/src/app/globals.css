@@ -1,18 +1,124 @@
 @import 'tailwindcss';
 
-/* Tema provisório: o tema completo (cores dos módulos e planos, Barlow) entra na Etapa 5. */
+/* Componentes do packages/ui usam as mesmas classes: o Tailwind precisa enxergá-los. */
+@source '../../../../packages/ui/src';
+
+/*
+ * Identidade (docs/documentacao-do-produto.md, seção 4): app escuro, amarelo marca o
+ * módulo e a navegação, verde é ação e sucesso. Tema claro opcional (recepção com sol
+ * no balcão). Amarelo e verde como texto só no escuro; no claro viram tons fechados.
+ * Layout: menu lateral no computador, barra inferior ao alcance do polegar no celular.
+ */
 :root {
-  --background: #0b0b0b;
-  --foreground: #f5f5f5;
+  --fundo: #0b0b0b;
+  --superficie: #141414;
+  --superficie-2: #1c1c1b;
+  --superficie-3: #2a2a28;
+  --borda: #262624;
+  --borda-forte: #4a4a44;
+  --tinta: #f4f4ef;
+  --tinta-suave: #aaaaa1;
+  --tinta-fraca: #74746c;
+  --modulo: #f5d33b;
+  --modulo-texto: #f5d33b;
+  --sobre-modulo: #0b0b0b;
+  --acao: #a5e34b;
+  --acao-texto: #a5e34b;
+  --sobre-acao: #0b0b0b;
+  --perigo: #f06a5a;
+  --perigo-texto: #ff8b7c;
+  --sobre-perigo: #0b0b0b;
+  --aviso: #f59e3b;
+  --aviso-texto: #f8b25c;
+  --foco: #f5d33b;
+  --plano-basico: #9ed8f5;
+  --plano-pro: #bbaaf2;
+  --plano-premium: #f7ae72;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --fundo: #f3f4f1;
+  --superficie: #ffffff;
+  --superficie-2: #eceee8;
+  --superficie-3: #dcded6;
+  --borda: #d8dad2;
+  --borda-forte: #9c9e95;
+  --tinta: #121211;
+  --tinta-suave: #4f504a;
+  --tinta-fraca: #84857d;
+  --modulo: #f5d33b;
+  --modulo-texto: #765c00;
+  --sobre-modulo: #121211;
+  --acao: #a5e34b;
+  --acao-texto: #3b6a08;
+  --sobre-acao: #121211;
+  --perigo: #c93a2b;
+  --perigo-texto: #b0261a;
+  --sobre-perigo: #ffffff;
+  --aviso: #e08a1e;
+  --aviso-texto: #934f00;
+  --foco: #121211;
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-fundo: var(--fundo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-superficie-3: var(--superficie-3);
+  --color-borda: var(--borda);
+  --color-borda-forte: var(--borda-forte);
+  --color-tinta: var(--tinta);
+  --color-tinta-suave: var(--tinta-suave);
+  --color-tinta-fraca: var(--tinta-fraca);
+  --color-modulo: var(--modulo);
+  --color-modulo-texto: var(--modulo-texto);
+  --color-sobre-modulo: var(--sobre-modulo);
+  --color-acao: var(--acao);
+  --color-acao-texto: var(--acao-texto);
+  --color-sobre-acao: var(--sobre-acao);
+  --color-perigo: var(--perigo);
+  --color-perigo-texto: var(--perigo-texto);
+  --color-sobre-perigo: var(--sobre-perigo);
+  --color-aviso: var(--aviso);
+  --color-aviso-texto: var(--aviso-texto);
+  --color-foco: var(--foco);
+  --color-plano-basico: var(--plano-basico);
+  --color-plano-pro: var(--plano-pro);
+  --color-plano-premium: var(--plano-premium);
+  --font-sans: var(--font-barlow), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-denso: var(--font-barlow-condensed), 'Arial Narrow', 'Roboto Condensed', sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, sans-serif;
+  background: var(--fundo);
+  color: var(--tinta);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--modulo);
+  color: var(--sobre-modulo);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

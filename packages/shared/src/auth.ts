@@ -95,3 +95,10 @@ export interface UsuarioSessao {
   contaId: string;
   papeis: { papel: z.infer<typeof papelSchema>; unidadeId: string | null }[];
 }
+
+/** Unidade como a lista de escolha mostra. */
+export interface UnidadeResumo {
+  id: string;
+  nome: string;
+  ativa: boolean;
+}
