@@ -18,3 +18,4 @@ export * from './permissoes.js';
 export * from './planos.js';
 export * from './publico.js';
 export * from './vigencia.js';
+export * from './desempenho.js';

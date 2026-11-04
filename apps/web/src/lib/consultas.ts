@@ -11,6 +11,8 @@ import type {
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { api } from './api';
 import type {
+  FichaProfissional,
+  LinhaRankingEquipe,
   DespesaDetalhe,
   DesempenhoBarbeiro,
   ExtratoComissao,
@@ -185,6 +187,7 @@ export const chavesResultados = {
   comissoes: ['comissoes'] as const,
   metas: ['metas'] as const,
   me: ['me'] as const,
+  desempenho: ['desempenho'] as const,
 };
 
 const comUnidade = (unidade: string | null) =>
@@ -257,4 +260,22 @@ export const useMeComissoes = (de: string, ate: string) =>
   useQuery({
     queryKey: [...chavesResultados.me, 'comissoes', de, ate],
     queryFn: () => api<ExtratoComissao[]>(`me/comissoes?de=${de}&ate=${ate}`),
+  });
+
+/** Ficha do profissional (dono, gestor da unidade ou o próprio barbeiro). */
+export const useFichaProfissional = (id: string | null, de: string, ate: string) =>
+  useQuery({
+    queryKey: [...chavesResultados.desempenho, 'ficha', id, de, ate],
+    queryFn: () => api<FichaProfissional>(`profissionais/${id}/desempenho?de=${de}&ate=${ate}`),
+    enabled: !!id,
+  });
+
+/** Ranking da equipe no período; unidade ativa ou a rede inteira. */
+export const useRankingEquipe = (unidade: string | null, de: string, ate: string) =>
+  useQuery({
+    queryKey: [...chavesResultados.desempenho, 'ranking', unidade, de, ate],
+    queryFn: () =>
+      api<LinhaRankingEquipe[]>(
+        `profissionais/desempenho?de=${de}&ate=${ate}${comUnidade(unidade)}`,
+      ),
   });

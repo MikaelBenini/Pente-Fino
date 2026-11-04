@@ -28,6 +28,8 @@ import { ImportacaoController } from './importacao/importacao.controller.js';
 import { PublicoController } from './publico/publico.controller.js';
 import { ComissoesController } from './comissoes/comissoes.controller.js';
 import { ComissoesService } from './comissoes/comissoes.service.js';
+import { DesempenhoController } from './desempenho/desempenho.controller.js';
+import { DesempenhoService } from './desempenho/desempenho.service.js';
 import { DespesasController } from './despesas/despesas.controller.js';
 import { MeController } from './me/me.controller.js';
 import { ResultadosController } from './resultados/resultados.controller.js';
@@ -108,6 +110,7 @@ export class ComumModule {}
     DespesasController,
     ResultadosController,
     ComissoesController,
+    DesempenhoController,
     MeController,
     ConfiguracaoController,
     ImportacaoController,
@@ -124,6 +127,7 @@ export class ComumModule {}
     AgendaService,
     ResultadosService,
     ComissoesService,
+    DesempenhoService,
     // Ordem das guardas: limite de requisições → login → papel e unidade.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AutenticacaoGuard },

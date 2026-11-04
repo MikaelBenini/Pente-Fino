@@ -43,6 +43,7 @@ test('dono adiciona barbeiro novo e recebe o link do WhatsApp', async ({ page },
   test.skip(info.project.name === 'celular', 'cadastro feito no computador');
   await entrar(page, 'dono@demo.pentefino.dev');
   await page.goto('/equipe');
+  await page.getByRole('tab', { name: 'Profissionais' }).click();
   await page.getByRole('button', { name: 'Adicionar barbeiro' }).click();
   const dialogo = page.getByRole('dialog', { name: 'Adicionar barbeiro' });
   await dialogo.getByLabel('Unidade').selectOption({ label: 'Jardins' });
