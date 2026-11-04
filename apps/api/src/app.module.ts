@@ -19,7 +19,14 @@ import { RaizController } from './saude/raiz.controller.js';
 import { SaudeController } from './saude/saude.controller.js';
 import { ConvitesService } from './usuarios/convites.service.js';
 import { UnidadesController } from './unidades/unidades.controller.js';
+import { AgendaController } from './agenda/agenda.controller.js';
+import { AgendaService } from './agenda/agenda.service.js';
+import { CaixaController } from './caixa/caixa.controller.js';
+import { ClientesController } from './clientes/clientes.controller.js';
+import { ComandasController } from './comandas/comandas.controller.js';
+import { ComandasService } from './comandas/comandas.service.js';
 import { ContaController } from './conta/conta.controller.js';
+import { ProdutosController } from './produtos/produtos.controller.js';
 import { ProfissionaisController } from './profissionais/profissionais.controller.js';
 import { ProfissionaisService } from './profissionais/profissionais.service.js';
 import { ServicosController } from './servicos/servicos.controller.js';
@@ -83,6 +90,11 @@ export class ComumModule {}
     UnidadesController,
     ServicosController,
     ProfissionaisController,
+    ProdutosController,
+    ClientesController,
+    AgendaController,
+    ComandasController,
+    CaixaController,
     SaudeController,
   ],
   providers: [
@@ -90,6 +102,8 @@ export class ComumModule {}
     ConvitesService,
     UsuariosService,
     ProfissionaisService,
+    ComandasService,
+    AgendaService,
     // Ordem das guardas: limite de requisições → login → papel e unidade.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AutenticacaoGuard },

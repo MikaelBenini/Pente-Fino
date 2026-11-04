@@ -31,12 +31,12 @@ test('dono cadastra serviço e grava o preço pela tabela', async ({ page }, inf
   await expect(linha).toContainText('R$ 6,50');
 
   await page.getByRole('tab', { name: 'Tabela de preços' }).click();
-  await page.getByLabel(`Centro (R$), linha`).last().fill('85,00');
+  await page.getByLabel(`Centro (R$), ${nome}`).fill('85,00');
   await page.getByRole('button', { name: 'Gravar 1 preço' }).click();
   await expect(page.getByText(/1 preço gravado, valendo a partir de/)).toBeVisible();
   await page.reload();
   await page.getByRole('tab', { name: 'Tabela de preços' }).click();
-  await expect(page.getByLabel(`Centro (R$), linha`).last()).toHaveValue('85,00');
+  await expect(page.getByLabel(`Centro (R$), ${nome}`)).toHaveValue('85,00');
 });
 
 test('dono adiciona barbeiro novo e recebe o link do WhatsApp', async ({ page }, info) => {
