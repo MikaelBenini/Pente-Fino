@@ -36,7 +36,10 @@ export interface ContaResumo {
   id: string;
   nome: string;
   plano: 'basico' | 'pro' | 'premium';
+  ciclo: 'mensal' | 'anual';
   status: string;
+  /** Fim do teste grátis (ISO), quando a conta está em teste. */
+  testeAte: string | null;
   uso: { unidades: number; profissionais: number };
   limites: { unidades: number | null; profissionais: number | null };
 }

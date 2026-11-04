@@ -33,7 +33,7 @@ import { ICONES_MENU } from './icones-menu';
 import { Marca } from './marca';
 
 /** Telas que qualquer papel abre, mesmo fora do menu. */
-const LIVRES = ['/', '/unidade', '/perfil'];
+const LIVRES = ['/app', '/unidade', '/perfil'];
 
 export function Casca({ children }: { children: ReactNode }) {
   const usuario = useUsuario();
@@ -160,7 +160,10 @@ function MenuLateral() {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-borda bg-superficie py-5 pl-[max(1rem,env(safe-area-inset-left))] pr-3 lg:flex">
-      <Link href="/" className="rounded-md px-2 focus-visible:outline-2 focus-visible:outline-foco">
+      <Link
+        href="/app"
+        className="rounded-md px-2 focus-visible:outline-2 focus-visible:outline-foco"
+      >
         <Marca />
       </Link>
       <SeletorUnidade />
@@ -329,7 +332,7 @@ function BlocoUsuario() {
 function BarraTopo() {
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-borda bg-fundo/95 pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] backdrop-blur lg:hidden">
-      <Link href="/" className="py-2" aria-label="Pente Fino, início">
+      <Link href="/app" className="py-2" aria-label="Pente Fino, início">
         <Marca compacta />
       </Link>
       <SeletorUnidade compacto />

@@ -9,7 +9,7 @@ describe('destinoSeguro', () => {
   it.each(['//evil.com', '/\\evil.com', 'https://evil.com', 'evil', '/\tevil', '', null])(
     'recusa %s',
     (v) => {
-      expect(destinoSeguro(v)).toBe('/');
+      expect(destinoSeguro(v)).toBe('/app');
     },
   );
 });

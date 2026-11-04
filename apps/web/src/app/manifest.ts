@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Pente Fino',
     description: 'Gestão de barbearia: agenda, comandas, comissões e lucro real.',
     lang: 'pt-BR',
-    start_url: '/',
+    start_url: '/app',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',

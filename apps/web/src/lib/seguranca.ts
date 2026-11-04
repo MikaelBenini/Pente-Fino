@@ -6,8 +6,8 @@
  */
 export function destinoSeguro(voltar: string | null | undefined): string {
   if (!voltar || !voltar.startsWith('/') || voltar.startsWith('//') || voltar.includes('\\'))
-    return '/';
-  if (/[\u0000-\u001f]/.test(voltar)) return '/';
+    return '/app';
+  if (/[\u0000-\u001f]/.test(voltar)) return '/app';
   return voltar;
 }
 

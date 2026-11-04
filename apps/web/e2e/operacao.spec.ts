@@ -62,19 +62,25 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await recepcao.waitForURL(/\/comandas\?id=/);
   const url = recepcao.url();
   await expect(recepcao.getByRole('heading', { name: cliente })).toBeVisible();
-  await expect(recepcao.getByText('Prevista', { exact: true })).toBeVisible();
+  await expect(
+    recepcao.getByText('Prevista', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
 
   // 2. Barbeiro começa, lança um extra em um toque e confirma.
   const barbeiro = await entrarComo(browser, 'rafael@demo.pentefino.dev', info.project.name);
   await barbeiro.goto(url.replace(/^https?:\/\/[^/]+/, ''));
   await barbeiro.getByRole('button', { name: 'Começar atendimento' }).click();
-  await expect(barbeiro.getByText('Em atendimento', { exact: true })).toBeVisible();
+  await expect(
+    barbeiro.getByText('Em atendimento', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await barbeiro.getByRole('button', { name: 'Sobrancelha' }).click();
   await expect(barbeiro.getByRole('listitem').filter({ hasText: 'Sobrancelha' })).toContainText(
     'Extra',
   );
   await barbeiro.getByRole('button', { name: 'Confirmar atendimento' }).click();
-  await expect(barbeiro.getByText('Confirmada', { exact: true })).toBeVisible();
+  await expect(
+    barbeiro.getByText('Confirmada', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await expect(barbeiro.getByRole('button', { name: 'Receber e fechar' })).toHaveCount(0);
 
   // 3. Recepção recebe dividido (Pix + dinheiro) e fecha.
@@ -90,7 +96,9 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
     .getByRole('dialog', { name: 'Fechar comanda de R$ 65,00?' })
     .getByRole('button', { name: 'Fechar comanda' })
     .click();
-  await expect(recepcao.getByText('Fechada', { exact: true })).toBeVisible();
+  await expect(
+    recepcao.getByText('Fechada', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await expect(recepcao.locator('dl').getByText('Pix', { exact: true })).toBeVisible();
   await expect(recepcao.getByRole('button', { name: 'Reabrir comanda' })).toHaveCount(0);
 
@@ -101,7 +109,9 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   const reabrir = gestor.getByRole('dialog', { name: 'Reabrir comanda fechada?' });
   await reabrir.getByLabel('Motivo (fica registrado)').fill('Forma de pagamento lançada errada');
   await reabrir.getByRole('button', { name: 'Reabrir' }).click();
-  await expect(gestor.getByText('Reaberta', { exact: true })).toBeVisible();
+  await expect(
+    gestor.getByText('Reaberta', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
 });
 
 test('barbeiro no celular vê só as próprias comandas', async ({ page }, info) => {
