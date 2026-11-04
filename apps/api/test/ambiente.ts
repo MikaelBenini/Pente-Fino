@@ -1,8 +1,10 @@
 // Variáveis dos testes e2e: as do .env da raiz, com ajustes para teste.
+import { silenciarAvisoDoPgNoPrisma } from '@pente-fino/db';
 import { existsSync } from 'node:fs';
 
 const envDaRaiz = new URL('../../../.env', import.meta.url);
 if (existsSync(envDaRaiz)) process.loadEnvFile(envDaRaiz);
+silenciarAvisoDoPgNoPrisma();
 
 process.env.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'silent';

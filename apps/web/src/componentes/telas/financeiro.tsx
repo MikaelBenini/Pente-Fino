@@ -102,6 +102,7 @@ function Resultado({ mes }: { mes: string }) {
           opcoes: { forte?: boolean; recuo?: boolean; sinal?: '−' } = {},
         ) => (
           <div
+            key={rotulo}
             className={`flex justify-between gap-6 py-2 ${opcoes.forte ? 'border-t border-borda text-xl font-bold' : ''} ${opcoes.recuo ? 'pl-4 text-tinta-suave' : ''}`}
           >
             <dt>{rotulo}</dt>
@@ -112,32 +113,36 @@ function Resultado({ mes }: { mes: string }) {
         );
         return (
           <div className="grid gap-8 lg:grid-cols-2">
-            <dl className="flex flex-col rounded-lg border border-borda bg-superficie px-5 py-3 text-lg">
-              {linha('Serviços', i.receitaServicos)}
-              {linha('Produtos', i.receitaProdutos)}
-              {linha('Faturamento', i.faturamento, { forte: true })}
-              {linha('Comissões', i.comissoes, { sinal: '−', recuo: true })}
-              {linha('Fixas', i.despesasPorGrupo.fixa, { sinal: '−', recuo: true })}
-              {linha('Variáveis', i.despesasPorGrupo.variavel, { sinal: '−', recuo: true })}
-              {linha('Manutenção', i.despesasPorGrupo.manutencao, { sinal: '−', recuo: true })}
-              {linha('Lucro do mês', i.lucro, { forte: true })}
+            <div className="flex flex-col rounded-lg border border-borda bg-superficie px-5 py-3 text-lg">
+              <dl className="flex flex-col">
+                {linha('Serviços', i.receitaServicos)}
+                {linha('Produtos', i.receitaProdutos)}
+                {linha('Faturamento', i.faturamento, { forte: true })}
+                {linha('Comissões', i.comissoes, { sinal: '−', recuo: true })}
+                {linha('Fixas', i.despesasPorGrupo.fixa, { sinal: '−', recuo: true })}
+                {linha('Variáveis', i.despesasPorGrupo.variavel, { sinal: '−', recuo: true })}
+                {linha('Manutenção', i.despesasPorGrupo.manutencao, { sinal: '−', recuo: true })}
+                {linha('Lucro do mês', i.lucro, { forte: true })}
+              </dl>
               <p className="pt-1 text-sm text-tinta-suave">
                 Despesas operacionais: {formatarFracao(i.percentualDespesas)} do faturamento.
               </p>
-            </dl>
-            <dl className="flex flex-col self-start rounded-lg border border-borda bg-superficie px-5 py-3 text-lg">
+            </div>
+            <div className="flex flex-col self-start rounded-lg border border-borda bg-superficie px-5 py-3 text-lg">
               <p className="py-2 text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                 Fora do resultado operacional
               </p>
-              {GRUPOS_FORA_OPERACIONAL.map((g) =>
-                linha(NOME_GRUPO_DESPESA[g], i.despesasPorGrupo[g]),
-              )}
-              {linha('Receita não operacional', i.receitaNaoOperacional)}
+              <dl className="flex flex-col">
+                {GRUPOS_FORA_OPERACIONAL.map((g) =>
+                  linha(NOME_GRUPO_DESPESA[g], i.despesasPorGrupo[g]),
+                )}
+                {linha('Receita não operacional', i.receitaNaoOperacional)}
+              </dl>
               <p className="pt-1 text-sm text-tinta-suave">
                 Investimento, retirada do dono e cartão aparecem aqui para o caixa da casa, mas não
                 entram no % de despesas.
               </p>
-            </dl>
+            </div>
           </div>
         );
       }}
