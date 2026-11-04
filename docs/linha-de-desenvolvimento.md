@@ -14,7 +14,7 @@ Contas, ferramentas e nomes definidos antes da primeira linha de código.
 - [ ] Armazenamento externo compatível com S3 para backup
 - [ ] Serviço de e-mail transacional (convite e recuperação de senha)
 - [ ] Um chip de WhatsApp dedicado para testes e um por unidade em produção
-- [ ] Conta no Asaas (só na V3)
+- [ ] Conta no Asaas (cobrança das barbearias na Etapa 23; cobrança do clube na Etapa 24)
 
 **Ferramentas no computador**
 
@@ -177,15 +177,143 @@ O dinheiro tem que bater. As regras de cálculo são testadas com casos reais da
 
 Toda mudança passa por verificação automática antes de entrar na `main`, e toda versão vira uma imagem Docker pronta para publicar.
 
-- [ ] GitHub Actions no pull request: instalar, lint, checagem de tipos, testes unitários, integração e ponta a ponta
-- [ ] Cache do pnpm e do Turborepo para o CI rodar rápido
+- [x] GitHub Actions no pull request: instalar, lint, checagem de tipos, testes unitários, integração e ponta a ponta (`.github/workflows/ci.yml`, desde a Etapa 2)
+- [ ] Cache do pnpm e do Turborepo para o CI rodar rápido (o do pnpm já existe; falta o do Turborepo)
 - [ ] `Dockerfile` de várias etapas para `web`, `api` e `worker` (imagem final pequena, usuário sem root)
 - [ ] No merge na `main`: build das imagens e envio para o GitHub Container Registry com a tag do commit
 - [ ] Verificação de dependências vulneráveis (Dependabot)
 - [ ] Segredos só nos Secrets do GitHub, nunca no código
 - [ ] **Pronto quando:** um pull request com teste quebrado é bloqueado e um merge gera as três imagens
 
-## Etapa 9 · Preparação da VPS
+## Etapas 9 a 15 · O produto completo antes do servidor
+
+Tudo o que a página de planos promete precisa existir antes do piloto. Cada etapa sai como os módulos da Etapa 6: API, tela, regras de cálculo em `packages/shared` com teste antes da tela, isolamento por conta (`habilitar_isolamento_conta` em toda tabela nova), linha nova na matriz de permissões, teste Playwright do fluxo principal no computador e no celular, e dados na conta de demonstração. Ao entregar um recurso, ele deixa de aparecer como "em breve" em `RECURSOS_PLANO`.
+
+## Etapa 9 · Ficha do profissional e desempenho da equipe
+
+O dono e o gestor veem tudo sobre cada profissional numa tela só, para conversar com dados e não com impressão. O barbeiro vê a mesma ficha, só a dele.
+
+- [ ] Regras novas em `packages/shared`, com teste antes da tela: taxa de retorno (cliente que volta ao mesmo profissional em até N dias; padrão 45, configurável), clientes novos e recorrentes, intervalo médio entre visitas, ocupação do profissional (minutos agendados ÷ minutos de expediente menos bloqueios), tempo real por serviço (início do atendimento até a confirmação) contra a duração cadastrada, % de comandas confirmadas pelo barbeiro antes do fechamento, faltas dos clientes dele
+- [ ] Ficha do profissional (`/equipe/:id`), aberta pela tela Equipe, com filtro de período (este mês, mês passado, intervalo) e de unidade
+- [ ] Resumo: faturamento gerado, atendimentos, clientes, ticket médio, % de extras, ocupação, comissão (prevista, a receber e paga) e quanto ele contribuiu para a meta da unidade
+- [ ] Técnica: serviços feitos (quantidade, receita, tempo real x previsto), extras e produtos que mais vende e, só para o dono, margem de cada serviço
+- [ ] Comandas atendidas: lista com data, cliente, itens, valor e estado, abrindo a comanda; reaberturas e cancelamentos destacados
+- [ ] Clientes: recorrentes (quantas vezes voltaram, última visita, intervalo habitual), novos no período, os que sumiram (passaram do intervalo habitual) e faltas
+- [ ] Rotina: comandas confirmadas no prazo, pendentes, tempo médio até confirmar e atrasos (atendimento começou depois do horário marcado)
+- [ ] Avaliações: nota média, distribuição das notas e comentários (os dados chegam com a Etapa 12; até lá a área explica como ligar a pesquisa)
+- [ ] Evolução dos últimos 6 meses e comparação com a média da unidade
+- [ ] Tela Equipe com ranking ordenável: faturamento, ticket, retorno, nota, ocupação e % de confirmação
+- [ ] Barbeiro: "Desempenho" passa a ser a mesma ficha, só a dele, sem custo nem margem e sem ver os números dos colegas; o telefone dos clientes segue a regra de ocultar
+- [ ] Exportar a ficha em PDF para a conversa de feedback
+- [ ] Permissões: dono vê todos, gestor só os da unidade dele, recepção não vê, barbeiro só a própria ficha
+- [ ] **Pronto quando:** o dono abre a ficha de um barbeiro e responde sem planilha quanto ele faturou, que serviços faz, quantos clientes voltam para ele, quais comandas atendeu e como está a nota; os números batem com os indicadores da unidade
+
+## Etapa 10 · Bot do WhatsApp: conexão e respostas automáticas
+
+O dono monta como o bot responde, sem inteligência artificial: menu numerado, palavras-chave e mensagens prontas. Nada chega ao cliente sem ter sido configurado e testado.
+
+- [ ] Conectar o WhatsApp da unidade pelo painel: QR Code na tela Bot, estado da conexão (conectado, lendo QR, desconectado), reconectar e desconectar; um número por unidade (`bot_conexao`)
+- [ ] Webhook da Evolution API entra numa fila do worker, com segredo conferido; mensagem repetida (mesmo id) é descartada
+- [ ] Provedor atrás de uma interface (`ProvedorWhatsApp`: enviar, estado, QR), para trocar a Evolution API sem reescrever o fluxo
+- [ ] Motor de fluxo em `packages/shared`, com testes: nós de mensagem, menu numerado, palavra-chave, pergunta com resposta guardada e ação; sessão por número que expira em 30 minutos sem resposta e volta ao menu (`bot_sessao`)
+- [ ] Construtor do menu (tela Bot): árvore editável, reordenar opções, textos com variáveis (`{nome}`, `{unidade}`, `{endereco}`, `{horario}`); avisa opção repetida e caminho sem saída
+- [ ] Palavras-chave reconhecidas em qualquer ponto da conversa ("preço", "endereço", "horário", "clube"), com sinônimos, sem diferenciar acento nem maiúscula
+- [ ] Mensagens prontas editáveis: boas-vindas, fora do horário, não entendi, transferência para atendente, encerramento (`modelo_mensagem`)
+- [ ] Horário do bot por unidade (segue o expediente ou tem horário próprio); fora do horário, responde e oferece agendar mesmo assim
+- [ ] Simulador de conversa no painel: o dono testa o menu como se fosse o cliente, antes de publicar
+- [ ] Rascunho e publicação: editar não afeta quem está conversando; publicar troca a versão; dá para voltar à versão anterior
+- [ ] Menu modelo na configuração guiada: Agendar, Meus horários, Preços, Endereço e horário, Clube, Falar com atendente
+- [ ] Respostas prontas ligadas ao cadastro: preços vigentes da unidade, endereço com link do mapa, horário de funcionamento e feriados do calendário
+- [ ] Cliente reconhecido pelo telefone: o bot cumprimenta pelo nome; número novo vira cliente com origem "bot"
+- [ ] Consentimento: na primeira conversa o cliente aceita receber avisos; "SAIR" a qualquer momento desliga lembretes, pesquisas e convites (`cliente.consentimento_msg`), "VOLTAR" religa; a escolha fica registrada com data
+- [ ] Proteção do número: fila de envio espaçado e com intervalo aleatório, limite por minuto, nenhuma mensagem para quem nunca falou com a barbearia, nenhum envio em massa
+- [ ] Histórico de mensagens no perfil do cliente (`mensagem`), para dono, gestor e recepção
+- [ ] Aviso no painel quando a conexão cair, com o passo a passo para reconectar
+- [ ] **Pronto quando:** o dono conecta o número, edita o menu, testa no simulador e publica; um cliente recebe as respostas certas por número e por palavra-chave, e "SAIR" para os avisos dele
+
+## Etapa 11 · Atendimento e agendamento pelo WhatsApp ou pelo site
+
+O cliente escolhe por onde quer marcar: conversando com o bot ou pelo link. Os dois canais usam a mesma agenda e as mesmas regras e criam a mesma comanda prevista.
+
+- [ ] Regras de agendamento da unidade num lugar só, valendo para bot, site e balcão: antecedência mínima, janela máxima (hoje 45 dias), limite de horários futuros por telefone (hoje 2), prazo para o cliente remarcar ou cancelar sozinho, intervalo entre atendimentos
+- [ ] Canais por unidade: o dono liga WhatsApp, site ou os dois
+- [ ] Escolha do cliente: em "Agendar", o bot pergunta se ele quer marcar pela conversa ou pelo site e segue pelo escolhido; o site mostra "Prefere pelo WhatsApp?" com link que abre a conversa já no agendamento
+- [ ] Preferência guardada no cliente (`canal_preferido`): da próxima vez o bot já segue pelo canal que ele usou, com a opção de trocar
+- [ ] Agendamento pela conversa: serviço (com preço e duração) → profissional ou "sem preferência" → dia → horários livres de 6 em 6 → resumo e confirmação, pela mesma API de horários livres
+- [ ] Mais de um serviço no mesmo horário (corte + barba), somando a duração
+- [ ] Link do site vindo do bot com o telefone já preenchido por um token curto e de uso único, sem dado pessoal na URL
+- [ ] Horário disputado: se outro cliente confirmar antes, o bot avisa e oferece os próximos livres (o banco já impede sobreposição)
+- [ ] "Meus horários": o cliente vê os próximos agendamentos e remarca ou cancela pela conversa ou pelo link de gerenciamento enviado na confirmação, dentro do prazo da unidade
+- [ ] No site, caixa para aceitar receber lembretes pelo WhatsApp
+- [ ] Lembretes (proposta: 24 h e 2 h antes, configuráveis) para quem aceitou, com "1 Confirmo · 2 Remarcar · 3 Cancelar"; a resposta muda o agendamento e a agenda mostra quem confirmou
+- [ ] Cancelamento pelo cliente libera o horário e cancela a comanda prevista sem contar como falta; a falta continua sendo marcada pela recepção
+- [ ] Cliente com muitas faltas (proposta: 3 em 90 dias) só agenda falando com a recepção
+- [ ] Falar com atendente: pausa o bot naquele número e avisa a recepção; o bot volta quando a recepção encerra, ou depois de 2 horas sem resposta, avisando o cliente
+- [ ] Tela Conversas (recepção e gestor): caixa de entrada da unidade, quem está com atendente, responder pelo painel, assumir e devolver ao bot, atalhos para agendar e abrir o cliente
+- [ ] Aviso ao barbeiro quando entra, muda ou cai um horário dele (notificação no celular)
+- [ ] Origem do agendamento registrada (balcão, site, bot) e indicador de agendamentos por canal nas métricas
+- [ ] **Pronto quando:** um cliente marca, remarca e cancela pelo WhatsApp e outro pelo site, sem ajuda; os dois aparecem na agenda com comanda prevista e recebem o lembrete
+
+## Etapa 12 · Pós-atendimento: avaliação e retorno do cliente
+
+Depois que a comanda fecha, o cliente avalia o atendimento pelo WhatsApp. A nota vai para a ficha do barbeiro e o dono fica sabendo na hora quando algo deu errado.
+
+- [ ] Pesquisa automática depois do fechamento (proposta: 1 hora depois, configurável), só para quem aceitou mensagens e no máximo uma por cliente a cada 7 dias
+- [ ] Pergunta curta: nota de 1 a 5 para o atendimento, depois comentário opcional; resposta por número
+- [ ] Tabela `avaliacao` (comanda, profissional, cliente, nota, comentário, respondida em), uma por comanda, com isolamento por conta
+- [ ] A pesquisa expira se não for respondida (proposta: 48 horas), sem insistir
+- [ ] Nota 1 ou 2: aviso imediato para dono e gestor, com o comentário e atalho para falar com o cliente; o tratamento fica registrado (resolvido, com anotação)
+- [ ] Nota 5: convite opcional para avaliar a barbearia no Google (link configurado pelo dono)
+- [ ] Ficha do profissional e indicadores: nota média, número de respostas, taxa de resposta e comentários do período
+- [ ] Barbeiro vê a própria média e os comentários, sem o telefone do cliente, e não vê as notas dos colegas
+- [ ] Mensagem de retorno: cliente que passou do intervalo habitual de visitas (pelo histórico; padrão 30 dias) recebe um convite para agendar, uma vez por ciclo
+- [ ] Mensagem de aniversário com o modelo da barbearia (liga e desliga)
+- [ ] Lista "clientes para recuperar": os que sumiram, deram nota baixa ou faltaram
+- [ ] Cada automação mostra quantas mensagens saíram, quantas foram respondidas e quantos agendamentos gerou
+- [ ] **Pronto quando:** uma comanda fechada gera a pesquisa, a nota aparece na ficha do barbeiro e uma nota 1 chega ao dono em menos de 1 minuto
+
+## Etapa 13 · Clube da barbearia
+
+Assinatura, combos e convênios reconhecidos na comanda, com o dono vendo se o clube dá lucro.
+
+- [ ] Itens do clube: assinatura, combo e convênio, com valor por unidade, serviços inclusos e limite de uso por mês (`item_clube`, `item_clube_servico`)
+- [ ] Adesão do cliente: início, vencimento, situação e usos no ciclo (`adesao_clube`)
+- [ ] A comanda reconhece o assinante: o que o plano cobre entra com valor zero e conta no uso; acima do limite ou fora do plano entra com preço normal, como extra (RN-07)
+- [ ] Comissão do item do clube sobre o preço de tabela da unidade na data, ou valor fixo definido pelo dono (regra em `packages/shared` com testes)
+- [ ] Mensalidade sem gateway: QR Pix da chave da barbearia e baixa pela recepção; receita do clube separada da receita de serviço
+- [ ] Rotina diária: vence adesões, zera os usos no novo ciclo e avisa o cliente pelo bot antes do vencimento
+- [ ] Bot: a opção "Clube" mostra os planos e, para o assinante, usos que restam e vencimento
+- [ ] Relatório do clube: assinantes ativos, cancelamentos, mensalidades recebidas x comissões pagas em atendimentos do clube
+- [ ] **Pronto quando:** um assinante é atendido, a comanda não cobra o que o plano cobre, o uso desconta do mês e o relatório mostra se o clube deu lucro
+
+## Etapa 14 · Agenda completa: lista de espera, encaixe e ocupação
+
+Horário vago vira atendimento sem a recepção pegar o telefone.
+
+- [ ] Lista de espera: o cliente pede dia, faixa de horário e profissional, pelo balcão, pelo bot ou pelo site
+- [ ] Quando um horário vaga, o bot oferece para a lista em ordem; o primeiro que confirmar leva e os demais recebem "já foi preenchido"
+- [ ] Encaixe: a recepção marca fora da grade, com aviso de conflito
+- [ ] Bloqueio recorrente (almoço toda terça) e férias do profissional
+- [ ] Ocupação por unidade, profissional e faixa de horário (com a capacidade da unidade) no Início e na ficha do profissional
+- [ ] Mapa da semana com os horários mais vazios e mais cheios, para decidir escala e promoções
+- [ ] **Pronto quando:** um cancelamento vira atendimento de alguém da lista de espera sem a recepção intervir
+
+## Etapa 15 · Avisos, rotinas, rede e planos
+
+Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente o que promete.
+
+- [ ] Comandas pendentes: a cada 15 minutos no expediente, aviso para a recepção
+- [ ] Fechamento do dia: consolida o dia e avisa o gestor quando o caixa tem divergência
+- [ ] Resumo diário do dono (WhatsApp ou e-mail, ele escolhe): faturamento do dia, ritmo do mês, pendências e notas baixas
+- [ ] Central de avisos no app, com histórico
+- [ ] Notificações no celular (push do PWA) com permissão por aparelho; cada tipo liga e desliga no Perfil
+- [ ] Painel da rede: unidades lado a lado com faturamento, lucro, ticket, ocupação, nota média e retorno (RF-23)
+- [ ] Recursos por plano aplicados na API e na tela (`incluiRecurso` em `packages/shared`); o que não está no plano aparece com convite para mudar, sem esconder dado já lançado
+- [ ] Ficha do profissional, avaliações, canais de agendamento e lista de espera incluídos em `RECURSOS_PLANO` e no comparativo de `/planos`
+- [ ] Troca de plano pelo próprio dono, conferindo os limites antes de descer
+- [ ] **Pronto quando:** cada papel recebe só os avisos dele, e uma conta Básico não usa recurso do Pro nem pela tela nem pela API
+
+## Etapa 16 · Preparação da VPS
 
 Um servidor Ubuntu 24.04 LTS seguro antes de receber qualquer dado.
 
@@ -215,7 +343,7 @@ sudo timedatectl set-timezone America/Sao_Paulo
 - [ ] Atenção: o Docker ignora o UFW para portas publicadas. Banco, Redis e Evolution API **nunca** publicam porta; ficam só na rede interna do Compose
 - [ ] **Pronto quando:** login só por chave, root bloqueado, só portas 22, 80 e 443 abertas por fora
 
-## Etapa 10 · Publicação com HTTPS
+## Etapa 17 · Publicação com HTTPS
 
 Tudo roda em containers na VPS, atrás do Caddy, que emite e renova o certificado HTTPS sozinho.
 
@@ -230,7 +358,7 @@ Tudo roda em containers na VPS, atrás do Caddy, que emite e renova o certificad
 - [ ] Ambiente de homologação no mesmo servidor (`homolog.`), com banco separado, para testar antes de produção
 - [ ] **Pronto quando:** `https://app.seudominio` abre com cadeado, o login funciona e um merge na `main` chega ao ar sozinho
 
-## Etapa 11 · Backup
+## Etapa 18 · Backup
 
 Um backup que nunca foi restaurado não é backup. A restauração é testada antes do piloto e todo mês.
 
@@ -243,7 +371,7 @@ Um backup que nunca foi restaurado não é backup. A restauração é testada an
 - [ ] Restauração testada num banco vazio, com o passo a passo em `docs/restaurar.md`
 - [ ] **Pronto quando:** o banco é restaurado do zero a partir do armazenamento externo e o sistema volta a abrir
 
-## Etapa 12 · Monitoramento
+## Etapa 19 · Monitoramento
 
 Saber do problema antes do cliente ligar, com ferramentas que rodam no próprio servidor.
 
@@ -255,7 +383,7 @@ Saber do problema antes do cliente ligar, com ferramentas que rodam no próprio 
 - [ ] Painel simples de uso: contas ativas, comandas por dia, erros por dia
 - [ ] **Pronto quando:** derrubar a API de propósito gera um aviso em menos de 2 minutos
 
-## Etapa 13 · E-mail transacional
+## Etapa 20 · E-mail transacional
 
 Convites e recuperação de senha chegando na caixa de entrada, não no spam.
 
@@ -265,24 +393,25 @@ Convites e recuperação de senha chegando na caixa de entrada, não no spam.
 - [ ] Em desenvolvimento, tudo cai no Mailpit
 - [ ] **Pronto quando:** convite enviado para Gmail e Outlook chega na caixa de entrada
 
-## Etapa 14 · Segurança e LGPD
+## Etapa 21 · Segurança e LGPD
 
 Dados de clientes e de dinheiro exigem cuidado desde o primeiro dia.
 
 - [ ] HTTPS em tudo; cookies seguros; CORS liberando só os domínios do sistema
 - [ ] Cabeçalhos de segurança (CSP, HSTS, X-Frame-Options) no Caddy
 - [ ] Senhas com argon2; bloqueio temporário após tentativas erradas de login
-- [ ] Revisão de permissões: cada rota com papel e unidade conferidos
+- [ ] Revisão de permissões: cada rota com papel e unidade conferidos, incluindo as das Etapas 9 a 15 e o webhook do WhatsApp
 - [ ] Auditoria imutável de comandas fechadas, preços, comissões e despesas
 - [x] Política de privacidade e termos de uso publicados e aceitos no cadastro (`/termos` e `/privacidade`; a versão aceita fica na auditoria da conta. Texto é rascunho: falta revisão jurídica e CNPJ)
-- [ ] Consentimento do cliente para receber mensagens de WhatsApp, com opção de sair
-- [ ] Exportar e apagar os dados de um cliente quando ele pedir
-- [ ] Telefone do cliente oculto para o barbeiro quando o dono ativar
+- [ ] Consentimento do cliente para receber mensagens de WhatsApp, com opção de sair (construído na Etapa 10; aqui, revisão do texto e do registro)
+- [ ] Exportar e apagar os dados de um cliente quando ele pedir, incluindo mensagens do bot e comentários de avaliação
+- [ ] Prazo de guarda das conversas do bot e das avaliações definido na política de privacidade e aplicado por rotina
+- [x] Telefone do cliente oculto para o barbeiro quando o dono ativar (Etapa 6.6; vale também na ficha do profissional e nas avaliações)
 - [ ] Contrato com a barbearia dizendo quem é responsável pelos dados (a barbearia controla, o sistema opera)
 - [ ] Atualização mensal de dependências e da imagem da Evolution API
 - [ ] **Pronto quando:** a checklist acima está toda marcada e revisada por uma segunda pessoa
 
-## Etapa 15 · Homologação e piloto
+## Etapa 22 · Homologação e piloto
 
 Uma barbearia real usa o sistema por um mês antes de qualquer venda.
 
@@ -290,13 +419,15 @@ Uma barbearia real usa o sistema por um mês antes de qualquer venda.
 - [ ] Importar a planilha da barbearia-piloto (serviços, preços, profissionais, clientes)
 - [ ] Configuração guiada feita junto com o dono
 - [ ] Treino de 30 minutos com a recepção e com os barbeiros; vídeo curto de cada fluxo
-- [ ] Barbeiros instalam o PWA no celular
+- [ ] Barbeiros instalam o PWA no celular e ligam as notificações
+- [ ] WhatsApp da unidade conectado, menu do bot revisado com o dono e publicado; clientes avisados de que podem agendar pelo WhatsApp ou pelo link
+- [ ] Pesquisa de avaliação ligada; o dono revisa as fichas dos barbeiros no fim de cada semana
 - [ ] Primeira semana em paralelo com a planilha, conferindo o caixa todo dia
 - [ ] Canal direto de suporte (grupo de WhatsApp) e registro de cada atrito
 - [ ] Correções semanais publicadas em homologação e depois em produção
-- [ ] **Pronto quando:** duas semanas seguidas sem divergência de caixa e 90% das comandas confirmadas pelo barbeiro
+- [ ] **Pronto quando:** duas semanas seguidas sem divergência de caixa, 90% das comandas confirmadas pelo barbeiro e clientes agendando pelo WhatsApp e pelo site sem ajuda da recepção
 
-## Etapa 16 · Lançamento comercial
+## Etapa 23 · Lançamento comercial
 
 O sistema passa a cobrar das barbearias e a receber clientes sozinho.
 
@@ -305,13 +436,24 @@ O sistema passa a cobrar das barbearias e a receber clientes sozinho.
 - [ ] Cobrança das barbearias pelo Asaas (assinatura recorrente), com bloqueio suave após atraso: o sistema vira só leitura, nunca apaga dados
 - [ ] Cupom do plano fundador: 30% para os 20 primeiros clientes (anunciado em `/planos`; aplicar junto com a cobrança no Asaas)
 - [ ] Página de vendas: frase "Saiba quanto sobra, não só quanto entrou", preços, comparativo, depoimento do piloto, botão de teste grátis (feito: `/` e `/planos` com preços mensal/anual, calculadora de unidades, comparativo com "em breve", perguntas, SEO e cadastro com plano escolhido; falta o depoimento real do piloto)
-- [ ] Central de ajuda com os vídeos do piloto e perguntas frequentes
+- [ ] Central de ajuda com os vídeos do piloto e perguntas frequentes (conectar o WhatsApp, montar o menu do bot, ler a ficha do profissional)
+- [ ] Comparativo de `/planos` sem "em breve" nos recursos entregues nas Etapas 9 a 15
 - [ ] WhatsApp de suporte com horário definido
 - [x] Termos de uso e política de privacidade com as condições dos planos e do cancelamento (rascunho para revisão jurídica)
 - [ ] Exportação completa dos dados para quem cancelar
 - [ ] **Pronto quando:** uma barbearia desconhecida se cadastra, testa, assina e paga sem falar com ninguém
 
-## Etapa 17 · Operação contínua e próximas versões
+## Etapa 24 · Premium completo
+
+Depois do lançamento, o que o Premium anuncia como "em breve".
+
+- [ ] Campeonato dos barbeiros: ranking mensal por % da meta, % de extras e nota média, sem valores em reais; o dono define a premiação
+- [ ] TV da unidade (`/tv`): tela cheia sem login, liberada por um código da unidade que o dono pode trocar; mostra o ranking, os próximos horários (só o primeiro nome do cliente) e recados; atualiza sozinha
+- [ ] Automações do bot: campanhas só para quem aceitou mensagens (clientes sumidos, aniversariantes do mês, horários vagos de amanhã), com limite diário e relatório de resultado
+- [ ] Cobrança automática do clube pelo Asaas (Pix e cartão): assinatura recorrente, baixa automática pelo webhook, aviso ao cliente quando a cobrança falhar
+- [ ] **Pronto quando:** uma rede Premium acompanha o campeonato na TV, recupera clientes por campanha e recebe o clube sem baixa manual
+
+## Etapa 25 · Operação contínua e próximas versões
 
 O trabalho depois do lançamento, para o sistema seguir estável e crescer.
 
@@ -330,6 +472,9 @@ O trabalho depois do lançamento, para o sistema seguir estável e crescer.
 
 **Próximas versões**
 
-- [ ] V2: metas, ritmo e projeção, ocupação, clube, lucro real e lucratividade, bot WhatsApp com menu e agendamento, sinal por Pix no link de agendamento, painel da rede
-- [ ] V3: cobrança automática do clube, campeonato e TV, estoque completo, fidelidade e recorrência, Google Agenda, importação do histórico
+- [ ] Estoque completo: baixa do produto gasto no serviço, estoque mínimo, fornecedores e compras
+- [ ] Fidelidade: pontos ou cashback por visita, resgate na comanda
+- [ ] Sinal por Pix no agendamento pelo link e pelo bot, para horários disputados
+- [ ] Google Agenda: espelhar a agenda do profissional
+- [ ] Importação do histórico da planilha (comandas antigas), com conferência
 - [ ] Revisar os preços a cada 6 meses com a tabela de mercado do documento principal

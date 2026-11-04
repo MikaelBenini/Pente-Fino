@@ -65,11 +65,11 @@ O produto existe para que cada atendimento seja lançado uma vez só e para que 
 | Clube da barbearia | Assinatura, combos, convênios | Pro |
 | Produtos e estoque | Catálogo, venda, estoque, fornecedores | Básico a Premium |
 | Clientes | Perfil, leads, fidelidade, recorrência | Básico a Premium |
-| Equipe e comissões | Profissional com data de entrada, regra de comissão com vigência | Básico (comissões: Pro) |
+| Equipe e comissões | Profissional com data de entrada, regra de comissão com vigência, ficha de desempenho do profissional | Básico (comissões: Pro) |
 | Financeiro | Caixa, receitas separadas, despesas por categoria, lucro real | Básico (lucro real: Premium) |
 | Métricas e metas | Indicadores, ritmo, projeção, metas, lucratividade | Pro (lucratividade: Premium) |
 | App do barbeiro | Agenda, comandas, clientes, desempenho, comissão, metas | Básico a Premium |
-| Bot WhatsApp | Menu, respostas prontas, agendamento por menu, lembretes | Pro (automações: Premium) |
+| Bot WhatsApp | Menu, respostas prontas, agendamento pela conversa ou pelo site (o cliente escolhe), lembretes, avaliação depois do atendimento, mensagens de retorno | Pro (automações: Premium) |
 | TV da unidade e campeonato | Ranking por % da meta e % de extras, sem valores | Premium |
 
 ### Requisitos funcionais
@@ -108,6 +108,12 @@ O produto existe para que cada atendimento seja lançado uma vez só e para que 
 | RF-30 | Estoque com baixa do produto gasto no serviço, fornecedores e compras | V3 |
 | RF-31 | Fidelidade (pontos e cashback) e mensagens de retorno | V3 |
 | RF-32 | Importar o histórico da planilha atual (CSV) | V3 |
+| RF-33 | Ficha do profissional: faturamento, atendimentos, serviços, tempo real x previsto, comandas atendidas, clientes recorrentes, confirmação no prazo, avaliações e evolução mensal | V2 |
+| RF-34 | O cliente escolhe agendar pela conversa do WhatsApp ou pelo site; a preferência fica guardada | V2 |
+| RF-35 | O cliente vê, remarca e cancela os próprios horários pelo bot ou por link, dentro do prazo da unidade | V2 |
+| RF-36 | Avaliação de 1 a 5 pelo WhatsApp depois do fechamento da comanda, ligada ao profissional; nota baixa avisa o dono | V2 |
+| RF-37 | Lista de espera: horário que vaga é oferecido pelo bot a quem espera, em ordem | V2 |
+| RF-38 | Avisos por papel (pendências, divergência de caixa, resumo do dia) no app e por notificação no celular | V2 |
 
 ### Regras de negócio
 
@@ -244,6 +250,8 @@ Ocupação = minutos agendados ÷ minutos disponíveis dos profissionais no per�
 | Projeção e ritmo | Diário | Recalcula projeção, ritmo e % de metas |
 | Clube | Diário | Vence assinaturas, zera usos no ciclo, dispara cobrança |
 | Recorrência | Diário | Lista clientes sem voltar no prazo e envia mensagem de retorno |
+| Avaliação | Após cada fechamento (proposta: 1 h) | Envia a pesquisa a quem aceitou mensagens; expira em 48 h |
+| Lista de espera | Ao cancelar um horário | Oferece a vaga em ordem; o primeiro que confirmar leva |
 
 ### Integrações
 
@@ -374,6 +382,7 @@ A interface é pensada para uso em pé e com pressa: recepção no balcão e bar
 | Metas | Dono | Objetivo por unidade, mês e serviço; atual e % | Definir meta |
 | Lucratividade | Dono | Serviço, quantidade, receita, custo, lucro, margem | Ordenar por margem |
 | Despesas | Dono, gestor | Lançamentos por categoria, % sobre faturamento | Nova despesa |
+| Ficha do profissional | Dono, gestor; barbeiro vê a própria | Resumo do período, serviços, comandas atendidas, clientes recorrentes, rotina, avaliações, evolução | Exportar PDF |
 | Construtor do bot | Dono, gestor | Árvore do menu, respostas, palavras-chave, prévia de conversa | Publicar menu |
 | Conversas | Recepção | Caixa de entrada, quem está com atendente | Assumir ou devolver ao bot |
 
@@ -432,7 +441,7 @@ Todas as tabelas abaixo têm `id` (UUID), `conta_id`, `criado_em` e `atualizado_
 | estoque | produto\_id, unidade\_id, quantidade, minimo |  |
 | movimento\_estoque | produto\_id, unidade\_id, tipo (entrada, saida, ajuste, reserva), quantidade, origem | Origem pode ser item de comanda |
 | fornecedor e pedido\_compra | dados do fornecedor; itens, custo, status | V3 |
-| cliente | nome, telefone, email, aniversario, unidade\_origem\_id, origem\_lead, etapa\_lead, consentimento\_msg | Telefone único por conta |
+| cliente | nome, telefone, email, aniversario, unidade\_origem\_id, origem\_lead, etapa\_lead, consentimento\_msg, canal\_preferido (whatsapp, site) | Telefone único por conta |
 | nota\_cliente | cliente\_id, profissional\_id, texto | Anotações do atendimento |
 | item\_clube | tipo (assinatura, combo, convenio), nome, valor, unidade\_id, limite\_uso\_mes, ativo | Valor por unidade |
 | item\_clube\_servico | item\_clube\_id, servico\_id, quantidade | Serviços inclusos |
@@ -451,7 +460,10 @@ Todas as tabelas abaixo têm `id` (UUID), `conta_id`, `criado_em` e `atualizado_
 | bot\_no | unidade\_id, pai\_id, tipo (mensagem, menu, palavra\_chave, acao), texto, opcao\_numero, acao | Árvore do menu |
 | bot\_sessao | unidade\_id, telefone, no\_atual\_id, dados, com\_atendente, expira\_em |  |
 | mensagem | unidade\_id, cliente\_id, direcao, texto, enviada\_em, status | Histórico de conversa |
-| modelo\_mensagem | unidade\_id, tipo (lembrete, confirmacao, retorno, aniversario), texto com variáveis |  |
+| modelo\_mensagem | unidade\_id, tipo (lembrete, confirmacao, retorno, aniversario, avaliacao, boas\_vindas, fora\_horario), texto com variáveis |  |
+| avaliacao | comanda\_id, profissional\_id, cliente\_id, nota (1 a 5), comentario, enviada\_em, respondida\_em, tratada\_em | Uma por comanda |
+| lista\_espera | unidade\_id, cliente\_id, profissional\_id, data, faixa\_inicio, faixa\_fim, status | Oferecida em ordem quando vaga um horário |
+| aviso | usuario\_id, tipo, texto, link, lido\_em | Central de avisos e notificações |
 
 ### Relacionamentos-chave
 
@@ -492,6 +504,8 @@ Todas as tabelas abaixo têm `id` (UUID), `conta_id`, `criado_em` e `atualizado_
 | GET /lucratividade?unidade&periodo | Margem por serviço | Dono |
 | GET/PUT /metas | Definir e ver metas | Dono |
 | GET /me/comissoes · GET /me/desempenho · GET /me/agenda | Área do barbeiro | Barbeiro |
+| GET /profissionais/:id/desempenho?periodo | Ficha do profissional | Dono, gestor (sua unidade) |
+| GET /avaliacoes?profissional&periodo | Notas e comentários | Dono, gestor; barbeiro só as próprias |
 | GET/POST /clube/itens · POST /clube/adesoes | Clube | Dono, recepção |
 | GET/PUT /bot/menu · POST /bot/publicar · GET /bot/conversas | Construtor e conversas | Dono, gestor, recepção |
 | POST /webhooks/whatsapp · POST /webhooks/pagamentos | Entrada do provedor | Sistema |
@@ -504,9 +518,11 @@ A API publica eventos na fila; os workers reagem.
 | --- | --- |
 | agendamento.criado | Cria comanda prevista; agenda lembrete |
 | comanda.confirmada | Avisa recepção |
-| comanda.fechada | Calcula comissão, baixa estoque, conta uso do clube, atualiza indicadores |
+| comanda.fechada | Calcula comissão, baixa estoque, conta uso do clube, atualiza indicadores, agenda a pesquisa de avaliação |
 | comanda.reaberta | Grava auditoria; recalcula comissão e indicadores |
 | mensagem.recebida | Motor do bot avança a sessão |
+| agendamento.cancelado | Oferece o horário à lista de espera; avisa o barbeiro |
+| avaliacao.recebida | Atualiza a ficha do profissional; nota 1 ou 2 avisa dono e gestor |
 | adesao.vencida | Cobrança e aviso ao cliente |
 
 ## 6. Plano de implementação
@@ -548,7 +564,8 @@ Cada losango é um portão: a fase seguinte só começa quando o critério de ac
 - Metas por unidade e mês, ritmo, projeção pelo calendário, ocupação pela agenda.
 - Clube: assinatura, combos, convênios, reconhecimento na comanda.
 - Lucro real e lucratividade por serviço.
-- Bot WhatsApp: conexão, construtor do menu, respostas prontas, agendamento pelo menu, transferência, lembretes.
+- Bot WhatsApp: conexão, construtor do menu, respostas prontas, agendamento pela conversa ou pelo site (escolha do cliente), transferência, lembretes.
+- Ficha do profissional e avaliação depois do atendimento; lista de espera; avisos por papel.
 - Painel da rede com filtro por unidade.
 - **Aceite:** clientes agendam pelo bot sem ajuda e o agendamento aparece na agenda com comanda prevista.
 
