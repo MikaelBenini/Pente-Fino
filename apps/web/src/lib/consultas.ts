@@ -11,6 +11,8 @@ import type {
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { api } from './api';
 import type {
+  ResumoDoDia,
+  ResumoDoMes,
   FichaProfissional,
   LinhaRankingEquipe,
   DespesaDetalhe,
@@ -277,5 +279,27 @@ export const useRankingEquipe = (unidade: string | null, de: string, ate: string
     queryFn: () =>
       api<LinhaRankingEquipe[]>(
         `profissionais/desempenho?de=${de}&ate=${ate}${comUnidade(unidade)}`,
+      ),
+  });
+
+const comProfissional = (id: string | null) => (id ? `&profissionalId=${id}` : '');
+
+/** O que tem para o dia e o que já foi feito; atualiza sozinho a cada minuto. */
+export const useResumoDia = (unidade: string | null, data: string, profissional: string | null) =>
+  useQuery({
+    queryKey: [...chavesResultados.desempenho, 'dia', unidade, data, profissional],
+    queryFn: () =>
+      api<ResumoDoDia>(
+        `resumo/dia?data=${data}${comUnidade(unidade)}${comProfissional(profissional)}`,
+      ),
+    refetchInterval: 60_000,
+  });
+
+export const useResumoMes = (unidade: string | null, mes: string, profissional: string | null) =>
+  useQuery({
+    queryKey: [...chavesResultados.desempenho, 'mes', unidade, mes, profissional],
+    queryFn: () =>
+      api<ResumoDoMes>(
+        `resumo/mes?mes=${mes}${comUnidade(unidade)}${comProfissional(profissional)}`,
       ),
   });

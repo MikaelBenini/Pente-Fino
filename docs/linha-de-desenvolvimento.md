@@ -208,6 +208,16 @@ O dono e o gestor veem tudo sobre cada profissional numa tela só, para conversa
 - [x] Permissões: dono vê todos, gestor só os da unidade dele, recepção não vê, barbeiro só a própria ficha (`apps/api/test/desempenho.e2e-spec.ts` e as varreduras de isolamento e permissão)
 - [x] **Pronto quando:** o dono abre a ficha de um barbeiro e responde sem planilha quanto ele faturou, que serviços faz, quantos clientes voltam para ele, quais comandas atendeu e como está a nota; os números batem com os indicadores da unidade (conferido com a demonstração e nos testes `apps/web/e2e/desempenho.spec.ts`)
 
+**Resumo do dia (pedido no meio da etapa, para dono e gestor)**
+
+- [x] Tela "Resumo do dia" (`/dia`), logo depois do Início: o que tem para hoje e o que já foi feito, por barbeiro, com atualização a cada minuto
+- [x] Totais do dia: atendidos de marcados, faturamento fechado, o que ainda vai entrar, ocupação
+- [x] "Fique de olho": comandas sem confirmação, prontas para fechar, faltas, clientes na primeira vez e aniversariantes
+- [x] Cartão de cada barbeiro: próximo cliente, agenda com hora, cliente, serviços, valor, estado, origem (balcão, link, WhatsApp, sem horário) e observação; toque abre a comanda
+- [x] Filtros: dia (anterior, seguinte, hoje), barbeiro, situação (a atender, em atendimento, aguardando fechamento, fechadas, faltas)
+- [x] Aba "Mês dia a dia": agendados, faltas, clientes, faturamento, ticket e comissão por dia, filtro por barbeiro e só dias de trabalho; toque no dia abre o resumo daquele dia
+- [x] Regras em `packages/shared/src/resumo-dia.ts` com testes; API `GET /resumo/dia` e `GET /resumo/mes` só para dono e gestor (gestor na unidade dele), nas varreduras de isolamento e permissão
+
 ## Etapa 10 · Bot do WhatsApp: conexão e respostas automáticas
 
 O dono monta como o bot responde, sem inteligência artificial: menu numerado, palavras-chave e mensagens prontas. Nada chega ao cliente sem ter sido configurado e testado.
@@ -251,6 +261,11 @@ O cliente escolhe por onde quer marcar: conversando com o bot ou pelo link. Os d
 - [ ] Falar com atendente: pausa o bot naquele número e avisa a recepção; o bot volta quando a recepção encerra, ou depois de 2 horas sem resposta, avisando o cliente
 - [ ] Tela Conversas (recepção e gestor): caixa de entrada da unidade, quem está com atendente, responder pelo painel, assumir e devolver ao bot, atalhos para agendar e abrir o cliente
 - [ ] Aviso ao barbeiro quando entra, muda ou cai um horário dele (notificação no celular)
+- [ ] Assistente da equipe no WhatsApp: o barbeiro liga no Perfil, confirma o próprio número com um código e escolhe os avisos que quer receber do número da barbearia
+- [ ] Avisos do assistente: horário novo, remarcado ou cancelado; "próximo cliente em 15 minutos" (com serviço e se é a primeira vez); agenda do dia de manhã; resumo do dia no fim do expediente (atendidos e comissão)
+- [ ] Respostas simples ao assistente, sem IA: "agenda" (agenda de hoje), "amanhã", "comissão" (do mês); só para o número confirmado, e nunca com telefone de cliente quando a conta oculta
+- [ ] Silêncio fora do expediente dele e limite de mensagens por dia; "PARAR" desliga na hora
+- [ ] Dono e gestor podem receber o mesmo tipo de aviso (falta, nota baixa, resumo do dia) pelo WhatsApp
 - [ ] Origem do agendamento registrada (balcão, site, bot) e indicador de agendamentos por canal nas métricas
 - [ ] **Pronto quando:** um cliente marca, remarca e cancela pelo WhatsApp e outro pelo site, sem ajuda; os dois aparecem na agenda com comanda prevista e recebem o lembrete
 

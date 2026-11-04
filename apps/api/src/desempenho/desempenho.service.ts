@@ -99,8 +99,8 @@ export class DesempenhoService {
     return porProfissional;
   }
 
-  /** Ocupação de cada profissional, do início do período até hoje (o futuro ainda não aconteceu). */
-  private async ocupacoes(
+  /** Ocupação de cada profissional; por padrão, do início do período até hoje (o futuro ainda não aconteceu). */
+  async ocupacoes(
     tx: Transacao,
     profissionais: {
       id: string;
@@ -109,9 +109,11 @@ export class DesempenhoService {
     }[],
     de: string,
     ate: string,
+    /** false: conta também o que está marcado para depois de hoje (agenda do dia). */
+    soAteHoje = true,
   ): Promise<Map<string, Ocupacao>> {
     const hoje = dataLocal(new Date());
-    const fim = ate < hoje ? ate : hoje;
+    const fim = !soAteHoje || ate < hoje ? ate : hoje;
     const resultado = new Map<string, Ocupacao>();
     if (fim < de) {
       for (const p of profissionais)
