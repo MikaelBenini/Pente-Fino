@@ -117,6 +117,7 @@ export async function contextoDaConversa(
     where: { ativo: true },
     orderBy: [{ ehExtra: 'asc' }, { nome: 'asc' }],
   });
+  const conta = await tx.conta.findFirst({ select: { nome: true } });
   const hoje = dataLocal(agora);
   const precos: { nome: string; valor: number }[] = [];
   for (const sv of servicos) {
@@ -125,6 +126,7 @@ export async function contextoDaConversa(
   }
   return {
     agora,
+    barbearia: conta?.nome ?? u.nome,
     unidade: u.nome,
     endereco: u.endereco,
     horario: s.descricao,
@@ -277,10 +279,18 @@ export async function atenderMensagem(
         ctx,
       );
 
+      // Pediu atendente agora: entra na fila da tela Conversas; o bot voltou: sai dela.
+      const atendenteDesde = r.sessao.comAtendente ? (salva?.atendenteDesde ?? agora) : null;
       await tx.botSessao.upsert({
         where: { unidadeId_telefone: { unidadeId, telefone: evento.telefone } },
-        create: { unidadeId, telefone: evento.telefone, sessao: json(r.sessao) },
-        update: { sessao: json(r.sessao) },
+        create: {
+          unidadeId,
+          telefone: evento.telefone,
+          clienteId: cliente.id,
+          sessao: json(r.sessao),
+          atendenteDesde,
+        },
+        update: { clienteId: cliente.id, sessao: json(r.sessao), atendenteDesde },
       });
       if (r.consentimento !== null) {
         await tx.cliente.update({

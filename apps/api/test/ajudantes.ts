@@ -24,11 +24,11 @@ export interface Cenario {
   contaId: string;
   unidadeA: string;
   unidadeB: string;
-  emails: { dono: string; gestor: string; barbeiro: string };
+  emails: { dono: string; gestor: string; barbeiro: string; recepcao: string };
   remover: () => Promise<void>;
 }
 
-/** Conta nova com duas unidades, dono (todas), gestor e barbeiro (unidade A). */
+/** Conta nova com duas unidades, dono (todas), gestor, barbeiro e recepção (unidade A). */
 export async function criarCenario(): Promise<Cenario> {
   const prisma: PrismaClient = criarPrisma();
   const contaId = randomUUID();
@@ -37,6 +37,7 @@ export async function criarCenario(): Promise<Cenario> {
     dono: `dono-${sufixo}@e2e.pentefino.dev`,
     gestor: `gestor-${sufixo}@e2e.pentefino.dev`,
     barbeiro: `barbeiro-${sufixo}@e2e.pentefino.dev`,
+    recepcao: `recepcao-${sufixo}@e2e.pentefino.dev`,
   };
   const senhaHash = await hash(SENHA);
 
@@ -49,7 +50,7 @@ export async function criarCenario(): Promise<Cenario> {
     const criar = async (
       nome: string,
       email: string,
-      papel: 'dono' | 'gestor' | 'barbeiro',
+      papel: 'dono' | 'gestor' | 'barbeiro' | 'recepcao',
       unidadeId: string | null,
     ) => {
       const u = await tx.usuario.create({ data: { nome, email, senhaHash } });
@@ -58,6 +59,7 @@ export async function criarCenario(): Promise<Cenario> {
     await criar('Dona Teste', emails.dono, 'dono', null);
     await criar('Gestor Teste', emails.gestor, 'gestor', a.id);
     await criar('Barbeiro Teste', emails.barbeiro, 'barbeiro', a.id);
+    await criar('Recepção Teste', emails.recepcao, 'recepcao', a.id);
     return { unidadeA: a.id, unidadeB: b.id };
   });
 

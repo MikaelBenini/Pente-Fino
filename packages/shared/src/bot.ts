@@ -55,7 +55,8 @@ export interface MenuBot {
 /** Variáveis que o dono pode usar nos textos. */
 export const VARIAVEIS_BOT = {
   cliente: 'Primeiro nome do cliente, quando ele já está cadastrado',
-  unidade: 'Nome da unidade',
+  barbearia: 'Nome da barbearia',
+  unidade: 'Nome da unidade (útil para quem tem mais de uma)',
   endereco: 'Endereço da unidade',
   mapa: 'Link do endereço no mapa',
   horario: 'Horário de funcionamento, por extenso',
@@ -74,6 +75,7 @@ export const TIPOS_MENSAGEM_BOT = [
   'boas_vindas',
   'fora_horario',
   'nao_entendi',
+  'nao_entendi_de_novo',
   'transferencia',
   'encerramento',
   'saida_avisos',
@@ -93,7 +95,13 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
   },
   nao_entendi: {
     nome: 'Não entendi',
-    quando: 'Quando a resposta não é um número do menu nem uma palavra-chave.',
+    quando:
+      'Quando a resposta não é uma opção do menu nem uma palavra-chave. As opções seguem numa linha só.',
+  },
+  nao_entendi_de_novo: {
+    nome: 'Não entendi de novo',
+    quando:
+      'No segundo erro seguido. Depois dele o bot fica quieto até o cliente mandar uma opção, uma palavra-chave ou 0, para não encher a conversa.',
   },
   transferencia: {
     nome: 'Passar para atendente',
@@ -119,15 +127,17 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
 };
 
 export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
-  boas_vindas: 'Olá, {cliente}! Aqui é a {unidade}.',
+  boas_vindas: 'Olá, {cliente}! Aqui é a {barbearia}.',
   fora_horario:
     'Agora estamos fechados. Funcionamos {horario}. Você pode agendar pelo menu a qualquer hora.',
   nao_entendi: 'Não entendi. Responda com o número de uma das opções:',
+  nao_entendi_de_novo:
+    'Ainda não entendi. Digite 0 para ver as opções ou ATENDENTE para falar com a nossa equipe.',
   transferencia: 'Certo! Um atendente vai responder por aqui assim que possível.',
   encerramento: 'Obrigado pelo contato! Quando precisar, é só mandar uma mensagem.',
   saida_avisos:
     'Pronto, você não vai mais receber lembretes nem avisos. Para voltar a receber, responda RECEBER.',
-  volta_avisos: 'Combinado! Você volta a receber os lembretes da {unidade}.',
+  volta_avisos: 'Combinado! Você volta a receber os lembretes da {barbearia}.',
   convite_avisos:
     'Quer receber lembretes dos seus horários por aqui? Responda RECEBER. Para parar a qualquer momento, responda SAIR.',
 };
@@ -369,6 +379,8 @@ export function dentroDoHorario(turnos: readonly TurnoBot[], agora: Date): boole
 
 /** Sem resposta por este tempo, a conversa recomeça do menu principal. */
 export const EXPIRACAO_SESSAO_MIN = 30;
+/** Com atendente, o bot espera mais antes de voltar sozinho: a recepção pode demorar. */
+export const EXPIRACAO_ATENDENTE_MIN = 120;
 
 export interface SessaoBot {
   /** Ids das opções que abriram submenus, da raiz até o menu atual. */
@@ -377,12 +389,19 @@ export interface SessaoBot {
   ultimaEm: string;
   /** Pediu atendente: o bot fica quieto até a recepção devolver. */
   comAtendente: boolean;
+  /** Respostas seguidas que o bot não entendeu (sessões antigas não têm: conta 0). */
+  erros?: number;
 }
+
+/** A partir deste erro seguido, o bot para de responder até o cliente acertar. */
+export const ERROS_ATE_SILENCIO = 3;
 
 export interface ContextoConversa {
   agora: Date;
   /** Primeiro nome, se o telefone já é de um cliente. */
   cliente: string | null;
+  /** Nome da conta, o que o cliente conhece. */
+  barbearia: string;
   unidade: string;
   endereco: string | null;
   horario: string;
@@ -422,6 +441,49 @@ function contem(texto: string, palavra: string): boolean {
   return !!p && ` ${texto} `.includes(` ${p} `);
 }
 
+const NUMEROS_POR_EXTENSO: Readonly<Record<string, number>> = {
+  um: 1,
+  uma: 1,
+  dois: 2,
+  duas: 2,
+  tres: 3,
+  quatro: 4,
+  cinco: 5,
+  seis: 6,
+  sete: 7,
+  oito: 8,
+  nove: 9,
+};
+
+/**
+ * Qual opção o cliente quis, aceitando o jeito que as pessoas escrevem: "2", "2.", "opção 2",
+ * "a dois", "2 por favor" ou o nome da opção ("precos", "quero ver preços"). Pelo nome, só
+ * quando uma opção só combina, para nunca escolher no chute. `texto` já vem normalizado.
+ */
+export function opcaoEscolhida(
+  texto: string,
+  menu: MenuNo,
+  valores: ValoresBot = {},
+): OpcaoMenu | null {
+  const t = texto.replace(/^(?:a |o )?(?:opcao|opc|op|numero|num|n)\s+/, '').replace(/^a |^o /, '');
+  const digitos = /^(\d{1,2})(?:\s|$)/.exec(t);
+  const numero = digitos ? Number(digitos[1]) : NUMEROS_POR_EXTENSO[t];
+  if (numero !== undefined) return menu.opcoes[numero - 1] ?? null;
+  if (t.length < 4) return null;
+  const combinam = menu.opcoes.filter((o) => {
+    const rotulo = normalizar(preencher(o.rotulo, valores));
+    return !!rotulo && (contem(rotulo, t) || contem(t, rotulo));
+  });
+  return combinam.length === 1 ? combinam[0]! : null;
+}
+
+/** As opções numa linha só ("1. Agendar · 2. Ver preços"), para o "não entendi" não repetir o menu. */
+export function opcoesEmUmaLinha(menu: MenuNo, valores: ValoresBot, submenu: boolean): string {
+  const itens = menu.opcoes.map((o, i) => `${i + 1}. ${preencher(o.rotulo, valores)}`);
+  if (submenu) itens.push('0. Voltar');
+  return itens.join(' · ');
+}
+
 /** Uma mensagem do cliente → o que o bot responde e como a conversa fica. */
 export function responder(
   m: MenuBot,
@@ -432,6 +494,7 @@ export function responder(
 ): ResultadoConversa {
   const valores: ValoresBot = {
     cliente: ctx.cliente?.trim().split(/\s+/)[0] ?? null,
+    barbearia: ctx.barbearia,
     unidade: ctx.unidade,
     endereco: ctx.endereco,
     mapa: ctx.endereco
@@ -443,12 +506,16 @@ export function responder(
   const msg = (t: TipoMensagemBot) => preencher(mensagens[t], valores);
   const texto = normalizar(entrada);
   const agoraIso = ctx.agora.toISOString();
+  const limiteMin = sessaoAnterior?.comAtendente ? EXPIRACAO_ATENDENTE_MIN : EXPIRACAO_SESSAO_MIN;
   const expirou =
     !sessaoAnterior ||
-    ctx.agora.getTime() - Date.parse(sessaoAnterior.ultimaEm) > EXPIRACAO_SESSAO_MIN * 60_000;
+    ctx.agora.getTime() - Date.parse(sessaoAnterior.ultimaEm) > limiteMin * 60_000;
   const sessao: SessaoBot = expirou
     ? { caminho: [], ultimaEm: agoraIso, comAtendente: false }
     : { ...sessaoAnterior!, ultimaEm: agoraIso };
+  // Qualquer resposta entendida zera a conta; só o "não entendi" lá embaixo soma.
+  const errosAntes = expirou ? 0 : (sessao.erros ?? 0);
+  sessao.erros = 0;
   const resultado = (
     respostas: string[],
     extra: Partial<Omit<ResultadoConversa, 'respostas'>> = {},
@@ -523,9 +590,17 @@ export function responder(
     return resultado([menuAtual()]);
   }
 
-  const numero = /^\d+$/.test(texto) ? Number(texto) : NaN;
-  const opcao = posicao.menu.opcoes[numero - 1];
-  if (!opcao) return resultado([msg('nao_entendi'), menuAtual()]);
+  const opcao = opcaoEscolhida(texto, posicao.menu, valores);
+  if (!opcao) {
+    // Não repete o menu a cada erro: 1º, aviso curto com as opções numa linha; 2º, oferece
+    // ver o menu ou falar com alguém; do 3º em diante, silêncio até o cliente acertar.
+    sessao.erros = errosAntes + 1;
+    if (sessao.erros >= ERROS_ATE_SILENCIO) return resultado([]);
+    if (sessao.erros === 2) return resultado([msg('nao_entendi_de_novo')]);
+    return resultado([
+      `${msg('nao_entendi')}\n${opcoesEmUmaLinha(posicao.menu, valores, sessao.caminho.length > 0)}`,
+    ]);
+  }
   if (opcao.submenu) {
     sessao.caminho = [...sessao.caminho, opcao.id];
     const intro = opcao.resposta.trim() ? [preencher(opcao.resposta, valores)] : [];

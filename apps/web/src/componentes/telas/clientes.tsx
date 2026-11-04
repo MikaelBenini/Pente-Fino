@@ -6,11 +6,11 @@ import {
   formatarMoeda,
   formatarTelefone,
   type ClienteResumo,
-  type MensagemDoCliente,
 } from '@pente-fino/shared';
-import { Botao, Campo, cn, Dialogo, EstadoVazio } from '@pente-fino/ui';
+import { Botao, Campo, Dialogo, EstadoVazio } from '@pente-fino/ui';
 import { Contact, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
@@ -21,6 +21,7 @@ import {
   useMensagensCliente,
 } from '@/lib/consultas';
 import { Aviso } from '../aviso';
+import { ListaMensagens } from '../lista-mensagens';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Tabela, td, th } from '../pagina';
 
@@ -33,7 +34,9 @@ export function TelaClientes() {
   const [busca, setBusca] = useState('');
   const termo = useDeferredValue(busca.trim());
   const clientes = useClientes(termo);
-  const [aberto, setAberto] = useState<string | null>(null);
+  // "Ver cliente" das Conversas abre a ficha direto (/clientes?id=).
+  const idDoLink = useSearchParams().get('id');
+  const [aberto, setAberto] = useState<string | null>(idDoLink);
   const [novo, setNovo] = useState(false);
 
   return (
@@ -264,12 +267,6 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
   );
 }
 
-const SITUACAO_ENVIO: Partial<Record<MensagemDoCliente['status'], string>> = {
-  pendente: 'enviando…',
-  falhou: 'não enviada',
-  descartada: 'não enviada',
-};
-
 /** Conversa do WhatsApp com o cliente, como no celular: cliente à esquerda, barbearia à direita. */
 function ConversaWhatsapp({ clienteId }: { clienteId: string }) {
   const mensagens = useMensagensCliente(clienteId, true);
@@ -281,41 +278,7 @@ function ConversaWhatsapp({ clienteId }: { clienteId: string }) {
           mensagens.data!.length === 0 ? (
             <p className="text-tinta-suave">Nenhuma conversa pelo WhatsApp ainda.</p>
           ) : (
-            <ol
-              aria-label="Mensagens do WhatsApp"
-              className="flex max-h-80 flex-col gap-2 overflow-y-auto rounded-md border border-borda bg-superficie-2 p-3"
-            >
-              {mensagens.data!.map((m) => {
-                const doCliente = m.direcao === 'entrada';
-                const situacao = SITUACAO_ENVIO[m.status];
-                return (
-                  <li
-                    key={m.id}
-                    className={cn(
-                      'max-w-[85%] rounded-lg border px-3 py-2',
-                      doCliente
-                        ? 'self-start border-borda bg-superficie'
-                        : 'self-end border-acao-texto/30 bg-superficie',
-                    )}
-                  >
-                    <p className="text-sm whitespace-pre-line">
-                      {m.texto || (
-                        <span className="italic text-tinta-suave">(áudio, foto ou figurinha)</span>
-                      )}
-                    </p>
-                    <p className="mt-1 text-xs text-tinta-suave">
-                      {doCliente ? 'Cliente' : 'Bot'} · {formatarDataHora(m.criadoEm)}
-                      {situacao && (
-                        <span className={m.status === 'pendente' ? '' : 'text-perigo-texto'}>
-                          {' '}
-                          · {situacao}
-                        </span>
-                      )}
-                    </p>
-                  </li>
-                );
-              })}
-            </ol>
+            <ListaMensagens mensagens={mensagens.data!} className="max-h-80" />
           )
         }
       </Estado>

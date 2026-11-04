@@ -633,8 +633,8 @@ function Mensagens({ e }: { e: EstadoBot }) {
   return (
     <form onSubmit={enviar} className="flex max-w-3xl flex-col gap-5">
       <p className="text-tinta-suave">
-        Valem para todas as unidades. Use {'{cliente}'}, {'{unidade}'}, {'{horario}'},{' '}
-        {'{endereco}'} e {'{link}'}.
+        Valem para todas as unidades. Use {'{cliente}'}, {'{barbearia}'}, {'{unidade}'},{' '}
+        {'{horario}'}, {'{endereco}'} e {'{link}'}.
       </p>
       <fieldset disabled={!e.podeEditar} className="flex min-w-0 flex-col gap-5">
         {TIPOS_MENSAGEM_BOT.map((t) => (

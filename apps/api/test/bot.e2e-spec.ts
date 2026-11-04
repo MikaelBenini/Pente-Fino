@@ -63,14 +63,15 @@ describe('bot: estado e simulador', () => {
     expect(e.rascunho).toBeNull();
     expect(e.temAnterior).toBe(false);
     expect(e.podeEditar).toBe(true);
-    expect(e.mensagens.boas_vindas).toBe('Olá, {cliente}! Aqui é a {unidade}.');
+    expect(e.mensagens.boas_vindas).toBe('Olá, {cliente}! Aqui é a {barbearia}.');
     expect(e.unidades.map((u) => u.nome).sort()).toEqual(['Unidade A', 'Unidade B']);
   });
 
   it('simula a conversa com a unidade de verdade (nome e preços)', async () => {
     const r1 = (await simular(dono, 'oi', { cliente: 'Carlos Lima' }).expect(200))
       .body as RespostaSimulacao;
-    expect(r1.respostas[0]).toBe('Olá, Carlos! Aqui é a Unidade A.');
+    // {barbearia} é o nome da conta, não o da unidade.
+    expect(r1.respostas[0]).toMatch(/^Olá, Carlos! Aqui é a Barbearia E2E \S+\.$/);
     expect(r1.respostas[1]).toMatch(/^Como posso ajudar\?\n\n1\. Agendar horário/);
     const r2 = (await simular(dono, '2', { sessao: r1.sessao }).expect(200))
       .body as RespostaSimulacao;

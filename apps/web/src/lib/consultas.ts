@@ -13,6 +13,7 @@ import { api } from './api';
 import type {
   ConexaoBot,
   EstadoBot,
+  ListaConversas,
   MensagemDoCliente,
   ResumoDoDia,
   ResumoDoMes,
@@ -327,4 +328,27 @@ export const useMensagensCliente = (clienteId: string | null, ativo: boolean) =>
     queryKey: [...chavesOperacao.clientes, clienteId, 'mensagens'],
     queryFn: () => api<MensagemDoCliente[]>(`clientes/${clienteId}/mensagens`),
     enabled: !!clienteId && ativo,
+  });
+
+// ─── Conversas do bot (recepção, gestor e dono) ───────────────────────────
+
+export const chaveConversas = ['conversas'] as const;
+
+/** Lista da unidade; consulta a cada 15 s para a fila de quem espera atendente andar sozinha. */
+export const useConversas = (unidade: string, ativo = true) =>
+  useQuery({
+    queryKey: [...chaveConversas, 'lista', unidade],
+    queryFn: () =>
+      api<ListaConversas>(`conversas${unidade !== 'todas' ? `?unidadeId=${unidade}` : ''}`),
+    enabled: ativo,
+    refetchInterval: 15_000,
+  });
+
+/** Mensagens da conversa aberta, a cada 5 s (a resposta do cliente aparece sem recarregar). */
+export const useMensagensConversa = (id: string | null) =>
+  useQuery({
+    queryKey: [...chaveConversas, 'mensagens', id],
+    queryFn: () => api<MensagemDoCliente[]>(`conversas/${id}/mensagens`),
+    enabled: !!id,
+    refetchInterval: 5_000,
   });

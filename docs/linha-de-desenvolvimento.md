@@ -269,16 +269,16 @@ Pedidos do dono depois de testar o sistema. Entram antes da Etapa 11, porque vá
 
 **Bot**
 
-- [ ] Não repetir o menu inteiro a cada resposta errada. Primeira resposta não entendida: "não entendi" curto com as opções em uma linha. Segunda seguida: oferecer o atendente. Terceira em diante: silêncio até o cliente mandar algo válido ou "menu". Contador de erros na sessão (`bot_sessao`), regra em `packages/shared/src/bot.ts` com teste
-- [ ] Respostas parecidas: aceitar o número com texto ("2", "2.", "opção 2", "dois") e o rótulo da opção sem acento ("precos", "endereco")
-- [ ] Variáveis: `{unidade}` hoje é o nome da unidade (na demonstração, "Centro"), e a boas-vindas sai "Aqui é a Centro". Criar `{barbearia}` (nome da conta) e usar nas mensagens padrão; `{unidade}` continua para quem tem mais de uma. Atualizar os textos padrão, o simulador e a lista de variáveis do construtor
-- [ ] Pedido de atendente aparece em Conversas: quando o cliente escolhe "Falar com atendente", a conversa fica marcada como esperando atendente e entra na tela Conversas da unidade, com aviso na hora (adianta a tela Conversas da Etapa 11)
+- [x] Não repetir o menu inteiro a cada resposta errada. Primeira resposta não entendida: "não entendi" curto com as opções em uma linha. Segunda seguida: oferecer o atendente. Terceira em diante: silêncio até o cliente mandar algo válido ou "menu". Contador de erros na sessão (`bot_sessao`), regra em `packages/shared/src/bot.ts` com teste (`sessao.erros`; o 2º erro usa a mensagem pronta nova "Não entendi de novo", editável: "Digite 0 para ver as opções ou ATENDENTE")
+- [x] Respostas parecidas: aceitar o número com texto ("2", "2.", "opção 2", "dois") e o rótulo da opção sem acento ("precos", "endereco") (`opcaoEscolhida`: pelo nome, só quando uma opção só combina; "horário" está em duas e não escolhe no chute)
+- [x] Variáveis: `{unidade}` hoje é o nome da unidade (na demonstração, "Centro"), e a boas-vindas sai "Aqui é a Centro". Criar `{barbearia}` (nome da conta) e usar nas mensagens padrão; `{unidade}` continua para quem tem mais de uma. Atualizar os textos padrão, o simulador e a lista de variáveis do construtor (migração troca o texto padrão nas contas que não editaram)
+- [x] Pedido de atendente aparece em Conversas: quando o cliente escolhe "Falar com atendente", a conversa fica marcada como esperando atendente e entra na tela Conversas da unidade, com aviso na hora (adianta a tela Conversas da Etapa 11) (`bot_sessao.atendente_desde`; contador no menu e faixa em qualquer tela; responder pelo painel assume a conversa e sai pela fila do worker, com a mesma proteção do número; "Devolver ao bot" manda o encerramento; com atendente, o bot espera 2 horas antes de voltar sozinho)
 - [ ] Botões "Chamar" e "Enviar mensagem" do painel: o dono escolhe se abre o WhatsApp do aparelho (link `wa.me` com o texto pronto, como hoje) ou se o próprio bot envia pelo número da barbearia. O envio pelo bot passa pela fila `whatsapp-saida` e só sai para quem já conversou com a barbearia e não pediu SAIR, a mesma proteção do número; fica no histórico do cliente
 
 **Menu por papel**
 
-- [ ] Rever o menu lateral de cada papel (dono, gestor, recepção, barbeiro) numa tabela na matriz de permissões em `docs/`. Regra: o que a recepção vê, dono e gestor também veem. Hoje "Conversas do bot" e "Caixa do dia" estão só na recepção; passar para dono e gestor também. Separar o menu em grupos por função (Atendimento, Gestão, Bot, Conta) para não virar uma lista longa
-- [ ] Teste do menu (`packages/shared/src/menu.test.ts` e Playwright) garantindo que todo item da recepção está no menu de dono e gestor
+- [x] Rever o menu lateral de cada papel (dono, gestor, recepção, barbeiro) numa tabela na matriz de permissões em `docs/`. Regra: o que a recepção vê, dono e gestor também veem. Hoje "Conversas do bot" e "Caixa do dia" estão só na recepção; passar para dono e gestor também. Separar o menu em grupos por função (Atendimento, Gestão, Bot, Conta) para não virar uma lista longa (seções Dia a dia, Gestão, Cadastros, WhatsApp e Conta, só no menu com mais de 7 itens; tabela atualizada em `docs/documentacao-do-produto.md`, "Navegação por papel")
+- [x] Teste do menu (`packages/shared/src/menu.test.ts` e Playwright) garantindo que todo item da recepção está no menu de dono e gestor
 
 **Métricas e avaliações**
 

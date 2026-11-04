@@ -5,7 +5,7 @@ const SENHA = 'pentefino123';
 
 const PAPEIS: { email: string; papel: Papel; inicial: string; proibida: string }[] = [
   { email: 'dono@demo.pentefino.dev', papel: 'dono', inicial: '/inicio', proibida: '/hoje' },
-  { email: 'gestor@demo.pentefino.dev', papel: 'gestor', inicial: '/inicio', proibida: '/caixa' },
+  { email: 'gestor@demo.pentefino.dev', papel: 'gestor', inicial: '/inicio', proibida: '/hoje' },
   {
     email: 'recepcao.centro@demo.pentefino.dev',
     papel: 'recepcao',

@@ -4,7 +4,7 @@ import {
   FILA_EVENTOS,
   FILA_WHATSAPP_ENTRADA,
   type EventoDominio,
-  type EventoWhatsapp,
+  type TrabalhoWhatsappEntrada,
   type NomeEvento,
   type TrabalhoEmail,
 } from '@pente-fino/shared';
@@ -26,7 +26,7 @@ const OPCOES_PADRAO: DefaultJobOptions = {
 export class Filas implements OnApplicationShutdown {
   readonly emails: Queue<TrabalhoEmail>;
   readonly eventos: Queue<EventoDominio>;
-  readonly whatsappEntrada: Queue<EventoWhatsapp>;
+  readonly whatsappEntrada: Queue<TrabalhoWhatsappEntrada>;
 
   constructor(@Inject(CONFIGURACAO) config: Configuracao) {
     const connection = { url: config.redisUrl };
@@ -38,7 +38,7 @@ export class Filas implements OnApplicationShutdown {
       connection,
       defaultJobOptions: OPCOES_PADRAO,
     });
-    this.whatsappEntrada = new Queue<EventoWhatsapp>(FILA_WHATSAPP_ENTRADA, {
+    this.whatsappEntrada = new Queue<TrabalhoWhatsappEntrada>(FILA_WHATSAPP_ENTRADA, {
       connection,
       // Resposta atrasada demais não serve: poucas tentativas e rápidas.
       defaultJobOptions: {

@@ -16,7 +16,7 @@ import {
   FILA_WHATSAPP_ENTRADA,
   FILA_WHATSAPP_SAIDA,
   proximoEnvio,
-  type EventoWhatsapp,
+  type TrabalhoWhatsappEntrada,
   type TrabalhoWhatsappSaida,
 } from '@pente-fino/shared';
 import { ProvedorEvolution, ProvedorFalso, type ProvedorWhatsApp } from '@pente-fino/whatsapp';
@@ -38,7 +38,10 @@ export const TENTATIVAS_ENVIO = 3;
  * variação aleatória por número (proteção contra bloqueio do WhatsApp).
  */
 export async function agendarRespostas(
-  r: Extract<ResultadoAtendimento, { tipo: 'respondida' }>,
+  r: Pick<
+    Extract<ResultadoAtendimento, { tipo: 'respondida' }>,
+    'contaId' | 'instancia' | 'saidas'
+  >,
   deps: {
     relogio: RelogioDeEnvio;
     adicionar: (t: TrabalhoWhatsappSaida, atrasoMs: number) => Promise<unknown>;
@@ -90,7 +93,7 @@ export function criarProvedor(c: ConfiguracaoWorker): ProvedorWhatsApp {
 @Injectable()
 export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger('WhatsApp');
-  private entrada?: Worker<EventoWhatsapp>;
+  private entrada?: Worker<TrabalhoWhatsappEntrada>;
   private saida?: Worker<TrabalhoWhatsappSaida>;
   private filaSaida?: Queue<TrabalhoWhatsappSaida>;
   private redis?: Redis;
@@ -128,19 +131,26 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
       },
     };
 
-    this.entrada = new Worker<EventoWhatsapp>(
+    const adicionar = (t: TrabalhoWhatsappSaida, atrasoMs: number) =>
+      filaSaida.add('enviar', t, { delay: Math.max(0, atrasoMs), jobId: t.mensagemId });
+    this.entrada = new Worker<TrabalhoWhatsappEntrada>(
       FILA_WHATSAPP_ENTRADA,
       async (job) => {
+        // Escrita no painel (Conversas): só entra na fila de saída, no mesmo relógio do número.
+        if (job.data.tipo === 'enviar') {
+          const { contaId, instancia, mensagemIds } = job.data;
+          await agendarRespostas(
+            { contaId, instancia, saidas: mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'agendada';
+        }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {
           appUrl: this.config.APP_URL,
         });
         if (r.tipo !== 'respondida') return r.tipo;
-        await agendarRespostas(r, {
-          relogio,
-          adicionar: (t, atrasoMs) =>
-            filaSaida.add('enviar', t, { delay: Math.max(0, atrasoMs), jobId: t.mensagemId }),
-        });
+        await agendarRespostas(r, { relogio, adicionar });
         return r.tipo;
       },
       { connection, concurrency: 1 },

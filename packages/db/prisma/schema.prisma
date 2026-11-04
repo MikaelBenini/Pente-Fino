@@ -163,6 +163,7 @@ enum TipoModeloMensagem {
   boas_vindas
   fora_horario
   nao_entendi
+  nao_entendi_de_novo
   transferencia
   encerramento
   saida_avisos
@@ -558,6 +559,7 @@ model Cliente {
   agendamentos  Agendamento[]
   comandas      Comanda[]
   mensagens     Mensagem[]
+  sessoesBot    BotSessao[]
 
   @@unique([contaId, telefone])
   @@index([contaId, nome])
@@ -871,18 +873,23 @@ model BotConexao {
 
 /// Onde cada número está no menu do bot. Sem resposta por 30 minutos, recomeça.
 model BotSessao {
-  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
-  unidadeId    String   @map("unidade_id") @db.Uuid
-  telefone     String
-  sessao       Json
-  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId      String    @map("unidade_id") @db.Uuid
+  telefone       String
+  clienteId      String?   @map("cliente_id") @db.Uuid
+  sessao         Json
+  /// Pediu atendente e espera a recepção (tela Conversas). Volta a null ao devolver ao bot.
+  atendenteDesde DateTime? @map("atendente_desde") @db.Timestamptz(3)
+  atualizadoEm   DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  cliente Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
 
   @@unique([unidadeId, telefone])
   @@index([contaId])
+  @@index([unidadeId, atualizadoEm])
   @@map("bot_sessao")
 }
 
