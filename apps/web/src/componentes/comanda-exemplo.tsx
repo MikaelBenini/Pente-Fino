@@ -13,7 +13,7 @@ export function ComandaExemplo() {
   return (
     <figure
       aria-label="Exemplo de comanda: entrou R$ 70,00 e sobrou R$ 35,00"
-      className="w-full max-w-sm rotate-[-1.5deg] border-x border-borda bg-superficie font-denso text-tinta shadow-[0_24px_60px_-20px_rgb(0_0_0/0.6)]"
+      className="comanda-imprime w-full max-w-sm rotate-[-1.5deg] border-x border-borda bg-superficie font-denso text-tinta shadow-[0_24px_60px_-20px_rgb(0_0_0/0.6)]"
     >
       <div
         aria-hidden
@@ -36,7 +36,7 @@ export function ComandaExemplo() {
         </ul>
         <p className="flex items-baseline justify-between gap-4">
           <span className="text-lg font-semibold uppercase tracking-wide">Sobra para a casa</span>
-          <span className="text-3xl font-bold tabular-nums text-modulo-texto">
+          <span data-sobra className="text-3xl font-bold tabular-nums text-modulo-texto">
             {formatarMoeda(SOBRA)}
           </span>
         </p>

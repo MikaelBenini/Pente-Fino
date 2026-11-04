@@ -116,7 +116,7 @@ function Profissionais() {
                 texto="Adicione os barbeiros com data de entrada e comissão. Quem ainda não tem acesso recebe o convite por e-mail e WhatsApp."
               />
             ) : (
-              <ul className="grid gap-3 lg:grid-cols-2">
+              <ul className="animar-escalonado grid gap-3 lg:grid-cols-2">
                 {lista.map((p) => {
                   const servico = selecionarVigente(
                     p.regras.filter((r) => r.tipoItem === 'servico'),

@@ -4,7 +4,7 @@ import { LinkBotao } from './link-botao';
 
 export function CabecalhoSite() {
   return (
-    <header className="sticky top-0 z-30 border-b border-borda bg-fundo/90 backdrop-blur supports-[backdrop-filter]:bg-fundo/75">
+    <header className="cabecalho-rolagem sticky top-0 z-30 border-b border-borda bg-fundo/90 backdrop-blur supports-[backdrop-filter]:bg-fundo/75">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link
           href="/"

@@ -126,7 +126,9 @@ export default function Pagina() {
         <h2 id="comparativo" className="font-denso text-4xl font-bold uppercase">
           O que vem em cada plano
         </h2>
-        <ComparativoPlanos />
+        <div className="revelar">
+          <ComparativoPlanos />
+        </div>
         <p className="text-sm text-tinta-suave">
           “Em breve” é recurso em construção: entra no plano indicado sem aumento de preço quando
           for lançado.

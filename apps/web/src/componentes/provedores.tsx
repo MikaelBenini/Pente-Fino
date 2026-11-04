@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ErroApi } from '@/lib/api';
+import { BarraNavegacao } from './barra-navegacao';
 
 /** Erro de rede ou do servidor tenta de novo; erro de regra (4xx) não. */
 function tentarDeNovo(tentativas: number, erro: unknown): boolean {
@@ -34,6 +35,7 @@ export function Provedores({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={cliente}>
       <RegistrarServiceWorker />
+      <BarraNavegacao />
       {children}
     </QueryClientProvider>
   );

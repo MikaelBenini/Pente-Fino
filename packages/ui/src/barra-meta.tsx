@@ -72,7 +72,7 @@ export function BarraMeta({ rotulo, formatar, className, ...entrada }: BarraMeta
         className="relative h-3 rounded-full bg-superficie-3"
       >
         <div
-          className={cn('h-full rounded-full', atrasada ? 'bg-aviso' : 'bg-acao')}
+          className={cn('animar-barra-x h-full rounded-full', atrasada ? 'bg-aviso' : 'bg-acao')}
           style={{ width: `${Math.min(100, c.fracao * 100)}%` }}
         />
         <div

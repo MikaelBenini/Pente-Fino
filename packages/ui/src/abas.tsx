@@ -80,7 +80,7 @@ export function Abas({
           aria-labelledby={`${base}-aba-${a.id}`}
           hidden={i !== indice}
         >
-          {i === indice && a.conteudo}
+          {i === indice && <div className="animar-entrada">{a.conteudo}</div>}
         </div>
       ))}
     </div>

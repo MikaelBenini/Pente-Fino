@@ -70,7 +70,7 @@ export function Tabela({
 }) {
   return (
     <div className={cn('overflow-x-auto rounded-lg border border-borda bg-superficie', className)}>
-      <table className="w-full border-collapse text-left">
+      <table className="tabela-dados w-full border-collapse text-left">
         <caption className="sr-only">{rotulo}</caption>
         {children}
       </table>

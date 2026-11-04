@@ -198,9 +198,9 @@ function GraficoEvolucao({ evolucao }: { evolucao: FichaProfissional['evolucao']
               )}
               <span
                 aria-hidden
-                style={{ height: `${altura}%` }}
+                style={{ height: `${altura}%`, animationDelay: `${i * 50}ms` }}
                 className={cn(
-                  'w-full max-w-10 rounded-t-[4px] transition-colors group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-foco',
+                  'animar-barra-y w-full max-w-10 rounded-t-[4px] transition-colors group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-foco',
                   i === ultimo || ativo ? 'bg-modulo-texto' : 'bg-modulo-texto/45',
                 )}
               />
@@ -323,7 +323,7 @@ function Conteudo({ f, periodo }: { f: FichaProfissional; periodo: Periodo }) {
       )}
 
       <Secao id="ficha-resumo" titulo="Resumo">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="animar-escalonado grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <CartaoIndicador
             rotulo="Faturamento"
             valor={formatarMoeda(r.faturamento)}
