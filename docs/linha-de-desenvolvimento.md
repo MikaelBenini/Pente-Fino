@@ -144,10 +144,10 @@ A ordem segue as dependências: cada módulo usa os anteriores. Cada um sai com 
 - [x] **6.3 Serviços:** duração, categoria, custo de produto, extra (sim/não), peso em atendimentos (custo visível só para dono e gestor)
 - [x] **6.4 Preços:** tabela serviço × unidade, novo preço a partir de uma data, histórico (aceita colar da planilha; vigência só de hoje em diante; mudanças programadas listadas)
 - [x] **6.5 Profissionais:** data de entrada, horários, bloqueios, regra de comissão com vigência (cadastro já convida o barbeiro novo; limite de profissionais do plano aplicado na API)
-- [ ] **6.6 Clientes:** cadastro, busca por telefone, histórico, anotações, telefone oculto para barbeiro
-- [ ] **6.7 Agenda:** visão por profissional em dia, semana e mês; agendar, remarcar, cancelar; consulta de horários livres
-- [ ] **6.8 Comanda:** criada pelo agendamento, aberta na hora, itens, ajuste, confirmação do barbeiro, pendente, cancelada por falta, reaberta com motivo e auditoria
-- [ ] **6.9 Fechamento e caixa:** várias formas de pagamento, desconto, caixa do dia, divergência
+- [x] **6.6 Clientes:** cadastro, busca por telefone, histórico, anotações, telefone oculto para barbeiro (barbeiro só vê quem atendeu; ocultar telefone é configuração da conta, ligada por padrão)
+- [x] **6.7 Agenda:** visão por profissional em dia, semana e mês; agendar, remarcar, cancelar; consulta de horários livres (respeita expediente, calendário da unidade e bloqueios; o banco impede sobreposição)
+- [x] **6.8 Comanda:** criada pelo agendamento, aberta na hora, itens, ajuste, confirmação do barbeiro, pendente, cancelada por falta, reaberta com motivo e auditoria (regras de estado em `packages/shared/src/comanda.ts`; pendente = horário terminou há 15 min sem confirmação; barbeiro lança extra sem internet pela fila offline)
+- [x] **6.9 Fechamento e caixa:** várias formas de pagamento, desconto, caixa do dia, divergência (desconto rateado entre os itens; comissão calculada no fechamento pela regra vigente; caixa fechado trava o dia até o gestor reabrir)
 - [ ] **6.10 Comissões:** cálculo por item na hora do fechamento, extrato por barbeiro, marcar como paga
 - [ ] **6.11 Despesas:** categorias (fixa, variável, manutenção, investimento, retirada do dono, cartão e resgates), competência, pago ou não
 - [ ] **6.12 Indicadores:** faturamento, clientes, ticket, atendimentos, extras, % de despesas, com filtro de unidade e período

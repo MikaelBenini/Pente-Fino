@@ -91,7 +91,7 @@ export function TabelaEditavel({ id, legenda, colunas, linhas, onChange }: Tabel
                   <td key={c.chave} className="p-0">
                     <input
                       id={`${id}-${i}-${c.chave}`}
-                      aria-label={`${c.rotulo}, linha ${i + 1}`}
+                      aria-label={`${c.rotulo}, ${(colunas[0] && linha[colunas[0].chave]) || `linha ${i + 1}`}`}
                       value={linha[c.chave] ?? ''}
                       readOnly={c.somenteLeitura}
                       inputMode={numerico ? 'decimal' : undefined}

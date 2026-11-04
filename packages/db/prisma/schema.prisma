@@ -162,13 +162,15 @@ enum TipoModeloMensagem {
 
 /// Raiz do isolamento multiempresa. O RLS compara o próprio id com app.conta_id.
 model Conta {
-  id           String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  nome         String
-  logoUrl      String?     @map("logo_url")
-  plano        Plano       @default(basico)
-  status       StatusConta @default(teste)
-  criadoEm     DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime    @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  id                      String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  nome                    String
+  logoUrl                 String?     @map("logo_url")
+  plano                   Plano       @default(basico)
+  status                  StatusConta @default(teste)
+  /// Esconde o telefone do cliente na tela do barbeiro (docs: matriz de permissões).
+  ocultarTelefoneBarbeiro Boolean     @default(true) @map("ocultar_telefone_barbeiro")
+  criadoEm                DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm            DateTime    @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   unidades           Unidade[]
   calendarios        CalendarioUnidade[]

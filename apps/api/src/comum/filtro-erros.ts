@@ -52,6 +52,13 @@ export class FiltroErros implements ExceptionFilter {
     if (excecao instanceof ThrottlerException) return this.padrao(HttpStatus.TOO_MANY_REQUESTS);
     if (excecao instanceof HttpException) return this.padrao(excecao.getStatus());
     if (excecao instanceof Prisma.PrismaClientKnownRequestError) return this.doPrisma(excecao);
+    // Restrição do banco vinda por outro caminho (driver): duas pessoas agendando ao mesmo tempo.
+    if (excecao instanceof Error) {
+      for (const [restricao, mensagem] of Object.entries(RESTRICOES)) {
+        if (excecao.message.includes(restricao))
+          return [HttpStatus.CONFLICT, { erro: { codigo: 'conflito', mensagem } }];
+      }
+    }
     return [
       HttpStatus.INTERNAL_SERVER_ERROR,
       {
