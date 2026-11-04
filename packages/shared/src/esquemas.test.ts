@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { novoProfissionalSchema, servicoSchema, unidadeSchema } from './esquemas.js';
+import { fecharComandaSchema } from './esquemas-operacao.js';
 import { lerMoeda } from './formatacao.js';
 
 describe('lerMoeda', () => {
@@ -78,5 +79,30 @@ describe('novoProfissionalSchema', () => {
       comissaoServico: { percentualBp: 4000, valorFixo: 100 },
     });
     expect(r.success).toBe(false);
+  });
+});
+
+describe('fecharComandaSchema', () => {
+  it('aceita cada forma uma vez, dividida em até 4', () => {
+    const r = fecharComandaSchema.safeParse({
+      pagamentos: [
+        { forma: 'pix', valor: 3000 },
+        { forma: 'credito', valor: 2000 },
+        { forma: 'debito', valor: 1000 },
+        { forma: 'dinheiro', valor: 500 },
+      ],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('recusa a mesma forma duas vezes (dois créditos somam na mesma linha)', () => {
+    const r = fecharComandaSchema.safeParse({
+      pagamentos: [
+        { forma: 'credito', valor: 3000 },
+        { forma: 'credito', valor: 2000 },
+      ],
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toMatch(/uma vez só/);
   });
 });

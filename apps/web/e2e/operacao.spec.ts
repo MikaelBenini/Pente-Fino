@@ -91,6 +91,10 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await fechar.getByLabel('Valor (R$)').fill('50,00');
   await fechar.getByRole('button', { name: 'Dividir em outra forma' }).click();
   await expect(fechar.getByLabel('Valor (R$)').nth(1)).toHaveValue('15,00');
+  // Cada forma uma vez: a segunda linha já vem em dinheiro e não oferece Pix de novo.
+  const segunda = fechar.getByLabel('Forma', { exact: true }).nth(1);
+  await expect(segunda).toHaveValue('dinheiro');
+  await expect(segunda.locator('option', { hasText: 'Pix' })).toHaveCount(0);
   await fechar.getByRole('button', { name: 'Continuar' }).click();
   await recepcao
     .getByRole('dialog', { name: 'Fechar comanda de R$ 65,00?' })

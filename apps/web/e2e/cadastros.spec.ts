@@ -65,6 +65,38 @@ test('dono adiciona barbeiro novo e recebe o link do WhatsApp', async ({ page },
   await expect(cartao).toContainText('Convite pendente');
 });
 
+test('barbeiro convidado em Acessos aparece para completar o cadastro', async ({ page }, info) => {
+  test.skip(info.project.name === 'celular', 'cadastro feito no computador');
+  const nome = `Davi Acesso ${sufixo}`;
+  await entrar(page, 'dono@demo.pentefino.dev');
+  await page.goto('/equipe');
+  await page.getByRole('tab', { name: 'Acessos ao sistema' }).click();
+  await page.getByRole('button', { name: 'Convidar pessoa' }).click();
+  const convite = page.getByRole('dialog', { name: 'Convidar pessoa' });
+  await convite.getByLabel('Nome').fill(nome);
+  await convite.getByLabel('E-mail').fill(`davi-${sufixo}@e2e.pentefino.dev`);
+  await convite.getByLabel('Papel').selectOption({ label: 'Barbeiro' });
+  await convite.getByLabel('Unidade').selectOption({ label: 'Centro' });
+  await convite.getByRole('button', { name: 'Enviar convite' }).click();
+  await expect(convite.getByText(/Completar\s+cadastro/)).toBeVisible();
+  await convite.getByRole('button', { name: 'Concluir' }).click();
+
+  await page.getByRole('tab', { name: 'Profissionais' }).click();
+  const faltam = page.getByRole('region', { name: 'Falta completar o cadastro' });
+  await faltam
+    .getByRole('listitem')
+    .filter({ hasText: nome })
+    .getByRole('button', { name: 'Completar cadastro' })
+    .click();
+  const dialogo = page.getByRole('dialog', { name: `Completar cadastro de ${nome}` });
+  await expect(dialogo.getByLabel('Nome')).toHaveCount(0); // a pessoa já vem escolhida
+  await dialogo.getByLabel('Comissão em serviços (%)').fill('45');
+  await dialogo.getByRole('button', { name: 'Adicionar' }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(faltam.getByText(nome)).toHaveCount(0);
+  await expect(page.getByRole('listitem').filter({ hasText: nome })).toContainText('45%');
+});
+
 test('gestor vê os preços sem editar e marca feriado na unidade dele', async ({ page }) => {
   await entrar(page, 'gestor@demo.pentefino.dev');
   await page.goto('/servicos');

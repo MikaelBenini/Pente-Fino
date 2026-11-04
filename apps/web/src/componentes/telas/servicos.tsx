@@ -15,6 +15,7 @@ import {
   Abas,
   Botao,
   Campo,
+  CampoQuantidade,
   Dialogo,
   EstadoVazio,
   Marcador,
@@ -23,7 +24,7 @@ import {
 } from '@pente-fino/ui';
 import { Plus, Scissors } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { chaves, useAcao, usePrecos, useServicos, useUnidadesDetalhe } from '@/lib/consultas';
@@ -221,13 +222,22 @@ function FormularioServico({
           {...register('categoria')}
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Campo
-            id="servico-duracao"
-            rotulo="Duração (minutos)"
-            type="number"
-            inputMode="numeric"
-            erro={formState.errors.duracaoMin?.message}
-            {...register('duracaoMin', { valueAsNumber: true })}
+          <Controller
+            control={control}
+            name="duracaoMin"
+            render={({ field, fieldState }) => (
+              <CampoQuantidade
+                id="servico-duracao"
+                rotulo="Duração (minutos)"
+                nomeBotoes="duração"
+                min={5}
+                max={600}
+                passo={5}
+                valor={field.value ?? null}
+                onMudar={field.onChange}
+                erro={fieldState.error?.message}
+              />
+            )}
           />
           <Campo
             id="servico-custo"
@@ -247,14 +257,22 @@ function FormularioServico({
             setValue('pesoAtendimento', e.target.checked ? 0 : 1);
           }}
         />
-        <Campo
-          id="servico-peso"
-          rotulo="Peso em atendimentos"
-          type="number"
-          inputMode="numeric"
-          dica="Principal 1, extra 0, combo soma os inclusos (corte + barba = 2)"
-          erro={formState.errors.pesoAtendimento?.message}
-          {...register('pesoAtendimento', { valueAsNumber: true })}
+        <Controller
+          control={control}
+          name="pesoAtendimento"
+          render={({ field, fieldState }) => (
+            <CampoQuantidade
+              id="servico-peso"
+              rotulo="Peso em atendimentos"
+              nomeBotoes="peso"
+              dica="Principal 1, extra 0, combo soma os inclusos (corte + barba = 2)"
+              min={0}
+              max={10}
+              valor={field.value ?? null}
+              onMudar={field.onChange}
+              erro={fieldState.error?.message}
+            />
+          )}
         />
         {!novo && (
           <Marcador
