@@ -56,12 +56,14 @@ test('termos e privacidade abrem sem login', async ({ page }) => {
 
 test('com sessão, a página inicial leva para o app', async ({ page }) => {
   await page.goto('/entrar');
-  await page.getByLabel('E-mail').fill('dono@demo.pentefino.dev');
+  // Gestor: o dono já entra em muitos testes e o login tem limite por minuto.
+  await page.getByLabel('E-mail').fill('gestor@demo.pentefino.dev');
   await page.getByLabel('Senha').fill('pentefino123');
   await page.getByRole('button', { name: 'Entrar' }).click();
-  await page.waitForURL(/inicio/);
+  await page.waitForURL(/inicio|agenda/);
+  const destino = new URL(page.url()).pathname;
   await page.goto('/');
-  await page.waitForURL(/inicio/);
+  await expect(page).toHaveURL(new RegExp(`${destino}$`));
 });
 
 test('robots, sitemap e imagem de compartilhamento', async ({ request }) => {
