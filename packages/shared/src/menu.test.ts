@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { itemDaRota, menuPara } from './menu.js';
+import { itemDaRota, menuEmGrupos, menuPara } from './menu.js';
 
 const rotulos = (papeis: Parameters<typeof menuPara>[0]) => menuPara(papeis).map((i) => i.rotulo);
 
@@ -10,20 +10,40 @@ describe('menu por papel', () => {
       'Resumo do dia',
       'Agenda',
       'Comandas',
+      'Caixa do dia',
+      'Clientes',
       'Financeiro',
       'Métricas e metas',
       'Equipe',
-      'Clube',
       'Serviços',
       'Produtos',
-      'Clientes',
+      'Clube',
       'Bot',
+      'Conversas do bot',
       'Configurações',
     ]);
   });
 
   it('gestor vê o mesmo menu do dono (os dados é que ficam na unidade dele)', () => {
     expect(rotulos(['gestor'])).toEqual(rotulos(['dono']));
+  });
+
+  it('o que a recepção vê, dono e gestor também veem', () => {
+    for (const papel of ['dono', 'gestor'] as const)
+      for (const item of rotulos(['recepcao'])) expect(rotulos([papel])).toContain(item);
+  });
+
+  it('menu longo vem em seções; o curto fica numa lista só', () => {
+    expect(menuEmGrupos(menuPara(['dono'])).map((g) => g.grupo)).toEqual([
+      'Dia a dia',
+      'Gestão',
+      'Cadastros',
+      'WhatsApp',
+      'Conta',
+    ]);
+    expect(menuEmGrupos(menuPara(['recepcao']))).toEqual([
+      { grupo: null, itens: menuPara(['recepcao']) },
+    ]);
   });
 
   it('recepção', () => {

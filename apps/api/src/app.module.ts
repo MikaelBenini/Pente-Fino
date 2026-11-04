@@ -44,6 +44,8 @@ import { ClientesController } from './clientes/clientes.controller.js';
 import { ComandasController } from './comandas/comandas.controller.js';
 import { ComandasService } from './comandas/comandas.service.js';
 import { ContaController } from './conta/conta.controller.js';
+import { ConversasController } from './conversas/conversas.controller.js';
+import { ConversasService } from './conversas/conversas.service.js';
 import { ProdutosController } from './produtos/produtos.controller.js';
 import { ProfissionaisController } from './profissionais/profissionais.controller.js';
 import { ProfissionaisService } from './profissionais/profissionais.service.js';
@@ -124,6 +126,7 @@ export class ComumModule {}
     DesempenhoController,
     ResumoController,
     BotController,
+    ConversasController,
     WebhooksController,
     MeController,
     ConfiguracaoController,
@@ -144,6 +147,7 @@ export class ComumModule {}
     DesempenhoService,
     ResumoService,
     BotService,
+    ConversasService,
     provedorWhatsApp,
     // Ordem das guardas: limite de requisições → login → papel e unidade.
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -361,9 +361,9 @@ A interface é pensada para uso em pé e com pressa: recepção no balcão e bar
 
 | Papel | Dispositivo principal | Menu |
 | --- | --- | --- |
-| Dono | Computador e celular | Início · Agenda · Comandas · Financeiro · Métricas e metas · Equipe · Clube · Serviços · Produtos · Clientes · Bot · Configurações |
+| Dono | Computador e celular | **Dia a dia:** Início · Resumo do dia · Agenda · Comandas · Caixa do dia · Clientes · **Gestão:** Financeiro · Métricas e metas · Equipe · **Cadastros:** Serviços · Produtos · Clube · **WhatsApp:** Bot · Conversas do bot · **Conta:** Configurações |
 | Gestor | Computador | Igual ao dono, limitado à unidade, sem Planos |
-| Recepção | Tablet ou computador no balcão | Agenda · Comandas · Caixa do dia · Clientes · Conversas do bot |
+| Recepção | Tablet ou computador no balcão | Agenda · Comandas · Caixa do dia · Clientes · Conversas do bot (tudo o que a recepção vê, dono e gestor também veem) |
 | Barbeiro | Celular (PWA) | Hoje · Comandas · Clientes · Desempenho · Comissões · Metas · Perfil |
 | TV da unidade | Smart TV ou monitor | Tela única: campeonato e colocação, sem valores, atualiza sozinha |
 
@@ -375,7 +375,7 @@ A interface é pensada para uso em pé e com pressa: recepção no balcão e bar
 | Agenda | Recepção, gestor | Colunas por profissional, blocos por horário, cor por estado da comanda | Novo agendamento |
 | Comanda | Recepção, barbeiro | Cliente, plano do clube, itens, total, estado | Confirmar ou fechar |
 | Fechamento | Recepção | Total, descontos, formas de pagamento divididas | Receber e fechar |
-| Caixa do dia | Recepção, gestor | Entradas por forma, comandas pendentes, divergência | Fechar o dia |
+| Caixa do dia | Recepção, dono e gestor | Entradas por forma, comandas pendentes, divergência | Fechar o dia |
 | Hoje (barbeiro) | Barbeiro | Próximos clientes, meta do mês com barra, comissão do dia | Abrir comanda |
 | Comissões (barbeiro) | Barbeiro | Extrato por item, previsto, a receber e pago | Filtrar período |
 | Preços | Dono | Tabela serviço x unidade, vigência | Novo preço a partir de uma data |
@@ -384,7 +384,7 @@ A interface é pensada para uso em pé e com pressa: recepção no balcão e bar
 | Despesas | Dono, gestor | Lançamentos por categoria, % sobre faturamento | Nova despesa |
 | Ficha do profissional | Dono, gestor; barbeiro vê a própria | Resumo do período, serviços, comandas atendidas, clientes recorrentes, rotina, avaliações, evolução | Exportar PDF |
 | Construtor do bot | Dono, gestor | Árvore do menu, respostas, palavras-chave, prévia de conversa | Publicar menu |
-| Conversas | Recepção | Caixa de entrada, quem está com atendente | Assumir ou devolver ao bot |
+| Conversas | Recepção, dono e gestor | Caixa de entrada, quem espera atendente primeiro, aviso no menu | Responder (assume) ou devolver ao bot |
 
 ### Componentes
 

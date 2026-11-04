@@ -1,6 +1,6 @@
 'use client';
 
-import { itemDaRota, menuPara, type ItemMenu } from '@pente-fino/shared';
+import { itemDaRota, menuEmGrupos, menuPara, type ItemMenu } from '@pente-fino/shared';
 import { Botao, Carregando, cn, EstadoVazio } from '@pente-fino/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,6 +11,7 @@ import {
   Ellipsis,
   LogOut,
   MessageCircleOff,
+  MessagesSquare,
   Moon,
   SunMedium,
   X,
@@ -19,7 +20,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
-import { useBot } from '@/lib/consultas';
+import { useBot, useConversas } from '@/lib/consultas';
 import { useFilaOffline } from '@/lib/fila';
 import {
   NOME_PAPEL,
@@ -118,6 +119,7 @@ export function Casca({ children }: { children: ReactNode }) {
           <BarraTopo />
           <AvisoConexao />
           <AvisoWhatsapp />
+          <AvisoConversas />
           <main
             id="conteudo"
             className="mx-auto w-full max-w-6xl flex-1 px-[max(1rem,env(safe-area-inset-left))] pt-6 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-8 lg:pb-12"
@@ -158,9 +160,18 @@ function ativo(pathname: string, item: ItemMenu) {
 
 // ─── Computador: menu lateral ─────────────────────────────────────────────
 
+/** "Dia a dia" → "dia-a-dia": id válido para aria-labelledby (sem espaço nem acento). */
+const idGrupo = (grupo: string) =>
+  grupo
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+
 function MenuLateral() {
   const c = useApp();
   const pathname = usePathname();
+  const esperando = useEsperandoAtendente();
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-borda bg-superficie py-5 pl-[max(1rem,env(safe-area-inset-left))] pr-3 lg:flex">
       <Link
@@ -170,42 +181,61 @@ function MenuLateral() {
         <Marca />
       </Link>
       <SeletorUnidade />
-      <nav aria-label="Menu principal" className="-mr-3 flex-1 overflow-y-auto pr-3">
-        <ul className="flex flex-col gap-0.5">
-          {c.menu.map((item) => {
-            const Icone = ICONES_MENU[item.id];
-            const atual = ativo(pathname, item);
-            return (
-              <li key={item.id}>
-                <Link
-                  href={item.rota}
-                  data-menu={item.id}
-                  aria-current={atual ? 'page' : undefined}
-                  className={cn(
-                    'relative flex min-h-11 items-center gap-3 rounded-md px-3 text-[0.95rem] font-medium transition-colors',
-                    'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco',
-                    atual
-                      ? 'bg-superficie-2 text-tinta'
-                      : 'text-tinta-suave hover:bg-superficie-2 hover:text-tinta',
-                  )}
-                >
-                  {atual && (
-                    <span
-                      aria-hidden
-                      className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-modulo"
-                    />
-                  )}
-                  <Icone
-                    aria-hidden
-                    className={cn('size-5', atual && 'text-modulo-texto')}
-                    strokeWidth={1.75}
-                  />
-                  {item.rotulo}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      <nav
+        aria-label="Menu principal"
+        className="-mr-3 flex flex-1 flex-col gap-4 overflow-y-auto pr-3"
+      >
+        {menuEmGrupos(c.menu).map(({ grupo, itens }) => (
+          <div key={grupo ?? 'menu'} className="flex flex-col gap-1">
+            {grupo && (
+              <p
+                id={`menu-${idGrupo(grupo)}`}
+                className="px-3 text-[0.7rem] font-semibold uppercase tracking-wider text-tinta-fraca"
+              >
+                {grupo}
+              </p>
+            )}
+            <ul
+              className="flex flex-col gap-0.5"
+              aria-labelledby={grupo ? `menu-${idGrupo(grupo)}` : undefined}
+            >
+              {itens.map((item) => {
+                const Icone = ICONES_MENU[item.id];
+                const atual = ativo(pathname, item);
+                return (
+                  <li key={item.id}>
+                    <Link
+                      href={item.rota}
+                      data-menu={item.id}
+                      aria-current={atual ? 'page' : undefined}
+                      className={cn(
+                        'relative flex min-h-11 items-center gap-3 rounded-md px-3 text-[0.95rem] font-medium transition-colors',
+                        'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-foco',
+                        atual
+                          ? 'bg-superficie-2 text-tinta'
+                          : 'text-tinta-suave hover:bg-superficie-2 hover:text-tinta',
+                      )}
+                    >
+                      {atual && (
+                        <span
+                          aria-hidden
+                          className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-modulo"
+                        />
+                      )}
+                      <Icone
+                        aria-hidden
+                        className={cn('size-5', atual && 'text-modulo-texto')}
+                        strokeWidth={1.75}
+                      />
+                      {item.rotulo}
+                      {item.id === 'conversas' && <Contador n={esperando} className="ml-auto" />}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
       <BlocoUsuario />
     </aside>
@@ -347,6 +377,7 @@ function BarraTopo() {
 function MenuInferior() {
   const c = useApp();
   const pathname = usePathname();
+  const esperando = useEsperandoAtendente();
   const [maisAberto, setMaisAberto] = useState(false);
   const cabem = c.menu.length <= 4;
   const atalhos = cabem ? c.menu : c.menu.slice(0, 4);
@@ -380,11 +411,14 @@ function MenuInferior() {
                 >
                   <span
                     className={cn(
-                      'grid h-7 w-12 place-items-center rounded-full',
+                      'relative grid h-7 w-12 place-items-center rounded-full',
                       atual && 'bg-modulo text-sobre-modulo',
                     )}
                   >
                     <Icone aria-hidden className="size-5" strokeWidth={atual ? 2 : 1.75} />
+                    {item.id === 'conversas' && (
+                      <Contador n={esperando} className="absolute -top-1 -right-0.5" />
+                    )}
                   </span>
                   <span className="max-w-full truncate">{item.rotulo}</span>
                 </Link>
@@ -401,18 +435,26 @@ function MenuInferior() {
             >
               <span
                 className={cn(
-                  'grid h-7 w-12 place-items-center rounded-full',
+                  'relative grid h-7 w-12 place-items-center rounded-full',
                   restoAtivo && 'bg-modulo text-sobre-modulo',
                 )}
               >
                 <Ellipsis aria-hidden className="size-5" strokeWidth={1.75} />
+                {resto.some((i) => i.id === 'conversas') && (
+                  <Contador n={esperando} className="absolute -top-1 -right-0.5" />
+                )}
               </span>
               Mais
             </button>
           </li>
         </ul>
       </nav>
-      <FolhaMais aberta={maisAberto} itens={resto} onFechar={() => setMaisAberto(false)} />
+      <FolhaMais
+        aberta={maisAberto}
+        itens={resto}
+        esperando={esperando}
+        onFechar={() => setMaisAberto(false)}
+      />
     </>
   );
 }
@@ -420,10 +462,12 @@ function MenuInferior() {
 function FolhaMais({
   aberta,
   itens,
+  esperando,
   onFechar,
 }: {
   aberta: boolean;
   itens: ItemMenu[];
+  esperando: number;
   onFechar: () => void;
 }) {
   const c = useApp();
@@ -482,6 +526,7 @@ function FolhaMais({
                         strokeWidth={1.75}
                       />
                       {item.rotulo}
+                      {item.id === 'conversas' && <Contador n={esperando} className="ml-auto" />}
                     </Link>
                   </li>
                 );
@@ -515,6 +560,53 @@ function FolhaMais({
 // ─── Conexão ──────────────────────────────────────────────────────────────
 
 /** Dono e gestor: o WhatsApp de uma unidade caiu e o bot parou de responder. */
+/** Quantos clientes esperam atendente no WhatsApp (só para quem atende as conversas). */
+function useEsperandoAtendente(): number {
+  const { menu, unidadeAtiva } = useApp();
+  const atende = menu.some((i) => i.id === 'conversas');
+  return useConversas(unidadeAtiva, atende).data?.aguardando ?? 0;
+}
+
+function Contador({ n, className }: { n: number; className?: string }) {
+  if (n <= 0) return null;
+  return (
+    <span
+      aria-label={`${n} esperando atendente`}
+      className={cn(
+        'grid h-5 min-w-5 place-items-center rounded-full bg-aviso px-1.5 text-xs font-bold text-fundo tabular-nums',
+        className,
+      )}
+    >
+      {n > 9 ? '9+' : n}
+    </span>
+  );
+}
+
+/** Cliente pediu atendente: faixa em qualquer tela até alguém abrir as Conversas. */
+function AvisoConversas() {
+  const pathname = usePathname();
+  const n = useEsperandoAtendente();
+  if (n === 0 || pathname === '/conversas') return null;
+  return (
+    <div
+      role="status"
+      className="border-b border-borda bg-superficie-2 px-[max(1rem,env(safe-area-inset-left))] py-2 text-sm sm:px-8"
+    >
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <MessagesSquare aria-hidden className="size-4 shrink-0 text-aviso-texto" />
+        <span>
+          {n === 1
+            ? '1 cliente está esperando atendente no WhatsApp.'
+            : `${n} clientes estão esperando atendente no WhatsApp.`}
+        </span>
+        <Link href="/conversas" className="font-semibold text-acao-texto underline">
+          Abrir conversas
+        </Link>
+      </p>
+    </div>
+  );
+}
+
 function AvisoWhatsapp() {
   const { papeis } = useApp();
   const pathname = usePathname();

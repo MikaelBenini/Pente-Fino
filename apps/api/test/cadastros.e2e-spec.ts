@@ -101,11 +101,11 @@ describe('conta e unidades', () => {
 describe('equipe', () => {
   it('dono lista todos; gestor só a unidade dele', async () => {
     const dono = await como(app, cenario.emails.dono);
-    expect((await dono.get('/usuarios').expect(200)).body).toHaveLength(3);
+    expect((await dono.get('/usuarios').expect(200)).body).toHaveLength(4);
     const gestor = await como(app, cenario.emails.gestor);
     const lista = (await gestor.get('/usuarios').expect(200)).body as { email: string }[];
     expect(lista.map((u) => u.email).sort()).toEqual(
-      [cenario.emails.barbeiro, cenario.emails.gestor].sort(),
+      [cenario.emails.barbeiro, cenario.emails.gestor, cenario.emails.recepcao].sort(),
     );
     const barbeiro = await como(app, cenario.emails.barbeiro);
     await barbeiro.get('/usuarios').expect(403);

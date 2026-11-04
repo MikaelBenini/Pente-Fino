@@ -53,7 +53,7 @@ const textos = async (ids: string[]) =>
 beforeAll(async () => {
   prisma = criarPrisma();
   await naMinhaConta(async (tx) => {
-    await tx.conta.create({ data: { id: conta, nome: 'Teste bot' } });
+    await tx.conta.create({ data: { id: conta, nome: 'Barbearia Navalha' } });
     const u = await tx.unidade.create({ data: { nome: 'Barbearia Centro', endereco: 'Rua A, 1' } });
     unidadeId = u.id;
     instancia = instanciaDaUnidade(u.id);
@@ -113,7 +113,7 @@ describe('atenderMensagem', () => {
       consentimentoEm: null,
     });
     const t = await textos(r.saidas);
-    expect(t[0]).toContain('Barbearia Centro');
+    expect(t[0]).toContain('Aqui é a Barbearia Navalha'); // o nome da barbearia, não o da unidade
     expect(t[0]).not.toContain('Pedro'); // número novo não é cumprimentado pelo nome
     expect(t.some((x) => x.includes('1. '))).toBe(true);
     expect(t.at(-1)).toBe(MENSAGENS_BOT_PADRAO.convite_avisos);
@@ -252,5 +252,29 @@ describe('registrarEstadoConexao', () => {
     await naMinhaConta((tx) =>
       registrarEstadoConexao(tx, unidadeId, { status: 'conectado', numero: null }),
     );
+  });
+});
+
+describe('pedido de atendente', () => {
+  it('entra na fila das Conversas com o cliente; mensagem nova fica quieta e mantém a hora', async () => {
+    const tel = '5511988880077';
+    await atenderMensagem(prisma, evento('oi', tel), { appUrl: APP, agora });
+    const r = await atenderMensagem(prisma, evento('atendente', tel), { appUrl: APP, agora });
+    if (r.tipo !== 'respondida') throw new Error(r.tipo);
+    expect(r.acao).toBe('falar_com_atendente');
+    const sessao = () =>
+      naMinhaConta((tx) =>
+        tx.botSessao.findUnique({ where: { unidadeId_telefone: { unidadeId, telefone: tel } } }),
+      );
+    expect(await sessao()).toMatchObject({ clienteId: r.clienteId, atendenteDesde: agora });
+
+    const depois = new Date(agora.getTime() + 60_000);
+    const quieto = await atenderMensagem(prisma, evento('alô?', tel), {
+      appUrl: APP,
+      agora: depois,
+    });
+    if (quieto.tipo !== 'respondida') throw new Error(quieto.tipo);
+    expect(quieto.saidas).toEqual([]);
+    expect((await sessao())?.atendenteDesde).toEqual(agora);
   });
 });

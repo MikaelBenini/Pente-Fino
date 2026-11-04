@@ -772,6 +772,56 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     data: { unidadeId: centro.id, instancia: 'teste', status: 'desconectado' },
   });
 
+  // Conversas do bot no Centro: uma esperando atendente (tela Conversas) e uma com o bot.
+  const conversas = [
+    {
+      cliente: clientes[1]!,
+      atendente: true,
+      falas: [
+        ['entrada', 'oi'],
+        ['saida', 'Olá! Aqui é a Barbearia Pente Fino (demonstração).'],
+        ['entrada', 'quero falar com alguém sobre o pacote de noivo'],
+        ['saida', 'Certo! Um atendente vai responder por aqui assim que possível.'],
+      ],
+    },
+    {
+      cliente: clientes[2]!,
+      atendente: false,
+      falas: [
+        ['entrada', 'preço'],
+        ['saida', 'Nossos preços:\n• Corte: R$ 45,00'],
+      ],
+    },
+  ] as const;
+  for (const [n, c] of conversas.entries()) {
+    const fim = agora.getTime() - (n * 40 + 8) * 60_000;
+    await tx.mensagem.createMany({
+      data: c.falas.map(([direcao, texto], i) => ({
+        unidadeId: centro.id,
+        clienteId: c.cliente.id,
+        telefone: c.cliente.telefone,
+        direcao,
+        texto,
+        status: direcao === 'entrada' ? ('recebida' as const) : ('enviada' as const),
+        criadoEm: new Date(fim - (c.falas.length - 1 - i) * 30_000),
+      })),
+    });
+    await tx.botSessao.create({
+      data: {
+        unidadeId: centro.id,
+        telefone: c.cliente.telefone,
+        clienteId: c.cliente.id,
+        sessao: {
+          caminho: [],
+          ultimaEm: new Date(fim).toISOString(),
+          comAtendente: c.atendente,
+          erros: 0,
+        },
+        atendenteDesde: c.atendente ? new Date(fim) : null,
+      },
+    });
+  }
+
   // Todos os usuários da demonstração entram com a mesma senha (argon2id).
   await tx.usuario.updateMany({ data: { senhaHash: await hash(SENHA_DEMO) } });
 

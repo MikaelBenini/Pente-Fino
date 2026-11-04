@@ -31,6 +31,20 @@ export type EventoWhatsapp =
       numero: string | null;
     };
 
+/**
+ * Mensagens escritas no painel (resposta da recepção, "devolver ao bot"): passam pela fila de
+ * entrada para o worker espaçá-las junto com as do bot, no mesmo relógio por número.
+ */
+export interface EnvioDoPainel {
+  tipo: 'enviar';
+  contaId: string;
+  instancia: string;
+  mensagemIds: string[];
+}
+
+/** O que vai na fila `whatsapp-entrada`: eventos do provedor ou envios do painel. */
+export type TrabalhoWhatsappEntrada = EventoWhatsapp | EnvioDoPainel;
+
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {
   contaId: string;

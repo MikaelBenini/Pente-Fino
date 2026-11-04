@@ -18,7 +18,8 @@ const agora = new Date('2026-11-04T14:00:00-03:00'); // quarta, 14h
 const ctx = (p: Partial<ContextoConversa> = {}): ContextoConversa => ({
   agora,
   cliente: 'João Pedro',
-  unidade: 'Barbearia Centro',
+  barbearia: 'Barbearia Navalha',
+  unidade: 'Centro',
   endereco: 'Rua A, 10',
   horario: 'de segunda a sábado, das 9h às 19h',
   dentroDoHorario: true,
@@ -62,7 +63,7 @@ describe('conversa', () => {
   it('primeira mensagem: boas-vindas com o nome e o menu', () => {
     const r = fala(null, 'oi');
     expect(r.respostas).toEqual([
-      'Olá, João! Aqui é a Barbearia Centro.',
+      'Olá, João! Aqui é a Barbearia Navalha.',
       textoDoMenu(MENU_BOT_PADRAO.menu, {}, false),
     ]);
     expect(r.sessao).toMatchObject({ caminho: [], comAtendente: false });
@@ -98,15 +99,78 @@ describe('conversa', () => {
     );
     // Na primeira mensagem, cumprimenta e já responde.
     const primeira = fala(null, 'qual o preço do corte?');
-    expect(primeira.respostas[0]).toBe('Olá, João! Aqui é a Barbearia Centro.');
+    expect(primeira.respostas[0]).toBe('Olá, João! Aqui é a Barbearia Navalha.');
     expect(primeira.acao).toBe('ver_precos');
   });
 
-  it('resposta que não é opção nem palavra-chave: não entendi e o menu de novo', () => {
+  it('não entendeu: uma mensagem curta com as opções numa linha, sem repetir o menu', () => {
     const s = fala(null, 'oi').sessao;
     const r = fala(s, '7');
-    expect(r.respostas[0]).toBe('Não entendi. Responda com o número de uma das opções:');
-    expect(r.respostas[1]).toMatch(/^Como posso ajudar\?/);
+    expect(r.respostas).toEqual([
+      'Não entendi. Responda com o número de uma das opções:\n' +
+        '1. Agendar horário · 2. Ver preços · 3. Endereço e horário · 4. Falar com um atendente',
+    ]);
+    expect(r.sessao.erros).toBe(1);
+  });
+
+  it('erros seguidos: o 2º oferece o menu e o atendente, do 3º em diante o bot fica quieto', () => {
+    let s = fala(null, 'oi').sessao;
+    s = fala(s, 'kkkk').sessao;
+    const segundo = fala(s, 'blz');
+    expect(segundo.respostas).toEqual([MENSAGENS_BOT_PADRAO.nao_entendi_de_novo]);
+    const terceiro = fala(segundo.sessao, 'hein');
+    expect(terceiro.respostas).toEqual([]);
+    expect(fala(terceiro.sessao, '???').respostas).toEqual([]);
+    // Acertou: volta a responder e a conta zera.
+    const acertou = fala(terceiro.sessao, '3');
+    expect(acertou.respostas.join('\n')).toContain('Rua A, 10');
+    expect(acertou.sessao.erros).toBe(0);
+    expect(fala(acertou.sessao, 'xyz').respostas).toHaveLength(1);
+  });
+
+  it('0 e palavra-chave tiram do silêncio', () => {
+    let s = fala(null, 'oi').sessao;
+    for (const t of ['a', 'b', 'c']) s = fala(s, t).sessao;
+    expect(fala(s, '0').respostas[0]).toMatch(/^Como posso ajudar\?/);
+    expect(fala(s, 'menu').respostas.join('\n')).toMatch(/Como posso ajudar\?/);
+  });
+
+  it('entende o número escrito de outros jeitos e o nome da opção', () => {
+    const s = fala(null, 'oi').sessao;
+    for (const t of ['2', '2.', 'opção 2', 'Opcao 2', 'a dois', 'dois', '2 por favor']) {
+      expect(fala(s, t).acao, t).toBe('ver_precos');
+    }
+    const m: MenuBot = { ...MENU_BOT_PADRAO, palavrasChave: [] };
+    expect(fala(s, 'ver precos', ctx(), m).acao).toBe('ver_precos');
+    expect(fala(s, 'quero o endereco e horario', ctx(), m).acao).toBe('endereco');
+    // "horario" está em "Agendar horário" e em "Endereço e horário": não escolhe no chute.
+    expect(fala(s, 'horario', ctx(), m).acao).toBeNull();
+    expect(fala(s, 'endereco', ctx(), m).acao).toBe('endereco');
+    // Curto demais para escolher pelo nome.
+    expect(fala(s, 'a', ctx(), m).acao).toBeNull();
+  });
+
+  it('nome que combina com mais de uma opção não escolhe no chute', () => {
+    const m: MenuBot = {
+      palavrasChave: [],
+      menu: {
+        texto: 'Escolha',
+        opcoes: [
+          { id: 'a', rotulo: 'Corte social', resposta: 'A', acao: null, submenu: null },
+          { id: 'b', rotulo: 'Corte degradê', resposta: 'B', acao: null, submenu: null },
+        ],
+      },
+    };
+    const s = fala(null, 'oi', ctx(), m).sessao;
+    expect(fala(s, 'corte', ctx(), m).respostas[0]).toMatch(/^Não entendi/);
+    expect(fala(s, 'corte degrade', ctx(), m).respostas[0]).toBe('B');
+  });
+
+  it('{barbearia} é o nome da conta e {unidade} o da unidade', () => {
+    expect(fala(null, 'oi').respostas[0]).toBe('Olá, João! Aqui é a Barbearia Navalha.');
+    expect(preencher('{barbearia} · {unidade}', { barbearia: 'Navalha', unidade: 'Centro' })).toBe(
+      'Navalha · Centro',
+    );
   });
 
   it('atendente: o bot fica quieto até a recepção devolver', () => {
@@ -124,18 +188,30 @@ describe('conversa', () => {
     };
     expect(fala(comAtendente, 'SAIR')).toMatchObject({ consentimento: false });
     expect(fala(null, 'Receber').respostas[0]).toBe(
-      'Combinado! Você volta a receber os lembretes da Barbearia Centro.',
+      'Combinado! Você volta a receber os lembretes da Barbearia Navalha.',
     );
+  });
+
+  it('com atendente, o bot espera 2 horas antes de voltar sozinho', () => {
+    const ha = (min: number): SessaoBot => ({
+      caminho: [],
+      ultimaEm: new Date(agora.getTime() - min * 60_000).toISOString(),
+      comAtendente: true,
+    });
+    expect(fala(ha(90), 'oi').respostas).toEqual([]);
+    const voltou = fala(ha(121), 'oi');
+    expect(voltou.respostas[0]).toBe('Olá, João! Aqui é a Barbearia Navalha.');
+    expect(voltou.sessao.comAtendente).toBe(false);
   });
 
   it('depois de 30 minutos parado, a conversa recomeça', () => {
     const antiga: SessaoBot = {
       caminho: ['x'],
       ultimaEm: new Date(agora.getTime() - 31 * 60_000).toISOString(),
-      comAtendente: true,
+      comAtendente: false,
     };
     const r = fala(antiga, '2');
-    expect(r.respostas[0]).toBe('Olá, João! Aqui é a Barbearia Centro.');
+    expect(r.respostas[0]).toBe('Olá, João! Aqui é a Barbearia Navalha.');
     expect(r.sessao).toMatchObject({ caminho: [], comAtendente: false });
   });
 

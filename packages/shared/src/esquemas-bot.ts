@@ -142,6 +142,43 @@ export interface MensagemDoCliente {
   criadoEm: string;
 }
 
+// ─── Conversas (recepção) ─────────────────────────────────────────────────
+
+export interface ConversaResumo {
+  /** Id da sessão do número na unidade. */
+  id: string;
+  unidadeId: string;
+  telefone: string;
+  clienteId: string | null;
+  cliente: string | null;
+  /**
+   * bot: o menu está respondendo; aguardando: pediu atendente (ou escreveu de novo) e ninguém
+   * respondeu; atendimento: a equipe respondeu e o bot está quieto.
+   */
+  situacao: 'bot' | 'aguardando' | 'atendimento';
+  /** Desde quando espera resposta da equipe (ISO). */
+  aguardandoDesde: string | null;
+  ultimaMensagem: { texto: string; direcao: 'entrada' | 'saida'; criadoEm: string } | null;
+  atualizadoEm: string;
+}
+
+export interface ListaConversas {
+  conversas: ConversaResumo[];
+  /** Quantas esperam atendente nas unidades que a pessoa vê (aviso no menu). */
+  aguardando: number;
+  /** A unidade tem WhatsApp conectado (sem isso, a resposta não sai). */
+  conectado: boolean;
+}
+
+export const responderConversaSchema = z.object({
+  texto: z
+    .string()
+    .trim()
+    .min(1, { error: 'Escreva a mensagem.' })
+    .max(1000, { error: 'No máximo 1.000 caracteres.' }),
+});
+export type ResponderConversaEntrada = z.infer<typeof responderConversaSchema>;
+
 export interface EstadoBot {
   publicado: { menu: MenuBot; publicadoEm: string | null; publicadoPor: string | null };
   rascunho: { menu: MenuBot; atualizadoEm: string; problemas: ProblemaMenu[] } | null;
@@ -159,3 +196,7 @@ export interface RespostaSimulacao {
   acao: string | null;
   consentimento: boolean | null;
 }
+
+export const listarConversasSchema = z.object({
+  unidadeId: z.uuid({ error: 'Unidade inválida.' }).optional(),
+});
