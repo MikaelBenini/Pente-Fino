@@ -26,6 +26,27 @@ describe('calcularBarraMeta', () => {
   });
 });
 
+describe('metas da planilha (print 3, A43:D49)', () => {
+  // OBJETIVO × ATUAL → CONCLUÍDO, como a planilha mostra.
+  it.each([
+    ['faturamento', 2_970_000, 2_748_100, '92,5%'],
+    ['sobrancelha', 70, 63, '90%'],
+    ['depilação', 30, 51, '170%'],
+    ['hidratação', 15, 14, '93,3%'],
+    ['pezinho', 20, 34, '170%'],
+  ])('%s: objetivo %i, atual %i → %s', (_, objetivo, atual, concluido) => {
+    const c = calcularBarraMeta({ atual, objetivo, fracaoDoMes: 1 });
+    expect(`${(c.fracao * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`).toBe(
+      concluido,
+    );
+    expect(c.situacao).toBe(c.fracao >= 1 ? 'batida' : 'atrasada');
+  });
+
+  it('PROBLEMA: a meta de barba express não tinha cálculo. Sistema: meta sem objetivo não divide por zero', () => {
+    expect(calcularBarraMeta({ atual: 12, objetivo: 0, fracaoDoMes: 0.5 }).fracao).toBe(0);
+  });
+});
+
 describe('colagem de planilha', () => {
   const colunas = [
     { chave: 'servico', rotulo: 'Serviço', somenteLeitura: true },

@@ -2,6 +2,7 @@
 
 import { criarFilaOffline, type Lancamento, type ResultadoEnvio } from '@pente-fino/shared';
 import { createStore, get, set } from 'idb-keyval';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 // Lançamentos feitos sem internet ficam no IndexedDB do aparelho e sobem na ordem
@@ -64,6 +65,7 @@ export function useOnline(): boolean {
 /** Lançamentos esperando conexão e recusados; sincroniza ao voltar a internet. */
 export function useFilaOffline() {
   const online = useOnline();
+  const cliente = useQueryClient();
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
 
   useEffect(() => {
@@ -74,8 +76,13 @@ export function useFilaOffline() {
   }, []);
 
   useEffect(() => {
-    if (online) void fila.sincronizar().then(avisar);
-  }, [online]);
+    if (!online) return;
+    void fila.sincronizar().then((r) => {
+      avisar();
+      // O que subiu agora precisa aparecer na tela (comanda, agenda, caixa).
+      if (r.enviados > 0) void cliente.invalidateQueries();
+    });
+  }, [online, cliente]);
 
   return {
     online,

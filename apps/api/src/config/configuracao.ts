@@ -38,6 +38,8 @@ const esquema = z
       .default('info'),
     /** Tentativas por minuto nas rotas de login, convite e senha (por IP + e-mail ou token). */
     LIMITE_AUTH_POR_MINUTO: z.coerce.number().int().positive().default(10),
+    /** Requisições por minuto por IP em qualquer rota (o teste de carga sobe este número). */
+    LIMITE_POR_MINUTO: z.coerce.number().int().positive().default(300),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
@@ -66,6 +68,7 @@ export interface Configuracao {
   trustProxy: boolean;
   nivelLog: string;
   limiteAuthPorMinuto: number;
+  limitePorMinuto: number;
 }
 
 export const CONFIGURACAO = Symbol('CONFIGURACAO');
@@ -96,5 +99,6 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
     trustProxy: e.TRUST_PROXY,
     nivelLog: e.LOG_LEVEL,
     limiteAuthPorMinuto: e.LIMITE_AUTH_POR_MINUTO,
+    limitePorMinuto: e.LIMITE_POR_MINUTO,
   };
 }
