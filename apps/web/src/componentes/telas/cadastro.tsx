@@ -3,13 +3,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   cadastroContaSchema,
+  CICLOS,
+  type Ciclo,
+  DIAS_TESTE,
+  formatarMoeda,
+  LIMITES_PLANO,
   NOME_PLANO,
   PLANOS,
+  type PlanoConta,
+  precoPorMes,
   type CadastroContaEntrada,
 } from '@pente-fino/shared';
 import { Botao, Campo, cn } from '@pente-fino/ui';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
@@ -18,18 +25,20 @@ import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
 import { Aviso } from '../aviso';
 
-/** Preços e limites dos planos (CLAUDE.md, "Planos"). */
-const RESUMO_PLANO = {
-  basico: { preco: 'R$ 79,90/mês', limite: '1 unidade · até 3 profissionais' },
-  pro: { preco: 'R$ 149,90/mês', limite: '1 unidade · até 10 profissionais · clube e bot' },
-  premium: {
-    preco: 'R$ 249,90/mês',
-    limite: 'Várias unidades · profissionais ilimitados · lucro real',
-  },
-} as const;
+function limitePlano(p: PlanoConta) {
+  if (p === 'premium') return 'Várias unidades · profissionais ilimitados';
+  const l = LIMITES_PLANO[p];
+  return `${l.unidades} unidade · até ${l.profissionais} profissionais`;
+}
+
+/** Plano e ciclo vindos da página de planos (?plano=pro&ciclo=anual); valor estranho é ignorado. */
+function daUrl<T extends string>(valor: string | null, aceitos: readonly T[], padrao: T): T {
+  return aceitos.includes(valor as T) ? (valor as T) : padrao;
+}
 
 export function FormularioCadastro() {
   const router = useRouter();
+  const params = useSearchParams();
   const hidratado = useHidratado();
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   const { register, handleSubmit, setError, setValue, control, formState } = useForm<
@@ -38,9 +47,13 @@ export function FormularioCadastro() {
     CadastroContaEntrada
   >({
     resolver: zodResolver(cadastroContaSchema),
-    defaultValues: { plano: 'pro' },
+    defaultValues: {
+      plano: daUrl(params.get('plano'), PLANOS, 'pro'),
+      ciclo: daUrl(params.get('ciclo'), CICLOS, 'mensal'),
+    },
   });
   const plano = useWatch({ control, name: 'plano' });
+  const ciclo: Ciclo = useWatch({ control, name: 'ciclo' }) ?? 'mensal';
 
   const enviar = handleSubmit(async (dados) => {
     setErroGeral(null);
@@ -57,7 +70,7 @@ export function FormularioCadastro() {
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-semibold">Criar conta</h1>
         <p className="text-tinta-suave">
-          14 dias para testar. Em 10 minutos a barbearia está configurada.
+          {DIAS_TESTE} dias para testar, sem cartão. Em 10 minutos a barbearia está configurada.
         </p>
       </div>
       {erroGeral && <Aviso tom="erro">{erroGeral}</Aviso>}
@@ -94,6 +107,30 @@ export function FormularioCadastro() {
         {...register('senha')}
       />
       <fieldset className="min-w-0">
+        <legend className="mb-1.5 text-sm font-medium">Pagamento depois do teste</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {CICLOS.map((c) => (
+            <label
+              key={c}
+              className={cn(
+                'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border px-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-foco',
+                ciclo === c ? 'border-modulo bg-superficie-2' : 'border-borda',
+              )}
+            >
+              <input
+                type="radio"
+                value={c}
+                checked={ciclo === c}
+                onChange={() => setValue('ciclo', c)}
+                className="size-5 accent-[var(--modulo)]"
+                name="ciclo"
+              />
+              <span className="font-medium">{c === 'mensal' ? 'Mensal' : 'Anual (-2 meses)'}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-medium">Plano</legend>
         <div className="flex flex-col gap-2">
           {PLANOS.map((p) => (
@@ -115,9 +152,11 @@ export function FormularioCadastro() {
               <span className="flex flex-1 flex-col">
                 <span className="font-semibold">
                   {NOME_PLANO[p]} ·{' '}
-                  <span className="font-denso tabular-nums">{RESUMO_PLANO[p].preco}</span>
+                  <span className="font-denso tabular-nums">
+                    {formatarMoeda(precoPorMes(p, ciclo))}/mês
+                  </span>
                 </span>
-                <span className="text-sm text-tinta-suave">{RESUMO_PLANO[p].limite}</span>
+                <span className="text-sm text-tinta-suave">{limitePlano(p)}</span>
               </span>
             </label>
           ))}
@@ -130,7 +169,19 @@ export function FormularioCadastro() {
           {...register('aceite', { setValueAs: (v) => v === true || v === 'on' })}
         />
         <span className="text-sm text-tinta-suave">
-          Li e aceito os termos de uso e a política de privacidade (LGPD).
+          Li e aceito os{' '}
+          <Link href="/termos" target="_blank" className="text-tinta underline underline-offset-4">
+            termos de uso
+          </Link>{' '}
+          e a{' '}
+          <Link
+            href="/privacidade"
+            target="_blank"
+            className="text-tinta underline underline-offset-4"
+          >
+            política de privacidade
+          </Link>{' '}
+          (LGPD).
         </span>
       </label>
       {formState.errors.aceite && (
@@ -140,7 +191,10 @@ export function FormularioCadastro() {
         Criar conta
       </Botao>
       <p className="text-sm text-tinta-suave">
-        Já tem conta?{' '}
+        <Link href="/planos" className="font-medium text-tinta underline underline-offset-4">
+          Comparar planos
+        </Link>
+        {' · '}Já tem conta?{' '}
         <Link href="/entrar" className="font-medium text-tinta underline underline-offset-4">
           Entrar
         </Link>

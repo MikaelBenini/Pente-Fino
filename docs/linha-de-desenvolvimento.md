@@ -274,7 +274,7 @@ Dados de clientes e de dinheiro exigem cuidado desde o primeiro dia.
 - [ ] Senhas com argon2; bloqueio temporário após tentativas erradas de login
 - [ ] Revisão de permissões: cada rota com papel e unidade conferidos
 - [ ] Auditoria imutável de comandas fechadas, preços, comissões e despesas
-- [ ] Política de privacidade e termos de uso publicados e aceitos no cadastro
+- [x] Política de privacidade e termos de uso publicados e aceitos no cadastro (`/termos` e `/privacidade`; a versão aceita fica na auditoria da conta. Texto é rascunho: falta revisão jurídica e CNPJ)
 - [ ] Consentimento do cliente para receber mensagens de WhatsApp, com opção de sair
 - [ ] Exportar e apagar os dados de um cliente quando ele pedir
 - [ ] Telefone do cliente oculto para o barbeiro quando o dono ativar
@@ -301,13 +301,13 @@ Uma barbearia real usa o sistema por um mês antes de qualquer venda.
 O sistema passa a cobrar das barbearias e a receber clientes sozinho.
 
 - [ ] Módulo de assinatura do sistema: planos Básico, Pro e Premium, mensal e anual, limites de unidades e profissionais aplicados pela API
-- [ ] Teste grátis de 14 dias sem cartão; aviso 3 dias antes do fim
+- [ ] Teste grátis de 14 dias sem cartão; aviso 3 dias antes do fim (feito: teste sem cartão, `conta.teste_ate` e contagem em Configurações, em destaque nos 3 últimos dias; falta o e-mail de aviso e o bloqueio ao fim)
 - [ ] Cobrança das barbearias pelo Asaas (assinatura recorrente), com bloqueio suave após atraso: o sistema vira só leitura, nunca apaga dados
-- [ ] Cupom do plano fundador: 30% para os 20 primeiros clientes
-- [ ] Página de vendas: frase "Saiba quanto sobra, não só quanto entrou", preços, comparativo, depoimento do piloto, botão de teste grátis
+- [ ] Cupom do plano fundador: 30% para os 20 primeiros clientes (anunciado em `/planos`; aplicar junto com a cobrança no Asaas)
+- [ ] Página de vendas: frase "Saiba quanto sobra, não só quanto entrou", preços, comparativo, depoimento do piloto, botão de teste grátis (feito: `/` e `/planos` com preços mensal/anual, calculadora de unidades, comparativo com "em breve", perguntas, SEO e cadastro com plano escolhido; falta o depoimento real do piloto)
 - [ ] Central de ajuda com os vídeos do piloto e perguntas frequentes
 - [ ] WhatsApp de suporte com horário definido
-- [ ] Termos de uso e política de privacidade com as condições dos planos e do cancelamento
+- [x] Termos de uso e política de privacidade com as condições dos planos e do cancelamento (rascunho para revisão jurídica)
 - [ ] Exportação completa dos dados para quem cancelar
 - [ ] **Pronto quando:** uma barbearia desconhecida se cadastra, testa, assina e paga sem falar com ninguém
 

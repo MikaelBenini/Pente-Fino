@@ -20,6 +20,8 @@ import {
   type HorarioLivre,
   type Sessao,
   type UnidadePublica,
+  DIAS_TESTE,
+  VERSAO_TERMOS,
 } from '@pente-fino/shared';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -76,7 +78,14 @@ export class PublicoController {
     try {
       return await this.banco.naConta(contaId, async (tx) => {
         await tx.conta.create({
-          data: { id: contaId, nome: d.barbearia, plano: d.plano, status: 'teste' },
+          data: {
+            id: contaId,
+            nome: d.barbearia,
+            plano: d.plano,
+            ciclo: d.ciclo,
+            status: 'teste',
+            testeAte: new Date(Date.now() + DIAS_TESTE * 86_400_000),
+          },
         });
         const unidade = await tx.unidade.create({
           data: {
@@ -101,7 +110,12 @@ export class PublicoController {
             entidade: 'conta',
             entidadeId: contaId,
             acao: 'criar',
-            depois: { nome: d.barbearia, plano: d.plano },
+            depois: {
+              nome: d.barbearia,
+              plano: d.plano,
+              ciclo: d.ciclo,
+              aceiteTermos: VERSAO_TERMOS,
+            },
           },
           dono.id,
         );

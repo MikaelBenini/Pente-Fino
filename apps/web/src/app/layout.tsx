@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Barlow, Barlow_Condensed } from 'next/font/google';
 import { Provedores } from '@/componentes/provedores';
+import { URL_SITE } from '@/lib/site';
 import { SCRIPT_TEMA } from '@/lib/tema';
 import './globals.css';
 
@@ -21,6 +22,9 @@ export const metadata: Metadata = {
   title: { default: 'Pente Fino', template: '%s · Pente Fino' },
   description: 'Gestão de barbearia: saiba quanto sobra, não só quanto entrou.',
   applicationName: 'Pente Fino',
+  metadataBase: new URL(URL_SITE),
+  openGraph: { type: 'website', locale: 'pt_BR', siteName: 'Pente Fino' },
+  twitter: { card: 'summary_large_image' },
   appleWebApp: { capable: true, title: 'Pente Fino', statusBarStyle: 'black-translucent' },
   icons: { apple: '/icones/apple-touch-icon.png' },
 };

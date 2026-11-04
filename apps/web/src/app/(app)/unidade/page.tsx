@@ -48,7 +48,7 @@ export default function EscolherUnidade() {
                 aria-pressed={atual}
                 onClick={() => {
                   escolherUnidade(o.valor);
-                  router.replace('/');
+                  router.replace('/app');
                 }}
                 className={cn(
                   'flex min-h-16 w-full items-center gap-4 rounded-lg border bg-superficie px-4 text-left transition-colors',

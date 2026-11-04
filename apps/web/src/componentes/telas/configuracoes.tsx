@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   contaSchema,
   dataLocal,
+  diasRestantesTeste,
   formatarData,
   formatarTelefone,
   NOME_PLANO,
@@ -75,8 +76,14 @@ function Barbearia() {
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                   Plano
                 </dt>
-                <dd className="text-xl font-semibold">{NOME_PLANO[c.plano]}</dd>
+                <dd className="text-xl font-semibold">
+                  {NOME_PLANO[c.plano]}{' '}
+                  <span className="text-base font-normal text-tinta-suave">
+                    · {c.ciclo === 'anual' ? 'anual' : 'mensal'}
+                  </span>
+                </dd>
               </div>
+              {c.status === 'teste' && c.testeAte && <AvisoTeste ate={c.testeAte} />}
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                   Unidades ativas
@@ -98,6 +105,28 @@ function Barbearia() {
         );
       }}
     </Estado>
+  );
+}
+
+/** Dias que faltam do teste grátis, contados pelo calendário de São Paulo. */
+function AvisoTeste({ ate }: { ate: string }) {
+  const dias = diasRestantesTeste(new Date(ate), new Date());
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+        Teste grátis
+      </dt>
+      <dd className={dias <= 3 ? 'font-semibold text-aviso-texto' : 'font-semibold'}>
+        {dias > 1
+          ? `Faltam ${dias} dias`
+          : dias === 1
+            ? 'Termina amanhã'
+            : dias === 0
+              ? 'Termina hoje'
+              : 'Terminou'}
+        <span className="block text-sm font-normal text-tinta-suave">até {formatarData(ate)}</span>
+      </dd>
+    </div>
   );
 }
 

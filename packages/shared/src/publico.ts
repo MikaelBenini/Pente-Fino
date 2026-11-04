@@ -1,7 +1,7 @@
 // Esquemas das rotas sem login: cadastro de conta e agendamento pelo link público.
 import { z } from 'zod';
 import { emailSchema, senhaSchema } from './auth.js';
-import { PLANOS } from './planos.js';
+import { CICLOS, PLANOS } from './planos.js';
 
 export const cadastroContaSchema = z.object({
   barbearia: z.string().trim().min(2, { error: 'Informe o nome da barbearia.' }).max(120),
@@ -9,6 +9,7 @@ export const cadastroContaSchema = z.object({
   email: emailSchema,
   senha: senhaSchema,
   plano: z.enum(PLANOS).default('basico'),
+  ciclo: z.enum(CICLOS).default('mensal'),
   aceite: z.literal(true, { error: 'É preciso aceitar os termos de uso.' }),
 });
 export type CadastroContaEntrada = z.infer<typeof cadastroContaSchema>;

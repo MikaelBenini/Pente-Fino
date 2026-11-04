@@ -32,6 +32,13 @@ enum Plano {
   @@map("plano")
 }
 
+enum CicloCobranca {
+  mensal
+  anual
+
+  @@map("ciclo_cobranca")
+}
+
 enum StatusConta {
   teste
   ativa
@@ -162,17 +169,20 @@ enum TipoModeloMensagem {
 
 /// Raiz do isolamento multiempresa. O RLS compara o próprio id com app.conta_id.
 model Conta {
-  id                      String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  id                      String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
   nome                    String
-  logoUrl                 String?     @map("logo_url")
-  plano                   Plano       @default(basico)
-  status                  StatusConta @default(teste)
+  logoUrl                 String?       @map("logo_url")
+  plano                   Plano         @default(basico)
+  status                  StatusConta   @default(teste)
   /// Esconde o telefone do cliente na tela do barbeiro (docs: matriz de permissões).
-  ocultarTelefoneBarbeiro Boolean     @default(true) @map("ocultar_telefone_barbeiro")
+  ocultarTelefoneBarbeiro Boolean       @default(true) @map("ocultar_telefone_barbeiro")
   /// Quando o dono terminou a configuração guiada (null = ainda não terminou).
-  configuradaEm           DateTime?   @map("configurada_em") @db.Timestamptz(3)
-  criadoEm                DateTime    @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm            DateTime    @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  configuradaEm           DateTime?     @map("configurada_em") @db.Timestamptz(3)
+  ciclo                   CicloCobranca @default(mensal)
+  /// Fim do teste grátis (null = não está em teste).
+  testeAte                DateTime?     @map("teste_ate") @db.Timestamptz(3)
+  criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm            DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   unidades           Unidade[]
   calendarios        CalendarioUnidade[]

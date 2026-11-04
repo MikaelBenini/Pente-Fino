@@ -191,7 +191,7 @@ export function FormularioNovaSenha({ tipo }: { tipo: 'convite' | 'redefinir' })
         corpo: { token, senha },
       });
       if (tipo === 'convite') {
-        router.replace('/');
+        router.replace('/app');
       } else {
         setConcluido(true);
       }

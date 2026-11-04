@@ -28,7 +28,9 @@ export class ContaController {
         id: conta.id,
         nome: conta.nome,
         plano: conta.plano,
+        ciclo: conta.ciclo,
         status: conta.status,
+        testeAte: conta.testeAte?.toISOString() ?? null,
         uso: { unidades, profissionais },
         limites: {
           unidades: Number.isFinite(limites.unidades) ? limites.unidades : null,

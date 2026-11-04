@@ -85,6 +85,7 @@ describe('cadastro de conta e configuração guiada', () => {
       email,
       senha: 'senha-forte-1',
       plano: 'pro',
+      ciclo: 'anual',
       aceite: true,
     };
     await http()
@@ -110,6 +111,11 @@ describe('cadastro de conta e configuração guiada', () => {
       servicos: 0,
       profissionais: 0,
     });
+    const conta = (await http().get('/conta').set(auth).expect(200)).body;
+    expect(conta).toMatchObject({ plano: 'pro', ciclo: 'anual', status: 'teste' });
+    const dias = (new Date(conta.testeAte).getTime() - Date.now()) / 86_400_000;
+    expect(dias).toBeGreaterThan(13.9);
+    expect(dias).toBeLessThanOrEqual(14);
     expect(estado.modelos.length).toBeGreaterThan(5);
     expect(
       (await http().get('/categorias-despesa').set(auth).expect(200)).body.length,
