@@ -32,6 +32,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Cobertura mínima de 80% nas regras de cálculo
+        run: pnpm --filter @pente-fino/shared test:cobertura
       - run: pnpm build
 
   banco:
@@ -75,6 +77,12 @@ jobs:
 
       - name: Testes de ponta a ponta da API (login, convite, senha)
         run: pnpm test:e2e
+
+      - name: Teste de carga (agenda e indicadores com o seed)
+        run: |
+          (cd apps/api && API_PORT=3201 LOG_LEVEL=warn LIMITE_POR_MINUTO=100000 node dist/main.js &) 
+          for i in $(seq 1 60); do curl -sf http://localhost:3201/health >/dev/null && break; sleep 1; done
+          CARGA_API=http://localhost:3201 pnpm carga
 
       - name: Instalar o Chromium do Playwright
         working-directory: apps/web

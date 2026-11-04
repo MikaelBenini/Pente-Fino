@@ -162,16 +162,16 @@ A ordem segue as dependências: cada módulo usa os anteriores. Cada um sai com 
 
 O dinheiro tem que bater. As regras de cálculo são testadas com casos reais da planilha antes de qualquer tela.
 
-- [ ] Testes unitários (Vitest) das regras de cálculo em `packages/shared`: faturamento, cliente, ticket, atendimentos, extras, % de despesas, projeção, comissão, lucro por serviço
-- [ ] Casos montados a partir dos prints da planilha, incluindo os erros que ela tinha ("outros", cliente que muda por mês, hidratação do dia 31)
-- [ ] Testes de integração da API com banco real em container (Testcontainers)
-- [ ] Teste de isolamento: cada rota tentando ler e alterar dados de outra conta
-- [ ] Teste de permissão: cada papel tentando acessar o que não pode
-- [ ] Testes de ponta a ponta (Playwright) dos fluxos críticos: agendar → atender → confirmar → fechar → ver comissão; cliente que não veio; reabrir comanda
-- [ ] Teste do app do barbeiro sem internet: lança, reconecta, envia
-- [ ] Teste de carga simples na agenda e nos indicadores com o seed de demonstração
-- [ ] Cobertura mínima de 80% em `packages/shared` (proposta)
-- [ ] **Pronto quando:** toda a suíte roda verde no CI e os indicadores batem com uma conferência manual da planilha
+- [x] Testes unitários (Vitest) das regras de cálculo em `packages/shared`: faturamento, cliente, ticket, atendimentos, extras, % de despesas, projeção, comissão, lucro por serviço (162 testes)
+- [x] Casos montados a partir dos prints da planilha, incluindo os erros que ela tinha ("outros", cliente que muda por mês, hidratação do dia 31) (`packages/shared/src/planilha.test.ts`, a partir do briefing de 03/11/2026: prints 1 a 6 e o dashboard de exemplo; o dia 31 também na API, com fuso)
+- [x] Testes de integração da API com banco real em container (Testcontainers) (PostgreSQL e Redis reais, na mesma imagem do docker compose, que o CI sobe; dispensa a biblioteca Testcontainers)
+- [x] Teste de isolamento: cada rota tentando ler e alterar dados de outra conta (`apps/api/test/varreduras.e2e-spec.ts`: 23 leituras e 27 alterações)
+- [x] Teste de permissão: cada papel tentando acessar o que não pode (matriz com barbeiro, recepção e gestor: 42 tentativas, todas 403)
+- [x] Testes de ponta a ponta (Playwright) dos fluxos críticos: agendar → atender → confirmar → fechar → ver comissão; cliente que não veio; reabrir comanda
+- [x] Teste do app do barbeiro sem internet: lança, reconecta, envia (`apps/web/e2e/offline.spec.ts`)
+- [x] Teste de carga simples na agenda e nos indicadores com o seed de demonstração (`pnpm carga`; no Codespace, 20 simultâneos: p95 de 454 ms na agenda da semana e 479 ms nos indicadores; roda no CI)
+- [x] Cobertura mínima de 80% em `packages/shared` (proposta) (`pnpm --filter @pente-fino/shared test:cobertura`, cobrada no CI)
+- [x] **Pronto quando:** toda a suíte roda verde no CI e os indicadores batem com uma conferência manual da planilha (os números dos prints do briefing batem nos testes)
 
 ## Etapa 8 · Integração contínua
 

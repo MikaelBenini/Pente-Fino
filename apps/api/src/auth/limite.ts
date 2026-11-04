@@ -10,14 +10,14 @@ function rotaDeAutenticacao(ctx: ExecutionContext): boolean {
 
 /**
  * Dois limites por minuto:
- * - padrao: 300 por IP em qualquer rota;
+ * - padrao: LIMITE_POR_MINUTO (300) por IP em qualquer rota;
  * - autenticacao: LIMITE_AUTH_POR_MINUTO por IP + e-mail (ou token) nas rotas de login,
  *   convite e senha, para frear tentativa de senha sem travar a barbearia inteira, que
  *   costuma sair pelo mesmo IP.
  */
 export function limitesDeRequisicao(config: Configuracao): ThrottlerOptions[] {
   return [
-    { name: 'padrao', ttl: 60_000, limit: 300 },
+    { name: 'padrao', ttl: 60_000, limit: config.limitePorMinuto },
     {
       name: 'autenticacao',
       ttl: 60_000,

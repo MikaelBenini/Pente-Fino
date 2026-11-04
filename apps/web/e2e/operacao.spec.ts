@@ -62,19 +62,25 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await recepcao.waitForURL(/\/comandas\?id=/);
   const url = recepcao.url();
   await expect(recepcao.getByRole('heading', { name: cliente })).toBeVisible();
-  await expect(recepcao.getByText('Prevista', { exact: true })).toBeVisible();
+  await expect(
+    recepcao.getByText('Prevista', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
 
   // 2. Barbeiro começa, lança um extra em um toque e confirma.
   const barbeiro = await entrarComo(browser, 'rafael@demo.pentefino.dev', info.project.name);
   await barbeiro.goto(url.replace(/^https?:\/\/[^/]+/, ''));
   await barbeiro.getByRole('button', { name: 'Começar atendimento' }).click();
-  await expect(barbeiro.getByText('Em atendimento', { exact: true })).toBeVisible();
+  await expect(
+    barbeiro.getByText('Em atendimento', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await barbeiro.getByRole('button', { name: 'Sobrancelha' }).click();
   await expect(barbeiro.getByRole('listitem').filter({ hasText: 'Sobrancelha' })).toContainText(
     'Extra',
   );
   await barbeiro.getByRole('button', { name: 'Confirmar atendimento' }).click();
-  await expect(barbeiro.getByText('Confirmada', { exact: true })).toBeVisible();
+  await expect(
+    barbeiro.getByText('Confirmada', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await expect(barbeiro.getByRole('button', { name: 'Receber e fechar' })).toHaveCount(0);
 
   // 3. Recepção recebe dividido (Pix + dinheiro) e fecha.
@@ -90,9 +96,20 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
     .getByRole('dialog', { name: 'Fechar comanda de R$ 65,00?' })
     .getByRole('button', { name: 'Fechar comanda' })
     .click();
-  await expect(recepcao.getByText('Fechada', { exact: true })).toBeVisible();
+  await expect(
+    recepcao.getByText('Fechada', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await expect(recepcao.locator('dl').getByText('Pix', { exact: true })).toBeVisible();
   await expect(recepcao.getByRole('button', { name: 'Reabrir comanda' })).toHaveCount(0);
+
+  // 3b. O barbeiro já vê a comissão do atendimento no extrato.
+  await barbeiro.goto('/comissoes');
+  await expect(
+    barbeiro
+      .getByRole('table', { name: 'Extrato de comissões' })
+      .getByRole('row', { name: new RegExp(cliente) })
+      .first(),
+  ).toBeVisible();
 
   // 4. Gestor reabre com motivo.
   const gestor = await entrarComo(browser, 'gestor@demo.pentefino.dev', info.project.name);
@@ -101,7 +118,9 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   const reabrir = gestor.getByRole('dialog', { name: 'Reabrir comanda fechada?' });
   await reabrir.getByLabel('Motivo (fica registrado)').fill('Forma de pagamento lançada errada');
   await reabrir.getByRole('button', { name: 'Reabrir' }).click();
-  await expect(gestor.getByText('Reaberta', { exact: true })).toBeVisible();
+  await expect(
+    gestor.getByText('Reaberta', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
 });
 
 test('barbeiro no celular vê só as próprias comandas', async ({ page }, info) => {
@@ -135,4 +154,63 @@ test('recepção vê o caixa do dia e a agenda por profissional', async ({ page 
   await page.goto('/caixa');
   await expect(page.getByRole('heading', { name: 'Caixa do dia' })).toBeVisible();
   await expect(page.getByText('Deve ter na gaveta')).toBeVisible();
+});
+
+test('cliente que não veio: a recepção marca falta e a comanda sai do faturamento', async ({
+  browser,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'balcão no computador');
+  const recepcao = await entrarComo(
+    browser,
+    'recepcao.centro@demo.pentefino.dev',
+    info.project.name,
+  );
+  await recepcao.goto('/agenda');
+  await recepcao.getByRole('button', { name: 'Novo agendamento' }).click();
+  const dialogo = recepcao.getByRole('dialog', { name: 'Novo agendamento' });
+  await dialogo.getByRole('button', { name: 'Cadastrar cliente novo' }).click();
+  await dialogo.getByLabel('Nome do cliente').fill(`Faltoso ${sufixo}`);
+  await dialogo.getByRole('button', { name: 'Usar este cliente' }).click();
+  await dialogo.getByLabel('Corte · 30 min').check();
+  await dialogo.getByLabel('Dia').fill(proximoDiaUtil());
+  await dialogo.getByLabel('Barbeiro').selectOption({ label: 'Diego Prado' });
+  await dialogo
+    .getByRole('button', { name: /^\d{2}:\d{2}$/ })
+    .last()
+    .click();
+  await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
+  await recepcao.waitForURL(/\/comandas\?id=/);
+  await recepcao.getByRole('button', { name: 'Cancelar ou marcar falta' }).click();
+  const cancelar = recepcao.getByRole('dialog', { name: 'Cancelar comanda' });
+  await cancelar.getByLabel('Motivo').fill('Não compareceu');
+  await cancelar.getByRole('button', { name: 'Cancelar comanda' }).click();
+  await expect(
+    recepcao.getByText('Cancelada', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
+  await expect(recepcao.getByText('Cancelada: Não compareceu')).toBeVisible();
+  await expect(recepcao.getByRole('button', { name: 'Receber e fechar' })).toHaveCount(0);
+});
+
+test('a ponte /api recusa alteração vinda de outro site (CSRF)', async ({ playwright }, info) => {
+  test.skip(info.project.name === 'celular', 'uma vez basta');
+  const base = info.project.use.baseURL!;
+  const outroSite = await playwright.request.newContext({
+    baseURL: base,
+    extraHTTPHeaders: { origin: 'https://site-malicioso.example' },
+  });
+  const r = await outroSite.post('/api/auth/login', {
+    data: { email: 'dono@demo.pentefino.dev', senha: SENHA },
+  });
+  expect(r.status()).toBe(403);
+  expect((await r.json()).erro.codigo).toBe('origem_invalida');
+  const semOrigem = await playwright.request.newContext({ baseURL: base });
+  expect(
+    (
+      await semOrigem.post('/api/auth/login', {
+        data: { email: 'dono@demo.pentefino.dev', senha: SENHA },
+      })
+    ).status(),
+  ).toBe(403);
+  await outroSite.dispose();
+  await semOrigem.dispose();
 });
