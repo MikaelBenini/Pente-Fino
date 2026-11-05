@@ -26,3 +26,4 @@ export * from './whatsapp.js';
 export * from './equipe.js';
 export * from './avaliacao.js';
 export * from './assinatura.js';
+export * from './agendar-bot.js';

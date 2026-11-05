@@ -305,14 +305,14 @@ Pedidos do dono depois de testar o sistema. Entram antes da Etapa 11, porque vá
 
 O cliente escolhe por onde quer marcar: conversando com o bot ou pelo link. Os dois canais usam a mesma agenda e as mesmas regras e criam a mesma comanda prevista.
 
-- [ ] Regras de agendamento da unidade num lugar só, valendo para bot, site e balcão: antecedência mínima, janela máxima (hoje 45 dias), limite de horários futuros por telefone (hoje 2), prazo para o cliente remarcar ou cancelar sozinho, intervalo entre atendimentos
+- [ ] Regras de agendamento da unidade num lugar só, valendo para bot, site e balcão: antecedência mínima, janela máxima (hoje 45 dias), limite de horários futuros por telefone (hoje 2), prazo para o cliente remarcar ou cancelar sozinho, intervalo entre atendimentos (em parte: janela de 45 dias e no máximo 2 horários futuros por cliente em `packages/shared`, valendo para bot e site; falta a tela para o dono configurar por unidade, antecedência mínima e prazo de remarcar)
 - [ ] Canais por unidade: o dono liga WhatsApp, site ou os dois
 - [ ] Escolha do cliente: em "Agendar", o bot pergunta se ele quer marcar pela conversa ou pelo site e segue pelo escolhido; o site mostra "Prefere pelo WhatsApp?" com link que abre a conversa já no agendamento
 - [ ] Preferência guardada no cliente (`canal_preferido`): da próxima vez o bot já segue pelo canal que ele usou, com a opção de trocar
-- [ ] Agendamento pela conversa: serviço (com preço e duração) → profissional ou "sem preferência" → dia → horários livres de 6 em 6 → resumo e confirmação, pela mesma API de horários livres
-- [ ] Mais de um serviço no mesmo horário (corte + barba), somando a duração
+- [x] Agendamento pela conversa: serviço (com preço e duração) → profissional ou "sem preferência" → dia → horários livres de 6 em 6 → resumo e confirmação, pela mesma API de horários livres (feito: `packages/db/src/agendar-bot.ts`, com as mesmas regras do balcão e do site, que saíram da API para `packages/db/src/agenda.ts`; textos e leitura da resposta em `packages/shared/src/agendar-bot.ts`. Só mostra dias que têm horário; um profissional só pula a escolha; "atendente" ou "menu" no meio largam o agendamento; o simulador faz o passo a passo sem gravar)
+- [x] Mais de um serviço no mesmo horário (corte + barba), somando a duração (feito: "1 e 3" na lista de serviços)
 - [ ] Link do site vindo do bot com o telefone já preenchido por um token curto e de uso único, sem dado pessoal na URL
-- [ ] Horário disputado: se outro cliente confirmar antes, o bot avisa e oferece os próximos livres (o banco já impede sobreposição)
+- [x] Horário disputado: se outro cliente confirmar antes, o bot avisa e oferece os próximos livres (o banco já impede sobreposição) (feito: na confirmação, se o horário foi ocupado, avisa e mostra os que sobraram do mesmo dia)
 - [ ] "Meus horários": o cliente vê os próximos agendamentos e remarca ou cancela pela conversa ou pelo link de gerenciamento enviado na confirmação, dentro do prazo da unidade
 - [ ] No site, caixa para aceitar receber lembretes pelo WhatsApp
 - [ ] Lembretes (proposta: 24 h e 2 h antes, configuráveis) para quem aceitou, com "1 Confirmo · 2 Remarcar · 3 Cancelar"; a resposta muda o agendamento e a agenda mostra quem confirmou
