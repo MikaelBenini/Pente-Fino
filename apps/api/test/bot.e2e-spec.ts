@@ -188,3 +188,35 @@ describe('bot: permissões e isolamento', () => {
     await intruso.put(`/bot/horario/${a.unidadeA}`, { turnos: null }).expect(404);
   });
 });
+
+describe('simulador: agendar pela conversa', () => {
+  it('faz o passo a passo inteiro e não grava nada no fim', async () => {
+    // Com alguém atendendo, "Agendar" vira passo a passo (sem profissional, manda o link).
+    const usuarios = (await dono.get('/usuarios')).body as { id: string; email: string }[];
+    await dono
+      .post('/profissionais', {
+        unidadeId: a.unidadeA,
+        usuarioId: usuarios.find((u) => u.email === a.emails.barbeiro)!.id,
+        dataEntrada: hoje,
+        comissaoServico: { percentualBp: 4000, valorFixo: null },
+        comissaoProduto: { percentualBp: 1000, valorFixo: null },
+      })
+      .expect(201);
+    let sessao: unknown = null;
+    const passo = async (entrada: string) => {
+      const r = (
+        await dono.post('/bot/simular', { unidadeId: a.unidadeA, entrada, sessao }).expect(200)
+      ).body as RespostaSimulacao;
+      sessao = r.sessao;
+      return r.respostas.join('\n---\n');
+    };
+    await passo('oi');
+    expect(await passo('1')).toContain('1. Corte · R$ 45,00 · 30 min');
+    expect(await passo('1')).toContain('Qual dia fica melhor?');
+    expect(await passo('1')).toMatch(/Horários livres/);
+    expect(await passo('1')).toContain('✂️ Corte\n💈 Com Barbeiro');
+    expect(await passo('1')).toContain('(Simulação: nada foi gravado.)');
+    const agenda = (await dono.get(`/agenda?unidadeId=${a.unidadeA}&de=${hoje}&ate=${hoje}`)).body;
+    expect(JSON.stringify(agenda)).not.toContain('"origem":"bot"');
+  });
+});

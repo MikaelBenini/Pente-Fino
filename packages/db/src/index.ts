@@ -49,3 +49,5 @@ export async function naConta<T>(
     return fn(tx);
   }, opcoes);
 }
+export * from './agenda.js';
+export * from './agendar-bot.js';

@@ -8,6 +8,8 @@ import {
   estadoAssinatura,
 } from '@pente-fino/db';
 import {
+  JANELA_AGENDAMENTO_DIAS,
+  MAX_FUTUROS_POR_CLIENTE,
   agendamentoPublicoSchema,
   cadastroContaSchema,
   dataLocal,
@@ -47,9 +49,9 @@ const consultaHorarios = z.object({
   profissionalId: z.uuid().optional(),
 });
 /** Até quantos horários futuros um mesmo telefone pode ter pelo link. */
-const MAX_FUTUROS_POR_TELEFONE = 2;
+const MAX_FUTUROS_POR_TELEFONE = MAX_FUTUROS_POR_CLIENTE;
 /** Até quantos dias à frente o link aceita agendar. */
-const JANELA_DIAS = 45;
+const JANELA_DIAS = JANELA_AGENDAMENTO_DIAS;
 
 @ApiTags('Público (sem login)')
 @Controller('publico')

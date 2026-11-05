@@ -1,6 +1,7 @@
 // Bot do WhatsApp sem IA (linha de desenvolvimento, Etapa 10): um menu numerado, palavras-chave
 // e mensagens prontas que o dono escreve. Tudo aqui é puro: o simulador do painel e o WhatsApp
 // de verdade passam pelo mesmo `responder`.
+import type { AgendaNaConversa } from './agendar-bot.js';
 import { lerNota } from './avaliacao.js';
 import { formatarMoeda } from './formatacao.js';
 
@@ -422,6 +423,8 @@ export interface SessaoBot {
   erros?: number;
   /** Pesquisa depois do atendimento em andamento: vale mesmo depois dos 30 min da sessão. */
   pesquisa?: { avaliacaoId: string; passo: PassoPesquisa; erros?: number };
+  /** Agendamento pela conversa em andamento (Etapa 11). */
+  agenda?: AgendaNaConversa;
 }
 
 export type PassoPesquisa = 'atendimento' | 'barbearia' | 'comentario';
@@ -452,6 +455,11 @@ export interface ContextoConversa {
   precos: readonly { nome: string; valor: number }[];
   /** Número que ainda não escolheu se recebe avisos: a primeira conversa termina com o convite. */
   pedirConsentimento?: boolean;
+  /**
+   * A unidade agenda pela conversa (tem serviço com preço e profissional): "Agendar" começa
+   * o passo a passo em vez de mandar o link do site.
+   */
+  agendarPelaConversa?: boolean;
 }
 
 export interface ResultadoConversa {
@@ -519,6 +527,12 @@ export function opcaoEscolhida(
     return !!rotulo && (contem(rotulo, t) || contem(t, rotulo));
   });
   return combinam.length === 1 ? combinam[0]! : null;
+}
+
+/** O grupo de palavras-chave que a mensagem cita (ou null): "atendente", "preço", "menu"… */
+export function grupoDaPalavraChave(m: MenuBot, entrada: string): GrupoPalavrasChave | null {
+  const texto = normalizar(entrada);
+  return m.palavrasChave.find((g) => g.palavras.some((p) => contem(texto, p))) ?? null;
 }
 
 /**
@@ -670,6 +684,8 @@ export function responder(
         });
       }
       case 'agendar':
+        // Quem chamou começa o passo a passo (serviço → profissional → dia → horário).
+        if (ctx.agendarPelaConversa) return resultado([...abertura, corpo], { acao });
         return resultado(
           [
             ...abertura,

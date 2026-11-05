@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   contextoDaConversa,
+  podeAgendarPelaConversa,
+  responderComAgenda,
   instanciaDaUnidade,
   json,
   lerMenu,
@@ -13,7 +15,7 @@ import {
   type Transacao,
 } from '@pente-fino/db';
 import {
-  responder,
+  dataLocal,
   validarMenu,
   type ConexaoBot,
   type EstadoBot,
@@ -251,13 +253,30 @@ export class BotService {
           : null;
       const menu = lerMenu((rascunho ?? (await menuPublicado(tx))).menu);
       const u = await this.unidade(tx, d.unidadeId);
-      const ctx = await contextoDaConversa(tx, u, new Date(), this.config.appUrl, {
+      const agora = new Date();
+      const ctx = await contextoDaConversa(tx, u, agora, this.config.appUrl, {
         cliente: d.cliente,
         // Número novo: a primeira conversa termina com o convite para receber avisos.
         pedirConsentimento: d.cliente === null,
+        agendarPelaConversa: await podeAgendarPelaConversa(tx, u.id, dataLocal(agora)),
       });
       if (d.foraDoHorario) ctx.dentroDoHorario = false;
-      return responder(menu, await mensagensDoBot(tx), d.sessao, d.entrada, ctx);
+      // O mesmo passo a passo do WhatsApp, sem gravar o agendamento no fim.
+      return responderComAgenda(tx, {
+        menu,
+        mensagens: await mensagensDoBot(tx),
+        sessao: d.sessao,
+        entrada: d.entrada,
+        ctx,
+        dados: {
+          unidadeId: u.id,
+          clienteId: '',
+          barbearia: ctx.barbearia,
+          link: ctx.link,
+          agora,
+          simulacao: true,
+        },
+      });
     });
   }
 
