@@ -285,7 +285,7 @@ Pedidos do dono depois de testar o sistema. Entram antes da Etapa 11, porque vá
 
 - [x] Produtos: mais vendidos (quantidade e receita), margem de cada um (preço − custo) e "vale investir": margem × giro no período, com os que vendem pouco e os que dão mais lucro por real investido em estoque. Regra em `packages/shared` com teste (Métricas e metas → "Produtos: o que vende e o que vale a pena": destaques de mais vendido, mais lucro e melhor retorno; tabela com lucro, margem, retorno por R$ 1 de custo e situação — investir, divulgar, rever preço, repensar ou parado — comparando com a mediana dos produtos do mês; `lucratividadePorProduto` em `packages/shared/src/indicadores.ts`)
 - [x] Serviços: mais consumidos (quantidade, atendimentos e receita), ao lado do lucro por serviço que já existe ("Serviços: lucro e procura", com "Ordenar por: mais lucro / mais consumidos" e a coluna "Procura", a fatia de cada serviço no total do mês)
-- [ ] Avaliação do barbeiro e avaliação da barbearia (atendimento, ambiente): adiantar da Etapa 12 a tabela `avaliacao`, a pesquisa pelo bot depois do fechamento, a nota na ficha do profissional e no ranking da Equipe, e a nota da barbearia no Início e nas Métricas
+- [x] Avaliação do barbeiro e avaliação da barbearia (atendimento, ambiente): adiantar da Etapa 12 a tabela `avaliacao`, a pesquisa pelo bot depois do fechamento, a nota na ficha do profissional e no ranking da Equipe, e a nota da barbearia no Início e nas Métricas (feito: tabela `avaliacao` com RLS e CHECK das notas; pesquisa pelo bot uma hora depois do fechamento — nota do atendimento, da barbearia e comentário, mensagens editáveis com `{profissional}`; só para quem aceitou avisos e já conversou com o WhatsApp da unidade, uma por cliente a cada 7 dias, vale 48 h; liga e desliga em Bot → Mensagens. Nota na ficha (o barbeiro vê a dele, sem o nome do cliente), no ranking da Equipe ("Nota"), em Métricas com notas baixas e comentários, e no Início. Fica para a Etapa 12: aviso imediato da nota baixa, registro do tratamento e convite para o Google)
 
 **Assinatura do sistema** (o lado do dono; o do admin e do vendedor fica na Etapa 15.1)
 
@@ -326,14 +326,14 @@ O cliente escolhe por onde quer marcar: conversando com o bot ou pelo link. Os d
 
 Depois que a comanda fecha, o cliente avalia o atendimento pelo WhatsApp. A nota vai para a ficha do barbeiro e o dono fica sabendo na hora quando algo deu errado.
 
-- [ ] Pesquisa automática depois do fechamento (proposta: 1 hora depois, configurável), só para quem aceitou mensagens e no máximo uma por cliente a cada 7 dias
-- [ ] Pergunta curta: nota de 1 a 5 para o atendimento, depois comentário opcional; resposta por número
-- [ ] Tabela `avaliacao` (comanda, profissional, cliente, nota, comentário, respondida em), uma por comanda, com isolamento por conta
-- [ ] A pesquisa expira se não for respondida (proposta: 48 horas), sem insistir
+- [x] Pesquisa automática depois do fechamento (proposta: 1 hora depois, configurável), só para quem aceitou mensagens e no máximo uma por cliente a cada 7 dias (adiantado na 10.1)
+- [x] Pergunta curta: nota de 1 a 5 para o atendimento, depois comentário opcional; resposta por número (adiantado na 10.1, com a nota da barbearia também)
+- [x] Tabela `avaliacao` (comanda, profissional, cliente, nota, comentário, respondida em), uma por comanda, com isolamento por conta (adiantado na 10.1)
+- [x] A pesquisa expira se não for respondida (proposta: 48 horas), sem insistir (adiantado na 10.1)
 - [ ] Nota 1 ou 2: aviso imediato para dono e gestor, com o comentário e atalho para falar com o cliente; o tratamento fica registrado (resolvido, com anotação)
 - [ ] Nota 5: convite opcional para avaliar a barbearia no Google (link configurado pelo dono)
-- [ ] Ficha do profissional e indicadores: nota média, número de respostas, taxa de resposta e comentários do período
-- [ ] Barbeiro vê a própria média e os comentários, sem o telefone do cliente, e não vê as notas dos colegas
+- [x] Ficha do profissional e indicadores: nota média, número de respostas, taxa de resposta e comentários do período (adiantado na 10.1)
+- [x] Barbeiro vê a própria média e os comentários, sem o telefone do cliente, e não vê as notas dos colegas (adiantado na 10.1)
 - [ ] Mensagem de retorno: cliente que passou do intervalo habitual de visitas (pelo histórico; padrão 30 dias) recebe um convite para agendar, uma vez por ciclo
 - [ ] Mensagem de aniversário com o modelo da barbearia (liga e desliga)
 - [ ] Lista "clientes para recuperar": os que sumiram, deram nota baixa ou faltaram

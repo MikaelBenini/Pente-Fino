@@ -169,6 +169,10 @@ enum TipoModeloMensagem {
   saida_avisos
   volta_avisos
   convite_avisos
+  pesquisa_atendimento
+  pesquisa_barbearia
+  pesquisa_comentario
+  pesquisa_obrigado
 
   @@map("tipo_modelo_mensagem")
 }
@@ -206,6 +210,8 @@ model Conta {
   ciclo                   CicloCobranca @default(mensal)
   /// Fim do teste grátis (null = não está em teste).
   testeAte                DateTime?     @map("teste_ate") @db.Timestamptz(3)
+  /// Pesquisa de 1 a 5 pelo WhatsApp depois do atendimento (o dono pode desligar).
+  pesquisaPosAtendimento  Boolean       @default(true) @map("pesquisa_pos_atendimento")
   criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm            DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -238,6 +244,7 @@ model Conta {
   botSessoes         BotSessao[]
   mensagens          Mensagem[]
   tokenAcessos       TokenAcesso[]
+  avaliacoes         Avaliacao[]
 
   @@map("conta")
 }
@@ -278,6 +285,7 @@ model Unidade {
   modelosMensagem ModeloMensagem[]
   botSessoes      BotSessao[]
   mensagens       Mensagem[]
+  avaliacoes      Avaliacao[]
 
   @@index([contaId])
   @@map("unidade")
@@ -404,6 +412,7 @@ model Profissional {
   comandas           Comanda[]
   itensComanda       ItemComanda[]
   pagamentosComissao PagamentoComissao[]
+  avaliacoes         Avaliacao[]
 
   @@unique([usuarioId, unidadeId])
   @@index([contaId])
@@ -560,6 +569,7 @@ model Cliente {
   comandas      Comanda[]
   mensagens     Mensagem[]
   sessoesBot    BotSessao[]
+  avaliacoes    Avaliacao[]
 
   @@unique([contaId, telefone])
   @@index([contaId, nome])
@@ -650,6 +660,7 @@ model Comanda {
   confirmadaPor Usuario?      @relation("ComandaConfirmadaPor", fields: [confirmadaPorId], references: [id], onDelete: SetNull)
   itens         ItemComanda[]
   pagamentos    Pagamento[]
+  avaliacao     Avaliacao?
 
   @@index([contaId])
   @@index([unidadeId, status, fechadaEm])
@@ -956,4 +967,50 @@ model ModeloMensagem {
 
   @@index([contaId])
   @@map("modelo_mensagem")
+}
+
+enum StatusAvaliacao {
+  /// Criada no fechamento, esperando a hora de sair.
+  agendada
+  enviada
+  /// Deu ao menos a nota do atendimento.
+  respondida
+  /// Não saiu (cliente saiu dos avisos, WhatsApp caído, comanda reaberta) ou passou do prazo.
+  cancelada
+
+  @@map("status_avaliacao")
+}
+
+/// Pesquisa depois do atendimento: uma por comanda, notas de 1 a 5 e comentário.
+model Avaliacao {
+  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId         String          @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId       String          @map("unidade_id") @db.Uuid
+  comandaId       String          @unique @map("comanda_id") @db.Uuid
+  profissionalId  String          @map("profissional_id") @db.Uuid
+  clienteId       String          @map("cliente_id") @db.Uuid
+  /// Número que conversou com a barbearia (é para ele que a pesquisa sai).
+  telefone        String
+  status          StatusAvaliacao @default(agendada)
+  notaAtendimento Int?            @map("nota_atendimento")
+  notaBarbearia   Int?            @map("nota_barbearia")
+  comentario      String?
+  enviarEm        DateTime        @map("enviar_em") @db.Timestamptz(3)
+  enviadaEm       DateTime?       @map("enviada_em") @db.Timestamptz(3)
+  respondidaEm    DateTime?       @map("respondida_em") @db.Timestamptz(3)
+  expiraEm        DateTime        @map("expira_em") @db.Timestamptz(3)
+  motivo          String?
+  criadoEm        DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade      Unidade      @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  comanda      Comanda      @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+  cliente      Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([profissionalId, respondidaEm])
+  @@index([unidadeId, respondidaEm])
+  @@index([clienteId, criadoEm])
+  @@map("avaliacao")
 }

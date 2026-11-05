@@ -63,6 +63,10 @@ test('dono: início com metas e indicadores; financeiro e métricas', async ({ p
   await expect(produtos.getByRole('row').nth(1)).toContainText(
     /Investir|Divulgar|Rever preço|Repensar|Parado/,
   );
+  // Avaliações dos clientes: notas do atendimento e da barbearia (demonstração tem respostas).
+  const avaliacoes = page.getByRole('region', { name: 'Avaliações dos clientes' });
+  await expect(avaliacoes.getByRole('list', { name: 'Notas de atendimento' })).toBeVisible();
+  await expect(avaliacoes.getByRole('list', { name: 'Notas de barbearia' })).toBeVisible();
 });
 
 test('dono lança uma despesa e ela aparece no mês', async ({ page }, info) => {

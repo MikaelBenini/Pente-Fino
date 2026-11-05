@@ -93,6 +93,9 @@ export class BotService {
             : null,
         temAnterior: anterior > 0,
         mensagens: await mensagensDoBot(tx),
+        pesquisaAtiva:
+          (await tx.conta.findFirst({ select: { pesquisaPosAtendimento: true } }))
+            ?.pesquisaPosAtendimento ?? false,
         unidades: await umPorVez(unidades, async (u) => {
           const s = await situacaoDaUnidade(tx, u, agora, this.config.appUrl);
           return {
@@ -204,6 +207,23 @@ export class BotService {
         else await tx.modeloMensagem.create({ data: { tipo: t, texto: texto! } });
       }
       return mensagensDoBot(tx);
+    });
+  }
+
+  /** Liga ou desliga a pesquisa depois do atendimento (só o dono). */
+  async salvarPesquisa(ativa: boolean): Promise<{ ativa: boolean }> {
+    this.exigirDono();
+    return this.banco.daConta(async (tx) => {
+      const conta = await tx.conta.findFirstOrThrow();
+      await tx.conta.update({ where: { id: conta.id }, data: { pesquisaPosAtendimento: ativa } });
+      await auditar(tx, {
+        entidade: 'conta',
+        entidadeId: conta.id,
+        acao: ativa ? 'ligar_pesquisa' : 'desligar_pesquisa',
+        antes: { pesquisaPosAtendimento: conta.pesquisaPosAtendimento },
+        depois: { pesquisaPosAtendimento: ativa },
+      });
+      return { ativa };
     });
   }
 

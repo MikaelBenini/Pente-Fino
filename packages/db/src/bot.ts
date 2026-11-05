@@ -21,6 +21,7 @@ import {
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
+import { gravarRespostaPesquisa, pesquisaValida } from './avaliacao.js';
 import { precoServicoVigente } from './vigencia.js';
 
 type Tx = Prisma.TransactionClient;
@@ -271,13 +272,14 @@ export async function atenderMensagem(
         pedirConsentimento: cliente.consentimentoEm === null && !conversouAntes,
       });
       const menu = lerMenu((await menuPublicado(tx)).menu);
-      const r = responder(
-        menu,
-        await mensagensDoBot(tx),
+      // Pesquisa vencida ou já cancelada sai da sessão antes de responder.
+      const sessaoSalva = await pesquisaValida(
+        tx,
         (salva?.sessao as unknown as SessaoBot | undefined) ?? null,
-        evento.texto,
-        ctx,
+        agora,
       );
+      const r = responder(menu, await mensagensDoBot(tx), sessaoSalva, evento.texto, ctx);
+      if (r.avaliacao) await gravarRespostaPesquisa(tx, r.avaliacao, agora);
 
       // Pediu atendente agora: entra na fila da tela Conversas; o bot voltou: sai dela.
       const atendenteDesde = r.sessao.comAtendente ? (salva?.atendenteDesde ?? agora) : null;

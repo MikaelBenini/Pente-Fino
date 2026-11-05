@@ -1,5 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { precoServicoVigente, regraComissaoVigente, type Transacao } from '@pente-fino/db';
+import {
+  agendarPesquisa,
+  precoServicoVigente,
+  regraComissaoVigente,
+  type Transacao,
+} from '@pente-fino/db';
 import {
   comissaoItem,
   dataLocal,
@@ -29,7 +34,7 @@ import { data, exigirUnidade } from '../comum/escopo.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { pdfComandas } from './impressao.js';
 import { umPorVez } from '../comum/sequencia.js';
-import { EventosService } from '../filas/filas.module.js';
+import { EventosService, Filas } from '../filas/filas.module.js';
 
 const INCLUIR = {
   itens: { include: { servico: true, produto: true }, orderBy: { criadoEm: 'asc' as const } },
@@ -117,6 +122,7 @@ export class ComandasService {
   constructor(
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(EventosService) private readonly eventos: EventosService,
+    @Inject(Filas) private readonly filas: Filas,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
   ) {}
 
@@ -441,7 +447,7 @@ export class ComandasService {
 
   async fechar(id: string, d: FecharComandaEntrada): Promise<ComandaDetalhe> {
     const quem = Contexto.usuario();
-    await this.banco.daConta(async (tx) => {
+    const pesquisa = await this.banco.daConta(async (tx) => {
       const { comanda, propria, papeis } = await this.carregar(tx, id);
       const antes = this.exigir('fechar', comanda, papeis, propria);
       if (comanda.itens.length === 0)
@@ -543,10 +549,24 @@ export class ComandasService {
         antes: { status: antes },
         depois: { status: 'fechada', ...totais, pagamentos: d.pagamentos },
       });
+      // Pesquisa de 1 a 5 pelo WhatsApp, uma hora depois (só para quem cabe).
+      return agendarPesquisa(tx, id);
     });
     await this.eventos
       .publicar('comanda.fechada', quem.contaId, { comandaId: id })
       .catch(() => undefined);
+    if (pesquisa)
+      await this.filas.whatsappEntrada
+        .add(
+          'pesquisa',
+          { tipo: 'pesquisa', contaId: quem.contaId, avaliacaoId: pesquisa.avaliacaoId },
+          {
+            jobId: `pesquisa_${pesquisa.avaliacaoId}`,
+            delay: Math.max(0, pesquisa.enviarEm.getTime() - Date.now()),
+          },
+        )
+        // Sem a fila, a pesquisa fica agendada no banco e não sai: não impede o fechamento.
+        .catch(() => undefined);
     return this.buscar(id);
   }
 

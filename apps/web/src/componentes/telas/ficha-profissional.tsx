@@ -20,6 +20,7 @@ import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { comparar, SeletorMes } from '../indicadores';
 import { useApp } from '../contexto-app';
 import { MandarMensagem } from '../mandar-mensagem';
+import { ComentarioDaPesquisa, ResumoDeNotas } from '../notas';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
 // ─── Período ──────────────────────────────────────────────────────────────
@@ -584,20 +585,34 @@ function Conteudo({ f, periodo }: { f: FichaProfissional; periodo: Periodo }) {
         titulo="Avaliações"
         pergunta="O que os clientes acham do atendimento."
       >
-        {f.avaliacoes ? (
-          <p className="font-denso text-3xl font-bold tabular-nums">
-            {f.avaliacoes.media.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}
-            <span className="ml-2 font-sans text-base font-normal text-tinta-suave">
-              de 5 · {f.avaliacoes.respostas} respostas
-            </span>
-          </p>
-        ) : (
+        {f.avaliacoes.enviadas === 0 && f.avaliacoes.respostas === 0 ? (
           <div className="flex items-start gap-3 rounded-lg border border-dashed border-borda-forte p-4 text-tinta-suave">
             <Star aria-hidden className="mt-0.5 size-5 shrink-0" />
             <p>
-              Em breve: depois de cada atendimento, o cliente dá uma nota de 1 a 5 pelo WhatsApp e
-              ela aparece aqui, com os comentários.
+              Nenhuma pesquisa no período. Uma hora depois de fechar a comanda, o cliente que aceita
+              avisos e já conversou com o WhatsApp da barbearia recebe a pergunta de 1 a 5.
             </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-[18rem_minmax(0,1fr)]">
+            <div className="flex flex-col gap-2">
+              <ResumoDeNotas titulo="Atendimento" resumo={f.avaliacoes} />
+              {f.avaliacoes.taxaResposta !== null && (
+                <p className="text-sm text-tinta-suave">
+                  {formatarFracao(f.avaliacoes.taxaResposta, 0)} responderam (
+                  {f.avaliacoes.respostas} de {f.avaliacoes.enviadas} pesquisas).
+                </p>
+              )}
+            </div>
+            {f.avaliacoes.comentarios.length === 0 ? (
+              <p className="text-tinta-suave">Sem comentários no período.</p>
+            ) : (
+              <ul className="flex flex-col gap-2" aria-label="Comentários dos clientes">
+                {f.avaliacoes.comentarios.map((c) => (
+                  <ComentarioDaPesquisa key={c.comandaId} c={c} />
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </Secao>

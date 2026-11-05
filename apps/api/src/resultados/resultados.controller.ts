@@ -10,10 +10,16 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { metaSchema, periodoSchema, type MetaEntrada } from '@pente-fino/shared';
+import {
+  metaSchema,
+  periodoSchema,
+  type MetaEntrada,
+  type ResumoAvaliacoes,
+} from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { Papeis } from '../auth/decoradores.js';
+import { resumoAvaliacoes } from '../avaliacoes/avaliacoes.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
 import { data, exigirUnidade, TODOS } from '../comum/escopo.js';
@@ -41,6 +47,16 @@ export class ResultadosController {
   })
   indicadores(@Consulta(periodoSchema) p: z.infer<typeof periodoSchema>) {
     return this.servico.indicadores(p.unidadeId, p.de, p.ate);
+  }
+
+  @Get('avaliacoes')
+  @Papeis('dono', 'gestor')
+  @ApiOperation({
+    summary: 'Notas do atendimento e da barbearia, notas baixas e comentários do período',
+  })
+  avaliacoes(@Consulta(periodoSchema) p: z.infer<typeof periodoSchema>): Promise<ResumoAvaliacoes> {
+    const { filtro } = escopoUnidades(p.unidadeId, ['dono', 'gestor']);
+    return this.banco.daConta((tx) => resumoAvaliacoes(tx, filtro, p.de, p.ate));
   }
 
   @Get('lucratividade')

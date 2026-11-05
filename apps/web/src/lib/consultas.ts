@@ -27,6 +27,7 @@ import type {
   PainelBarbeiro,
   RespostaIndicadores,
   RespostaLucratividade,
+  ResumoAvaliacoes,
   ResumoComissao,
 } from '@pente-fino/shared';
 
@@ -361,3 +362,11 @@ export const useEnvioParaCliente = (clienteId: string, ativo: boolean) =>
     queryFn: () => api<EnvioParaCliente>(`conversas/cliente/${clienteId}`),
     enabled: ativo,
   });
+
+/** Avaliações da barbearia no período (dono e gestor). */
+export function useAvaliacoes(unidade: string | null, de: string, ate: string) {
+  return useQuery({
+    queryKey: [...chavesResultados.indicadores, 'avaliacoes', unidade, de, ate],
+    queryFn: () => api<ResumoAvaliacoes>(`avaliacoes?de=${de}&ate=${ate}${comUnidade(unidade)}`),
+  });
+}

@@ -1,6 +1,7 @@
 // Bot do WhatsApp sem IA (linha de desenvolvimento, Etapa 10): um menu numerado, palavras-chave
 // e mensagens prontas que o dono escreve. Tudo aqui é puro: o simulador do painel e o WhatsApp
 // de verdade passam pelo mesmo `responder`.
+import { lerNota } from './avaliacao.js';
 import { formatarMoeda } from './formatacao.js';
 
 // ─── Menu ─────────────────────────────────────────────────────────────────
@@ -61,6 +62,7 @@ export const VARIAVEIS_BOT = {
   mapa: 'Link do endereço no mapa',
   horario: 'Horário de funcionamento, por extenso',
   link: 'Link de agendamento pelo site',
+  profissional: 'Primeiro nome de quem atendeu (só na pesquisa depois do atendimento)',
 } as const;
 export type VariavelBot = keyof typeof VARIAVEIS_BOT;
 
@@ -81,6 +83,10 @@ export const TIPOS_MENSAGEM_BOT = [
   'saida_avisos',
   'volta_avisos',
   'convite_avisos',
+  'pesquisa_atendimento',
+  'pesquisa_barbearia',
+  'pesquisa_comentario',
+  'pesquisa_obrigado',
 ] as const;
 export type TipoMensagemBot = (typeof TIPOS_MENSAGEM_BOT)[number];
 export type MensagensBot = Record<TipoMensagemBot, string>;
@@ -124,6 +130,20 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
     quando:
       'No fim da primeira conversa de um número que ainda não escolheu. Só quem responde RECEBER recebe lembretes.',
   },
+  pesquisa_atendimento: {
+    nome: 'Pesquisa: nota do atendimento',
+    quando:
+      'Uma hora depois de fechar a comanda, para quem aceitou avisos. Use {profissional} para o nome de quem atendeu.',
+  },
+  pesquisa_barbearia: {
+    nome: 'Pesquisa: nota da barbearia',
+    quando: 'Depois que o cliente dá a nota do atendimento.',
+  },
+  pesquisa_comentario: {
+    nome: 'Pesquisa: comentário',
+    quando: 'Depois da nota da barbearia. O cliente escreve ou responde 0 para terminar.',
+  },
+  pesquisa_obrigado: { nome: 'Pesquisa: agradecimento', quando: 'No fim da pesquisa.' },
 };
 
 export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
@@ -140,7 +160,16 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
   volta_avisos: 'Combinado! Você volta a receber os lembretes da {barbearia}.',
   convite_avisos:
     'Quer receber lembretes dos seus horários por aqui? Responda RECEBER. Para parar a qualquer momento, responda SAIR.',
+  pesquisa_atendimento:
+    'Oi, {cliente}! Obrigado pela visita na {barbearia}. De 1 a 5, que nota você dá para o atendimento de {profissional}? Responda só com o número.',
+  pesquisa_barbearia:
+    'Valeu! E de 1 a 5, que nota você dá para a barbearia (ambiente, recepção, pontualidade)?',
+  pesquisa_comentario: 'Quer deixar um comentário? Escreva aqui, ou responda 0 para terminar.',
+  pesquisa_obrigado: 'Obrigado pela avaliação! Ela ajuda a gente a melhorar.',
 };
+
+/** Resposta fora de 1 a 5 durante a pesquisa (uma vez só; na segunda, a pesquisa termina). */
+export const NOTA_NAO_ENTENDIDA = 'Responda só com um número de 1 a 5, por favor.';
 
 /** Menu que toda barbearia recebe pronto, para editar à vontade. */
 export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
@@ -391,6 +420,19 @@ export interface SessaoBot {
   comAtendente: boolean;
   /** Respostas seguidas que o bot não entendeu (sessões antigas não têm: conta 0). */
   erros?: number;
+  /** Pesquisa depois do atendimento em andamento: vale mesmo depois dos 30 min da sessão. */
+  pesquisa?: { avaliacaoId: string; passo: PassoPesquisa; erros?: number };
+}
+
+export type PassoPesquisa = 'atendimento' | 'barbearia' | 'comentario';
+
+/** O que gravar da pesquisa a cada resposta. */
+export interface RespostaPesquisa {
+  avaliacaoId: string;
+  notaAtendimento?: number;
+  notaBarbearia?: number;
+  comentario?: string | null;
+  concluida: boolean;
 }
 
 /** A partir deste erro seguido, o bot para de responder até o cliente acertar. */
@@ -419,6 +461,8 @@ export interface ResultadoConversa {
   acao: AcaoBot | null;
   /** true = voltou a aceitar avisos; false = pediu para sair. */
   consentimento: boolean | null;
+  /** Resposta da pesquisa depois do atendimento, para gravar na avaliação. */
+  avaliacao: RespostaPesquisa | null;
 }
 
 function menuNoCaminho(
@@ -524,6 +568,7 @@ export function responder(
     sessao,
     acao: null,
     consentimento: null,
+    avaliacao: null,
     ...extra,
   });
   // Conversa nova de quem ainda não escolheu: o convite fecha a primeira resposta.
@@ -532,9 +577,57 @@ export function responder(
       ? { ...r, respostas: [...r.respostas, msg('convite_avisos')].filter((t) => t.trim()) }
       : r;
 
-  // Avisos: valem sempre, até com atendente.
-  if (texto === 'sair') return resultado([msg('saida_avisos')], { consentimento: false });
+  // A pesquisa sobrevive à expiração da sessão (a resposta pode vir horas depois).
+  if (sessaoAnterior?.pesquisa) sessao.pesquisa = sessaoAnterior.pesquisa;
+
+  // Avisos: valem sempre, até com atendente. SAIR também encerra a pesquisa.
+  if (texto === 'sair') {
+    delete sessao.pesquisa;
+    return resultado([msg('saida_avisos')], { consentimento: false });
+  }
   if (texto === 'receber') return resultado([msg('volta_avisos')], { consentimento: true });
+
+  // Pesquisa depois do atendimento: nota do atendimento → da barbearia → comentário.
+  const pesquisa = sessao.pesquisa;
+  if (pesquisa) {
+    const { avaliacaoId } = pesquisa;
+    if (pesquisa.passo === 'comentario') {
+      delete sessao.pesquisa;
+      const pular = ['0', 'nao', 'n', 'pular', 'nada', 'nenhum', 'sem comentario'].includes(texto);
+      return resultado([msg('pesquisa_obrigado')], {
+        avaliacao: {
+          avaliacaoId,
+          comentario: pular || !entrada.trim() ? null : entrada.trim().slice(0, 500),
+          concluida: true,
+        },
+      });
+    }
+    const nota = lerNota(entrada);
+    if (nota !== null) {
+      sessao.pesquisa =
+        pesquisa.passo === 'atendimento'
+          ? { avaliacaoId, passo: 'barbearia' }
+          : { avaliacaoId, passo: 'comentario' };
+      return resultado(
+        [msg(pesquisa.passo === 'atendimento' ? 'pesquisa_barbearia' : 'pesquisa_comentario')],
+        {
+          avaliacao: {
+            avaliacaoId,
+            ...(pesquisa.passo === 'atendimento'
+              ? { notaAtendimento: nota }
+              : { notaBarbearia: nota }),
+            concluida: false,
+          },
+        },
+      );
+    }
+    // Não é nota: pede de novo uma vez; na segunda, larga a pesquisa e segue o menu.
+    if (!pesquisa.erros) {
+      sessao.pesquisa = { ...pesquisa, erros: 1 };
+      return resultado([NOTA_NAO_ENTENDIDA]);
+    }
+    delete sessao.pesquisa;
+  }
 
   // Com atendente, quem responde é a recepção.
   if (sessao.comAtendente) return resultado([]);

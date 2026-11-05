@@ -822,6 +822,64 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     });
   }
 
+  // Avaliações depois do atendimento: as comandas fechadas mais recentes, quase todas boas,
+  // algumas com comentário e duas notas baixas para a tela "para resolver".
+  const COMENTARIOS = [
+    'Corte ficou perfeito, como sempre.',
+    'Atendimento top, ambiente muito bom.',
+    'Gostei, mas atrasou uns 15 minutos.',
+    'Barba impecável!',
+    null,
+    null,
+    null,
+  ];
+  const avaliadas = await tx.comanda.findMany({
+    where: { status: 'fechada', clienteId: { not: null } },
+    orderBy: { fechadaEm: 'desc' },
+    take: 60,
+    include: { cliente: true },
+  });
+  const jaAvaliado = new Set<string>();
+  let baixas = 0;
+  for (const c of avaliadas) {
+    if (!c.cliente?.telefone || jaAvaliado.has(c.cliente.id) || !c.fechadaEm) continue;
+    jaAvaliado.add(c.cliente.id);
+    const enviadaEm = new Date(c.fechadaEm.getTime() + 60 * 60_000);
+    const respondeu = chance(0.7);
+    const baixa = respondeu && baixas < 2 && chance(0.1);
+    if (baixa) baixas += 1;
+    const notaAtendimento = baixa
+      ? 2
+      : sortearPeso([
+          [5, 6],
+          [4, 3],
+          [3, 1],
+        ] as const);
+    await tx.avaliacao.create({
+      data: {
+        unidadeId: c.unidadeId,
+        comandaId: c.id,
+        profissionalId: c.profissionalId,
+        clienteId: c.cliente.id,
+        telefone: c.cliente.telefone,
+        status: respondeu ? 'respondida' : 'enviada',
+        enviarEm: enviadaEm,
+        enviadaEm,
+        expiraEm: new Date(enviadaEm.getTime() + 48 * 3_600_000),
+        ...(respondeu
+          ? {
+              notaAtendimento,
+              notaBarbearia: baixa ? 3 : Math.max(3, notaAtendimento - (chance(0.3) ? 1 : 0)),
+              comentario: baixa
+                ? 'Esperei muito e o corte não ficou como pedi.'
+                : sortear(COMENTARIOS),
+              respondidaEm: new Date(enviadaEm.getTime() + 20 * 60_000),
+            }
+          : {}),
+      },
+    });
+  }
+
   // Todos os usuários da demonstração entram com a mesma senha (argon2id).
   await tx.usuario.updateMany({ data: { senhaHash: await hash(SENHA_DEMO) } });
 
