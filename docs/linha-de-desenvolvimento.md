@@ -287,7 +287,7 @@ Pedidos do dono depois de testar o sistema. Entram antes da Etapa 11, porque vá
 - [x] Serviços: mais consumidos (quantidade, atendimentos e receita), ao lado do lucro por serviço que já existe ("Serviços: lucro e procura", com "Ordenar por: mais lucro / mais consumidos" e a coluna "Procura", a fatia de cada serviço no total do mês)
 - [ ] Avaliação do barbeiro e avaliação da barbearia (atendimento, ambiente): adiantar da Etapa 12 a tabela `avaliacao`, a pesquisa pelo bot depois do fechamento, a nota na ficha do profissional e no ranking da Equipe, e a nota da barbearia no Início e nas Métricas
 
-**Assinatura do sistema**
+**Assinatura do sistema** (o lado do dono; o do admin e do vendedor fica na Etapa 15.1)
 
 - [ ] Conta de teste para a cobrança: no seed, uma conta com teste vencido (`expirado@demo.pentefino.dev`) e uma com fatura recusada, para testar o sistema bloqueado sem esperar 14 dias. Ambiente sandbox do Asaas no `.env.example` (adianta parte da Etapa 23)
 - [ ] Bloqueio suave ao fim do teste ou com fatura em atraso: o sistema fica só leitura, com aviso e botão para assinar; nunca apaga dado
@@ -364,6 +364,13 @@ Horário vago vira atendimento sem a recepção pegar o telefone.
 - [ ] Bloqueio recorrente (almoço toda terça) e férias do profissional
 - [ ] Ocupação por unidade, profissional e faixa de horário (com a capacidade da unidade) no Início e na ficha do profissional
 - [ ] Mapa da semana com os horários mais vazios e mais cheios, para decidir escala e promoções
+- [ ] **Avisar se vagar antes** (pedido em 2026-11-05): depois de agendar, o bot pergunta "quer que eu avise se vagar um horário antes do seu?" **só quando o cliente foi empurrado para depois**, e entra na lista de espera dos horários anteriores daquele dia
+  - Pergunta quando todos os horários do dia **antes** do escolhido estavam ocupados (a partir da abertura, ou de agora com a antecedência mínima, se for hoje), para o profissional escolhido, ou para todos em "sem preferência"
+  - Não pergunta: dia com horários livres antes do escolhido (ele escolheu por preferência); escolheu entre horários livres; marcou o primeiro horário do dia (não há como antecipar); já está na lista daquele dia
+  - Regra pura em `packages/shared` (`deveOferecerAntecipar`), com teste para cada caso acima, usando a mesma grade de horários livres do agendamento
+  - Vale para agendamento pelo bot (a conversa está aberta) e pelo site (só se marcou que aceita mensagens); pelo balcão, a recepção marca na hora
+  - Quando vaga um horário antes (cancelamento ou falta avisada), oferece em ordem para quem pediu; o primeiro que responder "1" leva e o horário dele é liberado para a lista; os outros recebem "já foi preenchido". Mesma proteção do número (fila espaçada, nada para quem não aceitou)
+  - Resposta "não": não pergunta de novo naquele agendamento
 - [ ] **Pronto quando:** um cancelamento vira atendimento de alguém da lista de espera sem a recepção intervir
 
 ## Etapa 15 · Avisos, rotinas, rede e planos
@@ -380,6 +387,45 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 - [ ] Ficha do profissional, avaliações, canais de agendamento e lista de espera incluídos em `RECURSOS_PLANO` e no comparativo de `/planos`
 - [ ] Troca de plano pelo próprio dono, conferindo os limites antes de descer
 - [ ] **Pronto quando:** cada papel recebe só os avisos dele, e uma conta Básico não usa recurso do Pro nem pela tela nem pela API
+
+## Etapa 15.1 · Administração do sistema (pedido em 2026-11-05)
+
+Área de quem opera o Pente Fino, separada das barbearias: acompanhar as contas, vender e ativar pessoalmente, cobrar e configurar o sistema. Vem antes do servidor porque o piloto (Etapa 22) e a venda presencial dependem dela.
+
+**Acesso e segurança**
+
+- [ ] Papéis da plataforma, fora das contas: `admin` (tudo) e `vendedor` (cria conta, registra pagamento, vê só as contas dele). Tabela `usuario_plataforma` sem `conta_id`; nunca reaproveita o login da barbearia
+- [ ] Endereço próprio (`/admin`), login com segundo fator obrigatório (código no aplicativo autenticador), sessão curta e IP registrado
+- [ ] Leitura entre contas sem furar o RLS: funções `SECURITY DEFINER` só para o que o painel precisa (contagens, plano, status, datas), com um usuário de banco próprio; o admin **não** abre comanda, cliente nem conversa de barbearia
+- [ ] Toda ação do admin e do vendedor fica numa auditoria da plataforma (quem, quando, conta, antes e depois)
+
+**Métricas do negócio**
+
+- [ ] Contas novas por dia, semana e mês; em teste, ativas, em atraso, bloqueadas e canceladas
+- [ ] Receita recorrente do mês (MRR), por plano e por forma de cobrança; ticket médio; previsão do próximo mês
+- [ ] Conversão do teste em assinatura, cancelamentos do mês (churn) e motivo informado; recorrência (contas que renovaram)
+- [ ] Uso por conta, para ver quem está em risco: comandas fechadas nos últimos 7 dias, último acesso, WhatsApp conectado ou não
+- [ ] Vendas por vendedor (contas criadas, ativadas e pagas)
+
+**Contas e cobrança**
+
+- [ ] Lista de contas com busca e filtros (plano, status, vencimento, vendedor); ficha da conta com dono, unidades, profissionais, plano, datas e histórico de cobrança
+- [ ] Mudar plano, mensal ou anual, e a data de expiração (estender teste, dar cortesia), com motivo obrigatório; os limites do plano seguem valendo pela API
+- [ ] Criar conta pela venda presencial: dados da barbearia e do dono, plano e período; o dono recebe o convite por e-mail e WhatsApp para criar a senha e entra direto na configuração guiada
+- [ ] Registrar pagamento manual: forma (Pix, dinheiro, cartão na maquininha, boleto, transferência), valor, data, período coberto, comprovante opcional e quem recebeu; o vencimento anda sozinho. Tabela `pagamento_assinatura` (manual ou Asaas, na mesma lista)
+- [ ] Como a conta é cobrada: Asaas automático ou manual pelo vendedor; a conta manual recebe aviso antes de vencer e entra no mesmo bloqueio suave
+- [ ] Bloquear, desbloquear e cancelar conta (só leitura, nunca apaga dado), com motivo; exportar os dados para quem cancela
+
+**Configurações do sistema**
+
+- [ ] E-mail: remetente, servidor de envio (SMTP) e um botão "mandar e-mail de teste"; a senha do SMTP fica cifrada e nunca volta para a tela (hoje vem do `.env`; o `.env` continua valendo como reserva)
+- [ ] Modelos de e-mail editáveis com variáveis e pré-visualização: boas-vindas e ativação da conta, convite da equipe, recuperação de senha, aviso de fim do teste, cobrança vencida, pagamento recebido
+- [ ] Planos e preços (Básico, Pro, Premium, mensal e anual, unidade extra) e cupons (como o do plano fundador), com vigência: mudar preço não altera quem já assinou
+- [ ] Duração do teste grátis e textos do cadastro (termos, política de privacidade em vigor)
+- [ ] Aviso geral para todas as contas (manutenção programada, novidade), com data de início e fim
+- [ ] Saúde do sistema: filas (e-mail, WhatsApp), conexões do WhatsApp caídas por conta, erros recentes
+
+- [ ] **Pronto quando:** um vendedor cria uma conta na rua, registra o Pix na hora, o dono recebe o convite e entra; o admin vê a conta nova nas métricas, muda o plano com motivo e tudo fica na auditoria, sem nunca ver um dado de cliente da barbearia
 
 ## Etapa 16 · Preparação da VPS
 
