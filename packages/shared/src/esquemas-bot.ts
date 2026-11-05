@@ -80,7 +80,16 @@ export type HorarioBotEntrada = z.infer<typeof horarioBotSchema>;
 
 /** Agendamento em andamento no simulador (o painel devolve a sessão a cada mensagem). */
 const agendaSchema = z.object({
-  passo: z.enum(['servico', 'profissional', 'dia', 'horario', 'confirmar']),
+  passo: z.enum([
+    'servico',
+    'profissional',
+    'dia',
+    'horario',
+    'confirmar',
+    'meus',
+    'acao',
+    'cancelar',
+  ]),
   servicoIds: z.array(z.uuid()).max(10),
   profissionalId: z.uuid().nullable(),
   dia: z
@@ -93,6 +102,7 @@ const agendaSchema = z.object({
     .object({ inicio: z.iso.datetime({ offset: true }), profissionalId: z.uuid() })
     .nullable(),
   erros: z.number().int().min(0).max(5),
+  remarcarId: z.uuid().nullable().default(null),
 });
 
 const sessaoSchema: z.ZodType<SessaoBot> = z.object({

@@ -313,10 +313,10 @@ O cliente escolhe por onde quer marcar: conversando com o bot ou pelo link. Os d
 - [x] Mais de um serviço no mesmo horário (corte + barba), somando a duração (feito: "1 e 3" na lista de serviços)
 - [ ] Link do site vindo do bot com o telefone já preenchido por um token curto e de uso único, sem dado pessoal na URL
 - [x] Horário disputado: se outro cliente confirmar antes, o bot avisa e oferece os próximos livres (o banco já impede sobreposição) (feito: na confirmação, se o horário foi ocupado, avisa e mostra os que sobraram do mesmo dia)
-- [ ] "Meus horários": o cliente vê os próximos agendamentos e remarca ou cancela pela conversa ou pelo link de gerenciamento enviado na confirmação, dentro do prazo da unidade
+- [x] "Meus horários": o cliente vê os próximos agendamentos e remarca ou cancela pela conversa ou pelo link de gerenciamento enviado na confirmação, dentro do prazo da unidade (feito pela conversa: opção no menu padrão e palavras-chave "meus horários", "remarcar", "desmarcar"; remarcar reaproveita o passo a passo com os mesmos serviços e profissional; cancelar pede confirmação, libera o horário sem contar falta e fica na auditoria como "pelo cliente"; menos de 2 h antes, com a recepção. Falta o link de gerenciamento pelo site)
 - [ ] No site, caixa para aceitar receber lembretes pelo WhatsApp
 - [ ] Lembretes (proposta: 24 h e 2 h antes, configuráveis) para quem aceitou, com "1 Confirmo · 2 Remarcar · 3 Cancelar"; a resposta muda o agendamento e a agenda mostra quem confirmou
-- [ ] Cancelamento pelo cliente libera o horário e cancela a comanda prevista sem contar como falta; a falta continua sendo marcada pela recepção
+- [x] Cancelamento pelo cliente libera o horário e cancela a comanda prevista sem contar como falta; a falta continua sendo marcada pela recepção (pela conversa; `cancelarPeloCliente` em `packages/db/src/agenda.ts`)
 - [ ] Cliente com muitas faltas (proposta: 3 em 90 dias) só agenda falando com a recepção
 - [ ] Falar com atendente: pausa o bot naquele número e avisa a recepção; o bot volta quando a recepção encerra, ou depois de 2 horas sem resposta, avisando o cliente
 - [ ] Tela Conversas (recepção e gestor): caixa de entrada da unidade, quem está com atendente, responder pelo painel, assumir e devolver ao bot, atalhos para agendar e abrir o cliente

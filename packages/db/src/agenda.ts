@@ -210,3 +210,74 @@ export async function criarAgendamentoNoBanco(
   });
   return { comandaId: comanda.id, agendamentoId: ag.id, fim, total };
 }
+
+/**
+ * Muda o horário (e o profissional) de um agendamento que ainda não começou. Confere
+ * expediente e choque, ignorando o próprio horário; a comanda prevista e os itens acompanham.
+ */
+export async function moverAgendamento(
+  tx: Tx,
+  agendamentoId: string,
+  inicio: Date,
+  profissionalId?: string,
+) {
+  const ag = await tx.agendamento.findUnique({
+    where: { id: agendamentoId },
+    include: { comanda: true },
+  });
+  if (!ag) throw new ErroAgenda('nao_encontrado', 'Agendamento não encontrado.');
+  if (!ag.comanda || ag.comanda.status !== 'prevista')
+    throw new ErroAgenda('conflito', 'Só dá para remarcar antes de o atendimento começar.');
+  const fim = new Date(inicio.getTime() + (ag.fim.getTime() - ag.inicio.getTime()));
+  const prof = profissionalId ?? ag.profissionalId;
+  await validarHorario(tx, prof, ag.unidadeId, inicio, fim, ag.id);
+  await tx.agendamento.update({
+    where: { id: ag.id },
+    data: { inicio, fim, profissionalId: prof },
+  });
+  await tx.comanda.update({ where: { id: ag.comanda.id }, data: { profissionalId: prof } });
+  await tx.itemComanda.updateMany({
+    where: { comandaId: ag.comanda.id, profissionalId: { not: null } },
+    data: { profissionalId: prof },
+  });
+  return {
+    antes: { inicio: ag.inicio, profissionalId: ag.profissionalId },
+    comandaId: ag.comanda.id,
+    unidadeId: ag.unidadeId,
+  };
+}
+
+/**
+ * O cliente cancelou (pela conversa ou pelo link): libera o horário e cancela a comanda
+ * prevista sem contar como falta. Fica na auditoria sem usuário (foi o cliente).
+ */
+export async function cancelarPeloCliente(tx: Tx, agendamentoId: string, canal: string) {
+  const ag = await tx.agendamento.findUnique({
+    where: { id: agendamentoId },
+    include: { comanda: true },
+  });
+  if (!ag) throw new ErroAgenda('nao_encontrado', 'Agendamento não encontrado.');
+  if (
+    !['agendado', 'confirmado'].includes(ag.status) ||
+    (ag.comanda && ag.comanda.status !== 'prevista')
+  )
+    throw new ErroAgenda('conflito', 'Este horário não pode mais ser cancelado por aqui.');
+  const motivo = `Cancelado pelo cliente (${canal})`;
+  await tx.agendamento.update({ where: { id: ag.id }, data: { status: 'cancelado' } });
+  if (ag.comanda)
+    await tx.comanda.update({
+      where: { id: ag.comanda.id },
+      data: { status: 'cancelada', canceladaEm: new Date(), motivoCancelamento: motivo },
+    });
+  await tx.auditoria.create({
+    data: {
+      usuarioId: null,
+      entidade: 'agendamento',
+      entidadeId: ag.id,
+      acao: 'cancelar_pelo_cliente',
+      antes: { status: ag.status, inicio: ag.inicio.toISOString() },
+      depois: { status: 'cancelado' },
+      motivo,
+    },
+  });
+}

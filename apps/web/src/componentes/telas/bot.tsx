@@ -114,7 +114,9 @@ const OPCOES_O_QUE_FAZ = (comSubmenu: boolean) => [
   ...(comSubmenu ? [{ valor: 'submenu', rotulo: 'Abrir outro menu' }] : []),
 ];
 const DICA_ACAO: Record<AcaoBot, string> = {
-  agendar: 'O bot manda o texto e o link de agendamento da unidade.',
+  agendar:
+    'O bot marca pela conversa (serviço, profissional, dia e horário); sem serviço com preço ou profissional, manda o link do site.',
+  meus_horarios: 'O bot mostra os horários marcados do cliente e deixa remarcar ou cancelar.',
   ver_precos: 'O bot manda o texto e a tabela de preços vigente da unidade.',
   endereco: 'Use {endereco} e {horario} no texto.',
   falar_com_atendente: 'O bot avisa e fica quieto até a recepção devolver a conversa.',

@@ -180,3 +180,69 @@ describe('agendar pela conversa', () => {
     expect(await fala(t4, '1')).toContain('Você já tem horários marcados com a gente');
   });
 });
+
+describe('meus horários', () => {
+  /** Cliente com um horário marcado (pelo balcão) no instante informado. */
+  async function comHorario(telefone: string, iso: string) {
+    await fala(telefone, 'oi');
+    return naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone } });
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: c.id,
+        inicio: new Date(iso),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      return r.agendamentoId;
+    });
+  }
+
+  it('remarcar: mesmo serviço e profissional, novo horário, na auditoria', async () => {
+    const id = await comHorario('5511977775555', '2026-12-02T13:00:00Z'); // amanhã 10:00
+    const acoes = await fala('5511977775555', 'meus horários');
+    expect(acoes).toContain('📅 Amanhã (qua, 02/12), às 10:00 · Corte com Rafael');
+    expect(acoes).toContain('1. Remarcar\n2. Cancelar');
+    expect(await fala('5511977775555', '1')).toContain('Qual dia fica melhor?');
+    await fala('5511977775555', '3'); // quinta, 03/12
+    await fala('5511977775555', '2'); // 09:45 (09:00 ocupado por outro cliente)
+    const pronto = await fala('5511977775555', '1');
+    expect(pronto).toContain('Pronto, horário remarcado! ✅');
+    const ag = await naMinhaConta((tx) => tx.agendamento.findUniqueOrThrow({ where: { id } }));
+    expect(ag.inicio.toISOString()).toBe('2026-12-03T12:45:00.000Z');
+    expect(ag.status).toBe('agendado');
+    const audit = await naMinhaConta((tx) =>
+      tx.auditoria.count({ where: { entidadeId: id, acao: 'remarcar_pelo_cliente' } }),
+    );
+    expect(audit).toBe(1);
+  });
+
+  it('cancelar: pede confirmação, libera o horário e não conta como falta', async () => {
+    const id = await comHorario('5511977776666', '2026-12-04T13:00:00Z');
+    await fala('5511977776666', 'desmarcar');
+    expect(await fala('5511977776666', '2')).toContain('1. Sim, cancelar\n2. Não, manter');
+    expect(await fala('5511977776666', '1')).toContain('Pronto, horário cancelado.');
+    const ag = await naMinhaConta((tx) =>
+      tx.agendamento.findUniqueOrThrow({ where: { id }, include: { comanda: true } }),
+    );
+    expect(ag.status).toBe('cancelado');
+    expect(ag.comanda).toMatchObject({
+      status: 'cancelada',
+      motivoCancelamento: 'Cancelado pelo cliente (WhatsApp)',
+    });
+  });
+
+  it('em cima da hora (menos de 2 h): manda falar com a recepção', async () => {
+    await comHorario('5511977777777', '2026-12-01T13:00:00Z'); // hoje 10:00, agora são 09:00
+    expect(await fala('5511977777777', 'meu horário')).toContain(
+      'Seu horário é daqui a pouco (10:00). Para mudar agora, responda ATENDENTE.',
+    );
+  });
+
+  it('sem horário marcado: convida a agendar', async () => {
+    await fala('5511977778888', 'oi');
+    expect(await fala('5511977778888', '4')).toContain('Você não tem horário marcado com a gente.');
+  });
+});

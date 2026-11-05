@@ -42,7 +42,7 @@ test('dono edita, testa o rascunho, publica e volta à versão anterior', async 
   // Sem resposta, não publica.
   await expect(visivel(page.getByText('Corrija antes de publicar:'))).toBeVisible();
   await expect(visivel(page.getByRole('button', { name: 'Publicar' }))).toBeDisabled();
-  await visivel(page.getByLabel('Resposta')).nth(4).fill('Corte ilimitado por R$ 99,90 ao mês.');
+  await visivel(page.getByLabel('Resposta')).nth(5).fill('Corte ilimitado por R$ 99,90 ao mês.');
   await expect(visivel(page.getByText('Corrija antes de publicar:'))).toHaveCount(0);
   await visivel(page.getByRole('button', { name: 'Salvar rascunho' })).click();
   await expect(visivel(page.getByText('Rascunho salvo.'))).toBeVisible();
@@ -51,7 +51,7 @@ test('dono edita, testa o rascunho, publica e volta à versão anterior', async 
   await visivel(page.getByLabel('Mensagem do cliente')).fill('oi');
   await visivel(page.getByRole('button', { name: 'Enviar' })).click();
   await expect(visivel(page.getByRole('log', { name: 'Conversa de teste' }))).toContainText(
-    '5. Conhecer o clube',
+    '6. Conhecer o clube',
   );
 
   await page.getByRole('tab', { name: 'Menu' }).click();
@@ -62,7 +62,7 @@ test('dono edita, testa o rascunho, publica e volta à versão anterior', async 
     page.getByRole('dialog').getByRole('button', { name: 'Usar a versão anterior' }),
   ).click();
   await expect(visivel(page.getByText('Versão anterior publicada.'))).toBeVisible();
-  await expect(visivel(page.getByLabel('Nome na lista'))).toHaveCount(4);
+  await expect(visivel(page.getByLabel('Nome na lista'))).toHaveCount(5);
 });
 
 test('gestor vê e testa, mas não edita o menu', async ({ page }) => {

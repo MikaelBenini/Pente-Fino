@@ -12,7 +12,19 @@ export const DIAS_POR_VEZ = 6;
 /** Quantos horários por página ("7. Ver mais horários"). */
 export const HORARIOS_POR_VEZ = 6;
 
-export type PassoAgenda = 'servico' | 'profissional' | 'dia' | 'horario' | 'confirmar';
+/** Até quanto tempo antes o cliente remarca ou cancela sozinho; depois, com a recepção. */
+export const PRAZO_MUDAR_MIN = 120;
+
+export type PassoAgenda =
+  | 'servico'
+  | 'profissional'
+  | 'dia'
+  | 'horario'
+  | 'confirmar'
+  // "Meus horários": escolher qual, o que fazer e confirmar o cancelamento.
+  | 'meus'
+  | 'acao'
+  | 'cancelar';
 
 /** Estado do agendamento guardado na sessão do número. */
 export interface AgendaNaConversa {
@@ -29,6 +41,8 @@ export interface AgendaNaConversa {
   escolha: { inicio: string; profissionalId: string } | null;
   /** Respostas seguidas que não serviram neste passo. */
   erros: number;
+  /** Remarcando este agendamento (null = marcando um novo). */
+  remarcarId: string | null;
 }
 
 export const agendaNova = (): AgendaNaConversa => ({
@@ -40,6 +54,7 @@ export const agendaNova = (): AgendaNaConversa => ({
   pagina: 0,
   escolha: null,
   erros: 0,
+  remarcarId: null,
 });
 
 const POR_EXTENSO: Readonly<Record<string, number>> = {
@@ -180,5 +195,62 @@ export function textoMarcado(r: ResumoAgendamento, barbearia: string): string {
     `📅 ${quando(r)}`,
     '',
     `Te esperamos na ${barbearia}. Precisa mudar? Responda ATENDENTE.`,
+  ].join('\n');
+}
+
+// ─── Meus horários ────────────────────────────────────────────────────────
+
+export interface HorarioDoCliente {
+  inicio: string;
+  servicos: readonly string[];
+  profissional: string;
+}
+
+const linhaDoHorario = (h: HorarioDoCliente, hoje: string) =>
+  `${rotuloDoDia(diaLocal(h.inicio), hoje)}, às ${formatarHora(h.inicio)} · ${h.servicos.join(' + ')} com ${h.profissional}`;
+
+/** Dia em São Paulo (AAAA-MM-DD) de um instante ISO, sem depender de Intl (-03:00 fixo). */
+function diaLocal(iso: string): string {
+  return new Date(new Date(iso).getTime() - 3 * 3_600_000).toISOString().slice(0, 10);
+}
+
+export function textoMeusHorarios(horarios: readonly HorarioDoCliente[], hoje: string): string {
+  return [
+    'Seus horários marcados:',
+    '',
+    lista(horarios.map((h) => linhaDoHorario(h, hoje))),
+    '',
+    'Responda o número para remarcar ou cancelar, ou 0 para voltar ao menu.',
+  ].join('\n');
+}
+
+export function textoAcoesDoHorario(h: HorarioDoCliente, hoje: string): string {
+  return [
+    `📅 ${linhaDoHorario(h, hoje)}`,
+    '',
+    '1. Remarcar',
+    '2. Cancelar',
+    '0. Voltar ao menu',
+  ].join('\n');
+}
+
+export function textoConfirmarCancelamento(h: HorarioDoCliente, hoje: string): string {
+  return [
+    `Cancelar o horário de ${linhaDoHorario(h, hoje)}?`,
+    '',
+    '1. Sim, cancelar',
+    '2. Não, manter',
+  ].join('\n');
+}
+
+export function textoRemarcado(r: ResumoAgendamento, barbearia: string): string {
+  return [
+    'Pronto, horário remarcado! ✅',
+    '',
+    `✂️ ${r.servicos.join(' + ')}`,
+    `💈 Com ${r.profissional}`,
+    `📅 ${quando(r)}`,
+    '',
+    `Te esperamos na ${barbearia}.`,
   ].join('\n');
 }
