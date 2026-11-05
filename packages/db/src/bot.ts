@@ -245,8 +245,8 @@ export async function responderComAgenda(
   }
 
   const r = responder(d.menu, d.mensagens, base, d.entrada, d.ctx);
-  if (r.acao !== 'agendar' || !d.ctx.agendarPelaConversa) return r;
-  const p = await passoDaAgenda(tx, null, null, d.dados);
+  if ((r.acao !== 'agendar' && r.acao !== 'meus_horarios') || !d.ctx.agendarPelaConversa) return r;
+  const p = await passoDaAgenda(tx, null, null, d.dados, r.acao);
   return {
     ...r,
     respostas: [...r.respostas, ...p.respostas],

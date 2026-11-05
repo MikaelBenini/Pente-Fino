@@ -4,6 +4,7 @@ import {
   criarAgendamentoNoBanco,
   duracaoDosServicos,
   ErroAgenda,
+  moverAgendamento,
   validarHorario,
   type Transacao,
 } from '@pente-fino/db';
@@ -221,35 +222,19 @@ export class AgendaService {
 
   async remarcar(agendamentoId: string, novoInicio: string, profissionalId?: string) {
     const comandaId = await this.banco.daConta(async (tx) => {
-      const ag = await tx.agendamento.findUnique({
-        where: { id: agendamentoId },
-        include: { comanda: true },
-      });
+      const ag = await tx.agendamento.findUnique({ where: { id: agendamentoId } });
       if (!ag) throw Erros.naoEncontrado('Agendamento não encontrado.');
       exigirUnidade(ag.unidadeId, [...BALCAO]);
-      if (!ag.comanda || ag.comanda.status !== 'prevista')
-        throw Erros.conflito('Só dá para remarcar antes de o atendimento começar.');
       const inicio = new Date(novoInicio);
-      const fim = new Date(inicio.getTime() + (ag.fim.getTime() - ag.inicio.getTime()));
-      const prof = profissionalId ?? ag.profissionalId;
-      await this.validarHorario(tx, prof, ag.unidadeId, inicio, fim, ag.id);
-      await tx.agendamento.update({
-        where: { id: ag.id },
-        data: { inicio, fim, profissionalId: prof },
-      });
-      await tx.comanda.update({ where: { id: ag.comanda.id }, data: { profissionalId: prof } });
-      await tx.itemComanda.updateMany({
-        where: { comandaId: ag.comanda.id, profissionalId: { not: null } },
-        data: { profissionalId: prof },
-      });
+      const r = await traduzir(() => moverAgendamento(tx, ag.id, inicio, profissionalId));
       await auditar(tx, {
         entidade: 'agendamento',
         entidadeId: ag.id,
         acao: 'remarcar',
-        antes: { inicio: ag.inicio, profissionalId: ag.profissionalId },
-        depois: { inicio, profissionalId: prof },
+        antes: r.antes,
+        depois: { inicio, profissionalId: profissionalId ?? ag.profissionalId },
       });
-      return ag.comanda.id;
+      return r.comandaId;
     });
     return this.comandas.buscar(comandaId);
   }

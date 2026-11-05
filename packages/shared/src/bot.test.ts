@@ -53,7 +53,7 @@ describe('texto', () => {
 
   it('monta o menu numerado, com 0 só nos submenus', () => {
     expect(textoDoMenu(MENU_BOT_PADRAO.menu, {}, false)).toBe(
-      'Como posso ajudar?\n\n1. Agendar horário\n2. Ver preços\n3. Endereço e horário\n4. Falar com um atendente',
+      'Como posso ajudar?\n\n1. Agendar horário\n2. Ver preços\n3. Endereço e horário\n4. Meus horários (remarcar ou cancelar)\n5. Falar com um atendente',
     );
     expect(
       textoDoMenu({ texto: 'Qual?', opcoes: MENU_BOT_PADRAO.menu.opcoes.slice(0, 1) }, {}, true),
@@ -110,7 +110,7 @@ describe('conversa', () => {
     const r = fala(s, '7');
     expect(r.respostas).toEqual([
       'Não entendi. Responda com o número de uma das opções:\n\n' +
-        '1. Agendar horário\n2. Ver preços\n3. Endereço e horário\n4. Falar com um atendente',
+        '1. Agendar horário\n2. Ver preços\n3. Endereço e horário\n4. Meus horários (remarcar ou cancelar)\n5. Falar com um atendente',
     ]);
     expect(r.sessao.erros).toBe(1);
   });
@@ -177,7 +177,7 @@ describe('conversa', () => {
 
   it('atendente: o bot fica quieto até a recepção devolver', () => {
     const s = fala(null, 'oi').sessao;
-    const r = fala(s, '4');
+    const r = fala(s, '5');
     expect(r.sessao.comAtendente).toBe(true);
     expect(fala(r.sessao, 'alô?').respostas).toEqual([]);
   });

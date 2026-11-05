@@ -9,6 +9,7 @@ import { formatarMoeda } from './formatacao.js';
 
 export const ACOES_BOT = [
   'agendar',
+  'meus_horarios',
   'ver_precos',
   'endereco',
   'falar_com_atendente',
@@ -18,6 +19,7 @@ export type AcaoBot = (typeof ACOES_BOT)[number];
 
 export const NOME_ACAO_BOT: Readonly<Record<AcaoBot, string>> = {
   agendar: 'Agendar horário',
+  meus_horarios: 'Ver, remarcar ou cancelar os horários marcados',
   ver_precos: 'Mostrar a tabela de preços',
   endereco: 'Endereço e horário de funcionamento',
   falar_com_atendente: 'Passar para um atendente',
@@ -199,6 +201,13 @@ export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
         submenu: null,
       },
       {
+        id: 'meus-horarios',
+        rotulo: 'Meus horários (remarcar ou cancelar)',
+        resposta: '',
+        acao: 'meus_horarios',
+        submenu: null,
+      },
+      {
         id: 'atendente',
         rotulo: 'Falar com um atendente',
         resposta: 'Certo! Um atendente vai responder por aqui assim que possível.',
@@ -213,6 +222,20 @@ export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
       palavras: ['preço', 'preços', 'valor', 'quanto custa', 'tabela'],
       resposta: 'Nossos preços:',
       acao: 'ver_precos',
+    },
+    {
+      // Antes de "agendar": "meu horário" também contém "horário".
+      id: 'kw-meus-horarios',
+      palavras: [
+        'meus horários',
+        'meu horário',
+        'remarcar',
+        'desmarcar',
+        'cancelar horário',
+        'mudar horário',
+      ],
+      resposta: '',
+      acao: 'meus_horarios',
     },
     {
       id: 'kw-agendar',
@@ -693,6 +716,13 @@ export function responder(
             'Digite 0 para ver o menu.',
           ],
           { acao: ctx.link ? acao : 'falar_com_atendente' },
+        );
+      case 'meus_horarios':
+        // Quem chamou mostra os horários (remarcar ou cancelar pela conversa).
+        if (ctx.agendarPelaConversa) return resultado([...abertura, corpo], { acao });
+        return resultado(
+          [...abertura, corpo || 'Para ver ou mudar o seu horário, responda ATENDENTE.'],
+          { acao },
         );
       case 'falar_com_atendente':
         sessao.comAtendente = true;

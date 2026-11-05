@@ -94,7 +94,7 @@ describe('bot: rascunho, publicar e voltar', () => {
     const r = await dono.put('/bot/menu', novo).expect(200);
     expect(r.body.problemas).toEqual([]);
     const rasc = (await simular(dono, 'oi').expect(200)).body as RespostaSimulacao;
-    expect(rasc.respostas[1]).toContain('5. Conhecer o clube');
+    expect(rasc.respostas[1]).toContain('6. Conhecer o clube');
     const pub = (await simular(dono, 'oi', { versao: 'publicado' }).expect(200))
       .body as RespostaSimulacao;
     expect(pub.respostas[1]).not.toContain('Conhecer o clube');
@@ -103,7 +103,7 @@ describe('bot: rascunho, publicar e voltar', () => {
   it('publica e depois volta à versão anterior', async () => {
     await dono.post('/bot/menu/publicar').expect(204);
     let e = (await dono.get('/bot').expect(200)).body as EstadoBot;
-    expect(e.publicado.menu.menu.opcoes).toHaveLength(5);
+    expect(e.publicado.menu.menu.opcoes).toHaveLength(6);
     expect(e.publicado.publicadoPor).toBe('Dona Teste');
     expect(e.rascunho).toBeNull();
     expect(e.temAnterior).toBe(true);
@@ -117,7 +117,7 @@ describe('bot: rascunho, publicar e voltar', () => {
     ruim.menu.opcoes.push({ id: 'vazia', rotulo: '', resposta: '', acao: null, submenu: null });
     const salvo = await dono.put('/bot/menu', ruim).expect(200);
     expect(salvo.body.problemas.map((p: { onde: string }) => p.onde)).toContain(
-      'Opção 5 do menu principal',
+      'Opção 6 do menu principal',
     );
     const r = await dono.post('/bot/menu/publicar').expect(400);
     expect(JSON.stringify(r.body)).toContain('Dê um nome para a opção.');

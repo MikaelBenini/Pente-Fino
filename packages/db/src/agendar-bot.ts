@@ -10,6 +10,12 @@ import {
   JANELA_AGENDAMENTO_DIAS,
   lerNumeros,
   MAX_FUTUROS_POR_CLIENTE,
+  PRAZO_MUDAR_MIN,
+  textoAcoesDoHorario,
+  textoConfirmarCancelamento,
+  textoMeusHorarios,
+  textoRemarcado,
+  type HorarioDoCliente,
   rotuloDoDia,
   textoConfirmar,
   textoDias,
@@ -23,9 +29,11 @@ import {
 } from '@pente-fino/shared';
 import {
   calcularLivres,
+  cancelarPeloCliente,
   criarAgendamentoNoBanco,
   duracaoDosServicos,
   ErroAgenda,
+  moverAgendamento,
 } from './agenda.js';
 import type { Prisma } from './generated/prisma/client.js';
 import { precoServicoVigente } from './vigencia.js';
@@ -226,6 +234,67 @@ function naoServiu(a: AgendaNaConversa, dica: string): PassoDaAgenda {
   return seguir({ ...a, erros: a.erros + 1 }, [dica]);
 }
 
+/** Horários futuros do cliente na unidade (os que ainda podem mudar), em ordem. */
+async function horariosDoCliente(tx: Tx, d: DadosDaConversa) {
+  if (!d.clienteId) return [];
+  const ags = await tx.agendamento.findMany({
+    where: {
+      clienteId: d.clienteId,
+      unidadeId: d.unidadeId,
+      inicio: { gt: d.agora },
+      status: { in: ['agendado', 'confirmado'] },
+    },
+    orderBy: { inicio: 'asc' },
+    include: {
+      profissional: { include: { usuario: { select: { nome: true } } } },
+      comanda: { include: { itens: { include: { servico: { select: { nome: true } } } } } },
+    },
+  });
+  return ags.map((a) => ({
+    id: a.id,
+    profissionalId: a.profissionalId,
+    servicoIds: (a.comanda?.itens ?? [])
+      .filter((i) => i.tipo === 'servico' && i.servicoId)
+      .map((i) => i.servicoId!),
+    texto: {
+      inicio: a.inicio.toISOString(),
+      servicos: (a.comanda?.itens ?? []).map((i) => i.servico?.nome ?? 'Serviço'),
+      profissional: primeiroNome(a.profissional.usuario.nome),
+    } satisfies HorarioDoCliente,
+  }));
+}
+
+/** Começa o "Meus horários": lista, ou mostra direto as ações quando há um só. */
+async function iniciarMeusHorarios(tx: Tx, d: DadosDaConversa): Promise<PassoDaAgenda> {
+  const hoje = dataLocal(d.agora);
+  const hs = await horariosDoCliente(tx, d);
+  if (hs.length === 0)
+    return sair(['Você não tem horário marcado com a gente. Para marcar, responda AGENDAR.']);
+  if (hs.length === 1) return mostrarAcoes(hs[0]!, { ...agendaNova(), opcoes: [hs[0]!.id] }, d);
+  return seguir({ ...agendaNova(), passo: 'meus', opcoes: hs.map((h) => h.id) }, [
+    textoMeusHorarios(
+      hs.map((h) => h.texto),
+      hoje,
+    ),
+  ]);
+}
+
+function mostrarAcoes(
+  h: Awaited<ReturnType<typeof horariosDoCliente>>[number],
+  a: AgendaNaConversa,
+  d: DadosDaConversa,
+): PassoDaAgenda {
+  const hoje = dataLocal(d.agora);
+  // Em cima da hora, só com a recepção (o barbeiro já se organizou para o horário).
+  if (new Date(h.texto.inicio).getTime() - d.agora.getTime() < PRAZO_MUDAR_MIN * 60_000)
+    return sair([
+      `Seu horário é daqui a pouco (${formatarHora(h.texto.inicio)}). Para mudar agora, responda ATENDENTE.`,
+    ]);
+  return seguir({ ...a, passo: 'acao', remarcarId: h.id, erros: 0 }, [
+    textoAcoesDoHorario(h.texto, hoje),
+  ]);
+}
+
 /**
  * Um passo da conversa. Sem `agenda`, começa (lista os serviços); depois, cada resposta
  * escolhe pelo número. "0" volta (ou sai), e a escolha final grava o agendamento.
@@ -235,9 +304,11 @@ export async function passoDaAgenda(
   agenda: AgendaNaConversa | null,
   entrada: string | null,
   d: DadosDaConversa,
+  comecar: 'agendar' | 'meus_horarios' = 'agendar',
 ): Promise<PassoDaAgenda> {
   const hoje = dataLocal(d.agora);
 
+  if (!agenda && comecar === 'meus_horarios') return iniciarMeusHorarios(tx, d);
   if (!agenda) {
     const futuros = d.simulacao
       ? []
@@ -278,6 +349,55 @@ export async function passoDaAgenda(
   const um = numeros.length === 1 ? numeros[0]! : null;
 
   switch (agenda.passo) {
+    case 'meus': {
+      if (um === 0) return sair([]);
+      if (um === null || um > agenda.opcoes.length)
+        return naoServiu(agenda, 'Responda com o número do horário, ou 0 para voltar ao menu.');
+      const h = (await horariosDoCliente(tx, d)).find((x) => x.id === agenda.opcoes[um - 1]);
+      if (!h) return iniciarMeusHorarios(tx, d);
+      return mostrarAcoes(h, agenda, d);
+    }
+    case 'acao': {
+      if (um === 0) return sair([]);
+      const h = (await horariosDoCliente(tx, d)).find((x) => x.id === agenda.remarcarId);
+      if (!h) return sair(['Esse horário não está mais marcado.']);
+      if (um === 2)
+        return seguir({ ...agenda, passo: 'cancelar', erros: 0 }, [
+          textoConfirmarCancelamento(h.texto, hoje),
+        ]);
+      if (um !== 1)
+        return naoServiu(agenda, 'Responda 1 para remarcar, 2 para cancelar ou 0 para voltar.');
+      // Remarcar: mesmos serviços e mesmo profissional; o cliente escolhe dia e horário.
+      return irParaDias(
+        tx,
+        { ...agenda, servicoIds: h.servicoIds, profissionalId: h.profissionalId },
+        d,
+      );
+    }
+    case 'cancelar': {
+      if (um === 2) return sair(['Combinado, seu horário continua marcado.']);
+      if (um !== 1)
+        return naoServiu(agenda, 'Responda 1 para cancelar ou 2 para manter o horário.');
+      if (d.simulacao)
+        return {
+          respostas: ['(Simulação: nada foi gravado.) O horário seria cancelado.'],
+          agenda: null,
+          voltarAoMenu: false,
+        };
+      try {
+        await cancelarPeloCliente(tx, agenda.remarcarId!, 'WhatsApp');
+      } catch (e) {
+        if (e instanceof ErroAgenda) return sair([e.message]);
+        throw e;
+      }
+      return {
+        respostas: [
+          'Pronto, horário cancelado. Quando quiser marcar de novo, é só responder AGENDAR.',
+        ],
+        agenda: null,
+        voltarAoMenu: false,
+      };
+    }
     case 'servico': {
       if (um === 0) return sair([]);
       const validos =
@@ -345,6 +465,38 @@ export async function passoDaAgenda(
       try {
         // Ponto de salvamento: se o horário acabou de ser ocupado, o resto da transação segue.
         await tx.$executeRawUnsafe('SAVEPOINT agendar_bot');
+        if (agenda.remarcarId) {
+          const r2 = await moverAgendamento(
+            tx,
+            agenda.remarcarId,
+            new Date(agenda.escolha!.inicio),
+            agenda.escolha!.profissionalId,
+          );
+          await tx.auditoria.create({
+            data: {
+              usuarioId: null,
+              entidade: 'agendamento',
+              entidadeId: agenda.remarcarId,
+              acao: 'remarcar_pelo_cliente',
+              antes: {
+                inicio: r2.antes.inicio.toISOString(),
+                profissionalId: r2.antes.profissionalId,
+              },
+              depois: {
+                inicio: agenda.escolha!.inicio,
+                profissionalId: agenda.escolha!.profissionalId,
+              },
+              motivo: 'Remarcado pelo cliente (WhatsApp)',
+            },
+          });
+          await tx.$executeRawUnsafe('RELEASE SAVEPOINT agendar_bot');
+          return {
+            respostas: [textoRemarcado(r, d.barbearia)],
+            agenda: null,
+            voltarAoMenu: false,
+            comandaId: r2.comandaId,
+          };
+        }
         const criado = await criarAgendamentoNoBanco(tx, {
           unidadeId: d.unidadeId,
           profissionalId: agenda.escolha!.profissionalId,
