@@ -366,6 +366,7 @@ Horário vago vira atendimento sem a recepção pegar o telefone.
 - [ ] Mapa da semana com os horários mais vazios e mais cheios, para decidir escala e promoções
 - [ ] **Avisar se vagar antes** (pedido em 2026-11-05): depois de agendar, o bot pergunta "quer que eu avise se vagar um horário antes do seu?" **só quando o cliente foi empurrado para depois**, e entra na lista de espera dos horários anteriores daquele dia
   - Pergunta quando todos os horários do dia **antes** do escolhido estavam ocupados (a partir da abertura, ou de agora com a antecedência mínima, se for hoje), para o profissional escolhido, ou para todos em "sem preferência"
+  - Exemplo confirmado: das 9h às 11h tudo ocupado, marcou 11h30 (o primeiro livre) com 12h também livre → **pergunta**: ele pegou o mais cedo que tinha e provavelmente queria antes
   - Não pergunta: dia com horários livres antes do escolhido (ele escolheu por preferência); escolheu entre horários livres; marcou o primeiro horário do dia (não há como antecipar); já está na lista daquele dia
   - Regra pura em `packages/shared` (`deveOferecerAntecipar`), com teste para cada caso acima, usando a mesma grade de horários livres do agendamento
   - Vale para agendamento pelo bot (a conversa está aberta) e pelo site (só se marcou que aceita mensagens); pelo balcão, a recepção marca na hora
