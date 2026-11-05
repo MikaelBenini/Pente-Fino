@@ -119,6 +119,21 @@ describe('lista', () => {
   });
 });
 
+describe('assumir', () => {
+  it('assumir sem escrever: sai da espera, fica com a equipe; barbeiro não assume', async () => {
+    await barbeiro.post(`/conversas/${sessaoId}/assumir`).expect(403);
+    await recepcao.post(`/conversas/${sessaoId}/assumir`).expect(200);
+    const lista = (await recepcao.get(`/conversas?unidadeId=${a.unidadeA}`).expect(200))
+      .body as ListaConversas;
+    expect(lista.aguardando).toBe(0);
+    expect(lista.conversas.find((c) => c.id === sessaoId)?.situacao).toBe('atendimento');
+    // Volta a esperar para os testes seguintes (o cliente escreveu de novo).
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.botSessao.update({ where: { id: sessaoId }, data: { atendenteDesde: new Date() } }),
+    );
+  });
+});
+
 describe('responder e devolver', () => {
   it('sem WhatsApp conectado, a resposta não é aceita', async () => {
     const r = await recepcao

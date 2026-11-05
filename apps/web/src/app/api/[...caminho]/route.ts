@@ -89,7 +89,7 @@ async function encaminhar(
       }).catch(() => undefined);
     }
     const res = new NextResponse(null, { status: 204 });
-    apagarSessao(res);
+    apagarSessao(res, req);
     return res;
   }
 
@@ -164,7 +164,7 @@ async function encaminhar(
   if (idRequisicao) res.headers.set('x-request-id', idRequisicao);
   if (renovada && !res.cookies.get(COOKIE_SESSAO)) gravarSessao(req, res, renovada);
   // Sessão perdida (renovação recusada): limpa os cookies para o proxy mandar ao login.
-  if (resposta.status === 401 && refresh && !renovada) apagarSessao(res);
+  if (resposta.status === 401 && refresh && !renovada) apagarSessao(res, req);
   return res;
 }
 

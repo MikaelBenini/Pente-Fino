@@ -521,11 +521,26 @@ export function opcaoEscolhida(
   return combinam.length === 1 ? combinam[0]! : null;
 }
 
-/** As opções numa linha só ("1. Agendar · 2. Ver preços"), para o "não entendi" não repetir o menu. */
-export function opcoesEmUmaLinha(menu: MenuNo, valores: ValoresBot, submenu: boolean): string {
+/**
+ * Só as opções, uma por linha (sem o texto do menu), para o "não entendi": no celular, uma
+ * linha corrida com "·" quebra no meio e fica ilegível.
+ */
+export function opcoesEmLista(menu: MenuNo, valores: ValoresBot, submenu: boolean): string {
   const itens = menu.opcoes.map((o, i) => `${i + 1}. ${preencher(o.rotulo, valores)}`);
   if (submenu) itens.push('0. Voltar');
-  return itens.join(' · ');
+  return itens.join('\n');
+}
+
+/**
+ * "Oi", "oiii", "olá", "bom dia", "e aí", "opa", com ou sem um "tudo bem" depois. O cliente
+ * cumprimentando no meio da conversa quer o menu de novo, não um "não entendi".
+ * `texto` já vem normalizado.
+ */
+export function ehSaudacao(texto: string): boolean {
+  const t = texto.replace(/(.)\1{2,}/g, '$1$1'); // "oiiiii" → "oii"
+  return /^(?:o+i+e?|oie|ola+|eai|e ai|opa+|salve|hey|eae|bom dia|boa tarde|boa noite|boa)(?: (?:tudo bem|tudo bom|tudo certo|blz|beleza|td bem|bom dia|boa tarde|boa noite))?$/.test(
+    t,
+  );
 }
 
 /** Uma mensagem do cliente → o que o bot responde e como a conversa fica. */
@@ -678,6 +693,12 @@ export function responder(
   // Conversa nova sem palavra-chave: abertura, menu e (se for o caso) o convite.
   if (expirou) return comConvite(resultado([...abertura, menuAtual()]));
 
+  // Cumprimentou no meio da conversa: recomeça do menu principal, com as boas-vindas.
+  if (ehSaudacao(texto)) {
+    sessao.caminho = [];
+    return resultado([msg('boas_vindas'), menuAtual()]);
+  }
+
   if (texto === '0') {
     sessao.caminho = sessao.caminho.slice(0, -1);
     return resultado([menuAtual()]);
@@ -691,7 +712,7 @@ export function responder(
     if (sessao.erros >= ERROS_ATE_SILENCIO) return resultado([]);
     if (sessao.erros === 2) return resultado([msg('nao_entendi_de_novo')]);
     return resultado([
-      `${msg('nao_entendi')}\n${opcoesEmUmaLinha(posicao.menu, valores, sessao.caminho.length > 0)}`,
+      `${msg('nao_entendi')}\n\n${opcoesEmLista(posicao.menu, valores, sessao.caminho.length > 0)}`,
     ]);
   }
   if (opcao.submenu) {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   dentroDoHorario,
   descreverHorario,
+  ehSaudacao,
   MENSAGENS_BOT_PADRAO,
   MENU_BOT_PADRAO,
   NOTA_NAO_ENTENDIDA,
@@ -104,12 +105,12 @@ describe('conversa', () => {
     expect(primeira.acao).toBe('ver_precos');
   });
 
-  it('não entendeu: uma mensagem curta com as opções numa linha, sem repetir o menu', () => {
+  it('não entendeu: uma mensagem só, com as opções uma por linha (legível no celular)', () => {
     const s = fala(null, 'oi').sessao;
     const r = fala(s, '7');
     expect(r.respostas).toEqual([
-      'Não entendi. Responda com o número de uma das opções:\n' +
-        '1. Agendar horário · 2. Ver preços · 3. Endereço e horário · 4. Falar com um atendente',
+      'Não entendi. Responda com o número de uma das opções:\n\n' +
+        '1. Agendar horário\n2. Ver preços\n3. Endereço e horário\n4. Falar com um atendente',
     ]);
     expect(r.sessao.erros).toBe(1);
   });
@@ -424,5 +425,24 @@ describe('pesquisa depois do atendimento', () => {
     const r = fala(comPesquisa(), 'sair');
     expect(r).toMatchObject({ consentimento: false, avaliacao: null });
     expect(r.sessao.pesquisa).toBeUndefined();
+  });
+});
+
+describe('saudação no meio da conversa', () => {
+  it.each(['Oii', 'oiiiii', 'olá', 'Bom dia!', 'boa tarde, tudo bem?', 'e aí', 'opa', 'oie'])(
+    '"%s" recomeça com boas-vindas e o menu, sem "não entendi"',
+    (entrada) => {
+      const s = fala(fala(null, 'oi').sessao, '7').sessao; // já errou uma vez
+      const r = fala(s, entrada);
+      expect(r.respostas[0]).toBe('Olá, João! Aqui é a Barbearia Navalha.');
+      expect(r.respostas[1]).toMatch(/^Como posso ajudar\?/);
+      expect(r.sessao.erros).toBe(0);
+    },
+  );
+
+  it('não confunde com outra coisa', () => {
+    for (const t of ['oi quero agendar amanha cedo', 'boa sorte', 'oito']) {
+      expect(ehSaudacao(normalizar(t))).toBe(false);
+    }
   });
 });

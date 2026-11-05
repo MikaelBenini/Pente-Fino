@@ -84,6 +84,14 @@ export class ConversasController {
     return this.servico.responder(id, texto);
   }
 
+  @Post(':id/assumir')
+  @Papeis(...QUEM_CONVERSA)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Assumir a conversa: o bot para de responder este cliente' })
+  assumir(@Param('id', ParseUUIDPipe) id: string) {
+    return this.servico.assumir(id);
+  }
+
   @Post(':id/devolver')
   @Papeis(...QUEM_CONVERSA)
   @HttpCode(HttpStatus.OK)
