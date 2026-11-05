@@ -5,6 +5,8 @@ import {
   formatarMoeda,
   formatarNumero,
   lerMoeda,
+  NOME_CANAL,
+  type LinhaCanal,
   type MetaDetalhe,
   type RespostaLucratividade,
   type ResumoAvaliacoes,
@@ -18,6 +20,7 @@ import {
   chavesResultados,
   useAcao,
   useAvaliacoes,
+  useCanais,
   useIndicadores,
   useLucratividade,
   useMetas,
@@ -39,6 +42,7 @@ export function TelaMetricas() {
   const metas = useMetas(unidadeAtiva, mes);
   const lucro = useLucratividade(unidadeAtiva, de, ate);
   const avaliacoes = useAvaliacoes(unidadeAtiva, de, ate);
+  const canais = useCanais(unidadeAtiva, de, ate);
   const [nova, setNova] = useState(false);
   const remover = useAcao(
     (id: string) => api(`metas/${id}`, { metodo: 'DELETE' }),
@@ -127,6 +131,7 @@ export function TelaMetricas() {
           </>
         )}
       </Estado>
+      <Estado consulta={canais}>{() => <PorCanal linhas={canais.data!} />}</Estado>
       <Estado consulta={avaliacoes}>{() => <Avaliacoes r={avaliacoes.data!} />}</Estado>
       {ehDono && <NovaMeta mes={mes} aberto={nova} onFechar={() => setNova(false)} />}
     </div>
@@ -498,6 +503,59 @@ function Avaliacoes({ r }: { r: ResumoAvaliacoes }) {
             ))}
           </ul>
         </div>
+      )}
+    </section>
+  );
+}
+
+// ─── Por onde os clientes marcam ──────────────────────────────────────────
+
+function PorCanal({ linhas }: { linhas: LinhaCanal[] }) {
+  return (
+    <section className="flex flex-col gap-4" aria-labelledby="titulo-canais">
+      <div>
+        <h2 id="titulo-canais" className="text-xl font-semibold">
+          Por onde os clientes marcam
+        </h2>
+        <p className="text-tinta-suave">
+          Horários do mês por canal. “Vieram” é quem marcou, não cancelou e foi atendido.
+        </p>
+      </div>
+      {linhas.length === 0 ? (
+        <p className="text-tinta-suave">Nenhum horário no mês.</p>
+      ) : (
+        <Tabela rotulo="Agendamentos por canal">
+          <thead className="bg-superficie-2">
+            <tr>
+              <th className={th}>Canal</th>
+              <th className={`${th} text-right`}>Marcados</th>
+              <th className={`${th} text-right`}>Atendidos</th>
+              <th className={`${th} text-right`}>Faltas</th>
+              <th className={`${th} text-right`}>Cancelados</th>
+              <th className={`${th} text-right`}>Vieram</th>
+              <th className={`${th} text-right`}>Faturamento</th>
+              <th className={`${th} text-right`}>Fatia</th>
+            </tr>
+          </thead>
+          <tbody className="font-denso tabular-nums">
+            {linhas.map((l) => (
+              <tr key={l.canal} className="border-t border-borda">
+                <td className={`${td} font-sans font-semibold`}>{NOME_CANAL[l.canal]}</td>
+                <td className={`${td} text-right`}>
+                  {l.canal === 'sem_horario' ? '—' : formatarNumero(l.agendados)}
+                </td>
+                <td className={`${td} text-right`}>{formatarNumero(l.atendidos)}</td>
+                <td className={`${td} text-right`}>{formatarNumero(l.faltas)}</td>
+                <td className={`${td} text-right`}>{formatarNumero(l.cancelados)}</td>
+                <td className={`${td} text-right`}>
+                  {l.comparecimento === null ? '—' : formatarFracao(l.comparecimento, 0)}
+                </td>
+                <td className={`${td} text-right font-semibold`}>{formatarMoeda(l.faturamento)}</td>
+                <td className={`${td} text-right`}>{formatarFracao(l.fatia, 0)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabela>
       )}
     </section>
   );

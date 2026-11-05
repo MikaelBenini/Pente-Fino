@@ -332,6 +332,7 @@ describe('permissões: cada papel tentando o que não pode', () => {
       ['get', () => `/clientes/${ids.cliente}/mensagens`],
       ['get', () => '/conversas'],
       ['get', () => `/avaliacoes?${periodo()}`],
+      ['get', () => `/canais?${periodo()}`],
       ['put', () => '/bot/pesquisa', { ativa: false }],
       ['get', () => `/resumo/dia?data=${hoje}`],
       ['get', () => `/resumo/mes?mes=${mes}`],

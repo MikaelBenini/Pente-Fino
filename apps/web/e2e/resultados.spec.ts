@@ -63,6 +63,12 @@ test('dono: início com metas e indicadores; financeiro e métricas', async ({ p
   await expect(produtos.getByRole('row').nth(1)).toContainText(
     /Investir|Divulgar|Rever preço|Repensar|Parado/,
   );
+  // Por canal: a demonstração tem horários do balcão, do WhatsApp e do site.
+  const canais = page
+    .getByRole('table', { name: 'Agendamentos por canal' })
+    .filter({ visible: true });
+  await expect(canais).toContainText('WhatsApp');
+  await expect(canais).toContainText('Balcão');
   // Avaliações dos clientes: notas do atendimento e da barbearia (demonstração tem respostas).
   const avaliacoes = page.getByRole('region', { name: 'Avaliações dos clientes' });
   await expect(avaliacoes.getByRole('list', { name: 'Notas de atendimento' })).toBeVisible();
