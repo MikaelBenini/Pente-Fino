@@ -29,15 +29,15 @@ test('teste vencido: aviso em toda tela, aba Assinatura e nada grava', async ({ 
   await expect(dialogo.getByText(/só para consulta/)).toBeVisible();
 });
 
-test('cartão recusado: motivo e o botão para pagar ou trocar o cartão', async ({ page }) => {
+test('cartão recusado: motivo e o formulário para assinar de novo', async ({ page }) => {
   await entrar(page, 'recusado@demo.pentefino.dev');
   await page.goto('/configuracoes?aba=assinatura');
   const recusa = page.getByRole('region', { name: 'Pagamento recusado' });
   await expect(recusa).toContainText('saldo insuficiente');
-  await expect(recusa.getByRole('link', { name: /Pagar ou trocar o cartão/ })).toHaveAttribute(
-    'href',
-    /asaas/,
-  );
+  // Sem cobrança automática ainda: assina de novo (Pix, boleto ou cartão).
+  const assinar = page.getByRole('region', { name: 'Assinar o Pente Fino' });
+  await assinar.getByLabel('CPF ou CNPJ de quem paga').fill('123');
+  await expect(assinar.getByRole('button', { name: 'Assinar e pagar' })).toBeVisible();
   await expect(
     page.getByRole('table', { name: 'Faturas da assinatura' }).filter({ visible: true }),
   ).toContainText('Recusada');

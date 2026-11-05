@@ -41,6 +41,7 @@ export default defineConfig({
         LIMITE_AUTH_POR_MINUTO: '60',
         // Sem WhatsApp de verdade: a tela de conexão mostra um QR de teste.
         WHATSAPP_PROVEDOR: 'falso',
+        COBRANCA_PROVEDOR: 'falso',
       },
       timeout: 60_000,
     },

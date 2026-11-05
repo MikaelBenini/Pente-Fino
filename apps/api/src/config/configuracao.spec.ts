@@ -8,6 +8,8 @@ const valido = {
   JWT_ACCESS_SECRET: 'segredo-de-desenvolvimento',
   WHATSAPP_WEBHOOK_SEGREDO: 'w'.repeat(40),
   EVOLUTION_API_KEY: 'chave-da-evolution',
+  ASAAS_API_KEY: '$aact_hmlg_chave_de_teste',
+  ASAAS_WEBHOOK_TOKEN: 't'.repeat(32),
 };
 
 describe('carregarConfiguracao', () => {
@@ -73,5 +75,23 @@ describe('carregarConfiguracao', () => {
       API_DOCS: 'true',
     });
     expect(c.apiDocs).toBe(true);
+  });
+
+  it('cobrança: Asaas com chave e token em produção; token vazio no .env vale como "sem webhook"', () => {
+    expect(carregarConfiguracao({ ...valido, ASAAS_WEBHOOK_TOKEN: '' }).cobranca).toEqual({
+      provedor: 'asaas',
+      asaasUrl: 'https://api-sandbox.asaas.com/v3',
+      asaasChave: '$aact_hmlg_chave_de_teste',
+      webhookToken: null,
+    });
+    const prod = { ...valido, NODE_ENV: 'production', JWT_ACCESS_SECRET: 'x'.repeat(48) };
+    expect(() => carregarConfiguracao({ ...prod, ASAAS_API_KEY: '' })).toThrow(/ASAAS_API_KEY/);
+    expect(() => carregarConfiguracao({ ...prod, ASAAS_WEBHOOK_TOKEN: '' })).toThrow(
+      /ASAAS_WEBHOOK_TOKEN/,
+    );
+    expect(
+      carregarConfiguracao({ ...prod, COBRANCA_PROVEDOR: 'falso', ASAAS_API_KEY: '' }).cobranca
+        .provedor,
+    ).toBe('falso');
   });
 });

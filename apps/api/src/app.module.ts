@@ -6,6 +6,9 @@ import { AuditoriaInterceptor } from './auditoria/auditoria.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
 import { AssinaturaGuard } from './assinatura/assinatura.guard.js';
+import { CobrancaService } from './cobranca/cobranca.service.js';
+import { provedorCobranca } from './cobranca/provedor.js';
+import { WebhookAsaasController } from './cobranca/webhook-asaas.controller.js';
 import { AutenticacaoGuard, PermissaoGuard } from './auth/guardas.js';
 import { limitesDeRequisicao } from './auth/limite.js';
 import { TokensAcesso } from './auth/tokens.js';
@@ -88,6 +91,7 @@ export class ComumModule {}
             'req.headers.authorization',
             'req.headers.cookie',
             'req.headers["x-pente-fino-assinatura"]',
+            'req.headers["asaas-access-token"]',
             'res.headers["set-cookie"]',
           ],
           autoLogging: { ignore: (req) => req.url === '/health' },
@@ -129,6 +133,7 @@ export class ComumModule {}
     BotController,
     ConversasController,
     WebhooksController,
+    WebhookAsaasController,
     MeController,
     ConfiguracaoController,
     ImportacaoController,
@@ -149,6 +154,8 @@ export class ComumModule {}
     ResumoService,
     BotService,
     ConversasService,
+    CobrancaService,
+    provedorCobranca,
     provedorWhatsApp,
     // Ordem das guardas: limite de requisições → login → papel e unidade.
     { provide: APP_GUARD, useClass: ThrottlerGuard },

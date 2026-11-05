@@ -1,17 +1,20 @@
-import { Controller, Get, Inject, Patch } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Inject, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { estadoAssinatura } from '@pente-fino/db';
 import {
+  assinarSchema,
   contaSchema,
   LIMITES_PLANO,
   precoPorMes,
+  type AssinarEntrada,
   type AssinaturaDetalhe,
   type ContaEntrada,
   type EstadoAssinatura,
   type FaturaDetalhe,
 } from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
-import { Papeis } from '../auth/decoradores.js';
+import { LivreSemAssinatura, Papeis } from '../auth/decoradores.js';
+import { CobrancaService } from '../cobranca/cobranca.service.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Corpo } from '../comum/validacao.js';
@@ -21,7 +24,10 @@ import { emSequencia } from '../comum/sequencia.js';
 @ApiBearerAuth()
 @Controller('conta')
 export class ContaController {
-  constructor(@Inject(BancoService) private readonly banco: BancoService) {}
+  constructor(
+    @Inject(BancoService) private readonly banco: BancoService,
+    @Inject(CobrancaService) private readonly cobranca: CobrancaService,
+  ) {}
 
   @Get('situacao')
   @ApiOperation({
@@ -70,8 +76,32 @@ export class ContaController {
         unidades,
         pendente,
         faturas: lista,
+        cobrancaAutomatica: conta.asaasAssinaturaId !== null,
       };
     });
+  }
+
+  @Post('assinatura')
+  @Papeis('dono')
+  @LivreSemAssinatura()
+  @Auditada()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary:
+      'Assinar: cria a assinatura no Asaas e devolve a página de pagamento (Pix, boleto ou cartão)',
+  })
+  assinar(@Corpo(assinarSchema) d: AssinarEntrada) {
+    return this.cobranca.assinar(d);
+  }
+
+  @Post('assinatura/conferir')
+  @Papeis('dono')
+  @LivreSemAssinatura()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '"Já paguei": busca as cobranças no Asaas e atualiza as faturas' })
+  async conferir(): Promise<AssinaturaDetalhe> {
+    await this.cobranca.conferir();
+    return this.assinatura();
   }
 
   @Get()

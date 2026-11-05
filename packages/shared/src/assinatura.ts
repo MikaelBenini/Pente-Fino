@@ -1,7 +1,8 @@
 // Assinatura do Pente Fino pela barbearia (Etapa 10.1, lado do dono): em que situação a conta
 // está e se o sistema fica só para consulta. Bloqueio suave: nunca apaga dado.
 import { dataLocal } from './datas.js';
-import { diasRestantesTeste } from './planos.js';
+import { z } from 'zod';
+import { diasRestantesTeste, precoPorMes, type Ciclo, type PlanoConta } from './planos.js';
 import type { DataISO } from './vigencia.js';
 
 /** Dias depois do vencimento em que a conta segue normal, só com aviso. */
@@ -139,6 +140,8 @@ export interface AssinaturaDetalhe {
   /** A fatura em aberto (ou recusada) mais antiga: a que precisa de atenção. */
   pendente: FaturaDetalhe | null;
   faturas: FaturaDetalhe[];
+  /** Já assinou pela cobrança automática (não mostra o formulário de assinar). */
+  cobrancaAutomatica: boolean;
 }
 
 export const NOME_SITUACAO_ASSINATURA: Readonly<Record<SituacaoAssinatura, string>> = {
@@ -157,3 +160,93 @@ export const NOME_STATUS_FATURA: Readonly<Record<StatusFatura, string>> = {
   recusada: 'Recusada',
   cancelada: 'Cancelada',
 };
+
+// ─── Cobrança automática (Asaas) ──────────────────────────────────────────
+
+/** CPF (11 dígitos) ou CNPJ (14) com os dígitos verificadores certos. */
+export function documentoValido(valor: string): boolean {
+  const d = valor.replace(/\D/g, '');
+  if (!/^(\d{11}|\d{14})$/.test(d) || /^(\d)\1+$/.test(d)) return false;
+  const dv = (base: string, pesos: number[]) => {
+    const soma = pesos.reduce((s, p, i) => s + Number(base[i]) * p, 0);
+    const r = soma % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  if (d.length === 11) {
+    const p1 = [10, 9, 8, 7, 6, 5, 4, 3, 2];
+    const p2 = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
+    return dv(d, p1) === Number(d[9]) && dv(d, p2) === Number(d[10]);
+  }
+  const p1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const p2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  return dv(d, p1) === Number(d[12]) && dv(d, p2) === Number(d[13]);
+}
+
+export const assinarSchema = z.object({
+  plano: z.enum(['basico', 'pro', 'premium']),
+  ciclo: z.enum(['mensal', 'anual']),
+  documento: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ''))
+    .refine(documentoValido, { error: 'CPF ou CNPJ inválido.' }),
+});
+export type AssinarEntrada = z.infer<typeof assinarSchema>;
+
+/** Valor de cada cobrança: o mês no mensal; os 12 meses de uma vez no anual. */
+export function valorDaCobranca(plano: PlanoConta, ciclo: Ciclo, unidades: number): number {
+  const porMes = precoPorMes(plano, ciclo, Math.max(1, unidades));
+  return ciclo === 'anual' ? porMes * 12 : porMes;
+}
+
+/** Uma cobrança como o provedor devolve (status do Asaas). */
+export interface CobrancaExterna {
+  id: string;
+  /** PENDING, OVERDUE, RECEIVED, CONFIRMED, RECEIVED_IN_CASH, REFUNDED, DELETED… */
+  status: string;
+  valor: number;
+  vencimento: DataISO;
+  link: string | null;
+  /** PIX, BOLETO, CREDIT_CARD… (como foi paga). */
+  forma: string | null;
+  /** ISO de quando o dinheiro entrou; null se não pagou. */
+  pagaEm: string | null;
+}
+
+const FORMA_DO_ASAAS: Readonly<Record<string, FaturaDetalhe['forma']>> = {
+  PIX: 'pix',
+  BOLETO: 'boleto',
+  CREDIT_CARD: 'cartao',
+  DEBIT_CARD: 'cartao',
+  TRANSFER: 'transferencia',
+  DEPOSIT: 'transferencia',
+};
+
+/** Eventos do webhook que querem dizer "o cartão foi recusado". */
+export const EVENTOS_RECUSA: Readonly<Record<string, string>> = {
+  PAYMENT_CREDIT_CARD_CAPTURE_REFUSED: 'Cartão recusado pelo banco.',
+  PAYMENT_REPROVED_BY_RISK_ANALYSIS: 'Pagamento reprovado na análise de risco do cartão.',
+};
+
+/**
+ * Como a cobrança do provedor vira a nossa fatura. Paga (inclusive em dinheiro) vale como
+ * paga; estornada ou apagada, cancelada; o resto segue em aberto (a situação da conta conta
+ * o atraso pelo vencimento).
+ */
+export function faturaDaCobranca(c: CobrancaExterna): {
+  status: StatusFatura;
+  forma: FaturaDetalhe['forma'];
+  pagaEm: Date | null;
+} {
+  const pagos = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'];
+  const cancelados = ['REFUNDED', 'REFUND_REQUESTED', 'DELETED', 'CHARGEBACK_REQUESTED'];
+  if (pagos.includes(c.status))
+    return {
+      status: 'paga',
+      forma:
+        (c.forma && FORMA_DO_ASAAS[c.forma]) ||
+        (c.status === 'RECEIVED_IN_CASH' ? 'dinheiro' : 'pix'),
+      pagaEm: c.pagaEm ? new Date(c.pagaEm) : new Date(),
+    };
+  if (cancelados.includes(c.status)) return { status: 'cancelada', forma: null, pagaEm: null };
+  return { status: 'aberta', forma: null, pagaEm: null };
+}

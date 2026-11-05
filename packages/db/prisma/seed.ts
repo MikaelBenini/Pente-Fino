@@ -910,9 +910,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
         periodoFim: dataParaBanco(somarDias(somarMeses(inicio, 1), -1)),
         status: paga ? 'paga' : 'aberta',
         origem: 'asaas',
-        ...(paga
-          ? { forma: 'cartao' as const, pagaEm: instante(vencimento, 9 * 60) }
-          : { linkPagamento: 'https://sandbox.asaas.com/i/demonstracao' }),
+        ...(paga ? { forma: 'cartao' as const, pagaEm: instante(vencimento, 9 * 60) } : {}),
       },
     });
   }
@@ -1029,7 +1027,6 @@ async function contasDeCobranca(prisma: ReturnType<typeof criarPrisma>, hoje: st
             periodoFim: dataParaBanco(somarDias(somarMeses(vencimento, 1), -1)),
             status: 'recusada',
             motivoRecusa: 'Cartão recusado pelo banco: saldo insuficiente.',
-            linkPagamento: 'https://sandbox.asaas.com/i/demonstracao-recusada',
           },
         });
       }
