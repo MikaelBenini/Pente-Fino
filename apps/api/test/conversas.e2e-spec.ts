@@ -4,6 +4,7 @@ import { criarPrisma, instanciaDaUnidade, naConta, type PrismaClient } from '@pe
 import {
   FILA_WHATSAPP_ENTRADA,
   MENSAGENS_BOT_PADRAO,
+  type EnvioParaCliente,
   type ListaConversas,
   type MensagemDoCliente,
   type TrabalhoWhatsappEntrada,
@@ -173,5 +174,57 @@ describe('responder e devolver', () => {
       tx.botSessao.findUnique({ where: { id: sessaoId } }),
     );
     expect(s?.sessao).toMatchObject({ comAtendente: false });
+  });
+});
+
+describe('mandar mensagem a um cliente pelo bot', () => {
+  it('só para quem já escreveu: os outros recebem o motivo e a tela oferece o link', async () => {
+    const novo = await naConta(prisma, a.contaId, (tx) =>
+      tx.cliente.create({ data: { nome: 'Nunca Escreveu', telefone: '5511933330000' } }),
+    );
+    const r = (await recepcao.get(`/conversas/cliente/${novo.id}`).expect(200))
+      .body as EnvioParaCliente;
+    expect(r).toMatchObject({ podeBot: false, unidadeId: null });
+    expect(r.motivo).toMatch(/ainda não escreveu/);
+    await recepcao.post(`/conversas/cliente/${novo.id}`, { texto: 'Oi!' }).expect(409);
+  });
+
+  it('quem já conversou recebe pela unidade em que escreveu, e a conversa fica com a equipe', async () => {
+    const clienteId = (await naConta(prisma, a.contaId, (tx) =>
+      tx.cliente.findFirst({ where: { telefone: TELEFONE } }),
+    ))!.id;
+    const pode = (await dono.get(`/conversas/cliente/${clienteId}`).expect(200))
+      .body as EnvioParaCliente;
+    expect(pode).toMatchObject({ podeBot: true, unidadeId: a.unidadeA, unidade: 'Unidade A' });
+
+    const r = await dono
+      .post(`/conversas/cliente/${clienteId}`, { texto: 'Lucas, faz um tempo! Bora marcar?' })
+      .expect(201);
+    expect(r.body.conversaId).toBe(sessaoId);
+    expect((await fila.getJob(`enviar_${r.body.id}`))?.data).toMatchObject({
+      tipo: 'enviar',
+      mensagemIds: [r.body.id],
+    });
+    const lista = (await recepcao.get(`/conversas?unidadeId=${a.unidadeA}`).expect(200))
+      .body as ListaConversas;
+    expect(lista.conversas.find((c) => c.id === sessaoId)?.situacao).toBe('atendimento');
+
+    await barbeiro.get(`/conversas/cliente/${clienteId}`).expect(403);
+    await intruso.get(`/conversas/cliente/${clienteId}`).expect(404);
+  });
+
+  it('quem respondeu SAIR não recebe pelo bot', async () => {
+    const clienteId = await naConta(prisma, a.contaId, async (tx) => {
+      const c = await tx.cliente.findFirst({ where: { telefone: TELEFONE } });
+      await tx.cliente.update({
+        where: { id: c!.id },
+        data: { consentimentoMsg: false, consentimentoEm: new Date() },
+      });
+      return c!.id;
+    });
+    const r = (await recepcao.get(`/conversas/cliente/${clienteId}`).expect(200))
+      .body as EnvioParaCliente;
+    expect(r.podeBot).toBe(false);
+    expect(r.motivo).toMatch(/SAIR/);
   });
 });

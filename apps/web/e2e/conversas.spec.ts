@@ -34,6 +34,21 @@ test('recepção vê o aviso, abre a conversa de quem pediu atendente e lê as m
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(sobra).toBeLessThanOrEqual(0);
+
+  // "Ver cliente" abre a ficha; "Mandar mensagem" explica por que o bot não envia agora
+  // (WhatsApp desconectado) e oferece o link com o texto pronto.
+  await conversa.getByRole('link', { name: 'Ver cliente' }).click();
+  await expect(page).toHaveURL(/\/clientes\?id=/);
+  await page.getByRole('button', { name: 'Mandar mensagem' }).click();
+  const janela = page.getByRole('dialog', { name: /^Mensagem para / });
+  await expect(janela.getByText(/está desconectado/)).toBeVisible();
+  await expect(
+    janela.getByRole('button', { name: /Enviar pelo WhatsApp da Centro/ }),
+  ).toBeDisabled();
+  await expect(janela.getByRole('link', { name: 'Abrir no meu WhatsApp' })).toHaveAttribute(
+    'href',
+    /^https:\/\/wa\.me\/55\d+\?text=Ol%C3%A1%2C/,
+  );
 });
 
 test('dono também tem Conversas e Caixa do dia, com o menu em seções', async ({ page }, info) => {

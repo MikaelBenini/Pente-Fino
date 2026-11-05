@@ -18,6 +18,8 @@ import { useState, type ReactNode } from 'react';
 import { useFichaProfissional } from '@/lib/consultas';
 import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { comparar, SeletorMes } from '../indicadores';
+import { useApp } from '../contexto-app';
+import { MandarMensagem } from '../mandar-mensagem';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
 // ─── Período ──────────────────────────────────────────────────────────────
@@ -301,6 +303,9 @@ export function FichaDoProfissional({
 }
 
 function Conteudo({ f, periodo }: { f: FichaProfissional; periodo: Periodo }) {
+  // Mandar mensagem pela barbearia é do balcão e da gestão, nunca do barbeiro.
+  const { papeis } = useApp();
+  const podeChamar = papeis.some((p) => p === 'dono' || p === 'gestor' || p === 'recepcao');
   const r = f.resumo;
   const vsMedia = 'vs. média da unidade';
   const media = f.media;
@@ -523,17 +528,18 @@ function Conteudo({ f, periodo }: { f: FichaProfissional; periodo: Periodo }) {
                           {c.diasSemVir} dias sem vir · costumava voltar em {c.limiteDias}
                         </span>
                       </span>
-                      {link && (
-                        <a
-                          href={link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          data-nao-imprimir
-                          aria-label={`Chamar ${c.nome} no WhatsApp`}
-                          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-borda-forte px-3 font-medium hover:bg-superficie-2 focus-visible:outline-2 focus-visible:outline-foco"
-                        >
-                          <MessageCircle aria-hidden className="size-5" /> Chamar
-                        </a>
+                      {link && podeChamar && (
+                        <BotaoChamar
+                          clienteId={c.clienteId}
+                          nome={c.nome}
+                          telefone={c.telefone}
+                          texto={mensagemRetorno({
+                            cliente: c.nome,
+                            barbeiro: f.profissional.nome,
+                            unidade: f.profissional.unidade,
+                            linkAgendamento: f.linkAgendamento,
+                          })}
+                        />
                       )}
                     </li>
                   );
@@ -640,6 +646,42 @@ function Conteudo({ f, periodo }: { f: FichaProfissional; periodo: Periodo }) {
           </Tabela>
         )}
       </Secao>
+    </>
+  );
+}
+
+/** "Chamar" o cliente sumido: mensagem pronta, pelo WhatsApp da barbearia ou pelo link. */
+function BotaoChamar({
+  clienteId,
+  nome,
+  telefone,
+  texto,
+}: {
+  clienteId: string;
+  nome: string;
+  telefone: string | null;
+  texto: string;
+}) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <Botao
+        variante="secundario"
+        data-nao-imprimir
+        aria-label={`Chamar ${nome} no WhatsApp`}
+        className="shrink-0"
+        onClick={() => setAberto(true)}
+      >
+        <MessageCircle aria-hidden className="size-5" /> Chamar
+      </Botao>
+      <MandarMensagem
+        aberto={aberto}
+        onFechar={() => setAberto(false)}
+        clienteId={clienteId}
+        nome={nome}
+        telefone={telefone}
+        textoInicial={texto}
+      />
     </>
   );
 }

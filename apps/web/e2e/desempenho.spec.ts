@@ -88,7 +88,7 @@ test('gestor vê a ficha sem margem; barbeiro vê só a própria', async ({ brow
     barbeiro.getByRole('heading', { name: 'Ticket médio' }).filter({ visible: true }),
   ).toBeVisible();
   await expect(barbeiro.getByRole('columnheader', { name: 'Lucro' })).toHaveCount(0);
-  await expect(barbeiro.getByRole('link', { name: /Chamar .* no WhatsApp/ })).toHaveCount(0);
+  await expect(barbeiro.getByRole('button', { name: /Chamar .* no WhatsApp/ })).toHaveCount(0);
   await expect(barbeiro.getByText(/vs\. média da unidade/)).toHaveCount(0);
   // A ficha dos colegas continua fora do alcance.
   await barbeiro.goto('/equipe');

@@ -200,3 +200,24 @@ export interface RespostaSimulacao {
 export const listarConversasSchema = z.object({
   unidadeId: z.uuid({ error: 'Unidade inválida.' }).optional(),
 });
+
+// ─── Mensagem para um cliente, pelo bot ou pelo link ──────────────────────
+
+/** Se dá para mandar pelo número da barbearia e, se não, por quê (a tela oferece o link). */
+export interface EnvioParaCliente {
+  podeBot: boolean;
+  motivo: string | null;
+  /** Unidade por onde sai: a que o cliente escreveu por último. */
+  unidadeId: string | null;
+  unidade: string | null;
+}
+
+export const enviarParaClienteSchema = z.object({
+  texto: z
+    .string()
+    .trim()
+    .min(1, { error: 'Escreva a mensagem.' })
+    .max(1000, { error: 'No máximo 1.000 caracteres.' }),
+  unidadeId: z.uuid({ error: 'Unidade inválida.' }).optional(),
+});
+export type EnviarParaClienteEntrada = z.infer<typeof enviarParaClienteSchema>;

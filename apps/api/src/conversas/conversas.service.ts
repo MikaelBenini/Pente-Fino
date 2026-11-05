@@ -4,6 +4,7 @@ import {
   preencher,
   variantesTelefone,
   type ConversaResumo,
+  type EnvioParaCliente,
   type ListaConversas,
   type MensagemDoCliente,
   type Papel,
@@ -180,6 +181,80 @@ export class ConversasService {
     });
     if (r) await this.enfileirar(r.contaId, r.instancia, [r.mensagemId]);
     return { ok: true };
+  }
+
+  /**
+   * Pode mandar pelo número da barbearia? Só para quem já escreveu (proteção do número), não
+   * pediu SAIR e com o WhatsApp da unidade conectado. Sai pela unidade em que ele escreveu.
+   */
+  private async envioParaCliente(tx: Tx, clienteId: string, unidadeId?: string) {
+    if (unidadeId) exigirUnidade(unidadeId, QUEM_CONVERSA);
+    const cliente = await tx.cliente.findUnique({ where: { id: clienteId } });
+    if (!cliente) throw Erros.naoEncontrado('Cliente não encontrado.');
+    const nao = (motivo: string, u: { id: string; nome: string } | null = null) => ({
+      resposta: { podeBot: false, motivo, unidadeId: u?.id ?? null, unidade: u?.nome ?? null },
+      envio: null,
+    });
+    if (!cliente.telefone) return nao('O cliente não tem telefone cadastrado.');
+    const ultima = await tx.mensagem.findFirst({
+      where: {
+        telefone: { in: variantesTelefone(cliente.telefone) },
+        direcao: 'entrada',
+        ...(unidadeId ? { unidadeId } : filtroUnidade(QUEM_CONVERSA)),
+      },
+      orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+      include: { unidade: { include: { botConexao: true } } },
+    });
+    if (!ultima)
+      return nao(
+        'Este cliente ainda não escreveu para o WhatsApp da barbearia. Para proteger o número, o bot só manda mensagem para quem já conversou: use o seu WhatsApp.',
+      );
+    const u = { id: ultima.unidadeId, nome: ultima.unidade.nome };
+    if (cliente.consentimentoMsg === false && cliente.consentimentoEm !== null)
+      return nao('O cliente respondeu SAIR e não quer receber mensagens da barbearia.', u);
+    const conexao = ultima.unidade.botConexao;
+    if (conexao?.status !== 'conectado')
+      return nao(`O WhatsApp da unidade ${u.nome} está desconectado.`, u);
+    return {
+      resposta: { podeBot: true, motivo: null, unidadeId: u.id, unidade: u.nome },
+      envio: { unidadeId: u.id, telefone: ultima.telefone, instancia: conexao.instancia, cliente },
+    };
+  }
+
+  async podeEnviarParaCliente(clienteId: string, unidadeId?: string): Promise<EnvioParaCliente> {
+    return this.banco.daConta(
+      async (tx) => (await this.envioParaCliente(tx, clienteId, unidadeId)).resposta,
+    );
+  }
+
+  /** Manda pelo bot e deixa a conversa com a equipe: a resposta do cliente cai em Conversas. */
+  async enviarParaCliente(
+    clienteId: string,
+    texto: string,
+    unidadeId?: string,
+  ): Promise<{ id: string; conversaId: string }> {
+    const r = await this.banco.daConta(async (tx) => {
+      const { resposta, envio } = await this.envioParaCliente(tx, clienteId, unidadeId);
+      if (!envio) throw Erros.conflito(resposta.motivo!);
+      const chave = { unidadeId: envio.unidadeId, telefone: envio.telefone };
+      const atual = await tx.botSessao.findUnique({ where: { unidadeId_telefone: chave } });
+      const sessao = {
+        ...lerSessao(atual?.sessao),
+        // A conversa recomeça agora: conta como recente para não expirar na hora.
+        ultimaEm: new Date().toISOString(),
+        comAtendente: true,
+        erros: 0,
+      };
+      const s = await tx.botSessao.upsert({
+        where: { unidadeId_telefone: chave },
+        create: { ...chave, clienteId, sessao: json(sessao), atendenteDesde: null },
+        update: { clienteId, sessao: json(sessao), atendenteDesde: null },
+      });
+      const m = await this.gravarSaida(tx, { ...chave, clienteId }, texto);
+      return { contaId: s.contaId, instancia: envio.instancia, mensagemId: m, conversaId: s.id };
+    });
+    await this.enfileirar(r.contaId, r.instancia, [r.mensagemId]);
+    return { id: r.mensagemId, conversaId: r.conversaId };
   }
 
   private async gravarSaida(
