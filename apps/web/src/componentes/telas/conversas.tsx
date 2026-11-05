@@ -1,11 +1,17 @@
 'use client';
 
 import { formatarHora, formatarTelefone, type ConversaResumo } from '@pente-fino/shared';
-import { Botao, CampoTexto, cn, EstadoVazio, ModalConfirmacao } from '@pente-fino/ui';
-import { ArrowLeft, Bot, MessagesSquare, Send } from 'lucide-react';
+import { Botao, CampoTexto, cn, EstadoVazio, Marcador, ModalConfirmacao } from '@pente-fino/ui';
+import { ArrowLeft, Bot, Hand, MessagesSquare, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
+import {
+  notificacoesSuportadas,
+  pedirPermissaoNotificacao,
+  tocarAviso,
+  usePreferenciasAvisos,
+} from '@/lib/avisos';
 import { chaveConversas, useAcao, useConversas, useMensagensConversa } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
@@ -45,7 +51,11 @@ export function TelaConversas() {
 
   return (
     <div className="flex flex-col gap-6">
-      <CabecalhoPagina titulo="Conversas do bot" pergunta="Quem está esperando resposta?" />
+      <CabecalhoPagina
+        titulo="Conversas do bot"
+        pergunta="Quem está esperando resposta?"
+        acao={<AvisosDesteAparelho />}
+      />
       <Estado consulta={lista}>
         {() => {
           const { conversas, conectado } = lista.data!;
@@ -201,6 +211,7 @@ function Conversa({
     (t: string) => api(`conversas/${c.id}/responder`, { corpo: { texto: t } }),
     [chaveConversas],
   );
+  const assumir = useAcao(() => api(`conversas/${c.id}/assumir`, { corpo: {} }), [chaveConversas]);
   const devolverAoBot = useAcao(
     () => api(`conversas/${c.id}/devolver`, { corpo: {} }),
     [chaveConversas],
@@ -244,8 +255,23 @@ function Conversa({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <FichaSituacao c={c} />
+          {c.situacao !== 'atendimento' && (
+            <Botao
+              carregando={assumir.isPending}
+              onClick={async () => {
+                setErro(null);
+                try {
+                  await assumir.mutateAsync(undefined);
+                } catch (e) {
+                  setErro(mensagemDe(e));
+                }
+              }}
+            >
+              <Hand aria-hidden className="size-4" /> Assumir conversa
+            </Botao>
+          )}
           {c.situacao !== 'bot' && (
             <Botao variante="secundario" onClick={() => setDevolver(true)}>
               <Bot aria-hidden className="size-4" /> Devolver ao bot
@@ -313,5 +339,45 @@ function Conversa({
         }}
       />
     </section>
+  );
+}
+
+/** Som e notificação quando um cliente passa a esperar atendente; valem só neste aparelho. */
+function AvisosDesteAparelho() {
+  const [p, mudar] = usePreferenciasAvisos();
+  const [negada, setNegada] = useState(false);
+  return (
+    <fieldset className="flex flex-col gap-1 rounded-lg border border-borda bg-superficie px-4 py-3">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+        Avisos neste aparelho
+      </legend>
+      <Marcador
+        id="aviso-som"
+        rotulo="Tocar som"
+        checked={p.som}
+        onChange={(e) => {
+          mudar({ ...p, som: e.target.checked });
+          if (e.target.checked) tocarAviso();
+        }}
+      />
+      <Marcador
+        id="aviso-notificacao"
+        rotulo="Notificação do navegador"
+        checked={p.notificacao}
+        disabled={!notificacoesSuportadas()}
+        onChange={async (e) => {
+          setNegada(false);
+          if (!e.target.checked) return mudar({ ...p, notificacao: false });
+          const permissao = await pedirPermissaoNotificacao();
+          if (permissao === 'granted') mudar({ ...p, notificacao: true });
+          else setNegada(true);
+        }}
+      />
+      {negada && (
+        <p className="max-w-64 text-xs text-aviso-texto">
+          O navegador bloqueou as notificações. Libere no cadeado ao lado do endereço do site.
+        </p>
+      )}
+    </fieldset>
   );
 }

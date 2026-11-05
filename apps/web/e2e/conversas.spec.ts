@@ -59,3 +59,32 @@ test('dono também tem Conversas e Caixa do dia, com o menu em seções', async 
   await expect(menu.getByRole('list', { name: 'Dia a dia' })).toContainText('Caixa do dia');
   await expect(menu.getByLabel('1 esperando atendente')).toBeVisible();
 });
+
+test('recepção assume uma conversa do bot e devolve; avisos ligam e desligam neste aparelho', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'muda o estado da demonstração: um projeto basta');
+  await page.goto('/entrar');
+  await page.getByLabel('E-mail').fill('recepcao.centro@demo.pentefino.dev');
+  await page.getByLabel('Senha').fill('pentefino123');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await page.waitForURL(/agenda/);
+  await page.goto('/conversas');
+
+  const avisos = page.getByRole('group', { name: 'Avisos neste aparelho' });
+  const som = avisos.getByLabel('Tocar som');
+  await expect(som).toBeChecked();
+  await som.uncheck();
+  await page.reload();
+  await expect(
+    page.getByRole('group', { name: 'Avisos neste aparelho' }).getByLabel('Tocar som'),
+  ).not.toBeChecked();
+
+  await page.getByRole('region', { name: 'Recentes' }).getByRole('button').first().click();
+  const conversa = page.getByRole('region', { name: /^Conversa com / });
+  await conversa.getByRole('button', { name: 'Assumir conversa' }).click();
+  await expect(conversa.getByText('Com a equipe')).toBeVisible();
+  await conversa.getByRole('button', { name: 'Devolver ao bot' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Devolver ao bot' }).click();
+  await expect(conversa.getByText('Bot respondendo')).toBeVisible();
+});

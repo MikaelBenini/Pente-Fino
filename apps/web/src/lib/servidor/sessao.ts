@@ -39,9 +39,11 @@ export function gravarSessao(
   });
 }
 
-export function apagarSessao(res: NextResponse) {
-  res.cookies.set(COOKIE_ACESSO, '', { path: '/api', maxAge: 0 });
-  res.cookies.set(COOKIE_SESSAO, '', { path: '/', maxAge: 0 });
+/** Apaga com os mesmos atributos da gravação (alguns navegadores exigem para trocar cookie Secure). */
+export function apagarSessao(res: NextResponse, req?: NextRequest) {
+  const base = { httpOnly: true, sameSite: 'lax' as const, secure: req ? seguro(req) : false };
+  res.cookies.set(COOKIE_ACESSO, '', { ...base, path: '/api', maxAge: 0 });
+  res.cookies.set(COOKIE_SESSAO, '', { ...base, path: '/', maxAge: 0 });
 }
 
 /**

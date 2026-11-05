@@ -22,6 +22,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
 import { useBot, useConversas, useSituacaoConta } from '@/lib/consultas';
+import { notificar, tocarAviso, usePreferenciasAvisos } from '@/lib/avisos';
 import { useFilaOffline } from '@/lib/fila';
 import {
   NOME_PAPEL,
@@ -290,6 +291,12 @@ function useSair() {
       setSaindo(true);
       await api('auth/sair', { corpo: {} }).catch(() => undefined);
       cliente.clear();
+      // Telas guardadas para abrir sem internet ficam para a próxima pessoa: apaga.
+      if ('caches' in window)
+        await caches
+          .keys()
+          .then((chaves) => Promise.all(chaves.map((c) => caches.delete(c))))
+          .catch(() => undefined);
       // Recarga completa de propósito: nada da sessão anterior fica na memória da página.
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign('/entrar');
@@ -634,6 +641,23 @@ function Contador({ n, className }: { n: number; className?: string }) {
 function AvisoConversas() {
   const pathname = usePathname();
   const n = useEsperandoAtendente();
+  const [preferencias] = usePreferenciasAvisos();
+  // Som e notificação só quando aumenta (alguém novo esperando), nunca ao abrir a página.
+  const anterior = useRef<number | null>(null);
+  useEffect(() => {
+    const antes = anterior.current;
+    anterior.current = n;
+    if (antes === null || n <= antes) return;
+    if (preferencias.som) tocarAviso();
+    if (preferencias.notificacao)
+      notificar(
+        'Cliente esperando atendente',
+        n === 1
+          ? '1 cliente está esperando no WhatsApp.'
+          : `${n} clientes estão esperando no WhatsApp.`,
+        '/conversas',
+      );
+  }, [n, preferencias]);
   if (n === 0 || pathname === '/conversas') return null;
   return (
     <div

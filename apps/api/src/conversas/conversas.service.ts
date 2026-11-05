@@ -154,6 +154,28 @@ export class ConversasService {
     return { id: r.mensagemId };
   }
 
+  /** Assume sem precisar escrever: o bot fica quieto e a conversa sai da fila de espera. */
+  async assumir(id: string): Promise<{ ok: true }> {
+    await this.banco.daConta(async (tx) => {
+      const s = await this.sessao(tx, id);
+      const sessao = lerSessao(s.sessao);
+      await tx.botSessao.update({
+        where: { id },
+        data: {
+          // Conta a partir de agora: assumir não pode fazer a conversa vencer na hora.
+          sessao: json({
+            ...sessao,
+            comAtendente: true,
+            erros: 0,
+            ultimaEm: new Date().toISOString(),
+          }),
+          atendenteDesde: null,
+        },
+      });
+    });
+    return { ok: true };
+  }
+
   /** Terminou: o bot volta a responder, com a mensagem de encerramento. */
   async devolver(id: string): Promise<{ ok: true }> {
     const r = await this.banco.daConta(async (tx) => {

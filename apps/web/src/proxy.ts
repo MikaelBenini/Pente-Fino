@@ -35,6 +35,14 @@ export function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
   if (temSessao && SO_SEM_SESSAO.includes(pathname)) {
+    // A tela mandou ao login porque a API recusou a sessão: o cookie que sobrou não vale.
+    // Sem isto, /entrar devolveria para /app, que mandaria de novo para /entrar.
+    if (pathname === '/entrar' && req.nextUrl.searchParams.get('motivo') === 'sessao') {
+      const res = NextResponse.next();
+      res.cookies.set('pf_sessao', '', { path: '/', maxAge: 0 });
+      res.cookies.set('pf_acesso', '', { path: '/api', maxAge: 0 });
+      return res;
+    }
     return NextResponse.redirect(new URL('/app', req.url));
   }
   return NextResponse.next();
