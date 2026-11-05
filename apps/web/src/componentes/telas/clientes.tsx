@@ -8,7 +8,7 @@ import {
   type ClienteResumo,
 } from '@pente-fino/shared';
 import { Botao, Campo, Dialogo, EstadoVazio } from '@pente-fino/ui';
-import { Contact, Plus } from 'lucide-react';
+import { Contact, MessageCircle, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
@@ -22,6 +22,7 @@ import {
 } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { ListaMensagens } from '../lista-mensagens';
+import { MandarMensagem } from '../mandar-mensagem';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Tabela, td, th } from '../pagina';
 
@@ -228,7 +229,9 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
                 ))}
               </ul>
             </section>
-            {veConversa && <ConversaWhatsapp clienteId={id!} />}
+            {veConversa && (
+              <ConversaWhatsapp clienteId={id!} nome={c!.nome} telefone={c!.telefone ?? null} />
+            )}
             <section className="flex flex-col gap-2">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                 Histórico
@@ -268,11 +271,35 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
 }
 
 /** Conversa do WhatsApp com o cliente, como no celular: cliente à esquerda, barbearia à direita. */
-function ConversaWhatsapp({ clienteId }: { clienteId: string }) {
+function ConversaWhatsapp({
+  clienteId,
+  nome,
+  telefone,
+}: {
+  clienteId: string;
+  nome: string;
+  telefone: string | null;
+}) {
   const mensagens = useMensagensCliente(clienteId, true);
+  const [mandar, setMandar] = useState(false);
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">WhatsApp</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+          WhatsApp
+        </h3>
+        <Botao variante="secundario" onClick={() => setMandar(true)}>
+          <MessageCircle aria-hidden className="size-4" /> Mandar mensagem
+        </Botao>
+      </div>
+      <MandarMensagem
+        aberto={mandar}
+        onFechar={() => setMandar(false)}
+        clienteId={clienteId}
+        nome={nome}
+        telefone={telefone}
+        textoInicial={`Olá, ${nome.split(' ')[0]}! `}
+      />
       <Estado consulta={mensagens}>
         {() =>
           mensagens.data!.length === 0 ? (

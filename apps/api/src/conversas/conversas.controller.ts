@@ -10,8 +10,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  enviarParaClienteSchema,
   listarConversasSchema,
   responderConversaSchema,
+  type EnviarParaClienteEntrada,
+  type EnvioParaCliente,
   type ListaConversas,
   type MensagemDoCliente,
   type ResponderConversaEntrada,
@@ -36,6 +39,31 @@ export class ConversasController {
     @Consulta(listarConversasSchema) { unidadeId }: z.infer<typeof listarConversasSchema>,
   ): Promise<ListaConversas> {
     return this.servico.listar(unidadeId);
+  }
+
+  @Get('cliente/:clienteId')
+  @Papeis(...QUEM_CONVERSA)
+  @ApiOperation({
+    summary: 'Dá para mandar mensagem a este cliente pelo número da barbearia? Se não, por quê',
+  })
+  podeEnviar(
+    @Param('clienteId', ParseUUIDPipe) clienteId: string,
+    @Consulta(listarConversasSchema) { unidadeId }: z.infer<typeof listarConversasSchema>,
+  ): Promise<EnvioParaCliente> {
+    return this.servico.podeEnviarParaCliente(clienteId, unidadeId);
+  }
+
+  @Post('cliente/:clienteId')
+  @Papeis(...QUEM_CONVERSA)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Mandar mensagem pelo bot (só para quem já escreveu e não pediu SAIR)',
+  })
+  enviar(
+    @Param('clienteId', ParseUUIDPipe) clienteId: string,
+    @Corpo(enviarParaClienteSchema) { texto, unidadeId }: EnviarParaClienteEntrada,
+  ) {
+    return this.servico.enviarParaCliente(clienteId, texto, unidadeId);
   }
 
   @Get(':id/mensagens')

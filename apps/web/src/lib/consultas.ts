@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/
 import { api } from './api';
 import type {
   ConexaoBot,
+  EnvioParaCliente,
   EstadoBot,
   ListaConversas,
   MensagemDoCliente,
@@ -351,4 +352,12 @@ export const useMensagensConversa = (id: string | null) =>
     queryFn: () => api<MensagemDoCliente[]>(`conversas/${id}/mensagens`),
     enabled: !!id,
     refetchInterval: 5_000,
+  });
+
+/** Dá para mandar pelo número da barbearia? Consulta só com a janela aberta. */
+export const useEnvioParaCliente = (clienteId: string, ativo: boolean) =>
+  useQuery({
+    queryKey: [...chaveConversas, 'cliente', clienteId],
+    queryFn: () => api<EnvioParaCliente>(`conversas/cliente/${clienteId}`),
+    enabled: ativo,
   });
