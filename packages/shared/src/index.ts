@@ -29,3 +29,4 @@ export * from './assinatura.js';
 export * from './agendar-bot.js';
 export * from './lembretes.js';
 export * from './regras-agendamento.js';
+export * from './canais.js';

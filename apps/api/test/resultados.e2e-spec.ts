@@ -181,6 +181,20 @@ describe('indicadores', () => {
     });
   });
 
+  it('por canal: as comandas sem agendamento entram como "chegou sem horário"', async () => {
+    const r = (await gestor.get(`/canais?${periodo}`).expect(200)).body as {
+      canal: string;
+      atendidos: number;
+      faturamento: number;
+      comparecimento: number | null;
+    }[];
+    const sem = r.find((l) => l.canal === 'sem_horario')!;
+    expect(sem.atendidos).toBeGreaterThanOrEqual(3);
+    expect(sem.faturamento).toBeGreaterThan(0);
+    expect(sem.comparecimento).toBeNull();
+    await barbeiro.get(`/canais?${periodo}`).expect(403);
+  });
+
   it('lucratividade por produto: vendido com custo e retorno; gestor vê, barbeiro não', async () => {
     const r = (await gestor.get(`/lucratividade?${periodo}`).expect(200)).body.produtos as {
       nome: string;

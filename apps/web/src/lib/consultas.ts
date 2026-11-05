@@ -29,6 +29,7 @@ import type {
   PainelBarbeiro,
   RespostaIndicadores,
   RespostaLucratividade,
+  LinhaCanal,
   ResumoAvaliacoes,
   ResumoComissao,
 } from '@pente-fino/shared';
@@ -393,3 +394,11 @@ export const useAssinatura = (ativo: boolean) =>
     queryFn: () => api<AssinaturaDetalhe>('conta/assinatura'),
     enabled: ativo,
   });
+
+/** Por onde os clientes marcam (dono e gestor). */
+export function useCanais(unidade: string | null, de: string, ate: string) {
+  return useQuery({
+    queryKey: [...chavesResultados.indicadores, 'canais', unidade, de, ate],
+    queryFn: () => api<LinhaCanal[]>(`canais?de=${de}&ate=${ate}${comUnidade(unidade)}`),
+  });
+}

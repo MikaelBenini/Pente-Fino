@@ -13,6 +13,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   metaSchema,
   periodoSchema,
+  porCanal,
+  type LinhaCanal,
   type MetaEntrada,
   type ResumoAvaliacoes,
 } from '@pente-fino/shared';
@@ -57,6 +59,43 @@ export class ResultadosController {
   avaliacoes(@Consulta(periodoSchema) p: z.infer<typeof periodoSchema>): Promise<ResumoAvaliacoes> {
     const { filtro } = escopoUnidades(p.unidadeId, ['dono', 'gestor']);
     return this.banco.daConta((tx) => resumoAvaliacoes(tx, filtro, p.de, p.ate));
+  }
+
+  @Get('canais')
+  @Papeis('dono', 'gestor')
+  @ApiOperation({
+    summary: 'Por onde os clientes marcam: agendados, atendidos, faltas e faturamento por canal',
+  })
+  canais(@Consulta(periodoSchema) p: z.infer<typeof periodoSchema>): Promise<LinhaCanal[]> {
+    const { filtro } = escopoUnidades(p.unidadeId, ['dono', 'gestor']);
+    const periodo = {
+      gte: new Date(`${p.de}T00:00:00-03:00`),
+      lt: new Date(new Date(`${p.ate}T00:00:00-03:00`).getTime() + 86_400_000),
+    };
+    return this.banco.daConta(async (tx) => {
+      const agendamentos = await tx.agendamento.findMany({
+        where: { ...filtro, inicio: periodo },
+        select: {
+          origem: true,
+          status: true,
+          comanda: { select: { status: true, totalLiquido: true } },
+        },
+      });
+      const semHorario = await tx.comanda.findMany({
+        where: { ...filtro, status: 'fechada', agendamentoId: null, fechadaEm: periodo },
+        select: { totalLiquido: true },
+      });
+      return porCanal(
+        agendamentos.map((a) => ({
+          origem: a.origem,
+          status: a.status,
+          comanda: a.comanda
+            ? { status: a.comanda.status, totalLiquido: a.comanda.totalLiquido ?? 0 }
+            : null,
+        })),
+        semHorario.map((c) => ({ totalLiquido: c.totalLiquido ?? 0 })),
+      );
+    });
   }
 
   @Get('lucratividade')

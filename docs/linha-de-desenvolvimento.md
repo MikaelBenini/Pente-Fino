@@ -326,7 +326,7 @@ O cliente escolhe por onde quer marcar: conversando com o bot ou pelo link. Os d
 - [ ] Respostas simples ao assistente, sem IA: "agenda" (agenda de hoje), "amanhã", "comissão" (do mês); só para o número confirmado, e nunca com telefone de cliente quando a conta oculta
 - [ ] Silêncio fora do expediente dele e limite de mensagens por dia; "PARAR" desliga na hora
 - [ ] Dono e gestor podem receber o mesmo tipo de aviso (falta, nota baixa, resumo do dia) pelo WhatsApp
-- [ ] Origem do agendamento registrada (balcão, site, bot) e indicador de agendamentos por canal nas métricas
+- [x] Origem do agendamento registrada (balcão, site, bot) e indicador de agendamentos por canal nas métricas (feito: Métricas → "Por onde os clientes marcam": marcados, atendidos, faltas, cancelados, comparecimento, faturamento e fatia por canal — WhatsApp, site, balcão e "chegou sem horário"; `porCanal` em `packages/shared/src/canais.ts`, `GET /canais`)
 - [ ] **Pronto quando:** um cliente marca, remarca e cancela pelo WhatsApp e outro pelo site, sem ajuda; os dois aparecem na agenda com comanda prevista e recebem o lembrete
 
 ## Etapa 12 · Pós-atendimento: avaliação e retorno do cliente
