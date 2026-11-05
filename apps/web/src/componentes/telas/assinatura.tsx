@@ -7,13 +7,17 @@ import {
   NOME_PLANO,
   NOME_SITUACAO_ASSINATURA,
   NOME_STATUS_FATURA,
+  documentoValido,
+  PLANOS,
+  valorDaCobranca,
   type FaturaDetalhe,
   type SituacaoAssinatura,
 } from '@pente-fino/shared';
-import { EstadoVazio } from '@pente-fino/ui';
-import { CreditCard, ExternalLink, Receipt } from 'lucide-react';
-import Link from 'next/link';
-import { useAssinatura } from '@/lib/consultas';
+import { Botao, Campo, EstadoVazio, Selecao } from '@pente-fino/ui';
+import { CreditCard, ExternalLink, Receipt, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { api, ErroApi } from '@/lib/api';
+import { chaveAssinatura, useAcao, useAssinatura } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 
@@ -140,21 +144,24 @@ export function Assinatura() {
                   {formatarData(pendente.vencimento)}. Pague por Pix ou boleto, ou use outro cartão,
                   na página de pagamento.
                 </p>
-                <AcaoPagar f={pendente} rotulo="Pagar ou trocar o cartão" />
+                <AcaoPagar
+                  f={pendente}
+                  rotulo="Pagar ou trocar o cartão"
+                  semLink={
+                    d.cobrancaAutomatica
+                      ? undefined
+                      : 'Assine abaixo para pagar por Pix, boleto ou cartão.'
+                  }
+                />
               </section>
             )}
             {pendente?.status === 'aberta' && (
               <AcaoPagar f={pendente} rotulo={`Pagar ${formatarMoeda(pendente.valor)}`} />
             )}
-            {(estado.situacao === 'teste' || estado.situacao === 'teste_vencido') && !pendente && (
-              <p className="text-tinta-suave">
-                Para assinar, veja os planos em{' '}
-                <Link href="/planos" className="font-semibold text-tinta underline">
-                  /planos
-                </Link>{' '}
-                ou fale com o suporte do Pente Fino. Nada do que você lançou se perde.
-              </p>
+            {!d.cobrancaAutomatica && estado.situacao !== 'ativa' && (
+              <Assinar planoAtual={d.plano} cicloAtual={d.ciclo} unidades={d.unidades} />
             )}
+            {d.cobrancaAutomatica && pendente && <ConferirPagamento />}
 
             <section aria-labelledby="titulo-faturas" className="flex flex-col gap-3">
               <h2 id="titulo-faturas" className="text-xl font-semibold">
@@ -227,13 +234,16 @@ export function Assinatura() {
   );
 }
 
-function AcaoPagar({ f, rotulo }: { f: FaturaDetalhe; rotulo: string }) {
-  if (!f.linkPagamento)
-    return (
-      <p className="text-sm text-tinta-suave">
-        O link de pagamento ainda não foi gerado. Fale com o suporte do Pente Fino.
-      </p>
-    );
+function AcaoPagar({
+  f,
+  rotulo,
+  semLink = 'O link de pagamento ainda não foi gerado. Fale com o suporte do Pente Fino.',
+}: {
+  f: FaturaDetalhe;
+  rotulo: string;
+  semLink?: string;
+}) {
+  if (!f.linkPagamento) return <p className="text-sm text-tinta-suave">{semLink}</p>;
   return (
     <a
       href={f.linkPagamento}
@@ -243,5 +253,158 @@ function AcaoPagar({ f, rotulo }: { f: FaturaDetalhe; rotulo: string }) {
     >
       {rotulo} <ExternalLink aria-hidden className="size-4" />
     </a>
+  );
+}
+
+const mensagemDe = (e: unknown) =>
+  e instanceof ErroApi ? e.message : 'Não foi possível concluir. Tente de novo.';
+
+/**
+ * Assinar pela cobrança automática: plano, ciclo e CPF ou CNPJ de quem paga. A página de
+ * pagamento (Pix, boleto ou cartão) abre numa aba nova; ao voltar, "Já paguei, conferir".
+ */
+function Assinar({
+  planoAtual,
+  cicloAtual,
+  unidades,
+}: {
+  planoAtual: FaturaDetalhe['plano'];
+  cicloAtual: FaturaDetalhe['ciclo'];
+  unidades: number;
+}) {
+  const [plano, setPlano] = useState(planoAtual);
+  const [ciclo, setCiclo] = useState(cicloAtual);
+  const [documento, setDocumento] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [link, setLink] = useState<string | null>(null);
+  const assinar = useAcao(
+    (corpo: object) => api<{ linkPagamento: string | null }>('conta/assinatura', { corpo }),
+    [chaveAssinatura],
+  );
+  const docOk = documentoValido(documento);
+  const valor = valorDaCobranca(plano, ciclo, unidades);
+  return (
+    <section
+      aria-labelledby="titulo-assinar"
+      className="flex flex-col gap-4 rounded-lg border border-borda bg-superficie p-5"
+    >
+      <div>
+        <h2 id="titulo-assinar" className="text-lg font-semibold">
+          Assinar o Pente Fino
+        </h2>
+        <p className="text-sm text-tinta-suave">
+          Pague por Pix, boleto ou cartão na página de pagamento. Nada do que você lançou se perde.
+        </p>
+      </div>
+      {link ? (
+        <div className="flex flex-col gap-3">
+          <Aviso tom="sucesso">
+            Assinatura criada. Pague na página que abriu; depois volte aqui e toque em “Já paguei,
+            conferir”.
+          </Aviso>
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${classeBotao} self-start`}
+          >
+            Abrir a página de pagamento <ExternalLink aria-hidden className="size-4" />
+          </a>
+        </div>
+      ) : (
+        <form
+          method="post"
+          noValidate
+          className="grid gap-4 sm:grid-cols-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setErro(null);
+            if (!docOk) return setErro('Confira o CPF ou CNPJ.');
+            try {
+              const r = await assinar.mutateAsync({ plano, ciclo, documento });
+              setLink(r.linkPagamento);
+              if (r.linkPagamento) window.open(r.linkPagamento, '_blank', 'noopener');
+            } catch (er) {
+              setErro(mensagemDe(er));
+            }
+          }}
+        >
+          {erro && (
+            <div className="sm:col-span-3">
+              <Aviso tom="erro">{erro}</Aviso>
+            </div>
+          )}
+          <Selecao
+            id="assinar-plano"
+            rotulo="Plano"
+            value={plano}
+            onChange={(e) => setPlano(e.target.value as typeof plano)}
+            opcoes={PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] }))}
+          />
+          <Selecao
+            id="assinar-ciclo"
+            rotulo="Cobrança"
+            value={ciclo}
+            onChange={(e) => setCiclo(e.target.value as typeof ciclo)}
+            opcoes={[
+              { valor: 'mensal', rotulo: 'Mensal' },
+              { valor: 'anual', rotulo: 'Anual (mais barato)' },
+            ]}
+          />
+          <Campo
+            id="assinar-documento"
+            rotulo="CPF ou CNPJ de quem paga"
+            inputMode="numeric"
+            autoComplete="off"
+            value={documento}
+            onChange={(e) => setDocumento(e.target.value)}
+            erro={
+              documento.replace(/\D/g, '').length >= 11 && !docOk
+                ? 'CPF ou CNPJ inválido.'
+                : undefined
+            }
+          />
+          <p className="font-denso text-lg tabular-nums sm:col-span-2">
+            {formatarMoeda(valor)}{' '}
+            <span className="font-sans text-base text-tinta-suave">
+              {ciclo === 'anual' ? 'por ano' : 'por mês'}
+              {unidades > 1 && ` · ${unidades} unidades`}
+            </span>
+          </p>
+          <Botao type="submit" carregando={assinar.isPending} className="sm:justify-self-end">
+            Assinar e pagar
+          </Botao>
+        </form>
+      )}
+    </section>
+  );
+}
+
+/** Voltou da página de pagamento: confere no Asaas sem esperar o aviso automático. */
+function ConferirPagamento() {
+  const [erro, setErro] = useState<string | null>(null);
+  const conferir = useAcao(
+    () => api('conta/assinatura/conferir', { corpo: {} }),
+    [chaveAssinatura],
+  );
+  return (
+    <div className="flex flex-col gap-2">
+      <Botao
+        variante="secundario"
+        className="self-start"
+        carregando={conferir.isPending}
+        onClick={async () => {
+          setErro(null);
+          try {
+            await conferir.mutateAsync(undefined);
+          } catch (e) {
+            setErro(mensagemDe(e));
+          }
+        }}
+      >
+        <RefreshCw aria-hidden className="size-4" /> Já paguei, conferir
+      </Botao>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+    </div>
   );
 }

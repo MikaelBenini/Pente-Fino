@@ -48,6 +48,15 @@ const esquema = z
     WHATSAPP_WEBHOOK_SEGREDO: z.string().min(16),
     /** Endereço da API visto pela Evolution. Padrão: API_URL/webhooks/whatsapp. */
     WHATSAPP_WEBHOOK_URL: z.url().optional(),
+    /** asaas = cobrança de verdade (sandbox ou produção); falso = sem Asaas (testes). */
+    COBRANCA_PROVEDOR: z.enum(['asaas', 'falso']).default('asaas'),
+    ASAAS_API_URL: z.url().default('https://api-sandbox.asaas.com/v3'),
+    ASAAS_API_KEY: z.string().default(''),
+    /** Token que o Asaas manda no cabeçalho asaas-access-token de cada webhook. */
+    ASAAS_WEBHOOK_TOKEN: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().min(16).optional(),
+    ),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
@@ -67,6 +76,20 @@ const esquema = z
         path: ['WHATSAPP_WEBHOOK_SEGREDO'],
         message: 'em produção use um valor aleatório com 32+ caracteres (openssl rand -hex 32)',
       });
+    }
+    if (env.COBRANCA_PROVEDOR === 'asaas') {
+      if (!env.ASAAS_API_KEY)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['ASAAS_API_KEY'],
+          message: 'defina a chave do Asaas',
+        });
+      if (!env.ASAAS_WEBHOOK_TOKEN)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['ASAAS_WEBHOOK_TOKEN'],
+          message: 'defina o token do webhook (o mesmo cadastrado no Asaas)',
+        });
     }
     if (env.WHATSAPP_PROVEDOR === 'evolution' && !env.EVOLUTION_API_KEY) {
       ctx.addIssue({
@@ -100,6 +123,13 @@ export interface Configuracao {
     evolutionChave: string;
     webhookSegredo: string;
     webhookUrl: string;
+  };
+  cobranca: {
+    provedor: 'asaas' | 'falso';
+    asaasUrl: string;
+    asaasChave: string;
+    /** null: webhook desligado (dev sem endereço público; use "conferir pagamento"). */
+    webhookToken: string | null;
   };
 }
 
@@ -138,6 +168,12 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
       evolutionChave: e.EVOLUTION_API_KEY,
       webhookSegredo: e.WHATSAPP_WEBHOOK_SEGREDO,
       webhookUrl: e.WHATSAPP_WEBHOOK_URL ?? `${e.API_URL.replace(/\/$/, '')}/webhooks/whatsapp`,
+    },
+    cobranca: {
+      provedor: e.COBRANCA_PROVEDOR,
+      asaasUrl: e.ASAAS_API_URL.replace(/\/$/, ''),
+      asaasChave: e.ASAAS_API_KEY,
+      webhookToken: e.ASAAS_WEBHOOK_TOKEN ?? null,
     },
   };
 }

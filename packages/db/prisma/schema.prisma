@@ -212,6 +212,11 @@ model Conta {
   testeAte                DateTime?     @map("teste_ate") @db.Timestamptz(3)
   /// Pesquisa de 1 a 5 pelo WhatsApp depois do atendimento (o dono pode desligar).
   pesquisaPosAtendimento  Boolean       @default(true) @map("pesquisa_pos_atendimento")
+  /// CPF ou CNPJ de quem paga a assinatura (só dígitos); o Asaas exige.
+  documento               String?
+  /// Cliente e assinatura no Asaas (cobrança automática, Etapa 10.1 em teste e 23).
+  asaasClienteId          String?       @unique @map("asaas_cliente_id")
+  asaasAssinaturaId       String?       @unique @map("asaas_assinatura_id")
   criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm            DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 

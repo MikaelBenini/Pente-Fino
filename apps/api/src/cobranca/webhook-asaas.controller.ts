@@ -1,0 +1,61 @@
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Logger,
+  Post,
+} from '@nestjs/common';
+import { ApiExcludeController } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
+import { timingSafeEqual } from 'node:crypto';
+import { Publico } from '../auth/decoradores.js';
+import { Erros } from '../comum/erros.js';
+import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { CobrancaService, type PagamentoWebhook } from './cobranca.service.js';
+
+const iguais = (a: string, b: string) => {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+};
+
+/**
+ * Webhook do Asaas: confere o token do cabeçalho asaas-access-token (o mesmo cadastrado no
+ * Asaas) e aplica a cobrança. Responde 200 mesmo para o que ignora: com erro, o Asaas pausa
+ * a fila de avisos da conta inteira.
+ */
+@ApiExcludeController()
+@Controller('webhooks')
+export class WebhookAsaasController {
+  private readonly log = new Logger('Webhook Asaas');
+
+  constructor(
+    @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(CobrancaService) private readonly cobranca: CobrancaService,
+  ) {}
+
+  @Post('asaas')
+  @Publico()
+  @SkipThrottle({ padrao: true })
+  @HttpCode(HttpStatus.OK)
+  async asaas(
+    @Body() corpo: { event?: string; payment?: PagamentoWebhook },
+    @Headers('asaas-access-token') token: string | undefined,
+  ): Promise<{ ok: true; resultado: string }> {
+    const esperado = this.config.cobranca.webhookToken;
+    if (!esperado || !token || !iguais(token, esperado))
+      throw Erros.naoAutenticado('Token do webhook inválido.');
+    const p = corpo?.payment;
+    if (!corpo?.event || !p?.id || !p.customer) return { ok: true, resultado: 'ignorado' };
+    try {
+      return { ok: true, resultado: await this.cobranca.webhook(corpo.event, p) };
+    } catch (e) {
+      // Registra e responde 200: o "conferir" da tela recupera o que faltar.
+      this.log.error(`Falhou ao aplicar ${corpo.event} (${p.id}): ${(e as Error).message}`);
+      return { ok: true, resultado: 'erro' };
+    }
+  }
+}

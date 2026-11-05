@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { situacaoAssinatura, TOLERANCIA_ATRASO_DIAS } from './assinatura.js';
+import {
+  documentoValido,
+  faturaDaCobranca,
+  situacaoAssinatura,
+  TOLERANCIA_ATRASO_DIAS,
+  valorDaCobranca,
+} from './assinatura.js';
 
 const agora = new Date('2026-11-05T15:00:00-03:00');
 const dia = (n: number) => new Date(agora.getTime() + n * 86_400_000);
@@ -56,5 +62,43 @@ describe('situacaoAssinatura', () => {
   it('suspensa e cancelada pela administração: só consulta', () => {
     for (const status of ['suspensa', 'cancelada'] as const)
       expect(situacaoAssinatura({ status, testeAte: null }, [], agora).somenteLeitura).toBe(true);
+  });
+});
+
+describe('cobrança', () => {
+  it.each([
+    ['529.982.247-25', true],
+    ['52998224725', true],
+    ['111.111.111-11', false],
+    ['529.982.247-24', false],
+    ['11.222.333/0001-81', true],
+    ['11.222.333/0001-80', false],
+    ['123', false],
+  ])('documento %s → %s', (doc, ok) => expect(documentoValido(doc)).toBe(ok));
+
+  it('valor: o mês no mensal, os 12 meses no anual (com o desconto do anual)', () => {
+    expect(valorDaCobranca('pro', 'mensal', 1)).toBe(14990);
+    expect(valorDaCobranca('pro', 'anual', 1)).toBe(12490 * 12);
+    expect(valorDaCobranca('premium', 'mensal', 2)).toBe(24990 + 9990);
+  });
+
+  it('status do Asaas → fatura', () => {
+    const base = { id: 'pay_1', valor: 14990, vencimento: '2026-11-05', link: null, pagaEm: null };
+    expect(faturaDaCobranca({ ...base, status: 'PENDING', forma: null }).status).toBe('aberta');
+    expect(faturaDaCobranca({ ...base, status: 'OVERDUE', forma: 'BOLETO' }).status).toBe('aberta');
+    expect(
+      faturaDaCobranca({
+        ...base,
+        status: 'RECEIVED',
+        forma: 'PIX',
+        pagaEm: '2026-11-05T13:00:00Z',
+      }),
+    ).toEqual({ status: 'paga', forma: 'pix', pagaEm: new Date('2026-11-05T13:00:00Z') });
+    expect(faturaDaCobranca({ ...base, status: 'CONFIRMED', forma: 'CREDIT_CARD' }).forma).toBe(
+      'cartao',
+    );
+    expect(faturaDaCobranca({ ...base, status: 'REFUNDED', forma: 'PIX' }).status).toBe(
+      'cancelada',
+    );
   });
 });
