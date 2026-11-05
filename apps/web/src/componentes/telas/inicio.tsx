@@ -3,7 +3,7 @@
 import { formatarMoeda, formatarNumero } from '@pente-fino/shared';
 import { BarraMeta } from '@pente-fino/ui';
 import Link from 'next/link';
-import { useIndicadores, useMetas } from '@/lib/consultas';
+import { useAvaliacoes, useIndicadores, useMetas } from '@/lib/consultas';
 import { useEstadoConfiguracao } from './configuracao-inicial';
 import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
@@ -17,6 +17,8 @@ export function TelaInicio() {
   const [de, ate] = limitesDoMes(mes);
   const indicadores = useIndicadores(unidadeAtiva, de, ate);
   const metas = useMetas(unidadeAtiva, mes);
+  const avaliacoes = useAvaliacoes(unidadeAtiva, de, ate);
+  const notas = avaliacoes.data;
   const nomeUnidade = (id: string) => unidades.find((u) => u.id === id)?.nome ?? '';
 
   return (
@@ -68,6 +70,38 @@ export function TelaInicio() {
           )
         }
       </Estado>
+      {notas && notas.atendimento.respostas > 0 && (
+        <Link
+          href="/metricas#titulo-avaliacoes"
+          className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-borda bg-superficie p-4 hover:bg-superficie-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+        >
+          <span className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+            Clientes avaliam
+          </span>
+          <span>
+            Atendimento{' '}
+            <strong className="font-denso text-xl tabular-nums">
+              {nota(notas.atendimento.media)}
+            </strong>
+          </span>
+          <span>
+            Barbearia{' '}
+            <strong className="font-denso text-xl tabular-nums">
+              {nota(notas.barbearia.media)}
+            </strong>
+          </span>
+          <span className="text-sm text-tinta-suave">
+            {notas.atendimento.respostas}{' '}
+            {notas.atendimento.respostas === 1 ? 'resposta' : 'respostas'} no mês
+          </span>
+          {notas.baixas.length > 0 && (
+            <span className="text-sm font-semibold text-perigo-texto">
+              {notas.baixas.length} {notas.baixas.length === 1 ? 'nota baixa' : 'notas baixas'} para
+              resolver
+            </span>
+          )}
+        </Link>
+      )}
       <Estado consulta={indicadores}>
         {() => (
           <PainelIndicadores
@@ -82,3 +116,6 @@ export function TelaInicio() {
     </div>
   );
 }
+
+const nota = (n: number | null) =>
+  n === null ? '—' : n.toLocaleString('pt-BR', { minimumFractionDigits: 1 });

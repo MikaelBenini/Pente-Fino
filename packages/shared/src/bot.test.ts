@@ -4,6 +4,7 @@ import {
   descreverHorario,
   MENSAGENS_BOT_PADRAO,
   MENU_BOT_PADRAO,
+  NOTA_NAO_ENTENDIDA,
   normalizar,
   preencher,
   responder,
@@ -373,5 +374,55 @@ describe('horário', () => {
     expect(dentroDoHorario(semana, agora)).toBe(true);
     expect(dentroDoHorario(semana, new Date('2026-11-04T19:00:00-03:00'))).toBe(false);
     expect(dentroDoHorario(semana, new Date('2026-11-08T10:00:00-03:00'))).toBe(false); // domingo
+  });
+});
+
+describe('pesquisa depois do atendimento', () => {
+  const comPesquisa = (min = 5): SessaoBot => ({
+    caminho: [],
+    // Horas depois da última conversa: a pesquisa vale mesmo com a sessão vencida.
+    ultimaEm: new Date(agora.getTime() - min * 60_000).toISOString(),
+    comAtendente: false,
+    pesquisa: { avaliacaoId: 'av1', passo: 'atendimento' },
+  });
+
+  it('nota do atendimento → da barbearia → comentário → obrigado', () => {
+    const r1 = fala(comPesquisa(180), '5');
+    expect(r1.respostas).toEqual([MENSAGENS_BOT_PADRAO.pesquisa_barbearia]);
+    expect(r1.avaliacao).toEqual({ avaliacaoId: 'av1', notaAtendimento: 5, concluida: false });
+    const r2 = fala(r1.sessao, 'nota 4');
+    expect(r2.avaliacao).toMatchObject({ notaBarbearia: 4 });
+    expect(r2.respostas).toEqual([MENSAGENS_BOT_PADRAO.pesquisa_comentario]);
+    const r3 = fala(r2.sessao, 'Corte top, só demorou um pouco.');
+    expect(r3.avaliacao).toEqual({
+      avaliacaoId: 'av1',
+      comentario: 'Corte top, só demorou um pouco.',
+      concluida: true,
+    });
+    expect(r3.respostas).toEqual([MENSAGENS_BOT_PADRAO.pesquisa_obrigado]);
+    expect(r3.sessao.pesquisa).toBeUndefined();
+  });
+
+  it('0 pula o comentário', () => {
+    const s: SessaoBot = {
+      ...comPesquisa(),
+      pesquisa: { avaliacaoId: 'av1', passo: 'comentario' },
+    };
+    expect(fala(s, '0').avaliacao).toMatchObject({ comentario: null, concluida: true });
+  });
+
+  it('resposta que não é nota: pede uma vez; na segunda, larga a pesquisa e segue o menu', () => {
+    const r1 = fala(comPesquisa(), 'ótimo');
+    expect(r1.respostas).toEqual([NOTA_NAO_ENTENDIDA]);
+    expect(r1.avaliacao).toBeNull();
+    const r2 = fala(r1.sessao, 'preço');
+    expect(r2.sessao.pesquisa).toBeUndefined();
+    expect(r2.acao).toBe('ver_precos');
+  });
+
+  it('SAIR no meio encerra a pesquisa e desliga os avisos', () => {
+    const r = fala(comPesquisa(), 'sair');
+    expect(r).toMatchObject({ consentimento: false, avaliacao: null });
+    expect(r.sessao.pesquisa).toBeUndefined();
   });
 });

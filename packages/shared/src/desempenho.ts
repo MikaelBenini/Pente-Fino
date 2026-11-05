@@ -1,5 +1,6 @@
 // Ficha do profissional (linha de desenvolvimento, Etapa 9). Regras puras: a API junta
 // os dados, aqui só se calcula. Tudo sai de comandas FECHADAS, como os indicadores.
+import type { ComentarioAvaliacao, NotasDoPeriodo } from './avaliacao.js';
 import { diaDaSemana, instanteLocal } from './agenda.js';
 import { TOLERANCIA_PENDENTE_MIN } from './comanda.js';
 import type { DataISO } from './vigencia.js';
@@ -500,12 +501,8 @@ export interface FichaProfissional {
     ResumoDesempenho,
     'faturamento' | 'clientes' | 'ticketMedio' | 'percentualExtras' | 'atendimentos'
   > | null;
-  /** Chega com a Etapa 12 (pesquisa depois do atendimento). */
-  avaliacoes: {
-    media: number;
-    respostas: number;
-    comentarios: { nota: number; texto: string; data: string }[];
-  } | null;
+  /** Pesquisa depois do atendimento: notas do atendimento dele e os comentários. */
+  avaliacoes: NotasDoPeriodo & { comentarios: ComentarioAvaliacao[] };
 }
 
 // ─── Chamar o cliente de volta ────────────────────────────────────────────

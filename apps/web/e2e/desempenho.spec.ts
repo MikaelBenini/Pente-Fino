@@ -32,6 +32,10 @@ test('dono vai do ranking da equipe à ficha completa do barbeiro', async ({ pag
     ).toBeVisible();
   await expect(visivel('Ticket médio')).toBeVisible();
   await expect(visivel('Para chamar de volta')).toBeVisible();
+  // Avaliações: a nota do atendimento dele, com as barras de 1 a 5.
+  await expect(
+    page.getByRole('list', { name: 'Notas de atendimento' }).filter({ visible: true }),
+  ).toBeVisible();
   // Dono vê a margem dos serviços.
   await expect(
     visivel('Serviços feitos no período', 'table').getByRole('columnheader', { name: 'Lucro' }),

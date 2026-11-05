@@ -42,8 +42,15 @@ export interface EnvioDoPainel {
   mensagemIds: string[];
 }
 
-/** O que vai na fila `whatsapp-entrada`: eventos do provedor ou envios do painel. */
-export type TrabalhoWhatsappEntrada = EventoWhatsapp | EnvioDoPainel;
+/** Hora de mandar a pesquisa depois do atendimento (trabalho atrasado, criado no fechamento). */
+export interface InicioDePesquisa {
+  tipo: 'pesquisa';
+  contaId: string;
+  avaliacaoId: string;
+}
+
+/** O que vai na fila `whatsapp-entrada`: eventos do provedor, envios do painel e pesquisas. */
+export type TrabalhoWhatsappEntrada = EventoWhatsapp | EnvioDoPainel | InicioDePesquisa;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

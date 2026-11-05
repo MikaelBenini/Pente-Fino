@@ -202,6 +202,7 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
       `/bot/conexao/${a.unidadeA}`,
       `/clientes/${ids.cliente}/mensagens`,
       `/conversas?unidadeId=${a.unidadeA}`,
+      `/avaliacoes?${periodo()}&unidadeId=${a.unidadeA}`,
     ];
     for (const rota of rotas) {
       const r = await intruso.get(rota);
@@ -329,6 +330,8 @@ describe('permissões: cada papel tentando o que não pode', () => {
       ['post', () => `/bot/conexao/${a.unidadeA}`],
       ['get', () => `/clientes/${ids.cliente}/mensagens`],
       ['get', () => '/conversas'],
+      ['get', () => `/avaliacoes?${periodo()}`],
+      ['put', () => '/bot/pesquisa', { ativa: false }],
       ['get', () => `/resumo/dia?data=${hoje}`],
       ['get', () => `/resumo/mes?mes=${mes}`],
       ['get', () => `/profissionais/desempenho?${periodo()}`],

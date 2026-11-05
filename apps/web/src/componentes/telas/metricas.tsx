@@ -7,6 +7,7 @@ import {
   lerMoeda,
   type MetaDetalhe,
   type RespostaLucratividade,
+  type ResumoAvaliacoes,
   type SituacaoProduto,
 } from '@pente-fino/shared';
 import { BarraMeta, Botao, Campo, Dialogo, EstadoVazio, Selecao } from '@pente-fino/ui';
@@ -16,6 +17,7 @@ import { api, ErroApi } from '@/lib/api';
 import {
   chavesResultados,
   useAcao,
+  useAvaliacoes,
   useIndicadores,
   useLucratividade,
   useMetas,
@@ -25,6 +27,7 @@ import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores, SeletorMes } from '../indicadores';
+import { ComentarioDaPesquisa, ResumoDeNotas } from '../notas';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
 export function TelaMetricas() {
@@ -35,6 +38,7 @@ export function TelaMetricas() {
   const indicadores = useIndicadores(unidadeAtiva, de, ate);
   const metas = useMetas(unidadeAtiva, mes);
   const lucro = useLucratividade(unidadeAtiva, de, ate);
+  const avaliacoes = useAvaliacoes(unidadeAtiva, de, ate);
   const [nova, setNova] = useState(false);
   const remover = useAcao(
     (id: string) => api(`metas/${id}`, { metodo: 'DELETE' }),
@@ -123,6 +127,7 @@ export function TelaMetricas() {
           </>
         )}
       </Estado>
+      <Estado consulta={avaliacoes}>{() => <Avaliacoes r={avaliacoes.data!} />}</Estado>
       {ehDono && <NovaMeta mes={mes} aberto={nova} onFechar={() => setNova(false)} />}
     </div>
   );
@@ -444,6 +449,55 @@ function LucroProdutos({ produtos }: { produtos: RespostaLucratividade['produtos
             </tbody>
           </Tabela>
         </>
+      )}
+    </section>
+  );
+}
+
+// ─── Avaliações dos clientes ──────────────────────────────────────────────
+
+function Avaliacoes({ r }: { r: ResumoAvaliacoes }) {
+  return (
+    <section className="flex flex-col gap-4" aria-labelledby="titulo-avaliacoes">
+      <div>
+        <h2 id="titulo-avaliacoes" className="text-xl font-semibold">
+          Avaliações dos clientes
+        </h2>
+        <p className="text-tinta-suave">
+          Pesquisa de 1 a 5 pelo WhatsApp depois do atendimento.
+          {r.atendimento.taxaResposta !== null &&
+            ` ${formatarFracao(r.atendimento.taxaResposta, 0)} responderam (${r.atendimento.respostas} de ${r.atendimento.enviadas}).`}
+        </p>
+      </div>
+      {!r.pesquisaAtiva && (
+        <Aviso tom="info">A pesquisa está desligada. O dono liga em Bot → Mensagens.</Aviso>
+      )}
+      <div className="grid gap-4 md:grid-cols-2">
+        <ResumoDeNotas titulo="Atendimento" resumo={r.atendimento} />
+        <ResumoDeNotas titulo="Barbearia" resumo={r.barbearia} />
+      </div>
+      {r.baixas.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-lg font-semibold">Notas baixas para resolver</h3>
+          <p className="text-sm text-tinta-suave">
+            Nota 1 ou 2 no atendimento ou na barbearia. Vale uma conversa com o cliente.
+          </p>
+          <ul className="flex flex-col gap-2" aria-label="Notas baixas">
+            {r.baixas.map((c) => (
+              <ComentarioDaPesquisa key={c.comandaId} c={c} />
+            ))}
+          </ul>
+        </div>
+      )}
+      {r.comentarios.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-lg font-semibold">Comentários recentes</h3>
+          <ul className="grid gap-2 md:grid-cols-2" aria-label="Comentários recentes">
+            {r.comentarios.map((c) => (
+              <ComentarioDaPesquisa key={c.comandaId} c={c} />
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );

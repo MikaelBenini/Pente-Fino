@@ -14,6 +14,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   horarioBotSchema,
   mensagensBotSchema,
+  pesquisaBotSchema,
   menuBotSchema,
   simularBotSchema,
   type ConexaoBot,
@@ -21,6 +22,7 @@ import {
   type HorarioBotEntrada,
   type MensagensBotEntrada,
   type MenuBot,
+  type PesquisaBotEntrada,
   type RespostaSimulacao,
   type SimularBotDados,
 } from '@pente-fino/shared';
@@ -78,6 +80,14 @@ export class BotController {
   @ApiOperation({ summary: 'Voltar à versão publicada antes desta' })
   restaurar() {
     return this.servico.restaurarAnterior();
+  }
+
+  @Put('pesquisa')
+  @Papeis('dono')
+  @Auditada()
+  @ApiOperation({ summary: 'Ligar ou desligar a pesquisa de 1 a 5 depois do atendimento' })
+  pesquisa(@Corpo(pesquisaBotSchema) d: PesquisaBotEntrada) {
+    return this.servico.salvarPesquisa(d.ativa);
   }
 
   @Put('mensagens')

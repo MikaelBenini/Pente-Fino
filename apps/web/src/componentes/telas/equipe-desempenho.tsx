@@ -49,6 +49,7 @@ const ORDENS: { valor: keyof LinhaRankingEquipe; rotulo: string }[] = [
   { valor: 'taxaRetorno', rotulo: 'Clientes que voltam' },
   { valor: 'percentualNoPrazo', rotulo: 'Confirmação no prazo' },
   { valor: 'ocupacao', rotulo: 'Ocupação' },
+  { valor: 'notaMedia', rotulo: 'Nota dos clientes' },
 ];
 
 export function RankingEquipe() {
@@ -73,7 +74,8 @@ export function RankingEquipe() {
       <Estado consulta={ranking}>
         {() => {
           const linhas = [...ranking.data!].sort(
-            (a, b) => (b[ordem] as number) - (a[ordem] as number),
+            // Sem nota (ninguém respondeu) vai para o fim quando ordena por nota.
+            (a, b) => ((b[ordem] as number | null) ?? -1) - ((a[ordem] as number | null) ?? -1),
           );
           if (linhas.length === 0)
             return (
@@ -95,6 +97,7 @@ export function RankingEquipe() {
                   <th className={`${th} text-right`}>Voltam</th>
                   <th className={`${th} text-right`}>No prazo</th>
                   <th className={`${th} text-right`}>Ocupação</th>
+                  <th className={`${th} text-right`}>Nota</th>
                   <th className={`${th} text-right`}>Comissão</th>
                 </tr>
               </thead>
@@ -122,6 +125,11 @@ export function RankingEquipe() {
                     <td className={`${td} text-right`}>{formatarFracao(l.taxaRetorno, 0)}</td>
                     <td className={`${td} text-right`}>{formatarFracao(l.percentualNoPrazo, 0)}</td>
                     <td className={`${td} text-right`}>{formatarFracao(l.ocupacao, 0)}</td>
+                    <td className={`${td} text-right`}>
+                      {l.notaMedia === null
+                        ? '—'
+                        : l.notaMedia.toLocaleString('pt-BR', { minimumFractionDigits: 1 })}
+                    </td>
                     <td className={`${td} text-right`}>{formatarMoeda(l.comissao)}</td>
                   </tr>
                 ))}
@@ -132,8 +140,8 @@ export function RankingEquipe() {
       </Estado>
       <p className="text-sm text-tinta-suave">
         Voltam: clientes do período que já tinham vindo com ele nos 45 dias anteriores. No prazo:
-        comandas confirmadas pelo barbeiro até 15 minutos depois do horário. Toque no nome para ver
-        a ficha completa.
+        comandas confirmadas pelo barbeiro até 15 minutos depois do horário. Nota: média de 1 a 5 do
+        atendimento na pesquisa pelo WhatsApp. Toque no nome para ver a ficha completa.
       </p>
     </div>
   );

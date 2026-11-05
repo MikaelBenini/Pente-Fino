@@ -168,7 +168,8 @@ describe('ficha do profissional', () => {
     expect(f.evolucao[5]!.mes).toBe(hoje.slice(0, 7));
     expect(f.media).not.toBeNull();
     expect(f.ocupacao.fracao).toBeGreaterThanOrEqual(0);
-    expect(f.avaliacoes).toBeNull();
+    // Sem pesquisa no período: zero respostas, sem média (a tela explica como funciona).
+    expect(f.avaliacoes).toMatchObject({ media: null, respostas: 0, enviadas: 0, comentarios: [] });
   });
 
   it('o próprio barbeiro vê a ficha dele, sem custo, margem nem média dos colegas', async () => {

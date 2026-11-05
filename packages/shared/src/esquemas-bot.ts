@@ -188,6 +188,8 @@ export interface EstadoBot {
   unidades: UnidadeDoBot[];
   /** Dono edita menu e mensagens; gestor vê, testa e ajusta o horário da unidade dele. */
   podeEditar: boolean;
+  /** Pesquisa de 1 a 5 depois do atendimento ligada para a conta. */
+  pesquisaAtiva: boolean;
 }
 
 export interface RespostaSimulacao {
@@ -221,3 +223,6 @@ export const enviarParaClienteSchema = z.object({
   unidadeId: z.uuid({ error: 'Unidade inválida.' }).optional(),
 });
 export type EnviarParaClienteEntrada = z.infer<typeof enviarParaClienteSchema>;
+
+export const pesquisaBotSchema = z.object({ ativa: z.boolean() });
+export type PesquisaBotEntrada = z.infer<typeof pesquisaBotSchema>;

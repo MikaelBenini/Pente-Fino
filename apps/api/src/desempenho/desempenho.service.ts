@@ -25,6 +25,7 @@ import { Erros } from '../comum/erros.js';
 import { data, dataTexto, GESTAO } from '../comum/escopo.js';
 import { ComissoesService } from '../comissoes/comissoes.service.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { avaliacoesDoProfissional, notaPorProfissional } from '../avaliacoes/avaliacoes.js';
 import { escopoUnidades, somarDias, ultimoDiaDoMes } from '../resultados/resultados.service.js';
 
 const inicioDoDia = (d: string) => new Date(`${d}T00:00:00-03:00`);
@@ -188,6 +189,7 @@ export class DesempenhoService {
       const fechadas = await fechadasDetalhadas(tx, de, ate, { profissionalId: { in: ids } });
       const visitas = await this.visitas(tx, ids, ate);
       const ocupacoes = await this.ocupacoes(tx, profs, de, ate);
+      const notas = await notaPorProfissional(tx, ids, de, ate);
       const hoje = dataLocal(new Date());
       return profs
         .map((p) => {
@@ -203,7 +205,7 @@ export class DesempenhoService {
             percentualNoPrazo: analisarRotina(minhas.map((c) => rotinaDe(c, p.usuarioId)))
               .percentualNoPrazo,
             ocupacao: ocupacoes.get(p.id)?.fracao ?? 0,
-            notaMedia: null,
+            notaMedia: notas.get(p.id) ?? null,
           };
         })
         .filter((l) => l.ativo || l.clientes > 0)
@@ -412,7 +414,7 @@ export class DesempenhoService {
           .sort((a, b) => b.data.localeCompare(a.data)),
         evolucao,
         media,
-        avaliacoes: null,
+        avaliacoes: await avaliacoesDoProfissional(tx, id, de, ate),
       };
     });
   }

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   atenderMensagem,
+  iniciarPesquisa,
   prepararEnvio,
   registrarEnvio,
   type PrismaClient,
@@ -144,6 +145,20 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             { relogio, adicionar },
           );
           return 'agendada';
+        }
+        // Pesquisa depois do atendimento: confere de novo e manda a primeira pergunta.
+        if (job.data.tipo === 'pesquisa') {
+          const p = await iniciarPesquisa(
+            this.banco.prisma,
+            job.data.contaId,
+            job.data.avaliacaoId,
+          );
+          if (p.tipo === 'pular') return `pesquisa: ${p.motivo}`;
+          await agendarRespostas(
+            { contaId: p.contaId, instancia: p.instancia, saidas: p.mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'pesquisa enviada';
         }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {

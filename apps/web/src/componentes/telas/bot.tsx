@@ -23,7 +23,16 @@ import {
   type TurnoBot,
   type UnidadeDoBot,
 } from '@pente-fino/shared';
-import { Abas, Botao, Campo, CampoTexto, cn, ModalConfirmacao, Selecao } from '@pente-fino/ui';
+import {
+  Abas,
+  Botao,
+  Campo,
+  CampoTexto,
+  cn,
+  Marcador,
+  ModalConfirmacao,
+  Selecao,
+} from '@pente-fino/ui';
 import {
   ArrowDown,
   ArrowUp,
@@ -632,9 +641,10 @@ function Mensagens({ e }: { e: EstadoBot }) {
   };
   return (
     <form onSubmit={enviar} className="flex max-w-3xl flex-col gap-5">
+      <PesquisaLigada e={e} />
       <p className="text-tinta-suave">
         Valem para todas as unidades. Use {'{cliente}'}, {'{barbearia}'}, {'{unidade}'},{' '}
-        {'{horario}'}, {'{endereco}'} e {'{link}'}.
+        {'{horario}'}, {'{endereco}'} e {'{link}'}; na pesquisa, também {'{profissional}'}.
       </p>
       <fieldset disabled={!e.podeEditar} className="flex min-w-0 flex-col gap-5">
         {TIPOS_MENSAGEM_BOT.map((t) => (
@@ -662,6 +672,39 @@ function Mensagens({ e }: { e: EstadoBot }) {
         </Botao>
       )}
     </form>
+  );
+}
+
+/** Pesquisa de 1 a 5 depois do atendimento: o dono liga e desliga para a conta toda. */
+function PesquisaLigada({ e }: { e: EstadoBot }) {
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useAcao(
+    (ativa: boolean) => api('bot/pesquisa', { metodo: 'PUT', corpo: { ativa } }),
+    [chaveBot],
+  );
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-4">
+      <Marcador
+        id="pesquisa-ativa"
+        rotulo="Mandar a pesquisa de 1 a 5 depois do atendimento"
+        checked={e.pesquisaAtiva}
+        disabled={!e.podeEditar || salvar.isPending}
+        onChange={async (ev) => {
+          setErro(null);
+          try {
+            await salvar.mutateAsync(ev.target.checked);
+          } catch (err) {
+            setErro(mensagemDe(err));
+          }
+        }}
+      />
+      <p className="text-sm text-tinta-suave">
+        Uma hora depois de fechar a comanda, para quem aceitou avisos e já conversou com o WhatsApp
+        da barbearia; no máximo uma a cada 7 dias por cliente. As notas aparecem na ficha do
+        profissional e em Métricas.
+      </p>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+    </div>
   );
 }
 
