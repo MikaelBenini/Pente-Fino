@@ -34,6 +34,9 @@ if (existsSync(envDaRaiz)) process.loadEnvFile(envDaRaiz);
 export const CONTA_DEMO_ID = '019a4b2c-0000-7000-8000-00000000d3e0';
 /** Senha de todos os usuários da demonstração. Só existe em desenvolvimento. */
 export const SENHA_DEMO = 'pentefino123';
+/** Contas para testar a cobrança sem esperar: teste vencido e fatura recusada. */
+export const CONTA_EXPIRADA_ID = '019a4b2c-0000-7000-8000-00000000e001';
+export const CONTA_RECUSADA_ID = '019a4b2c-0000-7000-8000-00000000e002';
 const DIAS_DE_HISTORICO = 30;
 const FUSO = 'America/Sao_Paulo';
 
@@ -81,6 +84,13 @@ function instante(data: DataISO, minutos: number): Date {
   const mm = String(minutos % 60).padStart(2, '0');
   return new Date(`${data}T${hh}:${mm}:00-03:00`);
 }
+/** Mesmo dia, n meses depois (o dia é 1 ou 5 aqui, então nunca estoura o mês). */
+function somarMeses(data: DataISO, n: number): DataISO {
+  const [a, m, d] = data.split('-').map(Number) as [number, number, number];
+  const x = new Date(Date.UTC(a, m - 1 + n, d, 12));
+  return x.toISOString().slice(0, 10);
+}
+
 function primeiroDoMes(data: DataISO): DataISO {
   return `${data.slice(0, 7)}-01`;
 }
@@ -187,9 +197,14 @@ async function main(): Promise<void> {
       { timeout: 120_000, maxWait: 10_000 },
     );
 
+    await contasDeCobranca(prisma, hoje, agora);
+
     console.log(`Conta de demonstração criada (${CONTA_DEMO_ID}).`);
     console.log(
       `Login: dono@demo.pentefino.dev (e os demais @demo.pentefino.dev) · senha: ${SENHA_DEMO}`,
+    );
+    console.log(
+      'Cobrança: expirado@demo.pentefino.dev (teste terminou) e recusado@demo.pentefino.dev (fatura recusada), mesma senha.',
     );
     console.table(resumo);
   } finally {
@@ -880,6 +895,28 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     });
   }
 
+  // Assinatura em dia: três meses pagos no cartão e a próxima em aberto, vencendo no dia 10.
+  for (let m = -3; m <= 0; m++) {
+    const inicio = somarMeses(primeiroDoMes(hoje), m);
+    const vencimento = `${inicio.slice(0, 7)}-10`;
+    const paga = m < 0 || vencimento < hoje;
+    await tx.faturaAssinatura.create({
+      data: {
+        plano: 'premium',
+        ciclo: 'mensal',
+        valor: 24990 + 9990,
+        vencimento: dataParaBanco(vencimento),
+        periodoInicio: dataParaBanco(inicio),
+        periodoFim: dataParaBanco(somarDias(somarMeses(inicio, 1), -1)),
+        status: paga ? 'paga' : 'aberta',
+        origem: 'asaas',
+        ...(paga
+          ? { forma: 'cartao' as const, pagaEm: instante(vencimento, 9 * 60) }
+          : { linkPagamento: 'https://sandbox.asaas.com/i/demonstracao' }),
+      },
+    });
+  }
+
   // Todos os usuários da demonstração entram com a mesma senha (argon2id).
   await tx.usuario.updateMany({ data: { senhaHash: await hash(SENHA_DEMO) } });
 
@@ -916,6 +953,88 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     ).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
     despesas: despesas.length,
   };
+}
+
+/**
+ * Duas contas pequenas para testar a cobrança sem esperar 14 dias:
+ * - expirado@: teste grátis terminou ontem → só consulta;
+ * - recusado@: Pro mensal com a fatura recusada no cartão há 8 dias → só consulta.
+ */
+async function contasDeCobranca(prisma: ReturnType<typeof criarPrisma>, hoje: string, agora: Date) {
+  const senhaHash = await hash(SENHA_DEMO);
+  const contas = [
+    {
+      id: CONTA_EXPIRADA_ID,
+      nome: 'Barbearia Teste Vencido',
+      email: 'expirado@demo.pentefino.dev',
+      dono: 'Eduardo Expirado',
+      conta: {
+        status: 'teste' as const,
+        plano: 'pro' as const,
+        testeAte: new Date(agora.getTime() - 86_400_000),
+      },
+      faturas: [],
+    },
+    {
+      id: CONTA_RECUSADA_ID,
+      nome: 'Barbearia Cartão Recusado',
+      email: 'recusado@demo.pentefino.dev',
+      dono: 'Rita Recusada',
+      conta: { status: 'ativa' as const, plano: 'pro' as const, testeAte: null },
+      faturas: [-2, -1].map((m) => {
+        const inicio = somarMeses(primeiroDoMes(hoje), m);
+        return { inicio, vencimento: `${inicio.slice(0, 7)}-05`, status: 'paga' as const };
+      }),
+    },
+  ];
+  for (const c of contas) {
+    await naConta(prisma, c.id, (tx) => tx.conta.deleteMany({ where: { id: c.id } }));
+    await naConta(prisma, c.id, async (tx) => {
+      await tx.conta.create({
+        data: { id: c.id, nome: c.nome, ciclo: 'mensal', configuradaEm: agora, ...c.conta },
+      });
+      await tx.unidade.create({
+        data: { nome: 'Centro', endereco: 'Rua de Teste, 10', diasTrabalho: [1, 2, 3, 4, 5, 6] },
+      });
+      const dono = await tx.usuario.create({ data: { nome: c.dono, email: c.email, senhaHash } });
+      await tx.papelUsuario.create({
+        data: { usuarioId: dono.id, papel: 'dono', unidadeId: null },
+      });
+      await tx.servico.create({
+        data: { nome: 'Corte', duracaoMin: 30, ehExtra: false, pesoAtendimento: 1 },
+      });
+      for (const f of c.faturas)
+        await tx.faturaAssinatura.create({
+          data: {
+            plano: 'pro',
+            ciclo: 'mensal',
+            valor: 14990,
+            vencimento: dataParaBanco(f.vencimento),
+            periodoInicio: dataParaBanco(f.inicio),
+            periodoFim: dataParaBanco(somarDias(somarMeses(f.inicio, 1), -1)),
+            status: f.status,
+            forma: 'cartao',
+            pagaEm: instante(f.vencimento, 8 * 60),
+          },
+        });
+      if (c.id === CONTA_RECUSADA_ID) {
+        const vencimento = somarDias(hoje, -8);
+        await tx.faturaAssinatura.create({
+          data: {
+            plano: 'pro',
+            ciclo: 'mensal',
+            valor: 14990,
+            vencimento: dataParaBanco(vencimento),
+            periodoInicio: dataParaBanco(vencimento),
+            periodoFim: dataParaBanco(somarDias(somarMeses(vencimento, 1), -1)),
+            status: 'recusada',
+            motivoRecusa: 'Cartão recusado pelo banco: saldo insuficiente.',
+            linkPagamento: 'https://sandbox.asaas.com/i/demonstracao-recusada',
+          },
+        });
+      }
+    });
+  }
 }
 
 await main();

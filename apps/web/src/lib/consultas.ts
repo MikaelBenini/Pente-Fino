@@ -11,7 +11,9 @@ import type {
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { api } from './api';
 import type {
+  AssinaturaDetalhe,
   ConexaoBot,
+  EstadoAssinatura,
   EnvioParaCliente,
   EstadoBot,
   ListaConversas,
@@ -370,3 +372,24 @@ export function useAvaliacoes(unidade: string | null, de: string, ate: string) {
     queryFn: () => api<ResumoAvaliacoes>(`avaliacoes?de=${de}&ate=${ate}${comUnidade(unidade)}`),
   });
 }
+
+// ─── Assinatura do Pente Fino ─────────────────────────────────────────────
+
+export const chaveAssinatura = ['assinatura'] as const;
+
+/** Situação da conta para o aviso do painel (todos os papéis); revê a cada 5 minutos. */
+export const useSituacaoConta = () =>
+  useQuery({
+    queryKey: [...chaveAssinatura, 'situacao'],
+    queryFn: () => api<EstadoAssinatura>('conta/situacao'),
+    refetchInterval: 5 * 60_000,
+    staleTime: 60_000,
+  });
+
+/** Aba Assinatura (só o dono). */
+export const useAssinatura = (ativo: boolean) =>
+  useQuery({
+    queryKey: [...chaveAssinatura, 'detalhe'],
+    queryFn: () => api<AssinaturaDetalhe>('conta/assinatura'),
+    enabled: ativo,
+  });

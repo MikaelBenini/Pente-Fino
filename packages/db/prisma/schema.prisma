@@ -245,6 +245,7 @@ model Conta {
   mensagens          Mensagem[]
   tokenAcessos       TokenAcesso[]
   avaliacoes         Avaliacao[]
+  faturas            FaturaAssinatura[]
 
   @@map("conta")
 }
@@ -1013,4 +1014,63 @@ model Avaliacao {
   @@index([unidadeId, respondidaEm])
   @@index([clienteId, criadoEm])
   @@map("avaliacao")
+}
+
+enum StatusFatura {
+  aberta
+  paga
+  /// Cobrança no cartão recusada (motivo em motivo_recusa).
+  recusada
+  cancelada
+
+  @@map("status_fatura")
+}
+
+enum FormaPagamentoFatura {
+  pix
+  cartao
+  boleto
+  dinheiro
+  transferencia
+
+  @@map("forma_pagamento_fatura")
+}
+
+enum OrigemFatura {
+  /// Cobrança automática (Asaas, Etapa 23).
+  asaas
+  /// Registrada pela administração (venda presencial, Etapa 15.1).
+  manual
+
+  @@map("origem_fatura")
+}
+
+/// Faturas da assinatura do Pente Fino pela barbearia. A conta só lê; quem grava é o sistema
+/// (cobrança automática ou a administração).
+model FaturaAssinatura {
+  id            String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId       String                @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  plano         Plano
+  ciclo         CicloCobranca
+  /// Centavos.
+  valor         Int
+  vencimento    DateTime              @db.Date
+  periodoInicio DateTime              @map("periodo_inicio") @db.Date
+  periodoFim    DateTime              @map("periodo_fim") @db.Date
+  status        StatusFatura          @default(aberta)
+  origem        OrigemFatura          @default(asaas)
+  forma         FormaPagamentoFatura?
+  pagaEm        DateTime?             @map("paga_em") @db.Timestamptz(3)
+  motivoRecusa  String?               @map("motivo_recusa")
+  /// Página de pagamento (Pix, boleto ou cartão) do provedor.
+  linkPagamento String?               @map("link_pagamento")
+  idExterno     String?               @map("id_externo")
+  criadoEm      DateTime              @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime              @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta Conta @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  @@unique([origem, idExterno])
+  @@index([contaId, vencimento])
+  @@map("fatura_assinatura")
 }

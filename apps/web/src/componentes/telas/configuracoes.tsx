@@ -28,6 +28,7 @@ import {
 import { CalendarOff, MapPin, Phone, Plus, Store } from 'lucide-react';
 import { useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { chaves, useAcao, useCalendario, useConta, useUnidadesDetalhe } from '@/lib/consultas';
@@ -35,11 +36,15 @@ import { aplicarErroDaApi } from '@/lib/formularios';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
+import { Assinatura } from './assinatura';
 import { ImportarPlanilha, LinkAgendamento } from './link-e-importacao';
 
 export function TelaConfiguracoes() {
   const { papeis } = useApp();
-  const [aba, setAba] = useState('barbearia');
+  // O aviso de assinatura do painel abre direto na aba (?aba=assinatura).
+  const abaDoLink = useSearchParams().get('aba');
+  const ehDono = papeis.includes('dono');
+  const [aba, setAba] = useState(abaDoLink === 'assinatura' && ehDono ? 'assinatura' : 'barbearia');
   return (
     <div className="flex flex-col gap-8">
       <CabecalhoPagina titulo="Configurações" pergunta="Como a barbearia funciona?" />
@@ -52,8 +57,11 @@ export function TelaConfiguracoes() {
           { id: 'unidades', rotulo: 'Unidades', conteudo: <Unidades /> },
           { id: 'calendario', rotulo: 'Folgas e feriados', conteudo: <Calendario /> },
           { id: 'link', rotulo: 'Link de agendamento', conteudo: <LinkAgendamento /> },
-          ...(papeis.includes('dono')
-            ? [{ id: 'importar', rotulo: 'Importar planilha', conteudo: <ImportarPlanilha /> }]
+          ...(ehDono
+            ? [
+                { id: 'importar', rotulo: 'Importar planilha', conteudo: <ImportarPlanilha /> },
+                { id: 'assinatura', rotulo: 'Assinatura', conteudo: <Assinatura /> },
+              ]
             : []),
         ]}
       />

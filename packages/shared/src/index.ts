@@ -25,3 +25,4 @@ export * from './esquemas-bot.js';
 export * from './whatsapp.js';
 export * from './equipe.js';
 export * from './avaliacao.js';
+export * from './assinatura.js';

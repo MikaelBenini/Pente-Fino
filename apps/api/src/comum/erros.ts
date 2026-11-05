@@ -33,6 +33,9 @@ export const Erros = {
   naoEncontrado: (mensagem = 'Não encontrado.') =>
     new ErroApp(HttpStatus.NOT_FOUND, 'nao_encontrado', mensagem),
   conflito: (mensagem: string) => new ErroApp(HttpStatus.CONFLICT, 'conflito', mensagem),
+  /** Conta só para consulta (teste terminado, fatura vencida, suspensa): 402. */
+  somenteLeitura: (mensagem: string) =>
+    new ErroApp(HttpStatus.PAYMENT_REQUIRED, 'somente_leitura', mensagem),
   requisicaoInvalida: (codigo: string, mensagem: string) =>
     new ErroApp(HttpStatus.BAD_REQUEST, codigo, mensagem),
 };
