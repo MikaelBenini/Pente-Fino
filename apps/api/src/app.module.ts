@@ -5,6 +5,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AuditoriaInterceptor } from './auditoria/auditoria.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
+import { AssinaturaGuard } from './assinatura/assinatura.guard.js';
 import { AutenticacaoGuard, PermissaoGuard } from './auth/guardas.js';
 import { limitesDeRequisicao } from './auth/limite.js';
 import { TokensAcesso } from './auth/tokens.js';
@@ -153,6 +154,9 @@ export class ComumModule {}
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AutenticacaoGuard },
     { provide: APP_GUARD, useClass: PermissaoGuard },
+    // Depois do papel: conta só para consulta não grava (402).
+    AssinaturaGuard,
+    { provide: APP_GUARD, useExisting: AssinaturaGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor },
     { provide: APP_FILTER, useClass: FiltroErros },
   ],

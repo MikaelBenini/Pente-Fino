@@ -12,6 +12,7 @@ import {
   LogOut,
   MessageCircleOff,
   MessagesSquare,
+  Lock,
   Moon,
   SunMedium,
   X,
@@ -20,7 +21,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
-import { useBot, useConversas } from '@/lib/consultas';
+import { useBot, useConversas, useSituacaoConta } from '@/lib/consultas';
 import { useFilaOffline } from '@/lib/fila';
 import {
   NOME_PAPEL,
@@ -118,6 +119,7 @@ export function Casca({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-col">
           <BarraTopo />
           <AvisoConexao />
+          <AvisoAssinatura />
           <AvisoWhatsapp />
           <AvisoConversas />
           <main
@@ -560,6 +562,52 @@ function FolhaMais({
 // ─── Conexão ──────────────────────────────────────────────────────────────
 
 /** Dono e gestor: o WhatsApp de uma unidade caiu e o bot parou de responder. */
+/**
+ * Assinatura pedindo atenção: teste nos últimos 3 dias, terminado, fatura atrasada ou conta
+ * só para consulta. O dono vai direto para a aba Assinatura; a equipe é orientada a falar com ele.
+ */
+function AvisoAssinatura() {
+  const { papeis } = useApp();
+  const pathname = usePathname();
+  const situacao = useSituacaoConta().data;
+  if (!situacao) return null;
+  const mostrar =
+    situacao.somenteLeitura ||
+    situacao.situacao === 'em_atraso' ||
+    (situacao.situacao === 'teste' && (situacao.diasRestantesTeste ?? 99) <= 3);
+  if (!mostrar) return null;
+  const dono = papeis.includes('dono');
+  return (
+    <div
+      role={situacao.somenteLeitura ? 'alert' : 'status'}
+      className="border-b border-borda bg-superficie-2 px-[max(1rem,env(safe-area-inset-left))] py-2 text-sm sm:px-8"
+    >
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Lock
+          aria-hidden
+          className={cn(
+            'size-4 shrink-0',
+            situacao.somenteLeitura ? 'text-perigo-texto' : 'text-aviso-texto',
+          )}
+        />
+        <span>{situacao.mensagem}</span>
+        {dono ? (
+          pathname !== '/configuracoes' && (
+            <Link
+              href="/configuracoes?aba=assinatura"
+              className="font-semibold text-acao-texto underline"
+            >
+              Ver assinatura
+            </Link>
+          )
+        ) : (
+          <span className="text-tinta-suave">Fale com o dono da barbearia.</span>
+        )}
+      </p>
+    </div>
+  );
+}
+
 /** Quantos clientes esperam atendente no WhatsApp (só para quem atende as conversas). */
 function useEsperandoAtendente(): number {
   const { menu, unidadeAtiva } = useApp();

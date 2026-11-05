@@ -19,9 +19,10 @@ import {
 import { Auditada } from '../auditoria/auditoria.js';
 import { Corpo } from '../comum/validacao.js';
 import { AuthService } from './auth.service.js';
-import { LimiteAutenticacao, Publico } from './decoradores.js';
+import { LimiteAutenticacao, LivreSemAssinatura, Publico } from './decoradores.js';
 
 @ApiTags('Autenticação')
+@LivreSemAssinatura()
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}

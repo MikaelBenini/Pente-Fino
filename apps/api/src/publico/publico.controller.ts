@@ -5,6 +5,7 @@ import {
   precoServicoVigente,
   Prisma,
   type Transacao,
+  estadoAssinatura,
 } from '@pente-fino/db';
 import {
   agendamentoPublicoSchema,
@@ -214,6 +215,11 @@ export class PublicoController {
     if (new Date(d.inicio) < new Date())
       throw Erros.requisicaoInvalida('horario_passado', 'Este horário já passou. Escolha outro.');
     const r = await this.banco.naConta(u.contaId, async (tx) => {
+      // Conta só para consulta não recebe agendamento novo pelo link.
+      if ((await estadoAssinatura(tx)).somenteLeitura)
+        throw Erros.conflito(
+          'O agendamento pelo link está indisponível no momento. Fale com a barbearia pelo telefone ou WhatsApp.',
+        );
       const cliente = await tx.cliente.findFirst({ where: { telefone: d.telefone } });
       if (cliente) {
         const futuros = await tx.agendamento.count({

@@ -1,6 +1,15 @@
 import { Controller, Get, Inject, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { contaSchema, LIMITES_PLANO, type ContaEntrada } from '@pente-fino/shared';
+import { estadoAssinatura } from '@pente-fino/db';
+import {
+  contaSchema,
+  LIMITES_PLANO,
+  precoPorMes,
+  type AssinaturaDetalhe,
+  type ContaEntrada,
+  type EstadoAssinatura,
+  type FaturaDetalhe,
+} from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -13,6 +22,57 @@ import { emSequencia } from '../comum/sequencia.js';
 @Controller('conta')
 export class ContaController {
   constructor(@Inject(BancoService) private readonly banco: BancoService) {}
+
+  @Get('situacao')
+  @ApiOperation({
+    summary: 'Situação da assinatura (teste, em dia, atrasada, só consulta) para o aviso do painel',
+  })
+  situacao(): Promise<EstadoAssinatura> {
+    return this.banco.daConta((tx) => estadoAssinatura(tx));
+  }
+
+  @Get('assinatura')
+  @Papeis('dono')
+  @ApiOperation({ summary: 'Plano, situação, fatura pendente e histórico de faturas (dono)' })
+  async assinatura(): Promise<AssinaturaDetalhe> {
+    return this.banco.daConta(async (tx) => {
+      const conta = await tx.conta.findFirstOrThrow();
+      const unidades = await tx.unidade.count({ where: { ativa: true } });
+      const faturas = await tx.faturaAssinatura.findMany({
+        orderBy: { vencimento: 'desc' },
+        take: 24,
+      });
+      const dia = (d: Date) => d.toISOString().slice(0, 10);
+      const lista: FaturaDetalhe[] = faturas.map((f) => ({
+        id: f.id,
+        plano: f.plano,
+        ciclo: f.ciclo,
+        valor: f.valor,
+        vencimento: dia(f.vencimento),
+        periodoInicio: dia(f.periodoInicio),
+        periodoFim: dia(f.periodoFim),
+        status: f.status,
+        forma: f.forma,
+        pagaEm: f.pagaEm?.toISOString() ?? null,
+        motivoRecusa: f.motivoRecusa,
+        linkPagamento: f.linkPagamento,
+      }));
+      const pendente =
+        [...lista]
+          .filter((f) => f.status === 'aberta' || f.status === 'recusada')
+          .sort((a, b) => a.vencimento.localeCompare(b.vencimento))[0] ?? null;
+      return {
+        estado: await estadoAssinatura(tx),
+        plano: conta.plano,
+        ciclo: conta.ciclo,
+        testeAte: conta.testeAte?.toISOString() ?? null,
+        precoPorMes: precoPorMes(conta.plano, conta.ciclo, Math.max(1, unidades)),
+        unidades,
+        pendente,
+        faturas: lista,
+      };
+    });
+  }
 
   @Get()
   @ApiOperation({ summary: 'Conta, plano e uso dos limites' })

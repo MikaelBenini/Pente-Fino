@@ -13,6 +13,13 @@ export const PAPEIS_ACEITOS = 'papeis_aceitos';
  */
 export const Papeis = (...papeis: Papel[]) => SetMetadata(PAPEIS_ACEITOS, papeis);
 
+export const LIVRE_SEM_ASSINATURA = 'livre_sem_assinatura';
+/**
+ * Rota que grava, mas continua valendo com a conta só para consulta (sair, trocar a senha,
+ * pagar a assinatura): a pessoa precisa conseguir se resolver.
+ */
+export const LivreSemAssinatura = () => SetMetadata(LIVRE_SEM_ASSINATURA, true);
+
 export const LIMITE_AUTENTICACAO = 'limite_autenticacao';
 /** Aplica o limite de tentativas por minuto das rotas de autenticação. */
 export const LimiteAutenticacao = () => SetMetadata(LIMITE_AUTENTICACAO, true);
