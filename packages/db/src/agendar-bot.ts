@@ -48,6 +48,8 @@ export interface PassoDaAgenda {
   voltarAoMenu: boolean;
   /** Marcou: a comanda prevista criada. */
   comandaId?: string;
+  /** Marcou ou remarcou: para agendar os lembretes. */
+  agendamento?: { id: string; inicio: string };
 }
 
 export interface DadosDaConversa {
@@ -296,6 +298,31 @@ function mostrarAcoes(
 }
 
 /**
+ * Resposta "2. Remarcar" ou "3. Cancelar" ao lembrete: vai direto ao horário lembrado, com
+ * o mesmo prazo do "Meus horários".
+ */
+export async function mudarHorarioDoLembrete(
+  tx: Tx,
+  agendamentoId: string,
+  acao: 'remarcar' | 'cancelar',
+  d: DadosDaConversa,
+): Promise<PassoDaAgenda> {
+  const h = (await horariosDoCliente(tx, d)).find((x) => x.id === agendamentoId);
+  if (!h) return sair(['Esse horário não está mais marcado. Para marcar, responda AGENDAR.']);
+  const acoes = mostrarAcoes(h, { ...agendaNova(), opcoes: [h.id] }, d);
+  if (!acoes.agenda) return acoes; // em cima da hora: com a recepção
+  if (acao === 'cancelar')
+    return seguir({ ...acoes.agenda, passo: 'cancelar' }, [
+      textoConfirmarCancelamento(h.texto, dataLocal(d.agora)),
+    ]);
+  return irParaDias(
+    tx,
+    { ...acoes.agenda, servicoIds: h.servicoIds, profissionalId: h.profissionalId },
+    d,
+  );
+}
+
+/**
  * Um passo da conversa. Sem `agenda`, começa (lista os serviços); depois, cada resposta
  * escolhe pelo número. "0" volta (ou sai), e a escolha final grava o agendamento.
  */
@@ -495,6 +522,7 @@ export async function passoDaAgenda(
             agenda: null,
             voltarAoMenu: false,
             comandaId: r2.comandaId,
+            agendamento: { id: agenda.remarcarId, inicio: agenda.escolha!.inicio },
           };
         }
         const criado = await criarAgendamentoNoBanco(tx, {
@@ -512,6 +540,7 @@ export async function passoDaAgenda(
           agenda: null,
           voltarAoMenu: false,
           comandaId: criado.comandaId,
+          agendamento: { id: criado.agendamentoId, inicio: agenda.escolha!.inicio },
         };
       } catch (e) {
         await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT agendar_bot');

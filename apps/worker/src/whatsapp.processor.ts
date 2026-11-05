@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import {
   atenderMensagem,
+  enviarLembrete,
   iniciarPesquisa,
   prepararEnvio,
   registrarEnvio,
@@ -17,6 +18,7 @@ import {
   FILA_WHATSAPP_ENTRADA,
   FILA_WHATSAPP_SAIDA,
   proximoEnvio,
+  trabalhosDeLembrete,
   type TrabalhoWhatsappEntrada,
   type TrabalhoWhatsappSaida,
 } from '@pente-fino/shared';
@@ -97,6 +99,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
   private entrada?: Worker<TrabalhoWhatsappEntrada>;
   private saida?: Worker<TrabalhoWhatsappSaida>;
   private filaSaida?: Queue<TrabalhoWhatsappSaida>;
+  private filaEntrada?: Queue<TrabalhoWhatsappEntrada>;
   private redis?: Redis;
 
   constructor(
@@ -119,6 +122,12 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
       },
     });
     this.filaSaida = filaSaida;
+    // Lembretes do horário marcado pela conversa: trabalhos atrasados na própria fila de entrada.
+    const filaEntrada = new Queue<TrabalhoWhatsappEntrada>(FILA_WHATSAPP_ENTRADA, {
+      connection,
+      defaultJobOptions: { removeOnComplete: { count: 1_000 }, removeOnFail: { count: 5_000 } },
+    });
+    this.filaEntrada = filaEntrada;
     const redis = new Redis(this.config.REDIS_URL, { maxRetriesPerRequest: 3 });
     this.redis = redis;
     const chave = (instancia: string) => `whatsapp:proximo-envio:${instancia}`;
@@ -160,12 +169,33 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           );
           return 'pesquisa enviada';
         }
+        // Hora de lembrar o horário: confere de novo e manda.
+        if (job.data.tipo === 'lembrete') {
+          const l = await enviarLembrete(this.banco.prisma, job.data);
+          if (l.tipo === 'pular') return `lembrete: ${l.motivo}`;
+          await agendarRespostas(
+            { contaId: l.contaId, instancia: l.instancia, saidas: l.mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'lembrete enviado';
+        }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {
           appUrl: this.config.APP_URL,
         });
         if (r.tipo !== 'respondida') return r.tipo;
         await agendarRespostas(r, { relogio, adicionar });
+        if (r.agendamento) {
+          const agora = new Date();
+          for (const l of trabalhosDeLembrete(
+            r.contaId,
+            r.agendamento.id,
+            new Date(r.agendamento.inicio),
+            agora,
+            agora,
+          ))
+            await filaEntrada.add('lembrete', l.dados, { delay: l.atrasoMs, jobId: l.jobId });
+        }
         return r.tipo;
       },
       { connection, concurrency: 1 },
@@ -189,6 +219,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
   async onApplicationShutdown(): Promise<void> {
     await Promise.all([this.entrada?.close(), this.saida?.close()]);
     await this.filaSaida?.close();
+    await this.filaEntrada?.close();
     this.redis?.disconnect();
   }
 }

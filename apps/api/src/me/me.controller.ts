@@ -90,6 +90,7 @@ export class MeController {
           fim: a.fim.toISOString(),
           status: statusEfetivo((a.comanda?.status ?? 'prevista') as StatusComanda, a.fim, agora),
           origem: a.origem,
+          confirmado: a.status === 'confirmado',
         })),
         comissaoDia: await soma(hoje),
         comissaoMes: await soma(`${mes}-01`),

@@ -448,6 +448,8 @@ export interface SessaoBot {
   pesquisa?: { avaliacaoId: string; passo: PassoPesquisa; erros?: number };
   /** Agendamento pela conversa em andamento (Etapa 11). */
   agenda?: AgendaNaConversa;
+  /** Lembrete enviado: a próxima resposta 1/2/3 vale para este horário. */
+  lembrete?: { agendamentoId: string; tipo: '24h' | '2h' };
 }
 
 export type PassoPesquisa = 'atendimento' | 'barbearia' | 'comentario';

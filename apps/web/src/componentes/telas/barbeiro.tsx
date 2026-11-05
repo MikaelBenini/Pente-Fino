@@ -84,6 +84,7 @@ export function TelaHoje() {
                           cliente={a.cliente}
                           servico={a.servicos.join(' + ')}
                           estado={statusEfetivo(a.status, new Date(a.fim), agora)}
+                          confirmado={a.confirmado}
                           onClick={() => a.comandaId && router.push(`/comandas?id=${a.comandaId}`)}
                         />
                       </li>

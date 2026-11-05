@@ -27,3 +27,4 @@ export * from './equipe.js';
 export * from './avaliacao.js';
 export * from './assinatura.js';
 export * from './agendar-bot.js';
+export * from './lembretes.js';
