@@ -1,7 +1,8 @@
 // Etapa 6.6 a 6.9: clientes, agenda, comanda, fechamento e caixa.
 import type { INestApplication } from '@nestjs/common';
 import { criarPrisma, naConta } from '@pente-fino/db';
-import { dataLocal } from '@pente-fino/shared';
+import { dataLocal, FILA_WHATSAPP_ENTRADA, type TrabalhoWhatsappEntrada } from '@pente-fino/shared';
+import { Queue } from 'bullmq';
 import type { App } from 'supertest/types.js';
 import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
 
@@ -476,5 +477,49 @@ describe('isolamento', () => {
     await intruso
       .post('/caixa/fechar', { unidadeId: cenario.unidadeA, data: AMANHA, totalInformado: 0 })
       .expect(404);
+  });
+});
+
+describe('lembretes do WhatsApp', () => {
+  it('marcar com dias de antecedência agenda 24 h e 2 h; remarcar agenda os do horário novo', async () => {
+    const fila = new Queue<TrabalhoWhatsappEntrada>(FILA_WHATSAPP_ENTRADA, {
+      connection: { url: process.env.REDIS_URL! },
+    });
+    try {
+      const r = await recepcao
+        .post('/agendamentos', {
+          unidadeId: cenario.unidadeA,
+          profissionalId: profBarbeiro,
+          clienteNovo: { nome: 'Lembrado', telefone: '11988880077' },
+          inicio: as(dia(5), '11:00'),
+          servicoIds: [corte],
+        })
+        .expect(201);
+      const id = r.body.agendamentoId as string;
+      const doAgendamento = async () =>
+        (await fila.getJobs(['delayed', 'waiting']))
+          .filter((j) => j.data?.tipo === 'lembrete' && j.data.agendamentoId === id)
+          .map((j) => j.data as Extract<TrabalhoWhatsappEntrada, { tipo: 'lembrete' }>);
+      let jobs = await doAgendamento();
+      expect(jobs.map((j) => j.lembrete).sort()).toEqual(['24h', '2h']);
+      expect(jobs[0]!.inicio).toBe(new Date(as(dia(5), '11:00')).toISOString());
+
+      await recepcao.patch(`/agendamentos/${id}`, { inicio: as(dia(6), '11:00') }).expect(200);
+      jobs = await doAgendamento();
+      const novo = new Date(as(dia(6), '11:00')).toISOString();
+      expect(
+        jobs
+          .filter((j) => j.inicio === novo)
+          .map((j) => j.lembrete)
+          .sort(),
+      ).toEqual(['24h', '2h']);
+      await Promise.all(
+        (await fila.getJobs(['delayed', 'waiting']))
+          .filter((j) => j.data?.tipo === 'lembrete' && j.data.agendamentoId === id)
+          .map((j) => j.remove()),
+      );
+    } finally {
+      await fila.close();
+    }
   });
 });

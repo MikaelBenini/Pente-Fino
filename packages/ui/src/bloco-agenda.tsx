@@ -25,6 +25,8 @@ export interface BlocoAgendaProps extends Omit<
   estado: EstadoComanda;
   /** Altura proporcional à duração, em px (a grade da agenda calcula). */
   altura?: number;
+  /** O cliente confirmou pelo lembrete do WhatsApp. */
+  confirmado?: boolean;
 }
 
 /** Cliente, serviço e horário; a faixa lateral e a etiqueta mostram o estado da comanda. */
@@ -35,13 +37,14 @@ export function BlocoAgenda({
   servico,
   estado,
   altura,
+  confirmado = false,
   className,
   ...props
 }: BlocoAgendaProps) {
   return (
     <button
       type="button"
-      aria-label={`${inicio} a ${fim}, ${cliente}, ${servico}, ${ESTADOS_COMANDA[estado].rotulo}`}
+      aria-label={`${inicio} a ${fim}, ${cliente}, ${servico}, ${ESTADOS_COMANDA[estado].rotulo}${confirmado ? ', cliente confirmou' : ''}`}
       className={cn(
         'relative flex w-full min-h-11 overflow-hidden rounded-md border border-borda bg-superficie text-left',
         'hover:bg-superficie-2 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-foco',
@@ -58,7 +61,12 @@ export function BlocoAgenda({
           </span>
           <EtiquetaEstado estado={estado} className="text-xs" />
         </span>
-        <span className="truncate font-semibold text-tinta">{cliente}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate font-semibold text-tinta">{cliente}</span>
+          {confirmado && (
+            <span className="shrink-0 text-xs font-semibold text-acao-texto">✓ confirmou</span>
+          )}
+        </span>
         <span className="truncate text-sm text-tinta-suave">{servico}</span>
       </span>
     </button>

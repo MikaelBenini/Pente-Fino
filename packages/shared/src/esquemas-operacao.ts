@@ -133,6 +133,8 @@ export interface AgendaItem {
   fim: string;
   status: StatusComanda;
   origem: string;
+  /** O cliente respondeu "Confirmo" ao lembrete do WhatsApp. */
+  confirmado: boolean;
 }
 
 export interface AgendaProfissional {

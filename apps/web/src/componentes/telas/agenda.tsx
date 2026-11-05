@@ -287,6 +287,7 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
               cliente={i.cliente}
               servico={i.servicos.join(' + ')}
               estado={i.status}
+              confirmado={i.confirmado}
               altura={Math.max(48, (minutosDoDia(i.fim) - minutosDoDia(i.inicio)) * PX_POR_MIN - 2)}
               onClick={() => abrirComanda(router, i)}
             />
@@ -395,6 +396,7 @@ function VisaoSemana({
                 cliente={i.cliente}
                 servico={i.servicos.join(' + ')}
                 estado={i.status}
+                confirmado={i.confirmado}
                 onClick={() => abrirComanda(router, i)}
               />
             ))}

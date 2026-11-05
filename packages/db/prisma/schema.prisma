@@ -618,6 +618,11 @@ model Agendamento {
   origem         OrigemAgendamento @default(balcao)
   observacao     String?
   criadoPorId    String?           @map("criado_por_id") @db.Uuid
+  /// Lembretes pelo WhatsApp já enviados (Etapa 11); null = ainda não.
+  lembrete24hEm  DateTime?         @map("lembrete_24h_em") @db.Timestamptz(3)
+  lembrete2hEm   DateTime?         @map("lembrete_2h_em") @db.Timestamptz(3)
+  /// O cliente respondeu "Confirmo" ao lembrete.
+  confirmadoEm   DateTime?         @map("confirmado_em") @db.Timestamptz(3)
   criadoEm       DateTime          @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm   DateTime          @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 

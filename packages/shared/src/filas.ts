@@ -49,8 +49,19 @@ export interface InicioDePesquisa {
   avaliacaoId: string;
 }
 
-/** O que vai na fila `whatsapp-entrada`: eventos do provedor, envios do painel e pesquisas. */
-export type TrabalhoWhatsappEntrada = EventoWhatsapp | EnvioDoPainel | InicioDePesquisa;
+/** Hora de lembrar o cliente do horário (trabalho atrasado, criado ao marcar ou remarcar). */
+export interface LembreteDeHorario {
+  tipo: 'lembrete';
+  contaId: string;
+  agendamentoId: string;
+  lembrete: '24h' | '2h';
+  /** Horário quando o lembrete foi agendado: se remarcaram, este fica para trás e não sai. */
+  inicio: string;
+}
+
+/** O que vai na fila `whatsapp-entrada`: eventos do provedor, envios do painel, pesquisas e lembretes. */
+export type TrabalhoWhatsappEntrada =
+  EventoWhatsapp | EnvioDoPainel | InicioDePesquisa | LembreteDeHorario;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

@@ -15,6 +15,7 @@ import {
   type HorarioLivre,
   type NovoAgendamentoEntrada,
   type StatusComanda,
+  trabalhosDeLembrete,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -22,7 +23,7 @@ import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade } from '../comum/escopo.js';
 import { ComandasService } from '../comandas/comandas.service.js';
-import { EventosService } from '../filas/filas.module.js';
+import { EventosService, Filas } from '../filas/filas.module.js';
 import { emSequencia } from '../comum/sequencia.js';
 
 const BALCAO = ['dono', 'gestor', 'recepcao'] as const;
@@ -53,7 +54,25 @@ export class AgendaService {
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(ComandasService) private readonly comandas: ComandasService,
     @Inject(EventosService) private readonly eventos: EventosService,
+    @Inject(Filas) private readonly filas: Filas,
   ) {}
+
+  /**
+   * Lembretes do WhatsApp (24 h e 2 h antes) do horário da comanda. Marcado ou remarcado
+   * agora; o worker confere tudo de novo na hora. Sem a fila, o horário vale sem lembrete.
+   */
+  async agendarLembretes(contaId: string, comandaId: string): Promise<void> {
+    const c = await this.banco.naConta(contaId, (tx) =>
+      tx.comanda.findUnique({ where: { id: comandaId }, include: { agendamento: true } }),
+    );
+    const ag = c?.agendamento;
+    if (!ag) return;
+    const agora = new Date();
+    for (const l of trabalhosDeLembrete(contaId, ag.id, ag.inicio, agora, agora))
+      await this.filas.whatsappEntrada
+        .add('lembrete', l.dados, { delay: l.atrasoMs, jobId: l.jobId })
+        .catch(() => undefined);
+  }
 
   /** Agenda da unidade no período. Barbeiro vê só a própria coluna. */
   async agenda(unidadeId: string, de: string, ate: string): Promise<Agenda> {
@@ -125,6 +144,7 @@ export class AgendaService {
               ? 'cancelada'
               : statusEfetivo((a.comanda?.status ?? 'prevista') as StatusComanda, a.fim, agora),
           origem: a.origem,
+          confirmado: a.status === 'confirmado',
         })),
         bloqueios: bloqueios.map((b) => ({
           id: b.id,
@@ -179,6 +199,7 @@ export class AgendaService {
     await this.eventos
       .publicar('agendamento.criado', quem.contaId, { comandaId })
       .catch(() => undefined);
+    await this.agendarLembretes(quem.contaId, comandaId);
     return this.comandas.buscar(comandaId);
   }
 
@@ -236,6 +257,7 @@ export class AgendaService {
       });
       return r.comandaId;
     });
+    await this.agendarLembretes(Contexto.usuario().contaId, comandaId);
     return this.comandas.buscar(comandaId);
   }
 }

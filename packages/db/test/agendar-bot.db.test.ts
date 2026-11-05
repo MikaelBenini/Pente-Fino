@@ -6,7 +6,9 @@ import {
   atenderMensagem,
   criarAgendamentoNoBanco,
   criarPrisma,
+  enviarLembrete,
   instanciaDaUnidade,
+  moverAgendamento,
   naConta,
   type PrismaClient,
 } from '../src/index.js';
@@ -244,5 +246,104 @@ describe('meus horários', () => {
   it('sem horário marcado: convida a agendar', async () => {
     await fala('5511977778888', 'oi');
     expect(await fala('5511977778888', '4')).toContain('Você não tem horário marcado com a gente.');
+  });
+});
+
+describe('lembretes', () => {
+  /** Cliente que já conversou e aceita avisos, com horário no dia 05/12 às 10:00. */
+  async function clienteComHorario(
+    telefone: string,
+    consentimento = true,
+    inicio = '2026-12-05T13:00:00.000Z',
+  ) {
+    await fala(telefone, 'oi');
+    return naMinhaConta(async (tx) => {
+      const achado = await tx.cliente.findFirstOrThrow({ where: { telefone } });
+      const c = await tx.cliente.update({
+        where: { id: achado.id },
+        data: { consentimentoMsg: consentimento },
+      });
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: c.id,
+        inicio: new Date(inicio),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      return r.agendamentoId;
+    });
+  }
+  const vespera = new Date('2026-12-04T13:00:00Z');
+  const job = (
+    agendamentoId: string,
+    lembrete: '24h' | '2h',
+    inicio = '2026-12-05T13:00:00.000Z',
+  ) => ({
+    contaId: conta,
+    agendamentoId,
+    lembrete,
+    inicio,
+  });
+  const ag = (id: string) =>
+    naMinhaConta((tx) => tx.agendamento.findUniqueOrThrow({ where: { id } }));
+
+  it('24 h antes: manda com as opções, não repete, e "1" confirma', async () => {
+    const tel = '5511966661111';
+    const id = await clienteComHorario(tel);
+    const r = await enviarLembrete(prisma, job(id, '24h'), vespera);
+    expect(r).toMatchObject({ tipo: 'enviar', instancia });
+    const texto = await naMinhaConta((tx) =>
+      tx.mensagem.findUniqueOrThrow({
+        where: { id: (r as { mensagemIds: string[] }).mensagemIds[0]! },
+      }),
+    );
+    expect(texto.texto).toContain('Lembrete do seu horário na Barbearia Navalha');
+    expect(texto.texto).toContain('📅 Amanhã (sáb, 05/12), às 10:00\n✂️ Corte com Rafael');
+    expect(texto.texto).toContain('1. Confirmo\n2. Remarcar\n3. Cancelar');
+    expect(await enviarLembrete(prisma, job(id, '24h'), vespera)).toEqual({
+      tipo: 'pular',
+      motivo: 'já enviado',
+    });
+
+    expect(await fala(tel, '1', new Date(vespera.getTime() + 10 * 60_000))).toBe(
+      'Confirmado! ✅ Te esperamos.',
+    );
+    expect(await ag(id)).toMatchObject({ status: 'confirmado' });
+    expect((await ag(id)).confirmadoEm).toBeInstanceOf(Date);
+    // Já confirmou: o de 2 h não pergunta de novo.
+    expect(await enviarLembrete(prisma, job(id, '2h'), new Date('2026-12-05T11:00:00Z'))).toEqual({
+      tipo: 'pular',
+      motivo: 'já confirmado',
+    });
+  });
+
+  it('remarcado depois: o lembrete do horário antigo não sai', async () => {
+    const id = await clienteComHorario('5511966662222', true, '2026-12-05T13:30:00.000Z');
+    await naMinhaConta((tx) => moverAgendamento(tx, id, new Date('2026-12-06T13:00:00Z')));
+    expect(
+      await enviarLembrete(prisma, job(id, '24h', '2026-12-05T13:30:00.000Z'), vespera),
+    ).toEqual({ tipo: 'pular', motivo: 'remarcado' });
+  });
+
+  it('"3" no lembrete leva a cancelar, com confirmação', async () => {
+    const tel = '5511966663333';
+    const id = await clienteComHorario(tel, true, '2026-12-05T14:00:00.000Z');
+    await enviarLembrete(prisma, job(id, '24h', '2026-12-05T14:00:00.000Z'), vespera);
+    const depois = new Date(vespera.getTime() + 5 * 60_000);
+    expect(await fala(tel, '3', depois)).toContain('1. Sim, cancelar\n2. Não, manter');
+    expect(await fala(tel, '1', depois)).toContain('Pronto, horário cancelado.');
+    expect(await ag(id)).toMatchObject({ status: 'cancelado' });
+  });
+
+  it('quem não aceitou avisos não recebe', async () => {
+    const id = await clienteComHorario('5511966664444', false, '2026-12-05T14:30:00.000Z');
+    expect(
+      await enviarLembrete(prisma, job(id, '24h', '2026-12-05T14:30:00.000Z'), vespera),
+    ).toEqual({
+      tipo: 'pular',
+      motivo: 'cliente sem avisos',
+    });
   });
 });

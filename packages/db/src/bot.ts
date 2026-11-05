@@ -26,7 +26,13 @@ import {
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
-import { passoDaAgenda, podeAgendarPelaConversa, type DadosDaConversa } from './agendar-bot.js';
+import {
+  mudarHorarioDoLembrete,
+  passoDaAgenda,
+  podeAgendarPelaConversa,
+  type DadosDaConversa,
+} from './agendar-bot.js';
+import { confirmarPeloCliente } from './lembretes.js';
 import { gravarRespostaPesquisa, pesquisaValida } from './avaliacao.js';
 import { precoServicoVigente } from './vigencia.js';
 
@@ -208,10 +214,48 @@ export async function responderComAgenda(
     ctx: ContextoConversa;
     dados: DadosDaConversa;
   },
-): Promise<ResultadoConversa> {
-  const { agenda, ...semAgenda } = d.sessao ?? ({} as SessaoBot);
-  const base: SessaoBot | null = d.sessao ? semAgenda : null;
+): Promise<ResultadoConversa & { agendamento?: { id: string; inicio: string } }> {
+  const { agenda, lembrete, ...resto } = d.sessao ?? ({} as SessaoBot);
+  const base: SessaoBot | null = d.sessao ? resto : null;
   const texto = normalizar(d.entrada);
+  const agoraIso = d.dados.agora.toISOString();
+
+  // Resposta ao lembrete: 1 confirma; no de 24 h, 2 remarca e 3 cancela. Outra coisa segue
+  // a conversa normal (e o lembrete sai da sessão).
+  if (lembrete && base && !base.comAtendente) {
+    const numeros = lerNumeros(d.entrada);
+    const um = numeros.length === 1 ? numeros[0]! : null;
+    const sessao: SessaoBot = { ...base, ultimaEm: agoraIso, erros: 0 };
+    if (um === 1) {
+      const ok = await confirmarPeloCliente(tx, lembrete.agendamentoId, d.dados.agora);
+      return {
+        respostas: [
+          ok
+            ? 'Confirmado! ✅ Te esperamos.'
+            : 'Esse horário não está mais marcado. Para marcar, responda AGENDAR.',
+        ],
+        sessao,
+        acao: null,
+        consentimento: null,
+        avaliacao: null,
+      };
+    }
+    if ((um === 2 || um === 3) && lembrete.tipo === '24h') {
+      const p = await mudarHorarioDoLembrete(
+        tx,
+        lembrete.agendamentoId,
+        um === 2 ? 'remarcar' : 'cancelar',
+        d.dados,
+      );
+      return {
+        respostas: p.respostas,
+        sessao: { ...sessao, ...(p.agenda ? { agenda: p.agenda } : {}) },
+        acao: null,
+        consentimento: null,
+        avaliacao: null,
+      };
+    }
+  }
   const emAndamento =
     !!agenda &&
     !!d.sessao &&
@@ -241,6 +285,7 @@ export async function responderComAgenda(
       acao: p.comandaId ? 'agendar' : null,
       consentimento: null,
       avaliacao: null,
+      ...(p.agendamento ? { agendamento: p.agendamento } : {}),
     };
   }
 
@@ -270,6 +315,8 @@ export type ResultadoAtendimento =
       saidas: string[];
       acao: string | null;
       consentimento: boolean | null;
+      /** Marcou ou remarcou pela conversa: o worker agenda os lembretes. */
+      agendamento?: { id: string; inicio: string };
     };
 
 const NOME_PADRAO_CLIENTE = 'Cliente do WhatsApp';
@@ -414,6 +461,7 @@ export async function atenderMensagem(
           saidas,
           acao: r.acao,
           consentimento: r.consentimento,
+          ...(r.agendamento ? { agendamento: r.agendamento } : {}),
         } as const;
       },
       // O agendamento pela conversa consulta a agenda de vários dias numa mensagem só.

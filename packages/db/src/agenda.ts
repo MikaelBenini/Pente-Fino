@@ -231,9 +231,18 @@ export async function moverAgendamento(
   const fim = new Date(inicio.getTime() + (ag.fim.getTime() - ag.inicio.getTime()));
   const prof = profissionalId ?? ag.profissionalId;
   await validarHorario(tx, prof, ag.unidadeId, inicio, fim, ag.id);
+  // Horário novo: os lembretes do antigo e a confirmação deixam de valer.
   await tx.agendamento.update({
     where: { id: ag.id },
-    data: { inicio, fim, profissionalId: prof },
+    data: {
+      inicio,
+      fim,
+      profissionalId: prof,
+      lembrete24hEm: null,
+      lembrete2hEm: null,
+      confirmadoEm: null,
+      ...(ag.status === 'confirmado' ? { status: 'agendado' as const } : {}),
+    },
   });
   await tx.comanda.update({ where: { id: ag.comanda.id }, data: { profissionalId: prof } });
   await tx.itemComanda.updateMany({
