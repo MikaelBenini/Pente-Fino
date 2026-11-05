@@ -12,8 +12,12 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Prisma } from '@pente-fino/db';
 import {
   diaCalendarioSchema,
+  lerRegrasAgendamento,
+  regrasAgendamentoSchema,
+  type RegrasAgendamento,
   unidadeParcialSchema,
   unidadeSchema,
   verificarLimite,
@@ -56,6 +60,47 @@ const dataParam = new PipeZod(
 @Controller('unidades')
 export class UnidadesController {
   constructor(@Inject(BancoService) private readonly banco: BancoService) {}
+
+  @Get(':id/regras-agendamento')
+  @Papeis(...GESTAO)
+  @ApiOperation({
+    summary: 'Regras de agendamento da unidade (antecedência, janela, prazos, lembretes)',
+  })
+  regras(@Param('id', ParseUUIDPipe) id: string): Promise<RegrasAgendamento> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const u = await tx.unidade.findUnique({ where: { id } });
+      if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
+      return lerRegrasAgendamento(u.regrasAgendamento);
+    });
+  }
+
+  @Put(':id/regras-agendamento')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({ summary: 'Gravar as regras de agendamento da unidade (bot e site)' })
+  gravarRegras(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(regrasAgendamentoSchema) regras: RegrasAgendamento,
+  ): Promise<RegrasAgendamento> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const u = await tx.unidade.findUnique({ where: { id } });
+      if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
+      await tx.unidade.update({
+        where: { id },
+        data: { regrasAgendamento: regras as unknown as Prisma.InputJsonValue },
+      });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'regras_agendamento',
+        antes: lerRegrasAgendamento(u.regrasAgendamento),
+        depois: regras,
+      });
+      return regras;
+    });
+  }
 
   @Get()
   @ApiOperation({ summary: 'Unidades que o usuário alcança (papel sem unidade = todas da conta)' })

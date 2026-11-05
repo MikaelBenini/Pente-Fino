@@ -271,6 +271,9 @@ model Unidade {
   slug               String?  @unique
   /// Link público ligado: só então a página de agendamento responde.
   agendamentoPublico Boolean  @default(false) @map("agendamento_publico")
+  /// Regras de agendamento (antecedência, janela, prazos, intervalo, lembretes). JSON validado
+  /// em packages/shared (regras-agendamento.ts); vazio = padrão.
+  regrasAgendamento  Json     @default("{}") @map("regras_agendamento")
   /// Horário do bot: lista de turnos (TurnoBot). Vazio = segue o expediente da equipe.
   botHorario         Json?    @map("bot_horario")
   criadoEm           DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)

@@ -16,6 +16,7 @@ import {
 } from '@pente-fino/db';
 import {
   dataLocal,
+  lerRegrasAgendamento,
   validarMenu,
   type ConexaoBot,
   type EstadoBot,
@@ -275,6 +276,7 @@ export class BotService {
           link: ctx.link,
           agora,
           simulacao: true,
+          regras: lerRegrasAgendamento(u.regrasAgendamento),
         },
       });
     });

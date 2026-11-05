@@ -58,6 +58,8 @@ beforeAll(async () => {
         diasTrabalho: [0, 1, 2, 3, 4, 5, 6],
         agendamentoPublico: true,
         slug: `navalha-${conta.slice(0, 8)}`,
+        // Sem antecedência mínima: os testes marcam a partir de "agora" (09:00).
+        regrasAgendamento: { antecedenciaMin: 0 },
       },
     });
     unidadeId = u.id;
@@ -345,5 +347,46 @@ describe('lembretes', () => {
       tipo: 'pular',
       motivo: 'cliente sem avisos',
     });
+  });
+});
+
+describe('regras da unidade', () => {
+  const regras = (r: object) =>
+    naMinhaConta((tx) =>
+      tx.unidade.update({ where: { id: unidadeId }, data: { regrasAgendamento: r } }),
+    );
+  afterAll(() => regras({ antecedenciaMin: 0 }));
+
+  it('antecedência de 3 h: hoje (das 9h às 12h) não tem mais horário para o cliente', async () => {
+    await regras({ antecedenciaMin: 180 });
+    const tel = '5511955550001';
+    await fala(tel, 'oi');
+    await fala(tel, '1');
+    const dias = await fala(tel, '2'); // Corte → dias
+    expect(dias).toContain('Qual dia fica melhor?');
+    expect(dias).not.toContain('Hoje');
+  });
+
+  it('intervalo de 30 min: o horário colado num atendimento sai da lista', async () => {
+    await regras({ antecedenciaMin: 0, intervaloMin: 30 });
+    const tel = '5511955550003';
+    await fala(tel, 'oi');
+    await fala(tel, '1');
+    await fala(tel, '2');
+    // Hoje não sobra horário com a folga; amanhã é a opção 1 (outro cliente das 09:00 às 09:30).
+    const horarios = await fala(tel, '1');
+    // Sem intervalo, o primeiro seria 09:30; com 30 min de folga, só a partir das 10:00.
+    expect(horarios).toContain('Horários livres amanhã (qua, 02/12):\n\n1. 10:00');
+  });
+
+  it('limite de 1 horário por cliente; conversa desligada manda o link', async () => {
+    await regras({ antecedenciaMin: 0, maxFuturos: 1 });
+    const tel = '5511977775555'; // já tem horário marcado (remarcado em "meus horários")
+    expect(await fala(tel, 'agendar')).toContain('Você já tem horários marcados com a gente');
+
+    await regras({ antecedenciaMin: 0, pelaConversa: false });
+    const r = await fala('5511955550002', 'agendar');
+    expect(r).toContain('http://app.teste/agendar?u=navalha-');
+    expect(r).not.toContain('Qual serviço');
   });
 });

@@ -1,14 +1,12 @@
 // Lembretes do horário pelo WhatsApp (Etapa 11): quando mandar e o que dizer.
 import { formatarHora } from './formatacao.js';
 
+/**
+ * Primeiro lembrete ("24h", o mais longe do horário: confirma, remarca ou cancela) e segundo
+ * ("2h", em cima da hora: só confirma). As horas de cada um vêm das regras da unidade.
+ */
 export const TIPOS_LEMBRETE = ['24h', '2h'] as const;
 export type TipoLembrete = (typeof TIPOS_LEMBRETE)[number];
-
-/** Minutos antes do horário em que cada lembrete sai. */
-export const ANTECEDENCIA_LEMBRETE_MIN: Readonly<Record<TipoLembrete, number>> = {
-  '24h': 24 * 60,
-  '2h': 2 * 60,
-};
 
 /**
  * Quando cada lembrete deve sair. Só manda o que faz sentido: o de 24 h, se o horário foi
@@ -19,9 +17,12 @@ export function momentosDosLembretes(
   inicio: Date,
   marcadoEm: Date,
   agora: Date,
+  horas: readonly number[] = [24, 2],
 ): { tipo: TipoLembrete; quando: Date }[] {
-  return TIPOS_LEMBRETE.flatMap((tipo) => {
-    const antes = ANTECEDENCIA_LEMBRETE_MIN[tipo] * 60_000;
+  const ordenadas = [...horas].sort((a, b) => b - a).slice(0, 2);
+  return ordenadas.flatMap((h, i) => {
+    const tipo = TIPOS_LEMBRETE[i]!;
+    const antes = h * 3_600_000;
     const quando = new Date(inicio.getTime() - antes);
     const marcadoComFolga = inicio.getTime() - marcadoEm.getTime() > antes;
     return marcadoComFolga && quando > agora ? [{ tipo, quando }] : [];
@@ -63,6 +64,7 @@ export function trabalhosDeLembrete(
   inicio: Date,
   marcadoEm: Date,
   agora: Date,
+  horas: readonly number[] = [24, 2],
 ): {
   dados: {
     tipo: 'lembrete';
@@ -74,7 +76,7 @@ export function trabalhosDeLembrete(
   atrasoMs: number;
   jobId: string;
 }[] {
-  return momentosDosLembretes(inicio, marcadoEm, agora).map(({ tipo, quando }) => ({
+  return momentosDosLembretes(inicio, marcadoEm, agora, horas).map(({ tipo, quando }) => ({
     dados: {
       tipo: 'lembrete',
       contaId,

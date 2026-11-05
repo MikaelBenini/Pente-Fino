@@ -22,6 +22,19 @@ describe('momentosDosLembretes', () => {
   });
 });
 
+describe('horas da unidade', () => {
+  it('48 h e 3 h; só um lembrete; nenhum', () => {
+    expect(momentosDosLembretes(inicio, horas(96), horas(96), [3, 48])).toEqual([
+      { tipo: '24h', quando: horas(48) },
+      { tipo: '2h', quando: horas(3) },
+    ]);
+    expect(momentosDosLembretes(inicio, horas(96), horas(96), [12]).map((m) => m.tipo)).toEqual([
+      '24h',
+    ]);
+    expect(momentosDosLembretes(inicio, horas(96), horas(96), [])).toEqual([]);
+  });
+});
+
 describe('textoLembrete', () => {
   const d = {
     cliente: 'João Pedro',

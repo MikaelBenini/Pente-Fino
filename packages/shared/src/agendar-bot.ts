@@ -3,17 +3,10 @@
 // consulta a agenda e grava é packages/db/src/agendar-bot.ts.
 import { formatarHora, formatarMoeda } from './formatacao.js';
 
-/** Até quantos dias à frente o cliente marca sozinho (bot e site). */
-export const JANELA_AGENDAMENTO_DIAS = 45;
-/** Horários futuros por cliente na unidade: acima disso, só com a recepção. */
-export const MAX_FUTUROS_POR_CLIENTE = 2;
 /** Quantos dias com horário livre o bot mostra de uma vez. */
 export const DIAS_POR_VEZ = 6;
 /** Quantos horários por página ("7. Ver mais horários"). */
 export const HORARIOS_POR_VEZ = 6;
-
-/** Até quanto tempo antes o cliente remarca ou cancela sozinho; depois, com a recepção. */
-export const PRAZO_MUDAR_MIN = 120;
 
 export type PassoAgenda =
   | 'servico'
