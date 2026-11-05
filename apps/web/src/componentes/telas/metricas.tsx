@@ -6,9 +6,11 @@ import {
   formatarNumero,
   lerMoeda,
   type MetaDetalhe,
+  type RespostaLucratividade,
+  type SituacaoProduto,
 } from '@pente-fino/shared';
 import { BarraMeta, Botao, Campo, Dialogo, EstadoVazio, Selecao } from '@pente-fino/ui';
-import { ChartLine, Plus, Trash2 } from 'lucide-react';
+import { ChartLine, Package, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
@@ -23,7 +25,7 @@ import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores, SeletorMes } from '../indicadores';
-import { CabecalhoPagina, Estado, Tabela, td, th } from '../pagina';
+import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
 export function TelaMetricas() {
   const { unidadeAtiva, papeis, unidades } = useApp();
@@ -113,58 +115,14 @@ export function TelaMetricas() {
         </Estado>
       </section>
 
-      <section className="flex flex-col gap-4" aria-labelledby="titulo-lucro">
-        <div>
-          <h2 id="titulo-lucro" className="text-xl font-semibold">
-            Lucro por serviço
-          </h2>
-          <p className="text-tinta-suave">
-            Receita − (custo de produto + comissão), do maior lucro para o menor.
-          </p>
-        </div>
-        <Estado consulta={lucro}>
-          {() =>
-            lucro.data!.servicos.length === 0 ? (
-              <EstadoVazio
-                icone={ChartLine}
-                titulo="Nenhum serviço fechado no mês"
-                texto="Assim que as comandas forem fechadas, a margem de cada serviço aparece aqui."
-              />
-            ) : (
-              <Tabela rotulo="Lucro por serviço">
-                <thead className="bg-superficie-2">
-                  <tr>
-                    <th className={th}>Serviço</th>
-                    <th className={`${th} text-right`}>Qtde</th>
-                    <th className={`${th} text-right`}>Receita</th>
-                    <th className={`${th} text-right`}>Custo de produto</th>
-                    <th className={`${th} text-right`}>Comissão</th>
-                    <th className={`${th} text-right`}>Lucro</th>
-                    <th className={`${th} text-right`}>Margem</th>
-                  </tr>
-                </thead>
-                <tbody className="font-denso tabular-nums">
-                  {lucro.data!.servicos.map((s) => (
-                    <tr key={s.servicoId} className="border-t border-borda">
-                      <td className={`${td} font-sans font-semibold`}>{s.nome}</td>
-                      <td className={`${td} text-right`}>{formatarNumero(s.quantidade)}</td>
-                      <td className={`${td} text-right`}>{formatarMoeda(s.receita)}</td>
-                      <td className={`${td} text-right text-tinta-suave`}>
-                        {formatarMoeda(s.custoProduto)}
-                      </td>
-                      <td className={`${td} text-right text-tinta-suave`}>
-                        {formatarMoeda(s.comissao)}
-                      </td>
-                      <td className={`${td} text-right font-semibold`}>{formatarMoeda(s.lucro)}</td>
-                      <td className={`${td} text-right`}>{formatarFracao(s.margem)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Tabela>
-            )
-          }
-        </Estado>
-      </section>
+      <Estado consulta={lucro}>
+        {() => (
+          <>
+            <LucroServicos servicos={lucro.data!.servicos} />
+            <LucroProdutos produtos={lucro.data!.produtos} />
+          </>
+        )}
+      </Estado>
       {ehDono && <NovaMeta mes={mes} aberto={nova} onFechar={() => setNova(false)} />}
     </div>
   );
@@ -281,5 +239,212 @@ function NovaMeta({
         </div>
       </form>
     </Dialogo>
+  );
+}
+
+// ─── Serviços: mais lucro e mais consumidos ───────────────────────────────
+
+function LucroServicos({ servicos }: { servicos: RespostaLucratividade['servicos'] }) {
+  const [ordem, setOrdem] = useState<'lucro' | 'quantidade'>('lucro');
+  const total = servicos.reduce((soma, s) => soma + s.quantidade, 0);
+  const lista = [...servicos].sort((a, b) =>
+    ordem === 'lucro' ? b.lucro - a.lucro : b.quantidade - a.quantidade || b.lucro - a.lucro,
+  );
+  return (
+    <section className="flex flex-col gap-4" aria-labelledby="titulo-lucro">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 id="titulo-lucro" className="text-xl font-semibold">
+            Serviços: lucro e procura
+          </h2>
+          <p className="text-tinta-suave">
+            Lucro = receita − (custo de produto + comissão). “Procura” é a fatia de cada serviço no
+            total feito no mês.
+          </p>
+        </div>
+        {servicos.length > 1 && (
+          <Selecao
+            id="servicos-ordem"
+            rotulo="Ordenar por"
+            value={ordem}
+            onChange={(e) => setOrdem(e.target.value as typeof ordem)}
+            opcoes={[
+              { valor: 'lucro', rotulo: 'Mais lucro' },
+              { valor: 'quantidade', rotulo: 'Mais consumidos' },
+            ]}
+            className="max-w-xs"
+          />
+        )}
+      </div>
+      {servicos.length === 0 ? (
+        <EstadoVazio
+          icone={ChartLine}
+          titulo="Nenhum serviço fechado no mês"
+          texto="Assim que as comandas forem fechadas, a margem e a procura de cada serviço aparecem aqui."
+        />
+      ) : (
+        <Tabela rotulo="Lucro por serviço">
+          <thead className="bg-superficie-2">
+            <tr>
+              <th className={th}>Serviço</th>
+              <th className={`${th} text-right`}>Qtde</th>
+              <th className={`${th} text-right`}>Procura</th>
+              <th className={`${th} text-right`}>Receita</th>
+              <th className={`${th} text-right`}>Custo de produto</th>
+              <th className={`${th} text-right`}>Comissão</th>
+              <th className={`${th} text-right`}>Lucro</th>
+              <th className={`${th} text-right`}>Margem</th>
+            </tr>
+          </thead>
+          <tbody className="font-denso tabular-nums">
+            {lista.map((s) => (
+              <tr key={s.servicoId} className="border-t border-borda">
+                <td className={`${td} font-sans font-semibold`}>{s.nome}</td>
+                <td className={`${td} text-right`}>{formatarNumero(s.quantidade)}</td>
+                <td className={`${td} text-right`}>
+                  {formatarFracao(total > 0 ? s.quantidade / total : 0, 0)}
+                </td>
+                <td className={`${td} text-right`}>{formatarMoeda(s.receita)}</td>
+                <td className={`${td} text-right text-tinta-suave`}>
+                  {formatarMoeda(s.custoProduto)}
+                </td>
+                <td className={`${td} text-right text-tinta-suave`}>{formatarMoeda(s.comissao)}</td>
+                <td className={`${td} text-right font-semibold`}>{formatarMoeda(s.lucro)}</td>
+                <td className={`${td} text-right`}>{formatarFracao(s.margem)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabela>
+      )}
+    </section>
+  );
+}
+
+// ─── Produtos: o que vende e o que vale a pena ────────────────────────────
+
+const SITUACAO_PRODUTO: Record<
+  SituacaoProduto,
+  { rotulo: string; tom: 'acao' | 'aviso' | 'neutro' | 'perigo'; dica: string }
+> = {
+  investir: {
+    rotulo: 'Investir',
+    tom: 'acao',
+    dica: 'Sai bem e sobra bem por unidade: mantenha estoque.',
+  },
+  divulgar: {
+    rotulo: 'Divulgar',
+    tom: 'acao',
+    dica: 'Sobra bem por unidade, mas sai pouco: vale oferecer na cadeira.',
+  },
+  rever_preco: {
+    rotulo: 'Rever preço',
+    tom: 'aviso',
+    dica: 'Sai bastante, mas sobra menos por unidade que os outros: confira preço e custo.',
+  },
+  repensar: {
+    rotulo: 'Repensar',
+    tom: 'perigo',
+    dica: 'Sai pouco e sobra menos que os outros: talvez não valha comprar de novo.',
+  },
+  parado: { rotulo: 'Parado', tom: 'neutro', dica: 'Nenhuma venda no período.' },
+};
+
+function LucroProdutos({ produtos }: { produtos: RespostaLucratividade['produtos'] }) {
+  const vendidos = produtos.filter((p) => p.quantidade > 0);
+  const maisVendido = [...vendidos].sort((a, b) => b.quantidade - a.quantidade)[0];
+  const maisLucro = vendidos[0];
+  const melhorRetorno = [...vendidos]
+    .filter((p) => p.retornoSobreCusto !== null)
+    .sort((a, b) => b.retornoSobreCusto! - a.retornoSobreCusto!)[0];
+  const destaques = [
+    {
+      rotulo: 'Mais vendido',
+      produto: maisVendido,
+      valor: `${formatarNumero(maisVendido?.quantidade ?? 0)} unidades`,
+    },
+    { rotulo: 'Mais lucro', produto: maisLucro, valor: formatarMoeda(maisLucro?.lucro ?? 0) },
+    {
+      rotulo: 'Melhor retorno',
+      produto: melhorRetorno,
+      valor: melhorRetorno
+        ? `${formatarMoeda(Math.round(melhorRetorno.retornoSobreCusto! * 100))} por R$ 1,00`
+        : 'cadastre o custo dos produtos',
+    },
+  ];
+  return (
+    <section className="flex flex-col gap-4" aria-labelledby="titulo-produtos">
+      <div>
+        <h2 id="titulo-produtos" className="text-xl font-semibold">
+          Produtos: o que vende e o que vale a pena
+        </h2>
+        <p className="text-tinta-suave">
+          Cada produto comparado com os outros do mês: quanto sai e quanto sobra por unidade.
+          “Retorno” é o lucro para cada R$ 1 gasto no estoque que foi vendido.
+        </p>
+      </div>
+      {produtos.length === 0 ? (
+        <EstadoVazio
+          icone={Package}
+          titulo="Nenhum produto cadastrado"
+          texto="Cadastre os produtos com preço de venda e custo para ver o que vale a pena comprar de novo."
+        />
+      ) : (
+        <>
+          {vendidos.length > 0 && (
+            <dl className="grid gap-3 sm:grid-cols-3">
+              {destaques.map((d) => (
+                <div key={d.rotulo} className="rounded-lg border border-borda bg-superficie p-4">
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+                    {d.rotulo}
+                  </dt>
+                  <dd className="mt-1 font-semibold">{d.produto?.nome ?? '—'}</dd>
+                  <dd className="font-denso text-sm tabular-nums text-tinta-suave">{d.valor}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          <Tabela rotulo="Lucro por produto">
+            <thead className="bg-superficie-2">
+              <tr>
+                <th className={th}>Produto</th>
+                <th className={`${th} text-right`}>Vendidos</th>
+                <th className={`${th} text-right`}>Receita</th>
+                <th className={`${th} text-right`}>Lucro</th>
+                <th className={`${th} text-right`}>Margem</th>
+                <th className={`${th} text-right`}>Retorno</th>
+                <th className={th}>Situação</th>
+              </tr>
+            </thead>
+            <tbody className="font-denso tabular-nums">
+              {produtos.map((p) => {
+                const sit = SITUACAO_PRODUTO[p.situacao];
+                return (
+                  <tr key={p.produtoId} className="border-t border-borda">
+                    <td className={`${td} font-sans font-semibold`}>{p.nome}</td>
+                    <td className={`${td} text-right`}>{formatarNumero(p.quantidade)}</td>
+                    <td className={`${td} text-right`}>{formatarMoeda(p.receita)}</td>
+                    <td className={`${td} text-right font-semibold`}>{formatarMoeda(p.lucro)}</td>
+                    <td className={`${td} text-right`}>
+                      {p.quantidade > 0 ? formatarFracao(p.margem) : '—'}
+                    </td>
+                    <td className={`${td} text-right`}>
+                      {p.retornoSobreCusto === null
+                        ? '—'
+                        : formatarMoeda(Math.round(p.retornoSobreCusto * 100))}
+                    </td>
+                    <td className={`${td} font-sans`}>
+                      <span className="flex flex-col items-start gap-1">
+                        <Ficha tom={sit.tom}>{sit.rotulo}</Ficha>
+                        <span className="text-xs text-tinta-suave">{sit.dica}</span>
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </Tabela>
+        </>
+      )}
+    </section>
   );
 }

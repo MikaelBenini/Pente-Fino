@@ -283,8 +283,8 @@ Pedidos do dono depois de testar o sistema. Entram antes da Etapa 11, porque vá
 
 **Métricas e avaliações**
 
-- [ ] Produtos: mais vendidos (quantidade e receita), margem de cada um (preço − custo) e "vale investir": margem × giro no período, com os que vendem pouco e os que dão mais lucro por real investido em estoque. Regra em `packages/shared` com teste
-- [ ] Serviços: mais consumidos (quantidade, atendimentos e receita), ao lado do lucro por serviço que já existe
+- [x] Produtos: mais vendidos (quantidade e receita), margem de cada um (preço − custo) e "vale investir": margem × giro no período, com os que vendem pouco e os que dão mais lucro por real investido em estoque. Regra em `packages/shared` com teste (Métricas e metas → "Produtos: o que vende e o que vale a pena": destaques de mais vendido, mais lucro e melhor retorno; tabela com lucro, margem, retorno por R$ 1 de custo e situação — investir, divulgar, rever preço, repensar ou parado — comparando com a mediana dos produtos do mês; `lucratividadePorProduto` em `packages/shared/src/indicadores.ts`)
+- [x] Serviços: mais consumidos (quantidade, atendimentos e receita), ao lado do lucro por serviço que já existe ("Serviços: lucro e procura", com "Ordenar por: mais lucro / mais consumidos" e a coluna "Procura", a fatia de cada serviço no total do mês)
 - [ ] Avaliação do barbeiro e avaliação da barbearia (atendimento, ambiente): adiantar da Etapa 12 a tabela `avaliacao`, a pesquisa pelo bot depois do fechamento, a nota na ficha do profissional e no ranking da Equipe, e a nota da barbearia no Início e nas Métricas
 
 **Assinatura do sistema**

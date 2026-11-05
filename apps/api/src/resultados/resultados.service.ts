@@ -4,6 +4,7 @@ import {
   calcularIndicadores,
   dataLocal,
   diasDeTrabalho,
+  lucratividadePorProduto,
   lucratividadePorServico,
   projetar,
   unidadesPermitidas,
@@ -181,13 +182,28 @@ export class ResultadosService {
   async lucratividade(unidadeId: string | undefined, de: string, ate: string) {
     const { filtro } = escopoUnidades(unidadeId, ['dono', 'gestor']);
     return this.banco.daConta(async (tx) => {
-      const lista = lucratividadePorServico(await this.fechadas(tx, de, ate, filtro));
+      const fechadas = await this.fechadas(tx, de, ate, filtro);
+      const lista = lucratividadePorServico(fechadas);
       const nomes = new Map(
         (await tx.servico.findMany({ where: { id: { in: lista.map((l) => l.servicoId) } } })).map(
           (s) => [s.id, s.nome],
         ),
       );
-      return { servicos: lista.map((l) => ({ ...l, nome: nomes.get(l.servicoId) ?? 'Serviço' })) };
+      // Produtos ativos entram para aparecer como "parado" quando não venderam.
+      const ativos = await tx.produto.findMany({ where: { ativo: true }, select: { id: true } });
+      const produtos = lucratividadePorProduto(
+        fechadas,
+        ativos.map((a) => a.id),
+      );
+      const nomesProduto = new Map(
+        (
+          await tx.produto.findMany({ where: { id: { in: produtos.map((l) => l.produtoId) } } })
+        ).map((p) => [p.id, p.nome]),
+      );
+      return {
+        servicos: lista.map((l) => ({ ...l, nome: nomes.get(l.servicoId) ?? 'Serviço' })),
+        produtos: produtos.map((l) => ({ ...l, nome: nomesProduto.get(l.produtoId) ?? 'Produto' })),
+      };
     });
   }
 
