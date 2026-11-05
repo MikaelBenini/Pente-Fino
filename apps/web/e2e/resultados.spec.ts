@@ -45,8 +45,24 @@ test('dono: início com metas e indicadores; financeiro e métricas', async ({ p
     .click();
 
   await page.goto('/metricas');
-  await expect(page.getByRole('heading', { name: 'Lucro por serviço' })).toBeVisible();
-  await expect(page.getByRole('row', { name: /^Corte\b/ }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Serviços: lucro e procura' })).toBeVisible();
+  const servicos = page.getByRole('table', { name: 'Lucro por serviço' }).filter({ visible: true });
+  await expect(servicos.getByRole('row', { name: /^Corte\b/ }).first()).toBeVisible();
+  // Mais consumidos: o primeiro é o que mais saiu no mês.
+  await page.getByLabel('Ordenar por').filter({ visible: true }).selectOption('quantidade');
+  const qtdes = await servicos
+    .locator('tbody tr td:nth-child(2)')
+    .evaluateAll((tds) => tds.map((t) => Number(t.textContent!.replace(/\D/g, ''))));
+  expect(qtdes).toEqual([...qtdes].sort((a, b) => b - a));
+  // Produtos: destaques e a situação de cada um.
+  await expect(
+    page.getByRole('heading', { name: 'Produtos: o que vende e o que vale a pena' }),
+  ).toBeVisible();
+  await expect(page.getByText('Mais vendido', { exact: true })).toBeVisible();
+  const produtos = page.getByRole('table', { name: 'Lucro por produto' }).filter({ visible: true });
+  await expect(produtos.getByRole('row').nth(1)).toContainText(
+    /Investir|Divulgar|Rever preço|Repensar|Parado/,
+  );
 });
 
 test('dono lança uma despesa e ela aparece no mês', async ({ page }, info) => {

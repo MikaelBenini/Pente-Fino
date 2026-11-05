@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calcularIndicadores,
   diasDeTrabalho,
+  lucratividadePorProduto,
   lucratividadePorServico,
   projetar,
   variacao,
@@ -153,5 +154,75 @@ describe('lucratividade e variação', () => {
   it('variação contra o período anterior', () => {
     expect(variacao(120, 100)).toBeCloseTo(0.2);
     expect(variacao(10, 0)).toBeNull();
+  });
+});
+
+describe('lucratividade por produto', () => {
+  const produto = (
+    produtoId: string,
+    preco: number,
+    custo: number,
+    quantidade = 1,
+    comissao = 0,
+  ): ItemFechado => ({
+    tipo: 'produto',
+    produtoId,
+    quantidade,
+    precoUnitario: preco,
+    desconto: 0,
+    ehExtra: false,
+    pesoAtendimento: 0,
+    custoUnitario: custo,
+    comissaoValor: comissao,
+  });
+
+  it('lucro, margem e retorno por real gasto no estoque', () => {
+    const [pomada] = lucratividadePorProduto([{ itens: [produto('pomada', 4000, 1500, 2, 800)] }]);
+    // Receita 8000 − (custo 3000 + comissão 800) = 4200.
+    expect(pomada).toMatchObject({
+      quantidade: 2,
+      receita: 8000,
+      custo: 3000,
+      lucro: 4200,
+      margem: 0.525,
+      retornoSobreCusto: 1.4,
+    });
+  });
+
+  it('vende × rende: investir, divulgar, rever preço, repensar e parado', () => {
+    const r = lucratividadePorProduto(
+      [
+        // Pomada: vende muito e rende bem.
+        { itens: [produto('pomada', 4000, 1000, 10)] },
+        // Óleo: rende muito por unidade, mas sai pouco.
+        { itens: [produto('oleo', 9000, 2000, 1)] },
+        // Gel: sai bastante, mas quase não dá lucro.
+        { itens: [produto('gel', 1500, 1400, 12)] },
+        // Pente: pouco e sem lucro.
+        { itens: [produto('pente', 1000, 1000, 1)] },
+      ],
+      ['pomada', 'oleo', 'gel', 'pente', 'shampoo'],
+    );
+    const situacao = Object.fromEntries(r.map((p) => [p.produtoId, p.situacao]));
+    expect(situacao).toEqual({
+      pomada: 'investir',
+      oleo: 'divulgar',
+      gel: 'rever_preco',
+      pente: 'repensar',
+      shampoo: 'parado',
+    });
+    // Mais lucro primeiro; parados no fim.
+    expect(r.map((p) => p.produtoId)).toEqual(['pomada', 'oleo', 'gel', 'pente', 'shampoo']);
+  });
+
+  it('sem custo cadastrado, o retorno fica em branco (não divide por zero)', () => {
+    expect(lucratividadePorProduto([{ itens: [produto('brinde', 500, 0)] }])[0]).toMatchObject({
+      retornoSobreCusto: null,
+      situacao: 'investir',
+    });
+  });
+
+  it('serviço não entra na conta de produto', () => {
+    expect(lucratividadePorProduto([{ itens: [servico(5000)] }])).toEqual([]);
   });
 });

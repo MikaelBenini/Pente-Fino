@@ -1,6 +1,6 @@
 // Esquemas da Etapa 6C: despesas, comissões, metas e indicadores.
 import { z } from 'zod';
-import type { Indicadores, LucroServico, Projecao } from './indicadores.js';
+import type { Indicadores, LucroProduto, LucroServico, Projecao } from './indicadores.js';
 import type { AgendaItem } from './esquemas-operacao.js';
 
 const uuid = (rotulo: string) => z.uuid({ error: `${rotulo} inválido.` });
@@ -148,6 +148,7 @@ export interface RespostaIndicadores {
 
 export interface RespostaLucratividade {
   servicos: (LucroServico & { nome: string })[];
+  produtos: (LucroProduto & { nome: string })[];
 }
 
 export interface PainelBarbeiro {

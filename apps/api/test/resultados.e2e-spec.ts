@@ -180,6 +180,27 @@ describe('indicadores', () => {
       lucro: 5700,
     });
   });
+
+  it('lucratividade por produto: vendido com custo e retorno; gestor vê, barbeiro não', async () => {
+    const r = (await gestor.get(`/lucratividade?${periodo}`).expect(200)).body.produtos as {
+      nome: string;
+      quantidade: number;
+      receita: number;
+      custo: number;
+      lucro: number;
+      retornoSobreCusto: number | null;
+      situacao: string;
+    }[];
+    const pomada = r.find((p) => p.nome === 'Pomada')!;
+    expect(pomada).toMatchObject({
+      quantidade: 1,
+      receita: 4500,
+      custo: 1800,
+      situacao: 'investir',
+    });
+    expect(pomada.retornoSobreCusto).toBeCloseTo(pomada.lucro / 1800);
+    await barbeiro.get(`/lucratividade?${periodo}`).expect(403);
+  });
 });
 
 describe('despesas', () => {

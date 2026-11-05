@@ -4,6 +4,7 @@
 export interface ItemFechado {
   tipo: 'servico' | 'produto' | 'nao_operacional';
   servicoId?: string | null;
+  produtoId?: string | null;
   quantidade: number;
   precoUnitario: number;
   desconto: number;
@@ -216,6 +217,107 @@ export function lucratividadePorServico(comandas: readonly ComandaFechada[]): Lu
       return { ...s, lucro, margem: s.receita > 0 ? lucro / s.receita : 0 };
     })
     .sort((a, b) => b.lucro - a.lucro);
+}
+
+// ─── Produtos: o que vende e o que vale a pena ────────────────────────────
+
+/**
+ * Onde o produto está, comparado com a mediana dos que venderam no período:
+ * investir (vende e rende), divulgar (rende, vende pouco), rever_preco (vende, rende pouco),
+ * repensar (nem vende nem rende) e parado (ativo, sem venda no período).
+ */
+export type SituacaoProduto = 'investir' | 'divulgar' | 'rever_preco' | 'repensar' | 'parado';
+
+export interface LucroProduto {
+  produtoId: string;
+  quantidade: number;
+  receita: number;
+  /** Custo de compra do que saiu (quantidade × custo do momento da venda). */
+  custo: number;
+  comissao: number;
+  /** Receita − (custo + comissão). */
+  lucro: number;
+  /** Lucro ÷ receita (fração). */
+  margem: number;
+  /** Lucro por real gasto no estoque vendido (lucro ÷ custo); null sem custo cadastrado. */
+  retornoSobreCusto: number | null;
+  situacao: SituacaoProduto;
+}
+
+function mediana(valores: readonly number[]): number {
+  if (valores.length === 0) return 0;
+  const v = [...valores].sort((a, b) => a - b);
+  const meio = Math.floor(v.length / 2);
+  return v.length % 2 ? v[meio]! : (v[meio - 1]! + v[meio]!) / 2;
+}
+
+/**
+ * Lucro de cada produto vendido no período e onde ele fica entre "vende" e "rende".
+ * "Rende" é o lucro por unidade vendida (comparável entre produtos baratos e caros);
+ * `ativos` entra para mostrar quem não vendeu nada.
+ */
+export function lucratividadePorProduto(
+  comandas: readonly ComandaFechada[],
+  ativos: readonly string[] = [],
+): LucroProduto[] {
+  const mapa = new Map<
+    string,
+    Omit<LucroProduto, 'lucro' | 'margem' | 'retornoSobreCusto' | 'situacao'>
+  >();
+  for (const c of comandas) {
+    for (const i of c.itens) {
+      if (i.tipo !== 'produto' || !i.produtoId) continue;
+      const atual = mapa.get(i.produtoId) ?? {
+        produtoId: i.produtoId,
+        quantidade: 0,
+        receita: 0,
+        custo: 0,
+        comissao: 0,
+      };
+      atual.quantidade += i.quantidade;
+      atual.receita += valorLiquido(i);
+      atual.custo += i.quantidade * i.custoUnitario;
+      atual.comissao += i.comissaoValor;
+      mapa.set(i.produtoId, atual);
+    }
+  }
+  const vendidos = [...mapa.values()].map((p) => {
+    const lucro = p.receita - (p.custo + p.comissao);
+    return {
+      ...p,
+      lucro,
+      margem: p.receita > 0 ? lucro / p.receita : 0,
+      retornoSobreCusto: p.custo > 0 ? lucro / p.custo : null,
+    };
+  });
+  const giro = mediana(vendidos.map((p) => p.quantidade));
+  const rende = mediana(vendidos.map((p) => p.lucro / p.quantidade));
+  const comSituacao: LucroProduto[] = vendidos.map((p) => {
+    const vende = p.quantidade >= giro;
+    const bom = p.lucro / p.quantidade >= rende && p.lucro > 0;
+    const situacao: SituacaoProduto = vende
+      ? bom
+        ? 'investir'
+        : 'rever_preco'
+      : bom
+        ? 'divulgar'
+        : 'repensar';
+    return { ...p, situacao };
+  });
+  const parados: LucroProduto[] = ativos
+    .filter((id) => !mapa.has(id))
+    .map((produtoId) => ({
+      produtoId,
+      quantidade: 0,
+      receita: 0,
+      custo: 0,
+      comissao: 0,
+      lucro: 0,
+      margem: 0,
+      retornoSobreCusto: null,
+      situacao: 'parado',
+    }));
+  return [...comSituacao.sort((a, b) => b.lucro - a.lucro), ...parados];
 }
 
 /** Variação entre dois valores (fração); null quando não há base de comparação. */
