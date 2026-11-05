@@ -372,6 +372,19 @@ Horário vago vira atendimento sem a recepção pegar o telefone.
   - Vale para agendamento pelo bot (a conversa está aberta) e pelo site (só se marcou que aceita mensagens); pelo balcão, a recepção marca na hora
   - Quando vaga um horário antes (cancelamento ou falta avisada), oferece em ordem para quem pediu; o primeiro que responder "1" leva e o horário dele é liberado para a lista; os outros recebem "já foi preenchido". Mesma proteção do número (fila espaçada, nada para quem não aceitou)
   - Resposta "não": não pergunta de novo naquele agendamento
+- [ ] **Tolerância de atraso e remarcação rápida** (pedido em 2026-11-05)
+  - Tolerância por unidade (padrão 10 minutos, o dono muda em Configurações), avisada ao cliente em toda confirmação de agendamento (bot, site, balcão) e no lembrete: "tolerância de 10 minutos; depois disso o horário pode ser cancelado"
+  - O sistema **identifica** o atraso, mas **não cancela sozinho**: passada a tolerância sem a comanda entrar em atendimento, a comanda e o "Hoje" do barbeiro mostram "Cliente não chegou?" com dois botões, **Chegou** (inicia o atendimento) e **Não veio** (confirma o atraso). Também aparece para a recepção na agenda
+  - Só a confirmação de "Não veio" dispara o fluxo. Assim, se o barbeiro esqueceu de iniciar a comanda com o cliente na cadeira, ninguém recebe mensagem de cancelamento à toa. Sem confirmação, nada acontece e o aviso some quando a comanda é iniciada, fechada ou cancelada
+  - O fluxo depois de "Não veio": a comanda prevista é cancelada como **atraso** (conta nas faltas do cliente, separado da falta comum no relatório), o horário é liberado e oferecido à lista de espera e a quem pediu "avisar se vagar antes", e o bot manda ao cliente (se ele aceita mensagens) "seu horário das 14h foi cancelado pelo atraso. Quer remarcar?" com os **próximos 3 horários livres** com o mesmo barbeiro, mais "outro dia" (link do site com o telefone preenchido). Responder o número já marca, sem passar pelo menu
+  - Desfazer em até 5 minutos (cliente chegou logo depois): reabre o horário se ainda estiver livre e não manda mais nada
+  - Regra pura em `packages/shared` (`estaAtrasado`, `proximosHorariosParaRemarcar`), com teste; a remarcação usa a mesma API de horários livres e o mesmo motor de agendamento pela conversa da Etapa 11
+- [ ] **Mover agendamento arrastando** (pedido em 2026-11-05): na agenda do computador e do tablet, dono, gestor e recepção seguram e arrastam o horário para outro barbeiro (outra coluna) e/ou outro horário
+  - Ao soltar, confere: o barbeiro de destino faz o serviço, está no expediente, sem bloqueio, e o horário não se sobrepõe (o banco já impede); se não pode, volta ao lugar com o motivo
+  - Confirmação curta antes de gravar ("Mover o corte do João das 14h com Rafael para 14h30 com Thiago?"); a comanda prevista acompanha; fica na auditoria; botão **Desfazer** por alguns segundos
+  - Se mudou o horário, o cliente recebe aviso pelo bot (se aceita mensagens); se mudou só o barbeiro, o dono escolhe se avisa
+  - No celular não arrasta (tela pequena): o mesmo movimento pelo botão "Mover" da comanda, com a escolha de barbeiro e horário. Pelo teclado também, para acessibilidade
+  - Biblioteca de arrastar com suporte a toque e teclado (`@dnd-kit`); teste Playwright arrastando entre colunas
 - [ ] **Pronto quando:** um cancelamento vira atendimento de alguém da lista de espera sem a recepção intervir
 
 ## Etapa 15 · Avisos, rotinas, rede e planos
