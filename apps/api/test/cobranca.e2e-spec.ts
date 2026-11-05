@@ -153,4 +153,21 @@ describe('webhook do Asaas', () => {
     expect(d.faturas.filter((f) => f.status === 'paga')).toHaveLength(2);
     expect(d.faturas).toHaveLength(2);
   });
+
+  it('aviso atrasado ou repetido não tira a fatura de paga; estorno tira', async () => {
+    await webhook({ event: 'PAYMENT_CREATED', payment: await pagamento({}) }).expect(200);
+    await webhook({
+      event: 'PAYMENT_CREDIT_CARD_CAPTURE_REFUSED',
+      payment: await pagamento({}),
+    }).expect(200);
+    let d = (await dono.get('/conta/assinatura').expect(200)).body as AssinaturaDetalhe;
+    expect(d.faturas.find((f) => f.status !== 'paga')).toBeUndefined();
+
+    await webhook({
+      event: 'PAYMENT_REFUNDED',
+      payment: await pagamento({ status: 'REFUNDED' }),
+    }).expect(200);
+    d = (await dono.get('/conta/assinatura').expect(200)).body as AssinaturaDetalhe;
+    expect(d.faturas.map((f) => f.status).sort()).toEqual(['cancelada', 'paga']);
+  });
 });

@@ -181,6 +181,9 @@ export class CobrancaService {
     const atual = await tx.faturaAssinatura.findUnique({
       where: { origem_idExterno: { origem: 'asaas', idExterno: c.id } },
     });
+    // Paga não volta atrás por aviso atrasado ou repetido ("criada", "recusada" depois do
+    // "paga"); só estorno ou exclusão (cancelada) tira a fatura de paga.
+    if (atual?.status === 'paga' && f.status !== 'cancelada') return;
     // Recusa vale até pagar: a cobrança segue "pendente" no Asaas depois do cartão recusado.
     const status = recusa
       ? 'recusada'
