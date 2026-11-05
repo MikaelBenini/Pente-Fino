@@ -37,6 +37,7 @@ import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
 import { Assinatura } from './assinatura';
+import { RegrasDeAgendamento } from './regras-agendamento';
 import { ImportarPlanilha, LinkAgendamento } from './link-e-importacao';
 
 export function TelaConfiguracoes() {
@@ -57,6 +58,7 @@ export function TelaConfiguracoes() {
           { id: 'unidades', rotulo: 'Unidades', conteudo: <Unidades /> },
           { id: 'calendario', rotulo: 'Folgas e feriados', conteudo: <Calendario /> },
           { id: 'link', rotulo: 'Link de agendamento', conteudo: <LinkAgendamento /> },
+          { id: 'agendamento', rotulo: 'Agendamento', conteudo: <RegrasDeAgendamento /> },
           ...(ehDono
             ? [
                 { id: 'importar', rotulo: 'Importar planilha', conteudo: <ImportarPlanilha /> },

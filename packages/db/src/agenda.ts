@@ -5,7 +5,10 @@ import {
   diaDaSemana,
   horariosLivres,
   instanteLocal,
+  lerRegrasAgendamento,
+  trabalhosDeLembrete,
   type HorarioLivre,
+  type RegrasAgendamento,
 } from '@pente-fino/shared';
 import type { OrigemAgendamento, Prisma } from './generated/prisma/client.js';
 import { precoServicoVigente } from './vigencia.js';
@@ -24,6 +27,24 @@ export class ErroAgenda extends Error {
 
 const dataBanco = (dia: string) => new Date(`${dia}T00:00:00.000Z`);
 const diaDoBanco = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Regras de agendamento da unidade (com o padrão no que não foi configurado). */
+export async function regrasDaUnidade(tx: Tx, unidadeId: string): Promise<RegrasAgendamento> {
+  const u = await tx.unidade.findUnique({
+    where: { id: unidadeId },
+    select: { regrasAgendamento: true },
+  });
+  return lerRegrasAgendamento(u?.regrasAgendamento);
+}
+
+/** Ocupado mais a folga antes e depois (intervalo entre atendimentos). */
+const comFolga = (ocupados: { inicio: Date; fim: Date }[], intervaloMin: number) =>
+  intervaloMin > 0
+    ? ocupados.map((o) => ({
+        inicio: new Date(o.inicio.getTime() - intervaloMin * 60_000),
+        fim: new Date(o.fim.getTime() + intervaloMin * 60_000),
+      }))
+    : ocupados;
 
 /** Expediente do profissional no dia, respeitando os dias da unidade e o calendário. */
 export async function expedienteDoProfissional(
@@ -75,7 +96,11 @@ export async function ocupadosDoProfissional(
   return [...ags, ...bls].map((x) => ({ inicio: x.inicio, fim: x.fim }));
 }
 
-/** Horários livres de cada profissional ativo da unidade (ou de um só) no dia. */
+/**
+ * Horários livres de cada profissional ativo da unidade (ou de um só) no dia, com o
+ * intervalo entre atendimentos da unidade. `antecedenciaMin` (bot e site) tira os horários
+ * próximos demais de agora; o balcão passa 0 (encaixe).
+ */
 export async function calcularLivres(
   tx: Tx,
   unidadeId: string,
@@ -83,18 +108,21 @@ export async function calcularLivres(
   duracaoMin: number,
   profissionalId?: string,
   agora = new Date(),
+  opcoes: { antecedenciaMin?: number } = {},
 ): Promise<HorarioLivre[]> {
+  const regras = await regrasDaUnidade(tx, unidadeId);
   const profs = await tx.profissional.findMany({
     where: { unidadeId, ativo: true, ...(profissionalId ? { id: profissionalId } : {}) },
   });
+  const aPartirDe = new Date(agora.getTime() + (opcoes.antecedenciaMin ?? 0) * 60_000);
   const r: HorarioLivre[] = [];
   for (const p of profs) {
     const inicios = horariosLivres({
       expediente: await expedienteDoProfissional(tx, p.id, unidadeId, dia),
-      ocupados: await ocupadosDoProfissional(tx, p.id, dia),
+      ocupados: comFolga(await ocupadosDoProfissional(tx, p.id, dia), regras.intervaloMin),
       duracaoMin,
       passoMin: 15,
-      agora,
+      agora: aPartirDe,
     });
     r.push({ profissionalId: p.id, inicios: inicios.map((d) => d.toISOString()) });
   }
@@ -117,7 +145,11 @@ export async function validarHorario(
       'conflito',
       'Fora do expediente do profissional (ou a unidade não abre nesse dia).',
     );
-  const ocupados = await ocupadosDoProfissional(tx, profissionalId, dia, ignorar);
+  const regras = await regrasDaUnidade(tx, unidadeId);
+  const ocupados = comFolga(
+    await ocupadosDoProfissional(tx, profissionalId, dia, ignorar),
+    regras.intervaloMin,
+  );
   if (ocupados.some((o) => o.inicio < fim && inicio < o.fim))
     throw new ErroAgenda(
       'conflito',
@@ -289,4 +321,20 @@ export async function cancelarPeloCliente(tx: Tx, agendamentoId: string, canal: 
       motivo,
     },
   });
+}
+
+/**
+ * Os trabalhos de lembrete de um agendamento pelas horas da unidade (marcado ou remarcado
+ * agora). A API e o worker põem na fila `whatsapp-entrada`.
+ */
+export async function lembretesDoAgendamento(
+  tx: Tx,
+  contaId: string,
+  agendamentoId: string,
+  agora = new Date(),
+) {
+  const ag = await tx.agendamento.findUnique({ where: { id: agendamentoId } });
+  if (!ag) return [];
+  const regras = await regrasDaUnidade(tx, ag.unidadeId);
+  return trabalhosDeLembrete(contaId, ag.id, ag.inicio, agora, agora, regras.lembretesHoras);
 }

@@ -7,10 +7,7 @@ import {
   formatarDiaPorExtenso,
   formatarHora,
   HORARIOS_POR_VEZ,
-  JANELA_AGENDAMENTO_DIAS,
   lerNumeros,
-  MAX_FUTUROS_POR_CLIENTE,
-  PRAZO_MUDAR_MIN,
   textoAcoesDoHorario,
   textoConfirmarCancelamento,
   textoMeusHorarios,
@@ -24,12 +21,14 @@ import {
   textoProfissionais,
   textoServicos,
   type AgendaNaConversa,
+  type RegrasAgendamento,
   type ResumoAgendamento,
   type ServicoParaAgendar,
 } from '@pente-fino/shared';
 import {
   calcularLivres,
   cancelarPeloCliente,
+  regrasDaUnidade,
   criarAgendamentoNoBanco,
   duracaoDosServicos,
   ErroAgenda,
@@ -58,6 +57,8 @@ export interface DadosDaConversa {
   barbearia: string;
   link: string | null;
   agora: Date;
+  /** Regras de agendamento da unidade (antecedência, janela, limite, prazo). */
+  regras: RegrasAgendamento;
   /** Simulador do painel: faz o passo a passo, mas não grava o agendamento. */
   simulacao?: boolean;
 }
@@ -98,8 +99,9 @@ async function profissionaisDaUnidade(tx: Tx, unidadeId: string) {
   return ps.map((p) => ({ id: p.id, nome: primeiroNome(p.usuario.nome) }));
 }
 
-/** A unidade tem como agendar pela conversa (serviço com preço e alguém atendendo)? */
+/** A unidade agenda pela conversa (ligado nas regras, serviço com preço e alguém atendendo)? */
 export async function podeAgendarPelaConversa(tx: Tx, unidadeId: string, dia: string) {
+  if (!(await regrasDaUnidade(tx, unidadeId)).pelaConversa) return false;
   if ((await profissionaisDaUnidade(tx, unidadeId)).length === 0) return false;
   return (await servicosParaAgendar(tx, unidadeId, dia)).length > 0;
 }
@@ -119,6 +121,7 @@ async function horariosDoDia(
     duracao,
     a.profissionalId ?? undefined,
     d.agora,
+    { antecedenciaMin: d.regras.antecedenciaMin },
   );
   const porHorario = new Map<string, string>();
   for (const l of livres)
@@ -167,7 +170,7 @@ async function irParaDias(tx: Tx, a: AgendaNaConversa, d: DadosDaConversa, aviso
   const dias: string[] = [];
   for (
     let i = 0;
-    i < Math.min(DIAS_DE_BUSCA, JANELA_AGENDAMENTO_DIAS) && dias.length < DIAS_POR_VEZ;
+    i < Math.min(DIAS_DE_BUSCA, d.regras.janelaDias + 1) && dias.length < DIAS_POR_VEZ;
     i++
   ) {
     const dia = somarDias(hoje, i);
@@ -178,6 +181,7 @@ async function irParaDias(tx: Tx, a: AgendaNaConversa, d: DadosDaConversa, aviso
       duracao,
       a.profissionalId ?? undefined,
       d.agora,
+      { antecedenciaMin: d.regras.antecedenciaMin },
     );
     if (livres.some((l) => l.inicios.length > 0)) dias.push(dia);
   }
@@ -288,7 +292,7 @@ function mostrarAcoes(
 ): PassoDaAgenda {
   const hoje = dataLocal(d.agora);
   // Em cima da hora, só com a recepção (o barbeiro já se organizou para o horário).
-  if (new Date(h.texto.inicio).getTime() - d.agora.getTime() < PRAZO_MUDAR_MIN * 60_000)
+  if (new Date(h.texto.inicio).getTime() - d.agora.getTime() < d.regras.prazoMudarMin * 60_000)
     return sair([
       `Seu horário é daqui a pouco (${formatarHora(h.texto.inicio)}). Para mudar agora, responda ATENDENTE.`,
     ]);
@@ -348,7 +352,7 @@ export async function passoDaAgenda(
           },
           orderBy: { inicio: 'asc' },
         });
-    if (futuros.length >= MAX_FUTUROS_POR_CLIENTE)
+    if (futuros.length >= d.regras.maxFuturos)
       return sair([
         [
           'Você já tem horários marcados com a gente:',

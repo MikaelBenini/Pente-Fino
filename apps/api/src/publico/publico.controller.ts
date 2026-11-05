@@ -8,8 +8,7 @@ import {
   estadoAssinatura,
 } from '@pente-fino/db';
 import {
-  JANELA_AGENDAMENTO_DIAS,
-  MAX_FUTUROS_POR_CLIENTE,
+  lerRegrasAgendamento,
   agendamentoPublicoSchema,
   cadastroContaSchema,
   dataLocal,
@@ -49,9 +48,7 @@ const consultaHorarios = z.object({
   profissionalId: z.uuid().optional(),
 });
 /** Até quantos horários futuros um mesmo telefone pode ter pelo link. */
-const MAX_FUTUROS_POR_TELEFONE = MAX_FUTUROS_POR_CLIENTE;
 /** Até quantos dias à frente o link aceita agendar. */
-const JANELA_DIAS = JANELA_AGENDAMENTO_DIAS;
 
 @ApiTags('Público (sem login)')
 @Controller('publico')
@@ -196,10 +193,13 @@ export class PublicoController {
     @Consulta(consultaHorarios) c: z.infer<typeof consultaHorarios>,
   ): Promise<HorarioLivre[]> {
     const u = await this.unidade(slug);
-    this.exigirJanela(c.data);
+    const regras = lerRegrasAgendamento(u.regrasAgendamento);
+    this.exigirJanela(c.data, regras.janelaDias);
     return this.banco.naConta(u.contaId, async (tx) => {
       const duracao = await this.duracao(tx, c.servicoIds);
-      return this.agenda.calcularLivres(tx, u.id, c.data, duracao, c.profissionalId);
+      return this.agenda.calcularLivres(tx, u.id, c.data, duracao, c.profissionalId, {
+        antecedenciaMin: regras.antecedenciaMin,
+      });
     });
   }
 
@@ -213,9 +213,15 @@ export class PublicoController {
     @Corpo(agendamentoPublicoSchema) d: AgendamentoPublicoEntrada,
   ): Promise<AgendamentoPublicoCriado> {
     const u = await this.unidade(slug);
-    this.exigirJanela(dataLocal(new Date(d.inicio)));
-    if (new Date(d.inicio) < new Date())
-      throw Erros.requisicaoInvalida('horario_passado', 'Este horário já passou. Escolha outro.');
+    const regras = lerRegrasAgendamento(u.regrasAgendamento);
+    this.exigirJanela(dataLocal(new Date(d.inicio)), regras.janelaDias);
+    if (new Date(d.inicio).getTime() < Date.now() + regras.antecedenciaMin * 60_000)
+      throw Erros.requisicaoInvalida(
+        'horario_passado',
+        regras.antecedenciaMin > 0
+          ? `Pelo link, marque com pelo menos ${regras.antecedenciaMin} minutos de antecedência. Escolha outro horário.`
+          : 'Este horário já passou. Escolha outro.',
+      );
     const r = await this.banco.naConta(u.contaId, async (tx) => {
       // Conta só para consulta não recebe agendamento novo pelo link.
       if ((await estadoAssinatura(tx)).somenteLeitura)
@@ -232,7 +238,7 @@ export class PublicoController {
             status: { in: ['agendado', 'confirmado'] },
           },
         });
-        if (futuros >= MAX_FUTUROS_POR_TELEFONE) {
+        if (futuros >= regras.maxFuturos) {
           throw Erros.conflito(
             'Você já tem horários marcados com a gente. Para mudar, fale com a barbearia pelo WhatsApp.',
           );
@@ -282,13 +288,13 @@ export class PublicoController {
     };
   }
 
-  private exigirJanela(dia: string) {
+  private exigirJanela(dia: string, janelaDias: number) {
     const hoje = dataLocal(new Date());
     const limite = new Date(`${hoje}T12:00:00Z`);
-    limite.setUTCDate(limite.getUTCDate() + JANELA_DIAS);
+    limite.setUTCDate(limite.getUTCDate() + janelaDias);
     if (dia < hoje || dia > limite.toISOString().slice(0, 10)) {
       throw Erros.validacao([
-        { campo: 'data', mensagem: `Escolha um dia entre hoje e os próximos ${JANELA_DIAS} dias.` },
+        { campo: 'data', mensagem: `Escolha um dia entre hoje e os próximos ${janelaDias} dias.` },
       ]);
     }
   }

@@ -8,6 +8,7 @@ import {
   EXPIRACAO_SESSAO_MIN,
   grupoDaPalavraChave,
   lerNumeros,
+  lerRegrasAgendamento,
   MENSAGENS_BOT_PADRAO,
   MENU_BOT_PADRAO,
   menuBotSchema,
@@ -413,6 +414,7 @@ export async function atenderMensagem(
             barbearia: ctx.barbearia,
             link: ctx.link,
             agora,
+            regras: lerRegrasAgendamento(u.regrasAgendamento),
           },
         });
         if (r.avaliacao) await gravarRespostaPesquisa(tx, r.avaliacao, agora);

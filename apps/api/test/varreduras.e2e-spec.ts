@@ -202,6 +202,7 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
       `/bot/conexao/${a.unidadeA}`,
       `/clientes/${ids.cliente}/mensagens`,
       `/conversas?unidadeId=${a.unidadeA}`,
+      `/unidades/${a.unidadeA}/regras-agendamento`,
       `/avaliacoes?${periodo()}&unidadeId=${a.unidadeA}`,
     ];
     for (const rota of rotas) {

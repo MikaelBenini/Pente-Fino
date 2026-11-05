@@ -9,6 +9,8 @@ import {
   atenderMensagem,
   enviarLembrete,
   iniciarPesquisa,
+  lembretesDoAgendamento,
+  naConta,
   prepararEnvio,
   registrarEnvio,
   type PrismaClient,
@@ -18,7 +20,6 @@ import {
   FILA_WHATSAPP_ENTRADA,
   FILA_WHATSAPP_SAIDA,
   proximoEnvio,
-  trabalhosDeLembrete,
   type TrabalhoWhatsappEntrada,
   type TrabalhoWhatsappSaida,
 } from '@pente-fino/shared';
@@ -186,14 +187,10 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
         if (r.tipo !== 'respondida') return r.tipo;
         await agendarRespostas(r, { relogio, adicionar });
         if (r.agendamento) {
-          const agora = new Date();
-          for (const l of trabalhosDeLembrete(
-            r.contaId,
-            r.agendamento.id,
-            new Date(r.agendamento.inicio),
-            agora,
-            agora,
-          ))
+          const trabalhos = await naConta(this.banco.prisma, r.contaId, (tx) =>
+            lembretesDoAgendamento(tx, r.contaId, r.agendamento!.id),
+          );
+          for (const l of trabalhos)
             await filaEntrada.add('lembrete', l.dados, { delay: l.atrasoMs, jobId: l.jobId });
         }
         return r.tipo;
