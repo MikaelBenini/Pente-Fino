@@ -37,7 +37,10 @@ export const SENHA_DEMO = 'pentefino123';
 /** Contas para testar a cobrança sem esperar: teste vencido e fatura recusada. */
 export const CONTA_EXPIRADA_ID = '019a4b2c-0000-7000-8000-00000000e001';
 export const CONTA_RECUSADA_ID = '019a4b2c-0000-7000-8000-00000000e002';
-const DIAS_DE_HISTORICO = 30;
+/** Meses completos antes do atual (6 meses no total: evolução, retorno e "sumidos" com cara de verdade). */
+const MESES_DE_HISTORICO = 6;
+/** Clientes da demonstração: com 700, quem é fiel volta a cada duas ou três semanas. */
+const TOTAL_CLIENTES = 700;
 const FUSO = 'America/Sao_Paulo';
 
 // ─── Sorteio determinístico ───────────────────────────────────────────────
@@ -180,7 +183,7 @@ const PRODUTOS = [
 async function main(): Promise<void> {
   const prisma = criarPrisma();
   const hoje = dataLocal(new Date(), FUSO);
-  const inicioHistorico = somarDias(hoje, -DIAS_DE_HISTORICO);
+  const inicioHistorico = somarMeses(primeiroDoMes(hoje), -MESES_DE_HISTORICO);
   const agora = new Date();
 
   try {
@@ -271,8 +274,8 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
   }
   const feriados = new Set([`${ano}-11-02`, `${ano}-11-15`]);
 
-  // Modelos prontos (serviços, categorias, bot, mensagens) com preços desde 60 dias atrás.
-  const vigenciaBase = somarDias(hoje, -60);
+  // Modelos prontos (serviços, categorias, bot, mensagens) com preços desde o início do histórico.
+  const vigenciaBase = somarDias(inicioHistorico, -30);
   const servicoIds = await aplicarModelosIniciais(tx, {
     unidadeIds: [centro.id, jardins.id],
     vigenciaInicio: vigenciaBase,
@@ -337,6 +340,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     regras: { vigenciaInicio: DataISO; percentualBp: number }[];
     regraProduto: number;
     usuarioId: string;
+    entrada: DataISO;
   }[] = [];
   for (const membro of EQUIPE) {
     const email = `${membro.nome.split(' ')[0]!.toLowerCase()}@demo.pentefino.dev`;
@@ -382,11 +386,12 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
       regras,
       regraProduto: 1000,
       usuarioId: usuario.id,
+      entrada,
     });
   }
 
   // Clientes com telefone único.
-  const clientes = Array.from({ length: 140 }, (_, i) => ({
+  const clientes = Array.from({ length: TOTAL_CLIENTES }, (_, i) => ({
     id: randomUUID(),
     nome: `${sortear(NOMES)} ${sortear(SOBRENOMES)}`,
     telefone: `55119${String(70000000 + i * 7919).padStart(8, '0')}`,
@@ -405,6 +410,12 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
       : null,
   }));
   await tx.cliente.createMany({ data: clientes });
+  // Cada cliente tem o barbeiro preferido, da unidade onde começou.
+  const clientesDo = new Map(barbeiros.map((b) => [b.id, [] as typeof clientes]));
+  for (const c of clientes) {
+    const daUnidade = barbeiros.filter((b) => b.unidadeId === c.unidadeOrigemId);
+    clientesDo.get(sortear(daUnidade).id)!.push(c);
+  }
 
   // ─── Agenda e comandas ──────────────────────────────────────────────────
 
@@ -429,6 +440,8 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     for (const barbeiro of barbeiros) {
       const unidade = barbeiro.unidadeId === centro.id ? centro : jardins;
       if (!unidade.diasTrabalho.includes(diaDaSemana(data))) continue;
+      // Quem entrou depois (Bruno, há 75 dias) só atende a partir da entrada.
+      if (data < barbeiro.entrada) continue;
       const regraServico = selecionarVigente(barbeiro.regras, data)!;
 
       for (let minuto = 9 * 60; minuto + DURACAO_SLOT <= 19 * 60; minuto += DURACAO_SLOT) {
@@ -439,7 +452,8 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
         const fim = adicionarMinutos(inicio, DURACAO_SLOT);
         const passado = fim <= agora;
         const emAndamento = inicio <= agora && agora < fim;
-        const cliente = sortear(clientes);
+        // Cliente é fiel: 80% das vezes vem um dos clientes "do" barbeiro.
+        const cliente = chance(0.8) ? sortear(clientesDo.get(barbeiro.id)!) : sortear(clientes);
         const veioPelaAgenda = chance(0.72);
         const falta = passado && veioPelaAgenda && chance(0.05);
 
@@ -687,9 +701,12 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     });
   }
 
-  // Despesas do mês atual e do anterior.
+  // Despesas de todos os meses do histórico (as eventuais só no mês passado).
   const categorias = new Map((await tx.categoriaDespesa.findMany()).map((c) => [c.nome, c.id]));
-  const meses = [primeiroDoMes(somarDias(primeiroDoMes(hoje), -1)), primeiroDoMes(hoje)];
+  const meses = Array.from({ length: MESES_DE_HISTORICO + 1 }, (_, i) =>
+    somarMeses(primeiroDoMes(hoje), i - MESES_DE_HISTORICO),
+  );
+  const mesPassado = somarMeses(primeiroDoMes(hoje), -1);
   const despesas: Prisma.DespesaCreateManyInput[] = [];
   for (const competencia of meses) {
     const pago = competencia < primeiroDoMes(hoje);
@@ -722,7 +739,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     lancar('Taxas da maquininha', 'Taxas de cartão', inteiro(85000, 105000), null);
     lancar('Marketing', 'Anúncios no Instagram', 40000, null);
     lancar('Retirada do dono', 'Pró-labore do dono', 800000, null);
-    if (competencia === meses[0]) {
+    if (competencia === mesPassado) {
       lancar('Manutenção de equipamentos', 'Conserto de cadeira hidráulica', 45000, jardins.id);
       lancar('Equipamentos novos', 'Máquina de corte profissional', 129000, centro.id);
     }
@@ -754,32 +771,34 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     ],
   });
 
-  // Comissões pagas: tudo que foi fechado antes do início do mês atual.
-  const inicioDoMes = instante(primeiroDoMes(hoje), 0);
-  const fechadasAntes = new Set(
+  // Comissões pagas mês a mês, no primeiro dia do mês seguinte (o mês atual fica a receber).
+  const mesDaComanda = new Map(
     comandas
-      .filter((c) => c.status === 'fechada' && (c.fechadaEm as Date) < inicioDoMes)
-      .map((c) => c.id),
+      .filter((c) => c.status === 'fechada')
+      .map((c) => [c.id, primeiroDoMes(dataLocal(c.fechadaEm as Date, FUSO))]),
   );
-  const comissaoPorBarbeiro = new Map<string, number>();
+  const comissaoPorMes = new Map<string, number>();
   for (const item of itens) {
-    if (!fechadasAntes.has(item.comandaId)) continue;
-    comissaoPorBarbeiro.set(
-      item.profissionalId!,
-      (comissaoPorBarbeiro.get(item.profissionalId!) ?? 0) + (item.comissaoValor ?? 0),
-    );
+    const mes = mesDaComanda.get(item.comandaId);
+    if (!mes || mes >= primeiroDoMes(hoje)) continue;
+    const chave = `${item.profissionalId}|${mes}`;
+    comissaoPorMes.set(chave, (comissaoPorMes.get(chave) ?? 0) + (item.comissaoValor ?? 0));
   }
   await tx.pagamentoComissao.createMany({
-    data: [...comissaoPorBarbeiro]
+    data: [...comissaoPorMes]
       .filter(([, valor]) => valor > 0)
-      .map(([profissionalId, valor]) => ({
-        profissionalId,
-        periodoInicio: dataParaBanco(inicioHistorico),
-        periodoFim: dataParaBanco(somarDias(primeiroDoMes(hoje), -1)),
-        valor,
-        pagoEm: instante(primeiroDoMes(hoje), 18 * 60),
-        pagoPorId: dono.id,
-      })),
+      .map(([chave, valor]) => {
+        const [profissionalId, mes] = chave.split('|') as [string, DataISO];
+        const seguinte = somarMeses(mes, 1);
+        return {
+          profissionalId,
+          periodoInicio: dataParaBanco(mes),
+          periodoFim: dataParaBanco(somarDias(seguinte, -1)),
+          valor,
+          pagoEm: instante(seguinte, 18 * 60),
+          pagoPorId: dono.id,
+        };
+      }),
   });
 
   // WhatsApp do Centro: a instância "teste" da Evolution API local.
