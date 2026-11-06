@@ -5,10 +5,13 @@ import {
   formatarDataHora,
   formatarMoeda,
   formatarTelefone,
+  NOME_MOTIVO_RECUPERAR,
+  type ClienteParaRecuperar,
   type ClienteResumo,
 } from '@pente-fino/shared';
-import { Botao, Campo, Dialogo, EstadoVazio } from '@pente-fino/ui';
-import { Contact, MessageCircle, Plus } from 'lucide-react';
+import { Abas, Botao, Campo, Dialogo, EstadoVazio } from '@pente-fino/ui';
+import { useQuery } from '@tanstack/react-query';
+import { CalendarPlus, Contact, HeartHandshake, MessageCircle, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
@@ -24,7 +27,7 @@ import { Aviso } from '../aviso';
 import { ListaMensagens } from '../lista-mensagens';
 import { MandarMensagem } from '../mandar-mensagem';
 import { useApp } from '../contexto-app';
-import { CabecalhoPagina, Estado, Tabela, td, th } from '../pagina';
+import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
@@ -32,13 +35,12 @@ const mensagemDe = (e: unknown) =>
 export function TelaClientes() {
   const { papeis } = useApp();
   const balcao = papeis.some((p) => p !== 'barbeiro');
-  const [busca, setBusca] = useState('');
-  const termo = useDeferredValue(busca.trim());
-  const clientes = useClientes(termo);
+  const [aba, setAba] = useState('todos');
   // "Ver cliente" das Conversas abre a ficha direto (/clientes?id=).
   const idDoLink = useSearchParams().get('id');
   const [aberto, setAberto] = useState<string | null>(idDoLink);
   const [novo, setNovo] = useState(false);
+  const lista = <ListaClientes onAbrir={setAberto} />;
 
   return (
     <div className="flex flex-col gap-6">
@@ -53,6 +55,36 @@ export function TelaClientes() {
           )
         }
       />
+      {balcao ? (
+        <Abas
+          rotulo="Clientes"
+          atual={aba}
+          onTrocar={setAba}
+          abas={[
+            { id: 'todos', rotulo: 'Todos', conteudo: lista },
+            {
+              id: 'recuperar',
+              rotulo: 'Para recuperar',
+              conteudo: <ParaRecuperar onAbrir={setAberto} />,
+            },
+          ]}
+        />
+      ) : (
+        lista
+      )}
+      <FichaCliente id={aberto} onFechar={() => setAberto(null)} />
+      <NovoCliente aberto={novo} onFechar={() => setNovo(false)} />
+    </div>
+  );
+}
+
+function ListaClientes({ onAbrir }: { onAbrir: (id: string) => void }) {
+  const [busca, setBusca] = useState('');
+  const termo = useDeferredValue(busca.trim());
+  const clientes = useClientes(termo);
+  const setAberto = onAbrir;
+  return (
+    <div className="flex flex-col gap-6">
       <div className="max-w-md">
         <Campo
           id="clientes-busca"
@@ -111,8 +143,93 @@ export function TelaClientes() {
           )
         }
       </Estado>
-      <FichaCliente id={aberto} onFechar={() => setAberto(null)} />
-      <NovoCliente aberto={novo} onFechar={() => setNovo(false)} />
+    </div>
+  );
+}
+
+/**
+ * Para recuperar: nota baixa sem resolver, faltou e não voltou, passou do tempo de costume.
+ * Cada linha diz o motivo e leva à ficha (mandar mensagem) ou ao novo agendamento.
+ */
+function ParaRecuperar({ onAbrir }: { onAbrir: (id: string) => void }) {
+  const lista = useQuery({
+    queryKey: ['clientes', 'recuperar'],
+    queryFn: () => api<ClienteParaRecuperar[]>('clientes/recuperar'),
+  });
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-tinta-suave">
+        Quem deu nota baixa e ainda não foi resolvida, quem faltou e não voltou nos últimos 90 dias,
+        e quem passou do tempo de costume entre uma visita e outra sem horário marcado.
+      </p>
+      <Estado consulta={lista}>
+        {() =>
+          lista.data!.length === 0 ? (
+            <EstadoVazio
+              icone={HeartHandshake}
+              titulo="Ninguém para recuperar agora"
+              texto="Quando alguém sumir, faltar ou der nota baixa, aparece aqui."
+            />
+          ) : (
+            <ul className="flex flex-col gap-2" aria-label="Clientes para recuperar">
+              {lista.data!.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-4"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onAbrir(c.id)}
+                      className="min-h-11 text-left text-lg font-semibold underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-foco"
+                    >
+                      {c.nome}
+                    </button>
+                    <span className="flex flex-wrap gap-1">
+                      {c.motivos.map((m) => (
+                        <Ficha key={m} tom={m === 'nota_baixa' ? 'perigo' : 'aviso'}>
+                          {NOME_MOTIVO_RECUPERAR[m]}
+                        </Ficha>
+                      ))}
+                    </span>
+                  </div>
+                  <p className="text-sm text-tinta-suave">
+                    {[
+                      c.ultimaVisita
+                        ? `Última visita ${formatarData(c.ultimaVisita)} (${c.diasSemVir} dias)`
+                        : 'Nunca foi atendido',
+                      c.intervaloDias ? `costuma voltar a cada ${c.intervaloDias} dias` : null,
+                      c.conviteRetornoEm
+                        ? `convite de retorno em ${formatarData(c.conviteRetornoEm)}`
+                        : null,
+                      c.telefone ? formatarTelefone(c.telefone) : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                  {c.notaBaixa && (
+                    <p className="text-sm">
+                      Nota {c.notaBaixa.nota}
+                      {c.notaBaixa.comentario ? `: “${c.notaBaixa.comentario}”` : ''}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Botao variante="secundario" onClick={() => onAbrir(c.id)}>
+                      <MessageCircle aria-hidden className="size-5" /> Abrir ficha
+                    </Botao>
+                    <Link
+                      href={`/agenda?agendar=${c.id}`}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 font-semibold text-modulo-texto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-foco"
+                    >
+                      <CalendarPlus aria-hidden className="size-5" /> Agendar
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </Estado>
     </div>
   );
 }

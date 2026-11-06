@@ -17,6 +17,7 @@ import {
   type LinhaRankingEquipe,
   type ResumoAvaliacoes,
   type EstadoBot,
+  type ClienteParaRecuperar,
   type EstadoAutomacoes,
   type TrabalhoWhatsappEntrada,
 } from '@pente-fino/shared';
@@ -331,5 +332,60 @@ describe('automações (retorno e aniversário)', () => {
       ((await dono.get('/bot/automacoes').expect(200)).body as EstadoAutomacoes).config,
     ).toEqual(novo);
     await barbeiro.get('/bot/automacoes').expect(403);
+  });
+});
+
+describe('clientes para recuperar', () => {
+  it('nota baixa sem resolver primeiro, depois quem faltou e quem sumiu; barbeiro não vê', async () => {
+    const dias = (n: number) => new Date(Date.now() - n * 86_400_000);
+    // Sumiu: veio uma vez, há 60 dias (padrão da conta: 45, salvo no teste das automações).
+    const sumiu = await clienteDoWhatsapp('5511977002001');
+    const c1 = await fecharComanda(sumiu);
+    // Faltou há 10 dias e não voltou.
+    const faltou = await clienteDoWhatsapp('5511977002002');
+    // Nota 1 sem resolver.
+    const nota = await clienteDoWhatsapp('5511977002003');
+    const c3 = await fecharComanda(nota);
+    await naConta(prisma, a.contaId, async (tx) => {
+      await tx.comanda.update({ where: { id: c1 }, data: { fechadaEm: dias(60) } });
+      await tx.agendamento.create({
+        data: {
+          unidadeId: a.unidadeA,
+          profissionalId: prof,
+          clienteId: faltou,
+          inicio: dias(10),
+          fim: new Date(dias(10).getTime() + 30 * 60_000),
+          origem: 'balcao',
+          status: 'falta',
+        },
+      });
+      await tx.avaliacao.create({
+        data: {
+          unidadeId: a.unidadeA,
+          comandaId: c3,
+          profissionalId: prof,
+          clienteId: nota,
+          telefone: '5511977002003',
+          status: 'respondida',
+          notaAtendimento: 1,
+          comentario: 'Atrasou muito.',
+          enviarEm: new Date(),
+          respondidaEm: new Date(),
+          expiraEm: new Date(Date.now() + 86_400_000),
+        },
+      });
+    });
+    const lista = (await gestor.get('/clientes/recuperar').expect(200))
+      .body as ClienteParaRecuperar[];
+    const de = (id: string) => lista.find((c) => c.id === id);
+    expect(de(nota)).toMatchObject({
+      motivos: ['nota_baixa'],
+      notaBaixa: { nota: 1, comentario: 'Atrasou muito.' },
+    });
+    expect(de(faltou)?.motivos).toEqual(['faltou']);
+    expect(de(sumiu)).toMatchObject({ motivos: ['sumiu'], diasSemVir: 60 });
+    const ordem = lista.map((c) => c.id).filter((id) => [nota, faltou, sumiu].includes(id));
+    expect(ordem).toEqual([nota, faltou, sumiu]);
+    await barbeiro.get('/clientes/recuperar').expect(403);
   });
 });

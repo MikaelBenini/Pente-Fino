@@ -105,3 +105,69 @@ export interface EstadoAutomacoes {
   config: AutomacoesConta;
   numeros: NumerosAutomacao[];
 }
+
+// ─── Clientes para recuperar ──────────────────────────────────────────────
+
+export type MotivoRecuperar = 'nota_baixa' | 'faltou' | 'sumiu';
+
+export const NOME_MOTIVO_RECUPERAR: Readonly<Record<MotivoRecuperar, string>> = {
+  nota_baixa: 'Nota baixa sem resolver',
+  faltou: 'Faltou e não voltou',
+  sumiu: 'Passou do tempo de costume',
+};
+
+/** Nota baixa e falta contam por este tempo. */
+export const RECUPERAR_JANELA_DIAS = 90;
+
+export interface ClienteParaRecuperar {
+  id: string;
+  nome: string;
+  /** null quando a conta esconde (barbeiro não vê esta lista). */
+  telefone: string | null;
+  motivos: MotivoRecuperar[];
+  ultimaVisita: string | null;
+  diasSemVir: number | null;
+  /** Tempo de costume (dias) de quem já veio. */
+  intervaloDias: number | null;
+  /** Último convite de retorno da automação, se saiu. */
+  conviteRetornoEm: string | null;
+  /** A nota baixa mais recente sem resolver. */
+  notaBaixa: { nota: number; comentario: string | null; em: string } | null;
+}
+
+/**
+ * Por que o cliente está para recuperar (vazio = não está). Nota baixa sem resolver; falta
+ * nos últimos 90 dias sem visita depois; passou do tempo de costume sem horário marcado.
+ */
+export function motivosParaRecuperar(d: {
+  visitas: readonly Date[];
+  padraoDias: number;
+  temHorarioMarcado: boolean;
+  notaBaixaAberta: boolean;
+  ultimaFalta: Date | null;
+  agora: Date;
+}): MotivoRecuperar[] {
+  const motivos: MotivoRecuperar[] = [];
+  const ultima = d.visitas.reduce<Date | null>((m, v) => (!m || v > m ? v : m), null);
+  if (d.notaBaixaAberta) motivos.push('nota_baixa');
+  const janela = d.agora.getTime() - RECUPERAR_JANELA_DIAS * DIA_MS;
+  if (
+    !d.temHorarioMarcado &&
+    d.ultimaFalta &&
+    d.ultimaFalta.getTime() >= janela &&
+    (!ultima || ultima < d.ultimaFalta)
+  )
+    motivos.push('faltou');
+  if (
+    ultima &&
+    deveConvidarRetorno({
+      ultimaVisita: ultima,
+      intervaloDias: intervaloHabitual(d.visitas, d.padraoDias),
+      convidadoEm: null,
+      temHorarioMarcado: d.temHorarioMarcado,
+      agora: d.agora,
+    })
+  )
+    motivos.push('sumiu');
+  return motivos;
+}
