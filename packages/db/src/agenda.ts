@@ -403,3 +403,26 @@ export async function faltasRecentes(
     },
   });
 }
+
+/**
+ * Primeiro horário possível do dia (abertura do expediente, ou agora com a antecedência,
+ * arredondado para a grade de 15 min), livre ou não. null = ninguém atende no dia.
+ */
+export async function primeiroHorarioPossivel(
+  tx: Tx,
+  unidadeId: string,
+  profissionalIds: readonly string[],
+  dia: string,
+  agora: Date,
+  antecedenciaMin: number,
+): Promise<string | null> {
+  let primeiro: number | null = null;
+  for (const id of profissionalIds) {
+    const turnos = await expedienteDoProfissional(tx, id, unidadeId, dia).catch(() => []);
+    for (const t of turnos) primeiro = Math.min(primeiro ?? Infinity, t.inicio.getTime());
+  }
+  if (primeiro === null) return null;
+  const passo = 15 * 60_000;
+  const minimo = Math.ceil((agora.getTime() + antecedenciaMin * 60_000) / passo) * passo;
+  return new Date(Math.max(primeiro, minimo)).toISOString();
+}

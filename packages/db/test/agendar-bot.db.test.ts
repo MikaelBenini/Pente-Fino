@@ -138,7 +138,9 @@ describe('agendar pela conversa', () => {
     expect(dias).toMatch(/Qual dia fica melhor\?\n\n1\. Hoje \(ter, 01\/12\)/);
     const horarios = await fala(tel, '1');
     expect(horarios).toContain('Horários livres hoje (ter, 01/12):\n\n1. 09:00\n2. 09:15');
-    expect(horarios).toContain('7. Ver mais horários\n0. Outro dia');
+    expect(horarios).toContain(
+      '7. Ver mais horários\n8. Nenhum serve: me avise se vagar neste dia\n0. Outro dia',
+    );
     const mais = await fala(tel, '7');
     expect(mais).toMatch(/1\. 10:30/);
     const resumo = await fala(tel, '1');
@@ -1252,5 +1254,83 @@ describe('lista de espera', () => {
     expect(await fala(tel.c, '1', new Date(resposta.getTime() + 60_000))).toContain(
       'não vale mais',
     );
+  });
+});
+
+describe('lista de espera pela conversa e "avisar se vagar antes"', () => {
+  // Segunda, 28/12, 09:00 local; o dia de interesse é a terça, 29/12.
+  const seg = new Date('2026-12-28T12:00:00Z');
+  const ocupante = '5511944100000';
+
+  it('empurrado para depois: pergunta, entra na lista e, quando vaga antes, antecipa com "1"', async () => {
+    // Das 9h às 10h30 da terça tudo ocupado por outra pessoa.
+    await fala(ocupante, 'oi', seg);
+    const ocupados = await naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: ocupante } });
+      const ids: string[] = [];
+      for (const h of ['12:00', '12:30', '13:00']) {
+        const r = await criarAgendamentoNoBanco(tx, {
+          unidadeId,
+          profissionalId,
+          clienteId: c.id,
+          inicio: new Date(`2026-12-29T${h}:00Z`),
+          servicoIds: [corte],
+          origem: 'balcao',
+          criadoPorId: null,
+        });
+        ids.push(r.agendamentoId);
+      }
+      return ids;
+    });
+    const tel = '5511944100001';
+    await fala(tel, 'oi', seg);
+    await naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: tel } });
+      await tx.cliente.update({ where: { id: c.id }, data: { consentimentoMsg: true } });
+    });
+    await comecarAgendar(tel, seg);
+    await fala(tel, '2', seg); // Corte
+    const horarios = await fala(tel, '2', seg); // amanhã (terça)
+    expect(horarios).toMatch(/1\. 10:30/);
+    expect(horarios).toContain('Nenhum serve: me avise se vagar neste dia');
+    await fala(tel, '1', seg); // 10:30, o primeiro livre
+    const marcado = await fala(tel, '1', seg);
+    expect(marcado).toContain('Pronto, horário marcado!');
+    expect(marcado).toContain('Quer que eu avise se vagar um horário antes do seu');
+    expect(await fala(tel, '1', seg)).toContain('Se vagar um horário antes do seu');
+    const pedido = await naMinhaConta((tx) =>
+      tx.listaEspera.findFirstOrThrow({ where: { cliente: { telefone: tel } } }),
+    );
+    expect(pedido).toMatchObject({ origem: 'antecipar', deMin: 0, ateMin: 10 * 60 + 15 });
+    expect(pedido.agendamentoId).toBeTruthy();
+
+    // O das 9h desmarca: a vaga vai para ele, que antecipa.
+    const liberado = await naMinhaConta((tx) => cancelarPeloCliente(tx, ocupados[0]!, 'WhatsApp'));
+    const oferta = await oferecerVaga(
+      prisma,
+      vagaDe(conta, liberado),
+      new Date(seg.getTime() + 3_600_000),
+    );
+    expect(oferta?.mensagemIds).toHaveLength(1);
+    expect(await fala(tel, '1', new Date(seg.getTime() + 3_700_000))).toContain('antecipado');
+    const ag = await naMinhaConta((tx) =>
+      tx.agendamento.findUniqueOrThrow({ where: { id: pedido.agendamentoId! } }),
+    );
+    expect(ag.inicio.toISOString()).toBe('2026-12-29T12:00:00.000Z');
+  });
+
+  it('"nenhum serve" na lista de horários põe o cliente na lista daquele dia', async () => {
+    const tel = '5511944100002';
+    await fala(tel, 'oi', seg);
+    await comecarAgendar(tel, seg);
+    await fala(tel, '2', seg);
+    const horarios = await fala(tel, '2', seg);
+    const n = /(\d+)\. Nenhum serve/.exec(horarios)![1]!;
+    expect(await fala(tel, n, seg)).toContain('Se vagar um horário nesse dia, eu te aviso');
+    const pedido = await naMinhaConta((tx) =>
+      tx.listaEspera.findFirstOrThrow({ where: { cliente: { telefone: tel } } }),
+    );
+    expect(pedido).toMatchObject({ origem: 'bot', deMin: 0, ateMin: 1440, servicoIds: [corte] });
+    expect(pedido.dia.toISOString().slice(0, 10)).toBe('2026-12-29');
   });
 });

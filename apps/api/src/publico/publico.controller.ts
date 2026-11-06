@@ -4,6 +4,8 @@ import {
   aplicarModelosIniciais,
   clienteDoToken,
   criarLinkDoHorario,
+  duracaoDosServicos,
+  primeiroHorarioPossivel,
   faltasRecentes,
   usarToken,
   precoServicoVigente,
@@ -14,6 +16,10 @@ import {
 import {
   lerRegrasAgendamento,
   agendamentoPublicoSchema,
+  deveOferecerAntecipar,
+  esperaPublicaSchema,
+  type EsperaPublicaCriada,
+  type EsperaPublicaEntrada,
   bloqueadoPorFaltas,
   caminhoDoHorario,
   cadastroContaSchema,
@@ -60,6 +66,26 @@ async function linkAgendarPelaConversa(tx: Transacao, unidadeId: string, regras:
 }
 
 const consultaToken = z.object({ c: z.string().regex(/^[A-Za-z0-9_-]{10,20}$/, 'Link inválido.') });
+
+/** Avisos pelo WhatsApp: ligados se já conversou; se não, o botão para ativar (proteção do número). */
+export async function ativacaoDosAvisos(
+  tx: Transacao,
+  unidadeId: string,
+  telefone: string,
+): Promise<EsperaPublicaCriada> {
+  const c = await tx.botConexao.findUnique({ where: { unidadeId } });
+  if (c?.status !== 'conectado' || !c.numero) return { lembretes: null, linkLembretes: null };
+  const falou = await tx.mensagem.findFirst({
+    where: { unidadeId, telefone: { in: variantesTelefone(telefone) }, direcao: 'entrada' },
+    select: { id: true },
+  });
+  return falou
+    ? { lembretes: 'ligados', linkLembretes: null }
+    : {
+        lembretes: 'ativar',
+        linkLembretes: `https://wa.me/${c.numero}?text=${encodeURIComponent(TEXTO_ATIVAR_LEMBRETES)}`,
+      };
+}
 
 /** Número do bot que manda os lembretes: WhatsApp conectado e lembretes ligados nas regras. */
 async function numeroDosLembretes(tx: Transacao, unidadeId: string, regras: unknown) {
@@ -305,6 +331,28 @@ export class PublicoController {
           );
         }
       }
+      // "Avisar se vagar antes": a grade do dia antes de marcar e o primeiro horário possível.
+      const diaEscolhido = dataLocal(new Date(d.inicio));
+      const livresAntes = (
+        await this.agenda.calcularLivres(
+          tx,
+          u.id,
+          diaEscolhido,
+          await duracaoDosServicos(tx, d.servicoIds),
+          d.profissionalId,
+          {
+            antecedenciaMin: regras.antecedenciaMin,
+          },
+        )
+      ).flatMap((l) => l.inicios);
+      const primeiroPossivel = await primeiroHorarioPossivel(
+        tx,
+        u.id,
+        [d.profissionalId],
+        diaEscolhido,
+        new Date(),
+        regras.antecedenciaMin,
+      );
       const comandaId = await this.agenda.criarAgendamento(
         tx,
         {
@@ -354,12 +402,25 @@ export class PublicoController {
             linkLembretes = `https://wa.me/${numero}?text=${encodeURIComponent(TEXTO_ATIVAR_LEMBRETES)}`;
         }
       }
+      const aceita =
+        !!c.clienteId &&
+        !!(await tx.cliente.findUnique({ where: { id: c.clienteId } }))?.consentimentoMsg;
+      const podeAntecipar =
+        aceita &&
+        !!primeiroPossivel &&
+        deveOferecerAntecipar({
+          livres: livresAntes,
+          escolhido: new Date(d.inicio).toISOString(),
+          primeiroPossivel,
+          jaNaLista: false,
+        });
       // Link para o cliente remarcar ou cancelar sozinho (o token só aparece aqui).
       return {
         ...c,
         token: await criarLinkDoHorario(tx, c.agendamentoId!),
         lembretes,
         linkLembretes,
+        podeAntecipar,
       };
     });
     await this.eventos
@@ -383,7 +444,70 @@ export class PublicoController {
       linkGerenciar: caminhoDoHorario(r.token),
       lembretes: r.lembretes,
       linkLembretes: r.linkLembretes,
+      podeAntecipar: r.podeAntecipar,
     };
+  }
+
+  @Post('agendamento/:slug/espera')
+  @Publico()
+  @LimiteAutenticacao()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: '"Avise-me se vagar": entra na lista de espera do dia pelo site' })
+  async esperar(
+    @Param('slug', slugParam) slug: string,
+    @Corpo(esperaPublicaSchema) d: EsperaPublicaEntrada,
+  ): Promise<EsperaPublicaCriada> {
+    const u = await this.unidade(slug);
+    const regras = lerRegrasAgendamento(u.regrasAgendamento);
+    this.exigirJanela(d.dia, regras.janelaDias);
+    return this.banco.naConta(u.contaId, async (tx) => {
+      if ((await estadoAssinatura(tx)).somenteLeitura)
+        throw Erros.conflito('Indisponível no momento. Fale com a barbearia.');
+      await duracaoDosServicos(tx, d.servicoIds).catch(() => {
+        throw Erros.naoEncontrado('Serviço não encontrado.');
+      });
+      if (d.profissionalId) {
+        const p = await tx.profissional.findUnique({ where: { id: d.profissionalId } });
+        if (!p || p.unidadeId !== u.id || !p.ativo)
+          throw Erros.naoEncontrado('Profissional não encontrado.');
+      }
+      const doLink = d.c ? await clienteDoToken(tx, u.id, d.c) : null;
+      const telefone = doLink?.cliente.telefone ?? d.telefone;
+      const cliente =
+        doLink?.cliente ??
+        (await tx.cliente.findFirst({ where: { telefone } })) ??
+        (await tx.cliente.create({
+          data: { nome: d.nome, telefone, unidadeOrigemId: u.id, origemLead: 'site' },
+        }));
+      // Pediu para ser avisado: é o aceite para receber mensagens.
+      await tx.cliente.update({
+        where: { id: cliente.id },
+        data: { consentimentoMsg: true, consentimentoEm: new Date() },
+      });
+      const dia = new Date(`${d.dia}T00:00:00.000Z`);
+      const ja = await tx.listaEspera.findFirst({
+        where: {
+          clienteId: cliente.id,
+          unidadeId: u.id,
+          dia,
+          status: { in: ['aguardando', 'oferecido'] },
+        },
+      });
+      if (!ja)
+        await tx.listaEspera.create({
+          data: {
+            unidadeId: u.id,
+            clienteId: cliente.id,
+            profissionalId: d.profissionalId,
+            servicoIds: d.servicoIds,
+            dia,
+            deMin: 0,
+            ateMin: 24 * 60,
+            origem: 'site',
+          },
+        });
+      return ativacaoDosAvisos(tx, u.id, telefone);
+    });
   }
 
   private exigirJanela(dia: string, janelaDias: number) {
