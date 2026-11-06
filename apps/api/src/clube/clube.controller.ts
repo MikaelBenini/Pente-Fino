@@ -13,6 +13,13 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { adesaoDoCliente, detalharAdesao, INCLUIR_ADESAO, type Transacao } from '@pente-fino/db';
 import {
   adesaoClubeSchema,
+  baixaMensalidadeSchema,
+  pixCopiaECola,
+  recebimentoPixSchema,
+  vencimentoDepoisDaBaixa,
+  type BaixaMensalidadeEntrada,
+  type MensalidadePix,
+  type RecebimentoPix,
   cancelarAdesaoSchema,
   dataLocal,
   itemClubeSchema,
@@ -207,6 +214,107 @@ export class ClubeController {
         depois: { ...d, vencimento },
       });
       return { id: a.id };
+    });
+  }
+
+  @Get('pix')
+  @Papeis('dono', 'gestor')
+  @ApiOperation({ summary: 'Pix da barbearia para as mensalidades (null = não cadastrado)' })
+  verPix(): Promise<{ pix: RecebimentoPix | null }> {
+    return this.banco.daConta(async (tx) => {
+      const c = await tx.conta.findFirstOrThrow({ select: { pix: true } });
+      const r = recebimentoPixSchema.safeParse(c.pix);
+      return { pix: r.success ? r.data : null };
+    });
+  }
+
+  @Put('pix')
+  @Papeis('dono')
+  @Auditada()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Cadastrar a chave Pix que recebe as mensalidades' })
+  async salvarPix(@Corpo(recebimentoPixSchema) d: RecebimentoPix): Promise<void> {
+    await this.banco.daConta(async (tx) => {
+      const c = await tx.conta.findFirstOrThrow();
+      await tx.conta.update({ where: { id: c.id }, data: { pix: d } });
+      await auditar(tx, {
+        entidade: 'conta',
+        entidadeId: c.id,
+        acao: 'pix',
+        antes: { pix: c.pix },
+        depois: { pix: d },
+      });
+    });
+  }
+
+  private async adesaoDoBalcao(tx: Transacao, id: string) {
+    const a = await tx.adesaoClube.findUnique({ where: { id }, include: { itemClube: true } });
+    if (!a) throw Erros.naoEncontrado('Adesão não encontrada.');
+    exigirUnidade(a.itemClube.unidadeId, [...BALCAO]);
+    return a;
+  }
+
+  @Get('adesoes/:id/mensalidade')
+  @Papeis(...BALCAO)
+  @ApiOperation({ summary: 'Valor, vencimento e o Pix copia e cola da mensalidade' })
+  mensalidade(@Param('id', ParseUUIDPipe) id: string): Promise<MensalidadePix> {
+    return this.banco.daConta(async (tx) => {
+      const a = await this.adesaoDoBalcao(tx, id);
+      const conta = await tx.conta.findFirstOrThrow({ select: { pix: true } });
+      const pix = recebimentoPixSchema.safeParse(conta.pix);
+      return {
+        valor: a.itemClube.valor,
+        vencimento: a.vencimento.toISOString().slice(0, 10) as DataISO,
+        copiaECola: pix.success
+          ? pixCopiaECola({
+              ...pix.data,
+              valor: a.itemClube.valor,
+              identificador: `CLUBE${a.id.slice(0, 8)}`,
+            })
+          : null,
+      };
+    });
+  }
+
+  @Post('adesoes/:id/pagamentos')
+  @Papeis(...BALCAO)
+  @Auditada()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Dar baixa na mensalidade: o vencimento anda um mês' })
+  async baixa(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(baixaMensalidadeSchema) d: BaixaMensalidadeEntrada,
+  ): Promise<{ vencimento: DataISO }> {
+    const hoje = dataLocal(new Date()) as DataISO;
+    return this.banco.daConta(async (tx) => {
+      const a = await this.adesaoDoBalcao(tx, id);
+      if (a.status === 'cancelada')
+        throw Erros.conflito('Adesão cancelada. Coloque o cliente no plano de novo.');
+      const atual = a.vencimento.toISOString().slice(0, 10) as DataISO;
+      const vencimento = vencimentoDepoisDaBaixa(atual, hoje);
+      const valor = d.valor ?? a.itemClube.valor;
+      await tx.pagamentoClube.create({
+        data: {
+          adesaoId: id,
+          valor,
+          forma: d.forma,
+          pagoEm: data(hoje),
+          referenteA: data(atual),
+          recebidoPorId: Contexto.usuario().id,
+        },
+      });
+      await tx.adesaoClube.update({
+        where: { id },
+        data: { vencimento: data(vencimento), avisoVencimentoEm: null },
+      });
+      await auditar(tx, {
+        entidade: 'adesao_clube',
+        entidadeId: id,
+        acao: 'mensalidade',
+        antes: { vencimento: atual },
+        depois: { vencimento, valor, forma: d.forma },
+      });
+      return { vencimento };
     });
   }
 

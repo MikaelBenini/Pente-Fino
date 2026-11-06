@@ -2,6 +2,7 @@
 
 import {
   dataLocal,
+  FORMAS_MENSALIDADE,
   formatarData,
   formatarMoeda,
   lerMoeda,
@@ -13,12 +14,15 @@ import {
   type DataISO,
   type ItemClubeDetalhe,
   type ItemClubeEntrada,
+  type MensalidadePix,
+  type RecebimentoPix,
   type TipoItemClube,
 } from '@pente-fino/shared';
 import { Abas, Botao, Campo, Dialogo, EstadoVazio, Marcador, Selecao } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Crown, Plus } from 'lucide-react';
-import { useState } from 'react';
+import QRCode from 'qrcode';
+import { useEffect, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { useAcao, useServicos } from '@/lib/consultas';
 import { useUnidades } from '@/lib/sessao';
@@ -71,6 +75,7 @@ function Assinantes() {
   const [situacao, setSituacao] = useState('');
   const [novo, setNovo] = useState(false);
   const [cancelando, setCancelando] = useState<AdesaoDetalhe | null>(null);
+  const [recebendo, setRecebendo] = useState<AdesaoDetalhe | null>(null);
   const lista = useQuery({
     queryKey: [...chaveAdesoes, situacao],
     queryFn: () => api<AdesaoDetalhe[]>(`clube/adesoes${situacao ? `?situacao=${situacao}` : ''}`),
@@ -129,13 +134,14 @@ function Assinantes() {
                     </p>
                   )}
                   {a.situacao !== 'cancelada' && (
-                    <Botao
-                      variante="fantasma"
-                      className="self-start"
-                      onClick={() => setCancelando(a)}
-                    >
-                      Cancelar adesão
-                    </Botao>
+                    <div className="flex flex-wrap gap-2">
+                      <Botao variante="secundario" onClick={() => setRecebendo(a)}>
+                        Receber mensalidade
+                      </Botao>
+                      <Botao variante="fantasma" onClick={() => setCancelando(a)}>
+                        Cancelar adesão
+                      </Botao>
+                    </div>
                   )}
                 </li>
               ))}
@@ -145,6 +151,7 @@ function Assinantes() {
       </Estado>
       <NovaAdesao aberto={novo} onFechar={() => setNovo(false)} />
       <CancelarAdesao adesao={cancelando} onFechar={() => setCancelando(null)} />
+      {recebendo && <ReceberMensalidade adesao={recebendo} onFechar={() => setRecebendo(null)} />}
     </div>
   );
 }
@@ -366,6 +373,7 @@ function Planos() {
           )
         }
       </Estado>
+      {dono && <PixDaBarbearia />}
       {editando && (
         <FormPlano
           plano={editando === 'novo' ? null : editando}
@@ -554,5 +562,201 @@ function FormPlano({ plano, onFechar }: { plano: ItemClubeDetalhe | null; onFech
         </Botao>
       </form>
     </Dialogo>
+  );
+}
+
+// ─── Mensalidade ──────────────────────────────────────────────────────────
+
+const NOME_FORMA: Record<(typeof FORMAS_MENSALIDADE)[number], string> = {
+  pix: 'Pix',
+  dinheiro: 'Dinheiro',
+  debito: 'Débito',
+  credito: 'Crédito',
+};
+
+/** QR do Pix (gerado aqui no aparelho, a partir do copia e cola). */
+function QrPix({ codigo }: { codigo: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    void QRCode.toDataURL(codigo, { margin: 1, width: 240 }).then((u) => vivo && setSrc(u));
+    return () => {
+      vivo = false;
+    };
+  }, [codigo]);
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element -- QR gerado no aparelho (data URL)
+    <img
+      src={src}
+      alt="QR Code do Pix da mensalidade"
+      width={240}
+      height={240}
+      className="rounded-md bg-white p-2"
+    />
+  ) : (
+    <div className="size-60 animate-pulse rounded-md bg-superficie-2" aria-hidden />
+  );
+}
+
+function ReceberMensalidade({ adesao, onFechar }: { adesao: AdesaoDetalhe; onFechar: () => void }) {
+  const m = useQuery({
+    queryKey: ['clube', 'mensalidade', adesao.id],
+    queryFn: () => api<MensalidadePix>(`clube/adesoes/${adesao.id}/mensalidade`),
+  });
+  const [forma, setForma] = useState<(typeof FORMAS_MENSALIDADE)[number]>('pix');
+  const [erro, setErro] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  const baixa = useAcao(
+    (f: string) =>
+      api<{ vencimento: string }>(`clube/adesoes/${adesao.id}/pagamentos`, { corpo: { forma: f } }),
+    [chaveAdesoes, ['clube', 'cliente']],
+  );
+  return (
+    <Dialogo
+      aberto
+      titulo="Receber mensalidade"
+      descricao={`${adesao.cliente.nome} · ${adesao.plano.nome}`}
+      onFechar={onFechar}
+    >
+      <Estado consulta={m}>
+        {() => (
+          <form
+            method="post"
+            noValidate
+            className="flex flex-col gap-4"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setErro(null);
+              try {
+                await baixa.mutateAsync(forma);
+                onFechar();
+              } catch (er) {
+                setErro(mensagemDe(er));
+              }
+            }}
+          >
+            <p className="font-denso text-3xl tabular-nums">{formatarMoeda(m.data!.valor)}</p>
+            <p className="text-sm text-tinta-suave">
+              Vencimento {formatarData(m.data!.vencimento)}. Depois da baixa, o plano renova por
+              mais um mês.
+            </p>
+            {forma === 'pix' &&
+              (m.data!.copiaECola ? (
+                <div className="flex flex-col items-center gap-2">
+                  <QrPix codigo={m.data!.copiaECola} />
+                  <Botao
+                    type="button"
+                    variante="secundario"
+                    onClick={async () => {
+                      await navigator.clipboard
+                        .writeText(m.data!.copiaECola!)
+                        .catch(() => undefined);
+                      setCopiado(true);
+                    }}
+                  >
+                    {copiado ? 'Copiado' : 'Copiar Pix copia e cola'}
+                  </Botao>
+                  <p className="text-sm text-tinta-suave">
+                    Confira o Pix no extrato da barbearia antes de confirmar.
+                  </p>
+                </div>
+              ) : (
+                <Aviso tom="aviso">
+                  O dono ainda não cadastrou a chave Pix (Clube → Planos). Dá para receber em outra
+                  forma.
+                </Aviso>
+              ))}
+            <Selecao
+              id="mensalidade-forma"
+              rotulo="Recebido em"
+              value={forma}
+              onChange={(e) => setForma(e.target.value as (typeof FORMAS_MENSALIDADE)[number])}
+              opcoes={FORMAS_MENSALIDADE.map((f) => ({ valor: f, rotulo: NOME_FORMA[f] }))}
+            />
+            {erro && <Aviso tom="erro">{erro}</Aviso>}
+            <Botao type="submit" carregando={baixa.isPending}>
+              Confirmar recebimento
+            </Botao>
+          </form>
+        )}
+      </Estado>
+    </Dialogo>
+  );
+}
+
+/** Dono: a chave Pix que recebe as mensalidades (o QR sai dela). */
+function PixDaBarbearia() {
+  const atual = useQuery({
+    queryKey: ['clube', 'pix'],
+    queryFn: () => api<{ pix: RecebimentoPix | null }>('clube/pix'),
+  });
+  const [f, setF] = useState<RecebimentoPix | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvo, setSalvo] = useState(false);
+  const salvar = useAcao(
+    (corpo: RecebimentoPix) => api('clube/pix', { metodo: 'PUT', corpo }),
+    [['clube', 'pix']],
+  );
+  const v = f ?? atual.data?.pix ?? { chave: '', nome: '', cidade: '' };
+  const mudar = (k: keyof RecebimentoPix, valor: string) => {
+    setF({ ...v, [k]: valor });
+    setSalvo(false);
+  };
+  return (
+    <form
+      method="post"
+      noValidate
+      aria-labelledby="titulo-pix-clube"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setErro(null);
+        try {
+          await salvar.mutateAsync(v);
+          setSalvo(true);
+        } catch (er) {
+          setErro(mensagemDe(er));
+        }
+      }}
+    >
+      <h2 id="titulo-pix-clube" className="font-semibold">
+        Pix para as mensalidades
+      </h2>
+      <p className="text-sm text-tinta-suave">
+        A recepção mostra o QR com o valor do plano; o dinheiro cai direto na sua conta, sem taxa de
+        gateway. A baixa é manual, depois de conferir o extrato.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Campo
+          id="pix-chave"
+          rotulo="Chave Pix"
+          dica="E-mail, +55 e telefone, CPF/CNPJ só números ou aleatória"
+          value={v.chave}
+          onChange={(e) => mudar('chave', e.target.value)}
+        />
+        <Campo
+          id="pix-nome"
+          rotulo="Nome de quem recebe"
+          value={v.nome}
+          onChange={(e) => mudar('nome', e.target.value)}
+        />
+        <Campo
+          id="pix-cidade"
+          rotulo="Cidade"
+          value={v.cidade}
+          onChange={(e) => mudar('cidade', e.target.value)}
+        />
+      </div>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {salvo && <p className="text-sm text-acao-texto">Chave Pix salva.</p>}
+      <Botao
+        type="submit"
+        variante="secundario"
+        className="self-start"
+        carregando={salvar.isPending}
+      >
+        Salvar Pix
+      </Botao>
+    </form>
   );
 }

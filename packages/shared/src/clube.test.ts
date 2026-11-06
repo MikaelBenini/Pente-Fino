@@ -6,6 +6,7 @@ import {
   restantesDoCiclo,
   situacaoDaAdesao,
   somarMeses,
+  vencimentoDepoisDaBaixa,
 } from './clube.js';
 
 describe('ciclo da adesão', () => {
@@ -90,5 +91,13 @@ describe('comissão do clube', () => {
         valorFixoClube: null,
       }),
     ).toBe(0);
+  });
+});
+
+describe('baixa da mensalidade', () => {
+  it('um mês adiante mantendo o dia; vencida há mais de um ciclo recomeça de hoje', () => {
+    expect(vencimentoDepoisDaBaixa('2026-12-10', '2026-12-08')).toBe('2027-01-10');
+    expect(vencimentoDepoisDaBaixa('2026-12-10', '2026-12-20')).toBe('2027-01-10');
+    expect(vencimentoDepoisDaBaixa('2026-10-10', '2026-12-20')).toBe('2027-01-20');
   });
 });
