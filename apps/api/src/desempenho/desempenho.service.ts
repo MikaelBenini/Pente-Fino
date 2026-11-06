@@ -18,6 +18,9 @@ import {
   type Ocupacao,
   type ResumoDesempenho,
   type VisitaCliente,
+  recorrentesNoDia,
+  mapaDeOcupacao,
+  type OcupacaoDaUnidade,
 } from '@pente-fino/shared';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
@@ -100,27 +103,20 @@ export class DesempenhoService {
     return porProfissional;
   }
 
-  /** Ocupação de cada profissional; por padrão, do início do período até hoje (o futuro ainda não aconteceu). */
-  async ocupacoes(
+  /**
+   * O que entra na ocupação de cada profissional entre `de` e `fim`: dias de trabalho da
+   * unidade (calendário), expediente, bloqueios (pontuais e os que repetem) e horários marcados.
+   */
+  private async insumosDeOcupacao(
     tx: Transacao,
-    profissionais: {
+    profissionais: readonly {
       id: string;
       unidadeId: string;
       horarios: { diaSemana: number; inicioMin: number; fimMin: number }[];
     }[],
     de: string,
-    ate: string,
-    /** false: conta também o que está marcado para depois de hoje (agenda do dia). */
-    soAteHoje = true,
-  ): Promise<Map<string, Ocupacao>> {
-    const hoje = dataLocal(new Date());
-    const fim = !soAteHoje || ate < hoje ? ate : hoje;
-    const resultado = new Map<string, Ocupacao>();
-    if (fim < de) {
-      for (const p of profissionais)
-        resultado.set(p.id, { disponivelMin: 0, agendadoMin: 0, fracao: 0 });
-      return resultado;
-    }
+    fim: string,
+  ) {
     const ids = profissionais.map((p) => p.id);
     const unidadeIds = [...new Set(profissionais.map((p) => p.unidadeId))];
     const unidades = await tx.unidade.findMany({ where: { id: { in: unidadeIds } } });
@@ -159,17 +155,86 @@ export class DesempenhoService {
         .filter((d) => d >= de && d <= fim);
       diasPorUnidade.set(u.id, dias);
     }
-    for (const p of profissionais)
-      resultado.set(
-        p.id,
-        calcularOcupacao({
-          dias: diasPorUnidade.get(p.unidadeId) ?? [],
-          turnos: p.horarios,
-          bloqueios: bloqueios.filter((b) => b.profissionalId === p.id),
-          agendados: agendados.filter((a) => a.profissionalId === p.id),
-        }),
-      );
+    // Bloqueios que repetem toda semana (almoço) também saem do expediente.
+    const recorrentes = await tx.bloqueioRecorrente.findMany({
+      where: { profissionalId: { in: ids } },
+    });
+    return profissionais.map((p) => {
+      const dias = diasPorUnidade.get(p.unidadeId) ?? [];
+      const dele = recorrentes
+        .filter((r) => r.profissionalId === p.id)
+        .map((r) => ({
+          diaSemana: r.diaSemana,
+          inicioMin: r.inicioMin,
+          fimMin: r.fimMin,
+          desde: dataTexto(r.desde),
+          ate: r.ate ? dataTexto(r.ate) : null,
+        }));
+      return {
+        id: p.id,
+        dias,
+        turnos: p.horarios,
+        bloqueios: [
+          ...bloqueios.filter((b) => b.profissionalId === p.id),
+          ...dias.flatMap((d) => recorrentesNoDia(dele, d)),
+        ],
+        agendados: agendados.filter((a) => a.profissionalId === p.id),
+      };
+    });
+  }
+
+  /** Ocupação de cada profissional; por padrão, do início do período até hoje (o futuro ainda não aconteceu). */
+  async ocupacoes(
+    tx: Transacao,
+    profissionais: {
+      id: string;
+      unidadeId: string;
+      horarios: { diaSemana: number; inicioMin: number; fimMin: number }[];
+    }[],
+    de: string,
+    ate: string,
+    /** false: conta também o que está marcado para depois de hoje (agenda do dia). */
+    soAteHoje = true,
+  ): Promise<Map<string, Ocupacao>> {
+    const hoje = dataLocal(new Date());
+    const fim = !soAteHoje || ate < hoje ? ate : hoje;
+    const resultado = new Map<string, Ocupacao>();
+    if (fim < de) {
+      for (const p of profissionais)
+        resultado.set(p.id, { disponivelMin: 0, agendadoMin: 0, fracao: 0 });
+      return resultado;
+    }
+    for (const i of await this.insumosDeOcupacao(tx, profissionais, de, fim))
+      resultado.set(i.id, calcularOcupacao(i));
     return resultado;
+  }
+
+  /**
+   * Ocupação da unidade (cadeiras × expediente), hora a hora, para o card do Início e o mapa
+   * da semana. Conta só até hoje: o futuro ainda não aconteceu.
+   */
+  async ocupacaoDaUnidade(unidadeId: string, de: string, ate: string): Promise<OcupacaoDaUnidade> {
+    escopoUnidades(unidadeId, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const unidade = await tx.unidade.findUnique({ where: { id: unidadeId } });
+      if (!unidade) throw Erros.naoEncontrado('Unidade não encontrada.');
+      const hoje = dataLocal(new Date());
+      const fim = ate < hoje ? ate : hoje;
+      const profs =
+        fim < de
+          ? []
+          : await tx.profissional.findMany({
+              where: { unidadeId, ativo: true },
+              include: { horarios: true },
+            });
+      const insumos = profs.length ? await this.insumosDeOcupacao(tx, profs, de, fim) : [];
+      const mapa = mapaDeOcupacao({
+        dias: insumos[0]?.dias ?? [],
+        capacidade: unidade.capacidade,
+        profissionais: insumos,
+      });
+      return { ...mapa, de, ate: fim < de ? ate : fim, capacidade: unidade.capacidade };
+    });
   }
 
   /** Ranking da equipe no período: dono vê a rede, gestor a unidade dele. */

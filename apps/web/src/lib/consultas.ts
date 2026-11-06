@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  OcupacaoDaUnidade,
   DiaCalendario,
   ProfissionalDetalhe,
   ServicoDetalhe,
@@ -400,5 +401,14 @@ export function useCanais(unidade: string | null, de: string, ate: string) {
   return useQuery({
     queryKey: [...chavesResultados.indicadores, 'canais', unidade, de, ate],
     queryFn: () => api<LinhaCanal[]>(`canais?de=${de}&ate=${ate}${comUnidade(unidade)}`),
+  });
+}
+
+/** Ocupação de uma unidade (cadeiras × expediente) no período; só conta até hoje. */
+export function useOcupacao(unidadeId: string | null, de: string, ate: string) {
+  return useQuery({
+    queryKey: [...chavesResultados.indicadores, 'ocupacao', unidadeId, de, ate],
+    queryFn: () => api<OcupacaoDaUnidade>(`ocupacao?unidadeId=${unidadeId}&de=${de}&ate=${ate}`),
+    enabled: !!unidadeId,
   });
 }

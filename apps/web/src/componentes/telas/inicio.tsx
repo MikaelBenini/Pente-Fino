@@ -3,11 +3,12 @@
 import { formatarMoeda, formatarNumero } from '@pente-fino/shared';
 import { BarraMeta } from '@pente-fino/ui';
 import Link from 'next/link';
-import { useAvaliacoes, useIndicadores, useMetas } from '@/lib/consultas';
+import { useAvaliacoes, useIndicadores, useMetas, useOcupacao } from '@/lib/consultas';
 import { useEstadoConfiguracao } from './configuracao-inicial';
 import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores } from '../indicadores';
+import { CardOcupacao } from '../ocupacao';
 import { CabecalhoPagina, Estado } from '../pagina';
 
 export function TelaInicio() {
@@ -19,6 +20,17 @@ export function TelaInicio() {
   const metas = useMetas(unidadeAtiva, mes);
   const avaliacoes = useAvaliacoes(unidadeAtiva, de, ate);
   const notas = avaliacoes.data;
+  const unidadeUnica =
+    unidadeAtiva && unidadeAtiva !== 'todas'
+      ? unidadeAtiva
+      : unidades.length === 1
+        ? unidades[0]!.id
+        : null;
+  const ocupacao = useOcupacao(
+    papeis.some((p) => p === 'dono' || p === 'gestor') ? unidadeUnica : null,
+    de,
+    ate,
+  );
   const nomeUnidade = (id: string) => unidades.find((u) => u.id === id)?.nome ?? '';
 
   return (
@@ -102,6 +114,7 @@ export function TelaInicio() {
           )}
         </Link>
       )}
+      {ocupacao.data && <CardOcupacao o={ocupacao.data} />}
       <Estado consulta={indicadores}>
         {() => (
           <PainelIndicadores

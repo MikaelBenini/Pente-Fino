@@ -6,6 +6,7 @@ import {
   type Agenda,
   type ComandaDetalhe,
   type EsperaDetalhe,
+  type OcupacaoDaUnidade,
   type TrabalhoWhatsappEntrada,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
@@ -288,5 +289,26 @@ describe('encaixe e bloqueios que repetem', () => {
       inicio: new Date(`${dia(7)}T12:00:00-03:00`).toISOString(),
     });
     await recepcao.delete(`/profissionais/${prof}/bloqueios-recorrentes/${id}`).expect(204);
+  });
+});
+
+describe('ocupação da unidade', () => {
+  it('dono e gestor veem total, faixas e mapa hora a hora; barbeiro não', async () => {
+    const url = `/ocupacao?unidadeId=${a.unidadeA}&de=${dia(-13)}&ate=${dia(0)}`;
+    await barbeiro.get(url).expect(403);
+    await dono.get(`/ocupacao?unidadeId=${a.unidadeA}&de=${dia(0)}&ate=${dia(-1)}`).expect(400);
+    const o = (await dono.get(url).expect(200)).body as OcupacaoDaUnidade;
+    expect(o).toMatchObject({ de: dia(-13), ate: dia(0), capacidade: expect.any(Number) });
+    expect(o.total.disponivelMin).toBeGreaterThan(0);
+    expect(o.celulas.length).toBeGreaterThan(0);
+    expect(o.celulas.reduce((s, c) => s + c.disponivelMin, 0)).toBe(o.total.disponivelMin);
+    expect(o.porFaixa.reduce((s, f) => s + f.ocupacao.disponivelMin, 0)).toBe(
+      o.total.disponivelMin,
+    );
+    // O futuro não conta: o fim é cortado em hoje.
+    const futuro = (
+      await dono.get(`/ocupacao?unidadeId=${a.unidadeA}&de=${dia(0)}&ate=${dia(20)}`).expect(200)
+    ).body as OcupacaoDaUnidade;
+    expect(futuro.ate).toBe(dia(0));
   });
 });

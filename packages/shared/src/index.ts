@@ -33,6 +33,7 @@ export * from './pix.js';
 export * from './espera.js';
 export * from './atraso.js';
 export * from './bloqueios.js';
+export * from './ocupacao.js';
 export * from './assinatura.js';
 export * from './agendar-bot.js';
 export * from './lembretes.js';
