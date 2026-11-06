@@ -1,14 +1,16 @@
 import { Controller, Get, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Transacao } from '@pente-fino/db';
+import { gravarAviso, type Transacao } from '@pente-fino/db';
 import {
   abrirCaixaSchema,
+  avisoCaixaDivergente,
   dataLocal,
   fecharCaixaSchema,
   statusEfetivo,
   type CaixaDia,
   type FormaPagamento,
   type StatusComanda,
+  type TrabalhoNotificacao,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
@@ -19,6 +21,7 @@ import { Erros } from '../comum/erros.js';
 import { data } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { emSequencia } from '../comum/sequencia.js';
+import { Filas } from '../filas/filas.module.js';
 
 const consultaSchema = z.object({
   unidadeId: z.uuid({ error: 'Unidade inválida.' }),
@@ -38,7 +41,10 @@ const FORMAS: FormaPagamento[] = ['dinheiro', 'pix', 'debito', 'credito', 'clube
 @ApiBearerAuth()
 @Controller('caixa')
 export class CaixaController {
-  constructor(@Inject(BancoService) private readonly banco: BancoService) {}
+  constructor(
+    @Inject(BancoService) private readonly banco: BancoService,
+    @Inject(Filas) private readonly filas: Filas,
+  ) {}
 
   private async montar(tx: Transacao, unidadeId: string, dia: string): Promise<CaixaDia> {
     const inicio = new Date(`${dia}T00:00:00-03:00`);
@@ -135,8 +141,9 @@ export class CaixaController {
   @Auditada()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Fechar o caixa com a contagem da gaveta (registra a divergência)' })
-  fechar(@Corpo(fecharCaixaSchema) d: z.infer<typeof fecharCaixaSchema>): Promise<CaixaDia> {
-    return this.banco.daConta(async (tx) => {
+  async fechar(@Corpo(fecharCaixaSchema) d: z.infer<typeof fecharCaixaSchema>): Promise<CaixaDia> {
+    let push: TrabalhoNotificacao[] = [];
+    const resposta = await this.banco.daConta(async (tx) => {
       const atual = await this.montar(tx, d.unidadeId, d.data);
       if (atual.situacao === 'fechado') throw Erros.conflito('Este caixa já está fechado.');
       const divergencia = d.totalInformado - atual.dinheiroEsperado;
@@ -163,8 +170,22 @@ export class CaixaController {
         acao: 'fechar',
         depois: { esperado: atual.dinheiroEsperado, informado: d.totalInformado, divergencia },
       });
+      // Diferença na gaveta: aviso para gestor e dono (central de avisos e celular).
+      const unidade = await tx.unidade.findUniqueOrThrow({ where: { id: d.unidadeId } });
+      const aviso = avisoCaixaDivergente({
+        caixaId: caixa.id,
+        unidade: unidade.nome,
+        dia: d.data,
+        totalSistema: atual.dinheiroEsperado,
+        totalInformado: d.totalInformado,
+        fechadoPor:
+          (await tx.usuario.findUnique({ where: { id: Contexto.usuario().id } }))?.nome ?? null,
+      });
+      if (aviso) push = await gravarAviso(tx, Contexto.usuario().contaId, d.unidadeId, aviso);
       return this.montar(tx, d.unidadeId, d.data);
     });
+    for (const n of push) await this.filas.notificacoes.add('push', n).catch(() => undefined);
+    return resposta;
   }
 
   @Post('reabrir')

@@ -3,7 +3,8 @@
 import { dataLocal, formatarMoeda, lerMoeda, NOME_FORMA, type CaixaDia } from '@pente-fino/shared';
 import { Botao, Campo, ModalConfirmacao } from '@pente-fino/ui';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { chavesOperacao, useAcao, useCaixa } from '@/lib/consultas';
 import { Aviso } from '../aviso';
@@ -12,8 +13,20 @@ import { CabecalhoPagina, Estado, Ficha } from '../pagina';
 import { useUnidadeTrabalho } from '../unidade-trabalho';
 
 export function TelaCaixa() {
+  return (
+    <Suspense>
+      <ConteudoCaixa />
+    </Suspense>
+  );
+}
+
+function ConteudoCaixa() {
   const { unidadeId, seletor } = useUnidadeTrabalho();
-  const [dia, setDia] = useState(dataLocal(new Date()));
+  // ?dia=AAAA-MM-DD (link do aviso de caixa com diferença).
+  const pedido = useSearchParams().get('dia');
+  const [dia, setDia] = useState(
+    pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido) ? pedido : dataLocal(new Date()),
+  );
   const caixa = useCaixa(unidadeId, dia);
   return (
     <div className="flex flex-col gap-6">

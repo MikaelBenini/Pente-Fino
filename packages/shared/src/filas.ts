@@ -141,6 +141,11 @@ export interface HorarioMudou {
   mudouHorario: boolean;
 }
 
+/** Rotina dos avisos da equipe (a cada 15 min): comandas pendentes para a recepção. */
+export interface RotinaDosAvisos {
+  tipo: 'avisos';
+}
+
 export type TrabalhoWhatsappEntrada =
   | EventoWhatsapp
   | EnvioDoPainel
@@ -153,7 +158,8 @@ export type TrabalhoWhatsappEntrada =
   | RotinaDasAutomacoes
   | VagaLiberada
   | RemarcacaoPorAtraso
-  | HorarioMudou;
+  | HorarioMudou
+  | RotinaDosAvisos;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

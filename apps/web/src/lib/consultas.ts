@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  CaixaDeAvisos,
   OcupacaoDaUnidade,
   DiaCalendario,
   ProfissionalDetalhe,
@@ -412,3 +413,15 @@ export function useOcupacao(unidadeId: string | null, de: string, ate: string) {
     enabled: !!unidadeId,
   });
 }
+
+// ─── Central de avisos ────────────────────────────────────────────────────
+
+export const chaveAvisos = ['avisos'] as const;
+
+/** Meus avisos; revê a cada minuto (a rotina das pendentes roda de 15 em 15). */
+export const useAvisos = () =>
+  useQuery({
+    queryKey: chaveAvisos,
+    queryFn: () => api<CaixaDeAvisos>('avisos'),
+    refetchInterval: 60_000,
+  });

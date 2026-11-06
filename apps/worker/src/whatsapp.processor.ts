@@ -13,6 +13,8 @@ import {
   avisarNotaBaixa,
   oferecerVaga,
   remarcacaoPorAtraso,
+  contasParaAvisos,
+  rotinaComandasPendentes,
   avisoHorarioMudou,
   contasComAutomacoes,
   rodarAutomacoes,
@@ -33,6 +35,7 @@ import {
   FILA_WHATSAPP_SAIDA,
   ESPERA_ATENDENTE_MAX_MIN,
   HORA_DAS_AUTOMACOES,
+  INTERVALO_PENDENTES_MIN,
   NOTA_BAIXA_ESPERA_MIN,
   proximoEnvio,
   type TrabalhoNotificacao,
@@ -164,6 +167,14 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
         { name: 'automacoes', data: { tipo: 'automacoes' } },
       )
       .catch((e: Error) => this.logger.error(`Agendar as automações: ${e.message}`));
+    // Central de avisos: comandas pendentes a cada 15 minutos (cada unidade só no expediente).
+    void filaEntrada
+      .upsertJobScheduler(
+        'avisos-da-equipe',
+        { pattern: `*/${INTERVALO_PENDENTES_MIN} * * * *`, tz: 'America/Sao_Paulo' },
+        { name: 'avisos', data: { tipo: 'avisos' } },
+      )
+      .catch((e: Error) => this.logger.error(`Agendar os avisos: ${e.message}`));
     const redis = new Redis(this.config.REDIS_URL, { maxRetriesPerRequest: 3 });
     this.redis = redis;
     const chave = (instancia: string) => `whatsapp:proximo-envio:${instancia}`;
@@ -261,6 +272,20 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           return 'atendente: bot voltou';
         }
         // Rotina diária: retorno e aniversário em cada conta que ligou as automações.
+        if (job.data.tipo === 'avisos') {
+          let total = 0;
+          for (const contaId of await contasParaAvisos(this.banco.prisma)) {
+            try {
+              for (const n of await rotinaComandasPendentes(this.banco.prisma, contaId)) {
+                await filaNotificacoes.add('push', n);
+                total++;
+              }
+            } catch (e) {
+              this.logger.error(`Avisos da conta ${contaId}: ${(e as Error).message}`);
+            }
+          }
+          return `avisos: ${total} notificações`;
+        }
         if (job.data.tipo === 'automacoes') {
           let total = 0;
           for (const contaId of await contasComAutomacoes(this.banco.prisma)) {

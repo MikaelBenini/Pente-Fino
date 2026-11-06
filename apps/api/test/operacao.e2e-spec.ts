@@ -368,6 +368,29 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
         .expect(200)
     ).body;
     expect(fechado).toMatchObject({ situacao: 'fechado', dinheiroEsperado: 0, divergencia: 500 });
+    // Diferença na gaveta: aviso para gestor e dono, não para quem fechou (recepção).
+    type Caixa = { naoLidos: number; avisos: { id: string; tipo: string; texto: string }[] };
+    const doGestor = (await gestor.get('/avisos').expect(200)).body as Caixa;
+    const divergente = doGestor.avisos.find((x) => x.tipo === 'caixa_divergente');
+    expect(divergente?.texto).toMatch(/sobram R\$\s5,00/);
+    expect(doGestor.naoLidos).toBeGreaterThan(0);
+    expect(
+      ((await dono.get('/avisos').expect(200)).body as Caixa).avisos.some(
+        (x) => x.tipo === 'caixa_divergente',
+      ),
+    ).toBe(true);
+    expect(
+      ((await recepcao.get('/avisos').expect(200)).body as Caixa).avisos.some(
+        (x) => x.tipo === 'caixa_divergente',
+      ),
+    ).toBe(false);
+    // Marcar como lido vale só para quem leu; o do outro não muda.
+    await recepcao.post(`/avisos/${divergente!.id}/lido`, {}).expect(204);
+    expect(((await gestor.get('/avisos').expect(200)).body as Caixa).naoLidos).toBe(
+      doGestor.naoLidos,
+    );
+    await gestor.post('/avisos/lidos', {}).expect(204);
+    expect(((await gestor.get('/avisos').expect(200)).body as Caixa).naoLidos).toBe(0);
     await gestor
       .post(`/comandas/${comanda}/reabrir`, { motivo: 'Tentar depois do caixa' })
       .expect(409);

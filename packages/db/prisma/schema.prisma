@@ -306,6 +306,7 @@ model Conta {
   pagamentosClube      PagamentoClube[]
   listaEspera          ListaEspera[]
   bloqueiosRecorrentes BloqueioRecorrente[]
+  avisos               Aviso[]
 
   @@map("conta")
 }
@@ -358,6 +359,7 @@ model Unidade {
   itensClube ItemClube[]
 
   listaEspera ListaEspera[]
+  avisos      Aviso[]
 
   @@index([contaId])
   @@map("unidade")
@@ -413,6 +415,7 @@ model Usuario {
   avaliacoesTratadas    Avaliacao[]         @relation("AvaliacaoTratadaPor")
   adesoesCriadas        AdesaoClube[]       @relation("AdesaoCriadaPor")
   mensalidadesRecebidas PagamentoClube[]
+  avisos                Aviso[]
 
   @@index([contaId])
   @@map("usuario")
@@ -751,6 +754,8 @@ model Comanda {
   fechadaPorId       String?       @map("fechada_por_id") @db.Uuid
   canceladaEm        DateTime?     @map("cancelada_em") @db.Timestamptz(3)
   motivoCancelamento String?       @map("motivo_cancelamento")
+  /// Já entrou num aviso de "comanda pendente" para a recepção (não repete).
+  pendenteAvisadaEm  DateTime?     @map("pendente_avisada_em") @db.Timestamptz(3)
   criadoEm           DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm       DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -1427,4 +1432,29 @@ model BloqueioRecorrente {
   @@index([contaId])
   @@index([profissionalId])
   @@map("bloqueio_recorrente")
+}
+
+/// Central de avisos (Etapa 15): o que cada pessoa precisa resolver, com histórico. Também vira
+/// notificação no celular para quem ligou o push. `chave` evita repetir o mesmo aviso.
+model Aviso {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId   String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId String    @map("usuario_id") @db.Uuid
+  unidadeId String?   @map("unidade_id") @db.Uuid
+  /// Tipo validado em packages/shared/src/avisos.ts.
+  tipo      String
+  titulo    String
+  texto     String
+  link      String?
+  chave     String
+  criadoEm  DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  lidoEm    DateTime? @map("lido_em") @db.Timestamptz(3)
+
+  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  unidade Unidade? @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, chave])
+  @@index([usuarioId, criadoEm])
+  @@map("aviso")
 }
