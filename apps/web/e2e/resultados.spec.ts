@@ -135,3 +135,24 @@ test('gestor: ocupação do mês no início e mapa da semana nas métricas', asy
   await expect(mapa.getByRole('list', { name: 'Mais vazios' })).toBeVisible();
   await expect(mapa.getByRole('list', { name: 'Mais cheios' })).toBeVisible();
 });
+
+test('dono: painel da rede com as unidades lado a lado e o total', async ({ page }, info) => {
+  await entrar(page, 'dono@demo.pentefino.dev');
+  await page.goto('/rede');
+  await expect(page.getByRole('heading', { name: 'Painel da rede' })).toBeVisible();
+  if (info.project.name === 'celular') {
+    const cartoes = page.getByRole('list', { name: 'Unidades da rede no mês' });
+    await expect(cartoes.getByRole('heading', { name: 'Centro' })).toBeVisible();
+    await expect(cartoes.getByRole('heading', { name: 'Rede' })).toBeVisible();
+    return;
+  }
+  const tabela = page.getByRole('table', { name: 'Unidades da rede no mês' });
+  await expect(tabela.getByRole('rowheader', { name: 'Centro' })).toBeVisible();
+  await expect(tabela.getByRole('rowheader', { name: 'Jardins' })).toBeVisible();
+  await expect(tabela.getByRole('rowheader', { name: 'Rede' })).toBeVisible();
+  for (const coluna of ['Faturamento', 'Lucro', 'Ticket médio', 'Ocupação', 'Nota média']) {
+    await expect(tabela.getByRole('columnheader', { name: coluna })).toBeVisible();
+  }
+  // A demonstração tem movimento nas duas: alguma unidade leva o destaque de faturamento.
+  await expect(tabela.getByLabel('melhor da rede').first()).toBeVisible();
+});

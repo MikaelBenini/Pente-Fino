@@ -39,6 +39,7 @@ import { ComissoesController } from './comissoes/comissoes.controller.js';
 import { ComissoesService } from './comissoes/comissoes.service.js';
 import { DesempenhoController } from './desempenho/desempenho.controller.js';
 import { OcupacaoController } from './desempenho/ocupacao.controller.js';
+import { RedeController } from './desempenho/rede.controller.js';
 import { AvisosController } from './avisos/avisos.controller.js';
 import { DesempenhoService } from './desempenho/desempenho.service.js';
 import { BotController } from './bot/bot.controller.js';
@@ -137,6 +138,7 @@ export class ComumModule {}
     ComissoesController,
     DesempenhoController,
     OcupacaoController,
+    RedeController,
     AvisosController,
     ResumoController,
     BotController,

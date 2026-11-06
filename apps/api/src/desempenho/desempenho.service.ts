@@ -20,6 +20,11 @@ import {
   type VisitaCliente,
   recorrentesNoDia,
   mapaDeOcupacao,
+  destaquesDaRede,
+  resumirNotas,
+  totalDaRede,
+  type LinhaDaRede,
+  type PainelDaRede,
   type OcupacaoDaUnidade,
 } from '@pente-fino/shared';
 import { BancoService } from '../comum/banco.service.js';
@@ -218,22 +223,120 @@ export class DesempenhoService {
     return this.banco.daConta(async (tx) => {
       const unidade = await tx.unidade.findUnique({ where: { id: unidadeId } });
       if (!unidade) throw Erros.naoEncontrado('Unidade não encontrada.');
-      const hoje = dataLocal(new Date());
-      const fim = ate < hoje ? ate : hoje;
-      const profs =
-        fim < de
-          ? []
-          : await tx.profissional.findMany({
-              where: { unidadeId, ativo: true },
-              include: { horarios: true },
-            });
-      const insumos = profs.length ? await this.insumosDeOcupacao(tx, profs, de, fim) : [];
-      const mapa = mapaDeOcupacao({
-        dias: insumos[0]?.dias ?? [],
-        capacidade: unidade.capacidade,
-        profissionais: insumos,
-      });
+      const { mapa, fim } = await this.mapaDaUnidade(tx, unidade, de, ate);
       return { ...mapa, de, ate: fim < de ? ate : fim, capacidade: unidade.capacidade };
+    });
+  }
+
+  /** Mapa de ocupação de uma unidade, contado até hoje. */
+  private async mapaDaUnidade(
+    tx: Transacao,
+    unidade: { id: string; capacidade: number },
+    de: string,
+    ate: string,
+  ) {
+    const hoje = dataLocal(new Date());
+    const fim = ate < hoje ? ate : hoje;
+    const profs =
+      fim < de
+        ? []
+        : await tx.profissional.findMany({
+            where: { unidadeId: unidade.id, ativo: true },
+            include: { horarios: true },
+          });
+    const insumos = profs.length ? await this.insumosDeOcupacao(tx, profs, de, fim) : [];
+    const mapa = mapaDeOcupacao({
+      dias: insumos[0]?.dias ?? [],
+      capacidade: unidade.capacidade,
+      profissionais: insumos,
+    });
+    return { mapa, fim };
+  }
+
+  /**
+   * Painel da rede: cada unidade com faturamento, lucro, ticket, ocupação, nota e retorno,
+   * mais o total (com as despesas da conta, sem unidade, só no lucro da rede).
+   */
+  async painelDaRede(de: string, ate: string): Promise<PainelDaRede> {
+    const { filtro, incluiConta } = escopoUnidades(undefined, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const unidades = await tx.unidade.findMany({
+        where: { ativa: true, ...(filtro.unidadeId ? { id: filtro.unidadeId as object } : {}) },
+        orderBy: { criadoEm: 'asc' },
+      });
+      const hoje = dataLocal(new Date());
+      const competencia = {
+        gte: data(`${de.slice(0, 7)}-01`),
+        lte: data(`${ate.slice(0, 7)}-01`),
+      };
+      const linhas: LinhaDaRede[] = [];
+      for (const u of unidades) {
+        const fechadas = await tx.comanda.findMany({
+          where: { unidadeId: u.id, status: 'fechada', fechadaEm: noPeriodo(de, ate) },
+          include: { itens: true },
+        });
+        const despesas = await tx.despesa.findMany({
+          where: { unidadeId: u.id, competencia },
+          include: { categoria: true },
+        });
+        const ind = calcularIndicadores(
+          fechadas,
+          despesas.map((d) => ({ grupo: d.categoria.grupo, valor: d.valor })),
+        );
+        const { mapa } = await this.mapaDaUnidade(tx, u, de, ate);
+        const notas = await tx.avaliacao.findMany({
+          where: { unidadeId: u.id, status: 'respondida', respondidaEm: noPeriodo(de, ate) },
+          select: { notaBarbearia: true },
+        });
+        const resumoNotas = resumirNotas(notas.map((n) => n.notaBarbearia));
+        const fimVisitas = ate > hoje ? ate : hoje;
+        const visitas = await tx.comanda.findMany({
+          where: {
+            unidadeId: u.id,
+            status: 'fechada',
+            clienteId: { not: null },
+            fechadaEm: noPeriodo(somarDias(fimVisitas, -HISTORICO_DIAS), fimVisitas),
+          },
+          select: { clienteId: true, fechadaEm: true },
+        });
+        const clientes = analisarClientes(
+          visitas.map((v) => ({ clienteId: v.clienteId!, data: dataLocal(v.fechadaEm!) })),
+          { de, ate, hoje },
+        ).resumo;
+        linhas.push({
+          unidadeId: u.id,
+          unidade: u.nome,
+          faturamento: ind.faturamento,
+          lucro: ind.lucro,
+          clientes: ind.clientes,
+          ticketMedio: ind.ticketMedio,
+          ocupacao: mapa.total,
+          nota: { media: resumoNotas.media, respostas: resumoNotas.respostas },
+          retorno: {
+            atendidos: clientes.atendidos,
+            voltaramNoPrazo: clientes.voltaramNoPrazo,
+            taxa: clientes.taxaRetorno,
+          },
+        });
+      }
+      // Despesas da conta (sem unidade): só o dono vê a rede inteira, então só ele as soma.
+      const daConta = incluiConta
+        ? await tx.despesa.findMany({
+            where: { unidadeId: null, competencia },
+            include: { categoria: true },
+          })
+        : [];
+      const despesasDaConta = calcularIndicadores(
+        [],
+        daConta.map((d) => ({ grupo: d.categoria.grupo, valor: d.valor })),
+      ).despesasOperacionais;
+      return {
+        de,
+        ate,
+        unidades: linhas,
+        rede: totalDaRede(linhas, despesasDaConta),
+        destaques: destaquesDaRede(linhas),
+      };
     });
   }
 
