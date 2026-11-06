@@ -14,7 +14,14 @@ export const ESTADOS_COMANDA = [
 export type StatusComanda = (typeof ESTADOS_COMANDA)[number];
 
 export type AcaoComanda =
-  'iniciar' | 'confirmar' | 'fechar' | 'cancelar' | 'reabrir' | 'editar_itens';
+  | 'iniciar'
+  | 'confirmar'
+  | 'fechar'
+  | 'cancelar'
+  | 'reabrir'
+  | 'editar_itens'
+  // Passou da tolerância e o cliente não veio: o barbeiro (ou a recepção) confirma o atraso.
+  | 'nao_veio';
 
 const GESTAO: readonly Papel[] = ['dono', 'gestor'];
 const BALCAO: readonly Papel[] = ['dono', 'gestor', 'recepcao'];
@@ -31,6 +38,8 @@ const REGRAS: Record<AcaoComanda, { de: readonly StatusComanda[]; papeis: readon
   },
   cancelar: { de: ['prevista', 'em_atendimento', 'confirmada', 'pendente'], papeis: BALCAO },
   reabrir: { de: ['fechada'], papeis: GESTAO },
+  // Pendente = o horário acabou e nada aconteceu: o barbeiro ainda pode confirmar que não veio.
+  nao_veio: { de: ['prevista', 'pendente'], papeis: TODOS },
   editar_itens: {
     de: ['prevista', 'em_atendimento', 'confirmada', 'pendente', 'reaberta'],
     papeis: TODOS,
@@ -103,6 +112,7 @@ const TEXTO_ACAO: Record<AcaoComanda, string> = {
   cancelar: 'cancelar',
   reabrir: 'reabrir',
   editar_itens: 'mudar os itens de',
+  nao_veio: 'marcar como não veio',
 };
 
 /** Tolerância depois do fim do horário antes de virar pendente. */

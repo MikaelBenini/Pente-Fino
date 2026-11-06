@@ -444,6 +444,47 @@ export async function passoDaAgenda(
       }
       return naoServiu(agenda, 'Responda 1 para marcar por aqui, 2 para o site, ou 0 para voltar.');
     }
+    case 'atraso': {
+      if (um === 0) return sair(['Tudo bem! Quando quiser marcar, é só responder AGENDAR.']);
+      if (um === null || um > agenda.opcoes.length)
+        return naoServiu(agenda, 'Responda com o número do horário, ou 0 para deixar para depois.');
+      const [inicio, profissionalId] = agenda.opcoes[um - 1]!.split('|') as [string, string];
+      const a: AgendaNaConversa = { ...agenda, escolha: { inicio, profissionalId } };
+      const r = await resumo(tx, a, d);
+      if (d.simulacao) return sair(['(Simulação: nada foi gravado.)']);
+      try {
+        await tx.$executeRawUnsafe('SAVEPOINT remarcar_atraso');
+        const criado = await criarAgendamentoNoBanco(tx, {
+          unidadeId: d.unidadeId,
+          profissionalId,
+          clienteId: d.clienteId,
+          inicio: new Date(inicio),
+          servicoIds: agenda.servicoIds,
+          origem: 'bot',
+          criadoPorId: null,
+        });
+        await tx.$executeRawUnsafe('RELEASE SAVEPOINT remarcar_atraso');
+        return {
+          respostas: [
+            textoMarcado(
+              r,
+              d.barbearia,
+              await linkDoHorario(tx, d, criado.agendamentoId),
+              d.regras.toleranciaAtrasoMin,
+            ),
+          ],
+          agenda: null,
+          voltarAoMenu: false,
+          comandaId: criado.comandaId,
+          agendamento: { id: criado.agendamentoId, inicio },
+          mudanca: { agendamentoId: criado.agendamentoId, tipo: 'novo' },
+        };
+      } catch (e) {
+        await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT remarcar_atraso');
+        if (!(e instanceof ErroAgenda)) throw e;
+        return sair(['Esse horário acabou de ser ocupado. 😕 Responda AGENDAR para ver outros.']);
+      }
+    }
     case 'antecipar': {
       if (um === 1 && agenda.remarcarId && agenda.escolha && !d.simulacao) {
         const escolhido = new Date(agenda.escolha.inicio);
@@ -597,7 +638,12 @@ export async function passoDaAgenda(
           await tx.$executeRawUnsafe('RELEASE SAVEPOINT agendar_bot');
           return {
             respostas: [
-              textoRemarcado(r, d.barbearia, await linkDoHorario(tx, d, agenda.remarcarId)),
+              textoRemarcado(
+                r,
+                d.barbearia,
+                await linkDoHorario(tx, d, agenda.remarcarId),
+                d.regras.toleranciaAtrasoMin,
+              ),
             ],
             agenda: null,
             voltarAoMenu: false,
@@ -631,7 +677,12 @@ export async function passoDaAgenda(
           });
         return {
           respostas: [
-            textoMarcado(r, d.barbearia, await linkDoHorario(tx, d, criado.agendamentoId)),
+            textoMarcado(
+              r,
+              d.barbearia,
+              await linkDoHorario(tx, d, criado.agendamentoId),
+              d.regras.toleranciaAtrasoMin,
+            ),
             ...(perguntar ? [TEXTO_PERGUNTA_ANTECIPAR] : []),
           ],
           agenda: perguntar

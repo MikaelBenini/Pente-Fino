@@ -140,6 +140,16 @@ function Formulario({ unidadeId, inicial }: { unidadeId: string; inicial: Regras
           onMudar={(v) => mudar('prazoMudarMin', numero(v, 0))}
         />
         <CampoQuantidade
+          id="regra-tolerancia"
+          rotulo="Tolerância de atraso (minutos)"
+          dica="Avisada na confirmação e no lembrete; depois, o barbeiro confirma se o cliente não veio"
+          min={0}
+          max={60}
+          passo={5}
+          valor={f.toleranciaAtrasoMin}
+          onMudar={(v) => mudar('toleranciaAtrasoMin', numero(v, 0))}
+        />
+        <CampoQuantidade
           id="regra-faltas"
           rotulo="Faltas para marcar só com a recepção"
           dica="0 = desligado. O balcão continua marcando"

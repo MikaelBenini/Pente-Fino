@@ -9,6 +9,7 @@ import {
   type LembreteDeHorario,
   type SessaoBot,
 } from '@pente-fino/shared';
+import { regrasDaUnidade } from './agenda.js';
 import { json, mensagensDoBot } from './bot.js';
 import type { Prisma, PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -77,6 +78,7 @@ export async function enviarLembrete(
         inicio: ag.inicio.toISOString(),
         servicos: (ag.comanda?.itens ?? []).map((i) => i.servico?.nome ?? 'Serviço'),
         profissional,
+        toleranciaMin: (await regrasDaUnidade(tx, ag.unidadeId)).toleranciaAtrasoMin,
       },
       // Abertura editada em Bot → Mensagens (o resto do lembrete é fixo).
       preencher(mensagens[job.lembrete === '24h' ? 'lembrete_primeiro' : 'lembrete_segundo'], {

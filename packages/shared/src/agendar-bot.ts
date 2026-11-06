@@ -1,6 +1,7 @@
 // Agendamento pela conversa do WhatsApp (Etapa 11): serviço → profissional → dia → horário →
 // confirmação. Aqui só o que é puro (ler a resposta, montar as listas e o resumo); quem
 // consulta a agenda e grava é packages/db/src/agendar-bot.ts.
+import { textoTolerancia } from './atraso.js';
 import { formatarHora, formatarMoeda } from './formatacao.js';
 
 /** Quantos dias com horário livre o bot mostra de uma vez. */
@@ -21,7 +22,9 @@ export type PassoAgenda =
   | 'acao'
   | 'cancelar'
   // Depois de marcar: "quer que eu avise se vagar antes?" (Etapa 14).
-  | 'antecipar';
+  | 'antecipar'
+  // Remarcação rápida depois do "Não veio" por atraso: o número já marca (Etapa 14).
+  | 'atraso';
 
 /** Estado do agendamento guardado na sessão do número. */
 export interface AgendaNaConversa {
@@ -223,13 +226,17 @@ export function textoMarcado(
   r: ResumoAgendamento,
   barbearia: string,
   link?: string | null,
+  /** Atraso tolerado (minutos) da unidade, avisado na confirmação. */
+  toleranciaMin = 0,
 ): string {
+  const tolerancia = textoTolerancia(toleranciaMin);
   return [
     'Pronto, horário marcado! ✅',
     '',
     `✂️ ${r.servicos.join(' + ')}`,
     `💈 Com ${r.profissional}`,
     `📅 ${quando(r)}`,
+    ...(tolerancia ? [tolerancia] : []),
     '',
     `Te esperamos na ${barbearia}.`,
     comoMudar(link, 'Precisa mudar? Responda MEUS HORÁRIOS.'),
@@ -285,13 +292,16 @@ export function textoRemarcado(
   r: ResumoAgendamento,
   barbearia: string,
   link?: string | null,
+  toleranciaMin = 0,
 ): string {
+  const tolerancia = textoTolerancia(toleranciaMin);
   return [
     'Pronto, horário remarcado! ✅',
     '',
     `✂️ ${r.servicos.join(' + ')}`,
     `💈 Com ${r.profissional}`,
     `📅 ${quando(r)}`,
+    ...(tolerancia ? [tolerancia] : []),
     '',
     `Te esperamos na ${barbearia}.`,
     ...(link ? [comoMudar(link, '')] : []),
