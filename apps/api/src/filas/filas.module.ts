@@ -2,8 +2,10 @@ import { Global, Inject, Injectable, Module, type OnApplicationShutdown } from '
 import {
   FILA_EMAILS,
   FILA_EVENTOS,
+  FILA_NOTIFICACOES,
   FILA_WHATSAPP_ENTRADA,
   type EventoDominio,
+  type TrabalhoNotificacao,
   type TrabalhoWhatsappEntrada,
   type NomeEvento,
   type TrabalhoEmail,
@@ -27,6 +29,7 @@ export class Filas implements OnApplicationShutdown {
   readonly emails: Queue<TrabalhoEmail>;
   readonly eventos: Queue<EventoDominio>;
   readonly whatsappEntrada: Queue<TrabalhoWhatsappEntrada>;
+  readonly notificacoes: Queue<TrabalhoNotificacao>;
 
   constructor(@Inject(CONFIGURACAO) config: Configuracao) {
     const connection = { url: config.redisUrl };
@@ -47,10 +50,19 @@ export class Filas implements OnApplicationShutdown {
         backoff: { type: 'exponential', delay: 2_000 },
       },
     });
+    this.notificacoes = new Queue<TrabalhoNotificacao>(FILA_NOTIFICACOES, {
+      connection,
+      defaultJobOptions: { ...OPCOES_PADRAO, attempts: 3 },
+    });
   }
 
   async onApplicationShutdown(): Promise<void> {
-    await Promise.all([this.emails.close(), this.eventos.close(), this.whatsappEntrada.close()]);
+    await Promise.all([
+      this.emails.close(),
+      this.eventos.close(),
+      this.whatsappEntrada.close(),
+      this.notificacoes.close(),
+    ]);
   }
 }
 

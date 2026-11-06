@@ -7,9 +7,17 @@ import {
   naConta,
   type PrismaClient,
 } from '@pente-fino/db';
-import { dataLocal, type CodigoAssistente, type EstadoAssistente } from '@pente-fino/shared';
+import {
+  dataLocal,
+  type CodigoAssistente,
+  type EstadoAssistente,
+  type EstadoPush,
+} from '@pente-fino/shared';
 import type { App } from 'supertest/types.js';
 import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+
+// A API só repassa a chave pública ao navegador: no CI (sem chaves no .env), uma de teste.
+process.env.VAPID_CHAVE_PUBLICA ||= 'BTeste' + 'x'.repeat(80);
 
 let app: INestApplication<App>;
 let a: Cenario;
@@ -102,5 +110,30 @@ describe('assistente da equipe', () => {
     expect(b.disponiveis).not.toContain('faltas');
     expect(b.disponiveis).toContain('proximoCliente');
     await recepcao.get('/me/assistente').expect(404);
+  });
+});
+
+describe('notificações no celular (push)', () => {
+  const inscricao = {
+    endpoint: 'https://push.teste.pentefino.dev/aparelho-1',
+    expirationTime: null,
+    keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) },
+  };
+
+  it('liga e desliga por aparelho; o teste vai para a fila do worker', async () => {
+    const antes = (await barbeiro.get('/me/push').expect(200)).body as EstadoPush;
+    expect(antes.chavePublica).toBeTruthy();
+    expect(antes.aparelhos).toBe(0);
+    expect((await barbeiro.post('/me/push', inscricao).expect(200)).body.aparelhos).toBe(1);
+    // O mesmo aparelho de novo não duplica.
+    expect((await barbeiro.post('/me/push', inscricao).expect(200)).body.aparelhos).toBe(1);
+    // Cada um vê só os próprios aparelhos.
+    expect((await dono.get('/me/push').expect(200)).body.aparelhos).toBe(0);
+    await barbeiro.post('/me/push/teste', {}).expect(202);
+    expect(
+      (await barbeiro.post('/me/push/remover', { endpoint: inscricao.endpoint }).expect(200)).body
+        .aparelhos,
+    ).toBe(0);
+    await barbeiro.post('/me/push', { endpoint: 'nao-e-url', keys: {} }).expect(400);
   });
 });

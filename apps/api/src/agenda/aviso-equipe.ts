@@ -1,4 +1,8 @@
-import { avisarEquipeSobreHorario, avisarFaltaParaGestao } from '@pente-fino/db';
+import {
+  avisarEquipeSobreHorario,
+  avisarFaltaParaGestao,
+  notificacaoDoHorario,
+} from '@pente-fino/db';
 import type { MudancaNaAgenda } from '@pente-fino/shared';
 import type { BancoService } from '../comum/banco.service.js';
 import type { Filas } from '../filas/filas.module.js';
@@ -15,9 +19,12 @@ export async function avisarEquipe(
   tipo: MudancaNaAgenda,
 ): Promise<void> {
   try {
-    const aviso = await banco.naConta(contaId, (tx) =>
-      avisarEquipeSobreHorario(tx, agendamentoId, tipo),
-    );
+    const [aviso, notificacao] = await banco.naConta(contaId, async (tx) => [
+      await avisarEquipeSobreHorario(tx, agendamentoId, tipo),
+      await notificacaoDoHorario(tx, agendamentoId, tipo),
+    ]);
+    // No celular (push), para os aparelhos que ele ligou no Perfil.
+    if (notificacao) await filas.notificacoes.add('push', notificacao);
     if (aviso)
       await filas.whatsappEntrada.add(
         'enviar',

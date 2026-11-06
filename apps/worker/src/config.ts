@@ -19,6 +19,10 @@ const esquema = z.object({
   WHATSAPP_PROVEDOR: z.enum(['evolution', 'falso']).default('evolution'),
   EVOLUTION_API_URL: z.url().default('http://localhost:8080'),
   EVOLUTION_API_KEY: z.string().default(''),
+  /** Push do PWA; sem as chaves, as notificações no celular ficam desligadas. */
+  VAPID_CHAVE_PUBLICA: z.string().default(''),
+  VAPID_CHAVE_PRIVADA: z.string().default(''),
+  VAPID_CONTATO: z.string().default('mailto:suporte@pentefino.dev'),
 });
 
 export type ConfiguracaoWorker = z.infer<typeof esquema>;
