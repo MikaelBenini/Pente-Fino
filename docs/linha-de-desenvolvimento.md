@@ -398,10 +398,10 @@ Horário vago vira atendimento sem a recepção pegar o telefone.
 
 Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente o que promete.
 
-- [ ] Comandas pendentes: a cada 15 minutos no expediente, aviso para a recepção
-- [ ] Fechamento do dia: consolida o dia e avisa o gestor quando o caixa tem divergência
+- [x] Comandas pendentes: a cada 15 minutos no expediente, aviso para a recepção (feito: rotina `avisos` no worker de 15 em 15 min; em cada unidade com expediente agora, as comandas de hoje que passaram 15 min do fim sem a confirmação do barbeiro e ainda não foram avisadas (`pendente_avisada_em`) viram um aviso "Comandas esperando confirmação" para a recepção; sem recepção na unidade, vai ao gestor e, sem gestor, ao dono (`destinatariosDoAviso`). Não repete a mesma comanda)
+- [ ] Fechamento do dia: consolida o dia e avisa o gestor quando o caixa tem divergência (em parte: fechar o caixa com diferença avisa gestor e dono na central e no celular, com o link para o caixa daquele dia (`/caixa?dia=`). Falta a consolidação no fim do expediente e o aviso de caixa que ficou sem fechar)
 - [ ] Resumo diário do dono (WhatsApp ou e-mail, ele escolhe): faturamento do dia, ritmo do mês, pendências e notas baixas (em parte: pelo WhatsApp, o resumo da unidade da Etapa 11 traz faturamento, clientes, ticket, faltas, notas baixas e comandas esperando fechamento. Falta o ritmo do mês (projeção) e o e-mail)
-- [ ] Central de avisos no app, com histórico
+- [x] Central de avisos no app, com histórico (feito: tabela `aviso` com RLS, uma linha por pessoa, sem repetir a mesma chave; sino no topo do menu (e na barra do celular) com o número de não lidos, revisto a cada minuto; `/avisos` com os últimos 100, abrir marca como lido e "Marcar todos como lidos"; quem tem push ligado recebe também no celular)
 - [ ] Notificações no celular (push do PWA) com permissão por aparelho; cada tipo liga e desliga no Perfil (em parte: o push por aparelho e as mudanças na agenda do barbeiro saíram na Etapa 11. Falta escolher os tipos e levar os outros avisos para o push)
 - [ ] Painel da rede: unidades lado a lado com faturamento, lucro, ticket, ocupação, nota média e retorno (RF-23)
 - [ ] Recursos por plano aplicados na API e na tela (`incluiRecurso` em `packages/shared`); o que não está no plano aparece com convite para mudar, sem esconder dado já lançado

@@ -5,6 +5,7 @@ import { Botao, Carregando, cn, EstadoVazio } from '@pente-fino/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronsUpDown,
+  Bell,
   CircleSlash,
   CircleUserRound,
   CloudOff,
@@ -21,7 +22,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
-import { useBot, useConversas, useSituacaoConta } from '@/lib/consultas';
+import { useAvisos, useBot, useConversas, useSituacaoConta } from '@/lib/consultas';
 import { notificar, tocarAviso, usePreferenciasAvisos } from '@/lib/avisos';
 import { useFilaOffline } from '@/lib/fila';
 import {
@@ -177,12 +178,15 @@ function MenuLateral() {
   const esperando = useEsperandoAtendente();
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col gap-6 border-r border-borda bg-superficie py-5 pl-[max(1rem,env(safe-area-inset-left))] pr-3 lg:flex">
-      <Link
-        href="/app"
-        className="rounded-md px-2 focus-visible:outline-2 focus-visible:outline-foco"
-      >
-        <Marca />
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link
+          href="/app"
+          className="rounded-md px-2 focus-visible:outline-2 focus-visible:outline-foco"
+        >
+          <Marca />
+        </Link>
+        <BotaoAvisos className="grid size-11 shrink-0 place-items-center rounded-md text-tinta-suave hover:bg-superficie-2 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco" />
+      </div>
       <SeletorUnidade />
       <nav
         aria-label="Menu principal"
@@ -369,6 +373,25 @@ function BlocoUsuario() {
   );
 }
 
+/** Sino da central de avisos, com quantos ainda não foram lidos. */
+function BotaoAvisos({ className }: { className: string }) {
+  const n = useAvisos().data?.naoLidos ?? 0;
+  const rotulo = n > 0 ? `Avisos: ${n} não ${n === 1 ? 'lido' : 'lidos'}` : 'Avisos';
+  return (
+    <Link href="/avisos" aria-label={rotulo} title={rotulo} className={cn(className, 'relative')}>
+      <Bell aria-hidden className="size-5" strokeWidth={1.75} />
+      {n > 0 && (
+        <span
+          aria-hidden
+          className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-aviso px-1 text-[0.625rem] font-bold text-fundo tabular-nums"
+        >
+          {n > 9 ? '9+' : n}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 // ─── Celular e tablet: barra no topo e menu inferior ──────────────────────
 
 function BarraTopo() {
@@ -377,7 +400,10 @@ function BarraTopo() {
       <Link href="/app" className="py-2" aria-label="Pente Fino, início">
         <Marca compacta />
       </Link>
-      <SeletorUnidade compacto />
+      <div className="flex items-center gap-1">
+        <BotaoAvisos className="relative grid size-11 shrink-0 place-items-center rounded-md text-tinta-suave hover:bg-superficie-2 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco" />
+        <SeletorUnidade compacto />
+      </div>
     </header>
   );
 }

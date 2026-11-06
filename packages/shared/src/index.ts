@@ -41,3 +41,4 @@ export * from './regras-agendamento.js';
 export * from './canais.js';
 export * from './assistente.js';
 export * from './mover.js';
+export * from './avisos.js';
