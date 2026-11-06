@@ -13,7 +13,9 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  bloqueioRecorrenteSchema,
   bloqueioSchema,
+  type BloqueioRecorrenteEntrada,
   horariosSchema,
   novaRegraComissaoSchema,
   novoProfissionalSchema,
@@ -122,5 +124,34 @@ export class ProfissionaisController {
     @Param('bloqueioId', ParseUUIDPipe) bloqueioId: string,
   ) {
     return this.servico.removerBloqueio(id, bloqueioId);
+  }
+
+  @Get(':id/bloqueios-recorrentes')
+  @Papeis('dono', 'gestor', 'recepcao')
+  @ApiOperation({ summary: 'Bloqueios que repetem toda semana (almoço de toda terça)' })
+  bloqueiosRecorrentes(@Param('id', ParseUUIDPipe) id: string) {
+    return this.servico.bloqueiosRecorrentes(id);
+  }
+
+  @Post(':id/bloqueios-recorrentes')
+  @Papeis('dono', 'gestor', 'recepcao')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Bloquear um horário toda semana' })
+  novoBloqueioRecorrente(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(bloqueioRecorrenteSchema) dados: BloqueioRecorrenteEntrada,
+  ) {
+    return this.servico.novoBloqueioRecorrente(id, dados);
+  }
+
+  @Delete(':id/bloqueios-recorrentes/:bloqueioId')
+  @Papeis('dono', 'gestor', 'recepcao')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Remover um bloqueio que repete' })
+  removerBloqueioRecorrente(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('bloqueioId', ParseUUIDPipe) bloqueioId: string,
+  ) {
+    return this.servico.removerBloqueioRecorrente(id, bloqueioId);
   }
 }

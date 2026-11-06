@@ -265,46 +265,47 @@ model Conta {
   criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm            DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  unidades           Unidade[]
-  calendarios        CalendarioUnidade[]
-  usuarios           Usuario[]
-  papeis             PapelUsuario[]
-  profissionais      Profissional[]
-  horarios           HorarioProfissional[]
-  bloqueios          BloqueioAgenda[]
-  regrasComissao     RegraComissao[]
-  servicos           Servico[]
-  precosServico      PrecoServico[]
-  produtos           Produto[]
-  clientes           Cliente[]
-  notasCliente       NotaCliente[]
-  agendamentos       Agendamento[]
-  comandas           Comanda[]
-  itensComanda       ItemComanda[]
-  pagamentos         Pagamento[]
-  caixas             CaixaDia[]
-  categoriasDespesa  CategoriaDespesa[]
-  despesas           Despesa[]
-  pagamentosComissao PagamentoComissao[]
-  metas              Meta[]
-  auditorias         Auditoria[]
-  botConexoes        BotConexao[]
-  botMenus           BotMenu[]
-  modelosMensagem    ModeloMensagem[]
-  botSessoes         BotSessao[]
-  mensagens          Mensagem[]
-  tokenAcessos       TokenAcesso[]
-  avaliacoes         Avaliacao[]
-  faturas            FaturaAssinatura[]
-  assistentes        AssistenteEquipe[]
-  linksHorario       LinkHorario[]
-  tokensAgendamento  TokenAgendamento[]
-  inscricoesPush     InscricaoPush[]
-  itensClube         ItemClube[]
-  servicosClube      ItemClubeServico[]
-  adesoesClube       AdesaoClube[]
-  pagamentosClube    PagamentoClube[]
-  listaEspera        ListaEspera[]
+  unidades             Unidade[]
+  calendarios          CalendarioUnidade[]
+  usuarios             Usuario[]
+  papeis               PapelUsuario[]
+  profissionais        Profissional[]
+  horarios             HorarioProfissional[]
+  bloqueios            BloqueioAgenda[]
+  regrasComissao       RegraComissao[]
+  servicos             Servico[]
+  precosServico        PrecoServico[]
+  produtos             Produto[]
+  clientes             Cliente[]
+  notasCliente         NotaCliente[]
+  agendamentos         Agendamento[]
+  comandas             Comanda[]
+  itensComanda         ItemComanda[]
+  pagamentos           Pagamento[]
+  caixas               CaixaDia[]
+  categoriasDespesa    CategoriaDespesa[]
+  despesas             Despesa[]
+  pagamentosComissao   PagamentoComissao[]
+  metas                Meta[]
+  auditorias           Auditoria[]
+  botConexoes          BotConexao[]
+  botMenus             BotMenu[]
+  modelosMensagem      ModeloMensagem[]
+  botSessoes           BotSessao[]
+  mensagens            Mensagem[]
+  tokenAcessos         TokenAcesso[]
+  avaliacoes           Avaliacao[]
+  faturas              FaturaAssinatura[]
+  assistentes          AssistenteEquipe[]
+  linksHorario         LinkHorario[]
+  tokensAgendamento    TokenAgendamento[]
+  inscricoesPush       InscricaoPush[]
+  itensClube           ItemClube[]
+  servicosClube        ItemClubeServico[]
+  adesoesClube         AdesaoClube[]
+  pagamentosClube      PagamentoClube[]
+  listaEspera          ListaEspera[]
+  bloqueiosRecorrentes BloqueioRecorrente[]
 
   @@map("conta")
 }
@@ -491,6 +492,8 @@ model Profissional {
   avaliacoes         Avaliacao[]
 
   listaEspera ListaEspera[]
+
+  bloqueiosRecorrentes BloqueioRecorrente[]
 
   @@unique([usuarioId, unidadeId])
   @@index([contaId])
@@ -1403,4 +1406,25 @@ model ListaEspera {
   @@index([contaId])
   @@index([unidadeId, dia, status])
   @@map("lista_espera")
+}
+
+/// Bloqueio que repete toda semana (almoço de toda terça), de uma data até outra (ou sem fim).
+model BloqueioRecorrente {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  profissionalId String    @map("profissional_id") @db.Uuid
+  diaSemana      Int       @map("dia_semana")
+  inicioMin      Int       @map("inicio_min")
+  fimMin         Int       @map("fim_min")
+  desde          DateTime  @db.Date
+  ate            DateTime? @db.Date
+  motivo         String?
+  criadoEm       DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([profissionalId])
+  @@map("bloqueio_recorrente")
 }

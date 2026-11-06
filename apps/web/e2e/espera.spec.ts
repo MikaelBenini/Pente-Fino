@@ -34,3 +34,25 @@ test('a recepção põe um cliente na lista de espera do dia e tira', async ({ p
   await item.getByRole('button', { name: 'Tirar' }).click();
   await expect(item).toHaveCount(0);
 });
+
+test('a recepção bloqueia o almoço de toda semana e remove', async ({ page }, info) => {
+  test.skip(info.project.name === 'celular', 'balcão no computador');
+  await entrar(page, 'recepcao.centro@demo.pentefino.dev');
+  await page.goto('/agenda');
+  await page.getByRole('button', { name: 'Bloquear horário' }).click();
+  const d = page.getByRole('dialog', { name: 'Bloquear horário' });
+  await d.getByLabel('Bloquear').selectOption('semana');
+  await d.getByLabel('Dia da semana').selectOption({ label: 'Terça' });
+  await d.getByLabel('Das').fill('12:00');
+  await d.getByLabel('Até', { exact: true }).fill('13:00');
+  await d.getByLabel('Motivo (opcional)').fill(`Almoço ${sufixo}`);
+  await d.getByRole('button', { name: 'Bloquear', exact: true }).click();
+  await expect(d.getByText('Bloqueio salvo.')).toBeVisible();
+  const item = d
+    .getByRole('list', { name: 'Bloqueios que repetem' })
+    .getByRole('listitem')
+    .filter({ hasText: `Almoço ${sufixo}` });
+  await expect(item).toContainText('Terça, 12:00 às 13:00');
+  await item.getByRole('button', { name: 'Remover' }).click();
+  await expect(item).toHaveCount(0);
+});

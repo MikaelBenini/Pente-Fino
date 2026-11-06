@@ -13,6 +13,8 @@ import {
   type ProximoClienteDaEquipe,
   type RegrasAgendamento,
   type DataISO,
+  recorrentesNoDia,
+  type AvisoEncaixe,
 } from '@pente-fino/shared';
 import type { OrigemAgendamento, Prisma } from './generated/prisma/client.js';
 import { partesDoServico } from './clube.js';
@@ -95,10 +97,78 @@ export async function ocupadosDoProfissional(
       ...(ignorar ? { id: { not: ignorar } } : {}),
     },
   });
+  return [
+    ...ags.map((x) => ({ inicio: x.inicio, fim: x.fim })),
+    ...(await bloqueiosDoDia(tx, profissionalId, dia)),
+  ];
+}
+
+/** Bloqueios do profissional no dia: os pontuais (e férias) e os que repetem toda semana. */
+export async function bloqueiosDoDia(
+  tx: Tx,
+  profissionalId: string,
+  dia: string,
+): Promise<{ inicio: Date; fim: Date }[]> {
+  const inicio = new Date(`${dia}T00:00:00-03:00`);
+  const fim = new Date(inicio.getTime() + 86_400_000);
   const bls = await tx.bloqueioAgenda.findMany({
     where: { profissionalId, inicio: { lt: fim }, fim: { gt: inicio } },
   });
-  return [...ags, ...bls].map((x) => ({ inicio: x.inicio, fim: x.fim }));
+  const recorrentes = await tx.bloqueioRecorrente.findMany({ where: { profissionalId } });
+  return [
+    ...bls.map((b) => ({ inicio: b.inicio, fim: b.fim })),
+    ...recorrentesNoDia(
+      recorrentes.map((r) => ({
+        diaSemana: r.diaSemana,
+        inicioMin: r.inicioMin,
+        fimMin: r.fimMin,
+        desde: diaDoBanco(r.desde),
+        ate: r.ate ? diaDoBanco(r.ate) : null,
+      })),
+      dia,
+    ),
+  ];
+}
+
+/**
+ * Encaixe (Etapa 14): a recepção marca fora da grade. Não recusa por expediente, bloqueio ou
+ * unidade fechada, mas devolve os avisos para ela confirmar; outro cliente no mesmo horário
+ * continua impossível (o banco também impede).
+ */
+export async function avisosDoEncaixe(
+  tx: Tx,
+  profissionalId: string,
+  unidadeId: string,
+  inicio: Date,
+  fim: Date,
+  ignorar?: string,
+): Promise<AvisoEncaixe[]> {
+  const dia = dataLocal(inicio);
+  const outros = await tx.agendamento.count({
+    where: {
+      profissionalId,
+      inicio: { lt: fim },
+      fim: { gt: inicio },
+      status: { notIn: ['cancelado', 'falta'] },
+      ...(ignorar ? { id: { not: ignorar } } : {}),
+    },
+  });
+  if (outros > 0)
+    throw new ErroAgenda('conflito', 'Este profissional já tem um cliente nesse horário.');
+  const avisos: AvisoEncaixe[] = [];
+  const unidade = await tx.unidade.findUnique({ where: { id: unidadeId } });
+  const excecao = await tx.calendarioUnidade.findUnique({
+    where: { unidadeId_data: { unidadeId, data: dataBanco(dia) } },
+  });
+  const abre = excecao ? excecao.trabalha : !!unidade?.diasTrabalho.includes(diaDaSemana(dia));
+  if (!abre) avisos.push('unidade_fechada');
+  else {
+    const turnos = await expedienteDoProfissional(tx, profissionalId, unidadeId, dia);
+    if (!turnos.some((t) => t.inicio <= inicio && fim <= t.fim)) avisos.push('fora_do_expediente');
+  }
+  if ((await bloqueiosDoDia(tx, profissionalId, dia)).some((b) => b.inicio < fim && inicio < b.fim))
+    avisos.push('bloqueio');
+  return avisos;
 }
 
 /**
@@ -185,6 +255,8 @@ export interface NovoAgendamentoNoBanco {
   origem: OrigemAgendamento;
   observacao?: string | null;
   criadoPorId: string | null;
+  /** Encaixe confirmado pela recepção (fora do expediente ou em cima de bloqueio). */
+  encaixe?: boolean;
 }
 
 /**
@@ -198,7 +270,9 @@ export async function criarAgendamentoNoBanco(
 ): Promise<{ comandaId: string; agendamentoId: string; fim: Date; total: number }> {
   const duracao = await duracaoDosServicos(tx, d.servicoIds);
   const fim = new Date(d.inicio.getTime() + duracao * 60_000);
-  await validarHorario(tx, d.profissionalId, d.unidadeId, d.inicio, fim);
+  // Encaixe: a recepção já viu os avisos e confirmou; só outro cliente no horário impede.
+  if (d.encaixe) await avisosDoEncaixe(tx, d.profissionalId, d.unidadeId, d.inicio, fim);
+  else await validarHorario(tx, d.profissionalId, d.unidadeId, d.inicio, fim);
   const ag = await tx.agendamento.create({
     data: {
       unidadeId: d.unidadeId,
