@@ -38,7 +38,7 @@ import { data, exigirUnidade } from '../comum/escopo.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { pdfComandas } from './impressao.js';
 import { umPorVez } from '../comum/sequencia.js';
-import { avisarEquipe, avisarFalta } from '../agenda/aviso-equipe.js';
+import { avisarEquipe, avisarFalta, liberarVaga } from '../agenda/aviso-equipe.js';
 import { EventosService, Filas } from '../filas/filas.module.js';
 
 const INCLUIR = {
@@ -616,9 +616,15 @@ export class ComandasService {
   }
 
   async cancelar(id: string, motivo: string, falta: boolean): Promise<ComandaDetalhe> {
+    let liberado: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date } | null =
+      null;
     const agendamentoId = await this.banco.daConta(async (tx) => {
       const { comanda, propria, papeis } = await this.carregar(tx, id);
       const antes = this.exigir('cancelar', comanda, papeis, propria);
+      const ag = comanda.agendamentoId
+        ? await tx.agendamento.findUnique({ where: { id: comanda.agendamentoId } })
+        : null;
+      if (ag && ['agendado', 'confirmado'].includes(ag.status)) liberado = ag;
       await tx.comanda.update({
         where: { id },
         data: { status: 'cancelada', canceladaEm: new Date(), motivoCancelamento: motivo },
@@ -638,6 +644,8 @@ export class ComandasService {
       });
       return comanda.agendamentoId;
     });
+    // O horário vagou: oferecer para a lista de espera.
+    if (liberado) await liberarVaga(this.filas, Contexto.usuario().contaId, liberado);
     // Cancelado (não falta): o profissional fica sabendo pelo assistente, se ligou.
     if (agendamentoId && falta)
       await avisarFalta(this.banco, this.filas, Contexto.usuario().contaId, agendamentoId);

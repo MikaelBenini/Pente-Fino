@@ -30,6 +30,7 @@ export * from './avaliacao.js';
 export * from './automacoes.js';
 export * from './clube.js';
 export * from './pix.js';
+export * from './espera.js';
 export * from './assinatura.js';
 export * from './agendar-bot.js';
 export * from './lembretes.js';

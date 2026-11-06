@@ -515,6 +515,8 @@ export interface SessaoBot {
   agenda?: AgendaNaConversa;
   /** Lembrete enviado: a próxima resposta 1/2/3 vale para este horário. */
   lembrete?: { agendamentoId: string; tipo: '24h' | '2h' };
+  /** Oferta da lista de espera enviada: a próxima resposta 1/2 vale para ela. */
+  oferta?: { esperaId: string };
 }
 
 export type PassoPesquisa = 'atendimento' | 'barbearia' | 'comentario';

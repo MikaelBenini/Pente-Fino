@@ -87,13 +87,21 @@ export function ehAniversario(nascimento: string, hoje: string): boolean {
 
 // ─── Números de cada automação ────────────────────────────────────────────
 
-export const AUTOMACOES = ['retorno', 'aniversario', 'clube', 'pesquisa', 'lembrete'] as const;
+export const AUTOMACOES = [
+  'retorno',
+  'aniversario',
+  'clube',
+  'espera',
+  'pesquisa',
+  'lembrete',
+] as const;
 export type Automacao = (typeof AUTOMACOES)[number];
 
 export const NOME_AUTOMACAO: Readonly<Record<Automacao, string>> = {
   retorno: 'Convite de retorno',
   aniversario: 'Aniversário',
   clube: 'Aviso de vencimento do clube',
+  espera: 'Oferta da lista de espera',
   pesquisa: 'Pesquisa depois do atendimento',
   lembrete: 'Lembrete do horário',
 };

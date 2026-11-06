@@ -25,7 +25,7 @@ import { Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade } from '../comum/escopo.js';
 import { ComandasService } from '../comandas/comandas.service.js';
 import { EventosService, Filas } from '../filas/filas.module.js';
-import { avisarEquipe } from './aviso-equipe.js';
+import { avisarEquipe, liberarVaga } from './aviso-equipe.js';
 import { emSequencia } from '../comum/sequencia.js';
 
 const BALCAO = ['dono', 'gestor', 'recepcao'] as const;
@@ -255,6 +255,8 @@ export class AgendaService {
   }
 
   async remarcar(agendamentoId: string, novoInicio: string, profissionalId?: string) {
+    let liberado: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date } | null =
+      null;
     const comandaId = await this.banco.daConta(async (tx) => {
       const ag = await tx.agendamento.findUnique({ where: { id: agendamentoId } });
       if (!ag) throw Erros.naoEncontrado('Agendamento não encontrado.');
@@ -268,8 +270,11 @@ export class AgendaService {
         antes: r.antes,
         depois: { inicio, profissionalId: profissionalId ?? ag.profissionalId },
       });
+      liberado = { unidadeId: ag.unidadeId, ...r.antes };
       return r.comandaId;
     });
+    // O horário antigo vagou: oferecer para a lista de espera.
+    if (liberado) await liberarVaga(this.filas, Contexto.usuario().contaId, liberado);
     await this.agendarLembretes(Contexto.usuario().contaId, comandaId);
     await this.avisarEquipeDaComanda(Contexto.usuario().contaId, comandaId, 'remarcado');
     return this.comandas.buscar(comandaId);

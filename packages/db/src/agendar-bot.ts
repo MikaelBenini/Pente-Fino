@@ -29,6 +29,7 @@ import {
   textoEscolherCanal,
   textoLinkDoSite,
   type CanalAgendamento,
+  type VagaLiberada,
 } from '@pente-fino/shared';
 import {
   calcularLivres,
@@ -41,6 +42,7 @@ import {
 } from './agenda.js';
 import { criarLinkDoHorario, remarcarPeloCliente } from './link-horario.js';
 import { criarTokenDeAgendamento } from './token-agendamento.js';
+import { vagaDe } from './espera.js';
 import type { Prisma } from './generated/prisma/client.js';
 import { precoServicoVigente } from './vigencia.js';
 
@@ -58,6 +60,8 @@ export interface PassoDaAgenda {
   agendamento?: { id: string; inicio: string };
   /** O que mudou na agenda, para avisar o profissional (assistente da equipe). */
   mudanca?: { agendamentoId: string; tipo: 'novo' | 'remarcado' | 'cancelado' };
+  /** Horário que vagou (cancelou ou remarcou): vai para a lista de espera. */
+  vaga?: VagaLiberada;
 }
 
 export interface DadosDaConversa {
@@ -470,8 +474,9 @@ export async function passoDaAgenda(
           agenda: null,
           voltarAoMenu: false,
         };
+      let liberado;
       try {
-        await cancelarPeloCliente(tx, agenda.remarcarId!, 'WhatsApp');
+        liberado = await cancelarPeloCliente(tx, agenda.remarcarId!, 'WhatsApp');
       } catch (e) {
         if (e instanceof ErroAgenda) return sair([e.message]);
         throw e;
@@ -483,6 +488,7 @@ export async function passoDaAgenda(
         agenda: null,
         voltarAoMenu: false,
         mudanca: { agendamentoId: agenda.remarcarId!, tipo: 'cancelado' },
+        vaga: vagaDe(liberado.contaId, liberado),
       };
     }
     case 'servico': {
@@ -570,6 +576,7 @@ export async function passoDaAgenda(
             comandaId: r2.comandaId,
             agendamento: { id: agenda.remarcarId, inicio: agenda.escolha!.inicio },
             mudanca: { agendamentoId: agenda.remarcarId, tipo: 'remarcado' },
+            vaga: vagaDe(r2.contaId, { ...r2.antes, unidadeId: r2.unidadeId }),
           };
         }
         const criado = await criarAgendamentoNoBanco(tx, {

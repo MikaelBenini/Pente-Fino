@@ -2,6 +2,7 @@ import {
   avisarEquipeSobreHorario,
   avisarFaltaParaGestao,
   notificacaoDoHorario,
+  vagaDe,
 } from '@pente-fino/db';
 import type { MudancaNaAgenda } from '@pente-fino/shared';
 import type { BancoService } from '../comum/banco.service.js';
@@ -54,4 +55,16 @@ export async function avisarFalta(
   } catch {
     // Sem aviso a falta continua registrada; aparece no resumo e nas métricas.
   }
+}
+
+/** Vagou um horário: o worker oferece para a lista de espera. Nunca impede a operação. */
+export async function liberarVaga(
+  filas: Filas,
+  contaId: string,
+  a: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date },
+): Promise<void> {
+  const vaga = vagaDe(contaId, a);
+  await filas.whatsappEntrada
+    .add('vaga', vaga, { jobId: `vaga_${a.profissionalId}_${a.inicio.getTime()}_${Date.now()}` })
+    .catch(() => undefined);
 }

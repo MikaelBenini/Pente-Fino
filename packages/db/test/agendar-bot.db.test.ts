@@ -14,7 +14,10 @@ import {
   rodarRotinaEquipe,
   contasComAutomacoes,
   contextoDaConversa,
+  cancelarPeloCliente,
   criarPrisma,
+  oferecerVaga,
+  vagaDe,
   numerosDasAutomacoes,
   rodarAutomacoes,
   encerrarEsperaDoAtendente,
@@ -1158,5 +1161,96 @@ describe('clube: aviso de vencimento e opção no bot', () => {
       emDia: true,
       restantes: [{ servico: 'Corte', restam: 4 }],
     });
+  });
+});
+
+describe('lista de espera', () => {
+  // Terça, 22/12, 09:00 local (12:00Z): o horário que vai vagar.
+  const vagaInicio = '2026-12-22T12:00:00.000Z';
+  const agoraEspera = new Date('2026-12-01T12:00:00Z');
+  const tel = { dono: '5511944000001', b: '5511944000002', c: '5511944000003' };
+
+  async function clienteQueConversou(telefone: string) {
+    await fala(telefone, 'oi', new Date('2026-11-20T12:00:00Z'));
+    return naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone } });
+      await tx.cliente.update({ where: { id: c.id }, data: { consentimentoMsg: true } });
+      return c.id;
+    });
+  }
+
+  it('um cancelamento vira atendimento de quem está na lista, sem a recepção intervir', async () => {
+    const dono = await clienteQueConversou(tel.dono);
+    const b = await clienteQueConversou(tel.b);
+    const c = await clienteQueConversou(tel.c);
+    const agId = await naMinhaConta(async (tx) => {
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: dono,
+        inicio: new Date(vagaInicio),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      // B pediu primeiro (9h às 11h, com o Rafael); C depois (qualquer um).
+      for (const [clienteId, prof] of [
+        [b, profissionalId],
+        [c, null],
+      ] as const)
+        await tx.listaEspera.create({
+          data: {
+            unidadeId,
+            clienteId,
+            profissionalId: prof,
+            servicoIds: [corte],
+            dia: new Date('2026-12-22T00:00:00Z'),
+            deMin: 9 * 60,
+            ateMin: 11 * 60,
+            origem: 'balcao',
+          },
+        });
+      return r.agendamentoId;
+    });
+
+    // O dono do horário cancela: a vaga vai para a lista, na ordem.
+    const liberado = await naMinhaConta((tx) => cancelarPeloCliente(tx, agId, 'WhatsApp'));
+    const oferta = await oferecerVaga(prisma, vagaDe(conta, liberado), agoraEspera);
+    expect(oferta?.mensagemIds).toHaveLength(2);
+    const textoB = await naMinhaConta((tx) =>
+      tx.mensagem.findFirstOrThrow({ where: { telefone: tel.b, automacao: 'espera' } }),
+    );
+    expect(textoB.texto).toContain('Vagou um horário que você pediu:');
+    expect(textoB.texto).toContain('09:00 com Rafael');
+
+    // B responde "1" primeiro: leva; C fica sabendo que foi preenchido.
+    const resposta = new Date(agoraEspera.getTime() + 5 * 60_000);
+    expect(await fala(tel.b, '1', resposta)).toContain('Pronto, horário marcado');
+    const marcado = await naMinhaConta((tx) =>
+      tx.agendamento.findFirst({
+        where: { clienteId: b, inicio: new Date(vagaInicio), status: 'agendado' },
+        include: { comanda: true },
+      }),
+    );
+    expect(marcado?.comanda?.status).toBe('prevista');
+    const avisoC = await naMinhaConta((tx) =>
+      tx.mensagem.findMany({
+        where: { telefone: tel.c, automacao: 'espera' },
+        orderBy: { criadoEm: 'asc' },
+      }),
+    );
+    expect(avisoC.at(-1)?.texto).toContain('acabou de ser preenchido');
+    const pedidos = await naMinhaConta((tx) =>
+      tx.listaEspera.findMany({
+        where: { clienteId: { in: [b, c] } },
+        orderBy: { criadoEm: 'asc' },
+      }),
+    );
+    expect(pedidos.map((x) => x.status)).toEqual(['atendido', 'aguardando']);
+
+    // C responde depois: a oferta não vale mais.
+    expect(await fala(tel.c, '1', new Date(resposta.getTime() + 60_000))).toContain(
+      'não vale mais',
+    );
   });
 });

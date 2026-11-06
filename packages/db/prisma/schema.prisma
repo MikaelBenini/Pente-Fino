@@ -129,6 +129,24 @@ enum StatusAdesao {
   @@map("status_adesao")
 }
 
+enum StatusEspera {
+  aguardando
+  oferecido
+  atendido
+  cancelado
+
+  @@map("status_espera")
+}
+
+enum OrigemEspera {
+  balcao
+  bot
+  site
+  antecipar
+
+  @@map("origem_espera")
+}
+
 enum GrupoDespesa {
   fixa
   variavel
@@ -286,6 +304,7 @@ model Conta {
   servicosClube      ItemClubeServico[]
   adesoesClube       AdesaoClube[]
   pagamentosClube    PagamentoClube[]
+  listaEspera        ListaEspera[]
 
   @@map("conta")
 }
@@ -336,6 +355,8 @@ model Unidade {
   tokenAgendamentos TokenAgendamento[]
 
   itensClube ItemClube[]
+
+  listaEspera ListaEspera[]
 
   @@index([contaId])
   @@map("unidade")
@@ -468,6 +489,8 @@ model Profissional {
   itensComanda       ItemComanda[]
   pagamentosComissao PagamentoComissao[]
   avaliacoes         Avaliacao[]
+
+  listaEspera ListaEspera[]
 
   @@unique([usuarioId, unidadeId])
   @@index([contaId])
@@ -636,6 +659,8 @@ model Cliente {
 
   adesoesClube AdesaoClube[]
 
+  listaEspera ListaEspera[]
+
   @@unique([contaId, telefone])
   @@index([contaId, nome])
   @@map("cliente")
@@ -692,6 +717,8 @@ model Agendamento {
   criadoPor    Usuario?     @relation("AgendamentoCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
   link         LinkHorario?
   comanda      Comanda?
+
+  listaEspera ListaEspera[]
 
   @@index([contaId])
   @@index([profissionalId, inicio])
@@ -1339,4 +1366,39 @@ model PagamentoClube {
   @@index([contaId, pagoEm])
   @@index([adesaoId])
   @@map("pagamento_clube")
+}
+
+/// Lista de espera: o cliente quer um horário no dia, numa faixa, com um profissional (ou
+/// qualquer um). Quando vaga um horário que cabe, o bot oferece na ordem de chegada.
+model ListaEspera {
+  id             String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String       @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId      String       @map("unidade_id") @db.Uuid
+  clienteId      String       @map("cliente_id") @db.Uuid
+  /// null = qualquer profissional.
+  profissionalId String?      @map("profissional_id") @db.Uuid
+  servicoIds     String[]     @map("servico_ids") @db.Uuid
+  dia            DateTime     @db.Date
+  /// Faixa em minutos desde 00:00 (São Paulo) em que o atendimento pode começar.
+  deMin          Int          @map("de_min")
+  ateMin         Int          @map("ate_min")
+  origem         OrigemEspera
+  /// "Avisar se vagar antes": o horário que o cliente já tem e quer antecipar.
+  agendamentoId  String?      @map("agendamento_id") @db.Uuid
+  status         StatusEspera @default(aguardando)
+  /// Oferta em aberto: { inicio, profissionalId, enviadaEm }.
+  oferta         Json?
+  criadoPorId    String?      @map("criado_por_id") @db.Uuid
+  criadoEm       DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade      Unidade       @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  cliente      Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  profissional Profissional? @relation(fields: [profissionalId], references: [id], onDelete: SetNull)
+  agendamento  Agendamento?  @relation(fields: [agendamentoId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([unidadeId, dia, status])
+  @@map("lista_espera")
 }

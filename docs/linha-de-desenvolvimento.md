@@ -365,8 +365,8 @@ Assinatura, combos e convênios reconhecidos na comanda, com o dono vendo se o c
 
 Horário vago vira atendimento sem a recepção pegar o telefone.
 
-- [ ] Lista de espera: o cliente pede dia, faixa de horário e profissional, pelo balcão, pelo bot ou pelo site
-- [ ] Quando um horário vaga, o bot oferece para a lista em ordem; o primeiro que confirmar leva e os demais recebem "já foi preenchido"
+- [ ] Lista de espera: o cliente pede dia, faixa de horário e profissional, pelo balcão, pelo bot ou pelo site (em parte: pelo balcão, Agenda → "Lista de espera": cliente (ou cadastro na hora), serviços, barbeiro ou qualquer um, dia e faixa de horário; a lista mostra a ordem, a origem e a oferta em aberto; tirar da lista. `lista_espera` com RLS e auditoria. Falta entrar pelo bot e pelo site, na próxima entrega)
+- [x] Quando um horário vaga, o bot oferece para a lista em ordem; o primeiro que confirmar leva e os demais recebem "já foi preenchido" (feito: cancelamento ou falta na comanda, remarcação pelo balcão, cancelar ou remarcar pelo link ou pela conversa põem a vaga na fila (`vaga`); o worker escolhe, na ordem de chegada, quem cabe (dia, faixa, barbeiro ou qualquer um, a duração dos serviços cabendo na agenda, com aceite de mensagens e conversa com a unidade) e oferece para até 3 ao mesmo tempo, com validade de 30 min; a resposta "1" marca com comanda prevista (ou antecipa o horário que a pessoa tem), "2" recusa e continua na lista; os outros recebem "já foi preenchido" e voltam a esperar; resposta atrasada recebe "a oferta não vale mais". Os números aparecem em Automações como "Oferta da lista de espera")
 - [ ] Encaixe: a recepção marca fora da grade, com aviso de conflito
 - [ ] Bloqueio recorrente (almoço toda terça) e férias do profissional
 - [ ] Ocupação por unidade, profissional e faixa de horário (com a capacidade da unidade) no Início e na ficha do profissional
@@ -392,7 +392,7 @@ Horário vago vira atendimento sem a recepção pegar o telefone.
   - Se mudou o horário, o cliente recebe aviso pelo bot (se aceita mensagens); se mudou só o barbeiro, o dono escolhe se avisa
   - No celular não arrasta (tela pequena): o mesmo movimento pelo botão "Mover" da comanda, com a escolha de barbeiro e horário. Pelo teclado também, para acessibilidade
   - Biblioteca de arrastar com suporte a toque e teclado (`@dnd-kit`); teste Playwright arrastando entre colunas
-- [ ] **Pronto quando:** um cancelamento vira atendimento de alguém da lista de espera sem a recepção intervir
+- [x] **Pronto quando:** um cancelamento vira atendimento de alguém da lista de espera sem a recepção intervir (conferido no teste de banco `lista de espera` em `packages/db/test/agendar-bot.db.test.ts`: o dono do horário cancela, a vaga é oferecida na ordem, o primeiro "1" vira agendamento com comanda prevista e o outro recebe "já foi preenchido", sem ninguém do balcão)
 
 ## Etapa 15 · Avisos, rotinas, rede e planos
 

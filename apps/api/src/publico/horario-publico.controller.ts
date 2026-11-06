@@ -19,7 +19,7 @@ import {
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { AgendaService, traduzir } from '../agenda/agenda.service.js';
-import { avisarEquipe } from '../agenda/aviso-equipe.js';
+import { avisarEquipe, liberarVaga } from '../agenda/aviso-equipe.js';
 import { LimiteAutenticacao, Publico } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
@@ -132,6 +132,8 @@ export class HorarioPublicoController {
   ): Promise<HorarioDoLink> {
     const l = await this.link(token);
     const inicio = new Date(d.inicio);
+    let liberado: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date } | null =
+      null;
     const comandaId = await this.banco.naConta(l.contaId, async (tx) => {
       if ((await estadoAssinatura(tx)).somenteLeitura)
         throw Erros.conflito('Por aqui não dá para mudar agora. Fale com a barbearia.');
@@ -141,8 +143,10 @@ export class HorarioPublicoController {
       if (inicio.getTime() < Date.now() + regras.antecedenciaMin * 60_000)
         throw Erros.requisicaoInvalida('horario_passado', 'Este horário não está mais livre.');
       const r = await traduzir(() => remarcarPeloCliente(tx, l.agendamentoId, inicio, 'link'));
+      liberado = { unidadeId: r.unidadeId, ...r.antes };
       return r.comandaId;
     });
+    if (liberado) await liberarVaga(this.filas, l.contaId, liberado);
     await this.agenda.agendarLembretes(l.contaId, comandaId);
     await avisarEquipe(this.banco, this.filas, l.contaId, l.agendamentoId, 'remarcado');
     return this.ver(token);
@@ -155,11 +159,12 @@ export class HorarioPublicoController {
   @ApiOperation({ summary: 'Cancelar pelo link (libera o horário, não conta como falta)' })
   async cancelar(@Param('token', tokenParam) token: string): Promise<HorarioDoLink> {
     const l = await this.link(token);
-    await this.banco.naConta(l.contaId, async (tx) => {
+    const liberado = await this.banco.naConta(l.contaId, async (tx) => {
       const { decisao } = await this.carregar(tx, l.agendamentoId);
       this.exigirQuePode(decisao);
-      await traduzir(() => cancelarPeloCliente(tx, l.agendamentoId, 'link'));
+      return traduzir(() => cancelarPeloCliente(tx, l.agendamentoId, 'link'));
     });
+    await liberarVaga(this.filas, l.contaId, liberado);
     await avisarEquipe(this.banco, this.filas, l.contaId, l.agendamentoId, 'cancelado');
     return this.ver(token);
   }

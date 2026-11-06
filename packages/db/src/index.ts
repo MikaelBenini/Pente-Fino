@@ -58,3 +58,4 @@ export * from './token-agendamento.js';
 export * from './push.js';
 export * from './automacoes.js';
 export * from './clube.js';
+export * from './espera.js';
