@@ -22,6 +22,8 @@ export interface ProvedorCobranca {
     referencia: string;
   }): Promise<{ id: string }>;
   cobrancasDaAssinatura(assinatura: string): Promise<CobrancaExterna[]>;
+  /** Troca de plano: valor e descrição novos, também nas cobranças ainda em aberto. */
+  atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }): Promise<void>;
 }
 
 export class ErroCobranca extends Error {}
@@ -108,6 +110,14 @@ export class ProvedorAsaas implements ProvedorCobranca {
     return { id: r.id };
   }
 
+  async atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }) {
+    await this.pedir('POST', `/subscriptions/${encodeURIComponent(assinatura)}`, {
+      value: d.valor / 100,
+      description: d.descricao,
+      updatePendingPayments: true,
+    });
+  }
+
   async cobrancasDaAssinatura(assinatura: string) {
     const r = await this.pedir<{ data: PagamentoAsaas[] }>(
       'GET',
@@ -145,6 +155,11 @@ export class ProvedorCobrancaFalso implements ProvedorCobranca {
 
   async cobrancasDaAssinatura(assinatura: string) {
     return this.assinaturas.get(assinatura) ?? [];
+  }
+
+  async atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }) {
+    for (const c of this.assinaturas.get(assinatura) ?? [])
+      if (c.status === 'PENDING') c.valor = d.valor;
   }
 
   pagar(assinatura: string, forma = 'PIX'): CobrancaExterna {

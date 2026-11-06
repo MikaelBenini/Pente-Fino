@@ -11,9 +11,12 @@ import {
   PLANOS,
   valorDaCobranca,
   type FaturaDetalhe,
+  type PlanoConta,
+  type PreviaTrocaPlano,
   type SituacaoAssinatura,
 } from '@pente-fino/shared';
-import { Botao, Campo, EstadoVazio, Selecao } from '@pente-fino/ui';
+import { Botao, Campo, cn, EstadoVazio, ModalConfirmacao, Selecao } from '@pente-fino/ui';
+import { useQuery } from '@tanstack/react-query';
 import { CreditCard, ExternalLink, Receipt, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
@@ -162,6 +165,8 @@ export function Assinatura() {
               <Assinar planoAtual={d.plano} cicloAtual={d.ciclo} unidades={d.unidades} />
             )}
             {d.cobrancaAutomatica && pendente && <ConferirPagamento />}
+
+            <MudarPlano atual={d.plano} />
 
             <section aria-labelledby="titulo-faturas" className="flex flex-col gap-3">
               <h2 id="titulo-faturas" className="text-xl font-semibold">
@@ -406,5 +411,129 @@ function ConferirPagamento() {
       </Botao>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
     </div>
+  );
+}
+
+/**
+ * Mudar de plano (o dono, sem falar com o suporte): subir vale na hora; descer mostra antes o
+ * que impede (limites) e o que deixa de usar, e pede confirmação.
+ */
+function MudarPlano({ atual }: { atual: PlanoConta }) {
+  const outros = PLANOS.filter((p) => p !== atual);
+  const [para, setPara] = useState<PlanoConta>(outros[0]!);
+  const [confirmar, setConfirmar] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [feito, setFeito] = useState<string | null>(null);
+  const previa = useQuery({
+    queryKey: [...chaveAssinatura, 'previa', para],
+    queryFn: () => api<PreviaTrocaPlano>(`conta/plano/previa?plano=${para}`),
+  });
+  const trocar = useAcao(
+    (plano: PlanoConta) =>
+      api<PreviaTrocaPlano>('conta/plano', { metodo: 'PUT', corpo: { plano } }),
+    [chaveAssinatura],
+  );
+  const p = previa.data;
+
+  async function aplicar() {
+    setConfirmar(false);
+    setErro(null);
+    try {
+      await trocar.mutateAsync(para);
+      setFeito(`Pronto: a conta está no plano ${NOME_PLANO[para]}.`);
+    } catch (e) {
+      setErro(mensagemDe(e));
+    }
+  }
+
+  return (
+    <section
+      aria-labelledby="titulo-mudar-plano"
+      className="flex flex-col gap-4 rounded-lg border border-borda bg-superficie p-5"
+    >
+      <div>
+        <h2 id="titulo-mudar-plano" className="text-lg font-semibold">
+          Mudar de plano
+        </h2>
+        <p className="text-sm text-tinta-suave">
+          Vale na hora. Com a cobrança automática, as cobranças em aberto e as próximas já vêm com o
+          valor novo. Nada do que foi lançado se perde.
+        </p>
+      </div>
+      {feito && <Aviso tom="sucesso">{feito}</Aviso>}
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      <div role="radiogroup" aria-label="Plano novo" className="flex flex-wrap gap-2">
+        {outros.map((o) => (
+          <button
+            key={o}
+            type="button"
+            role="radio"
+            aria-checked={para === o}
+            onClick={() => {
+              setPara(o);
+              setFeito(null);
+              setErro(null);
+            }}
+            className={cn(
+              'min-h-11 rounded-md border px-4 font-semibold focus-visible:outline-2 focus-visible:outline-foco',
+              para === o
+                ? 'border-modulo bg-modulo text-sobre-modulo'
+                : 'border-borda hover:border-borda-forte',
+            )}
+          >
+            {NOME_PLANO[o]}
+          </button>
+        ))}
+      </div>
+      {p && p.para === para && (
+        <div className="flex flex-col gap-3">
+          <p className="font-denso text-lg tabular-nums">
+            {formatarMoeda(p.valorAtual)} → <strong>{formatarMoeda(p.valorNovo)}</strong>{' '}
+            <span className="font-sans text-base text-tinta-suave">por mês</span>
+          </p>
+          {p.bloqueios.length > 0 && (
+            <Aviso tom="erro">
+              <span className="font-semibold">Antes de mudar:</span>
+              <ul className="mt-1 list-disc pl-5" aria-label="O que impede a troca">
+                {p.bloqueios.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            </Aviso>
+          )}
+          {p.perdas.length > 0 && (
+            <div>
+              <p className="text-sm font-medium">Deixa de usar:</p>
+              <ul
+                className="list-disc pl-5 text-sm text-tinta-suave"
+                aria-label="O que deixa de usar"
+              >
+                {p.perdas.map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Botao
+            className="self-start"
+            variante={p.sobe ? 'acao' : 'secundario'}
+            disabled={p.bloqueios.length > 0}
+            carregando={trocar.isPending}
+            onClick={() => (p.sobe ? aplicar() : setConfirmar(true))}
+          >
+            Mudar para o {NOME_PLANO[para]}
+          </Botao>
+        </div>
+      )}
+      <ModalConfirmacao
+        aberto={confirmar}
+        titulo={`Mudar para o ${NOME_PLANO[para]}?`}
+        descricao={`A conta deixa de usar ${p?.perdas.length ?? 0} ${p?.perdas.length === 1 ? 'recurso' : 'recursos'} agora mesmo. O que já foi lançado continua guardado e volta quando subir de plano.`}
+        textoConfirmar={`Mudar para o ${NOME_PLANO[para]}`}
+        carregando={trocar.isPending}
+        onConfirmar={aplicar}
+        onCancelar={() => setConfirmar(false)}
+      />
+    </section>
   );
 }

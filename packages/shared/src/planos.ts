@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { dataLocal } from './datas.js';
 
 // Limites dos planos (CLAUDE.md e docs/, seção 7). A API aplica; a tela explica.
@@ -169,3 +170,81 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
 ];
 
 export const incluiRecurso = (plano: PlanoConta, r: RecursoPlano) => ORDEM[plano] >= ORDEM[r.desde];
+
+// ─── Troca de plano pelo dono ─────────────────────────────────────────────
+
+/** O que a conta usa hoje e que pesa na troca de plano. */
+export interface UsoDaConta {
+  unidades: number;
+  profissionais: number;
+  /** Alguma unidade com o WhatsApp conectado (o bot responde sozinho). */
+  whatsappConectado: boolean;
+  adesoesAtivas: number;
+  esperaAguardando: number;
+}
+
+export interface PreviaTrocaPlano {
+  de: PlanoConta;
+  para: PlanoConta;
+  sobe: boolean;
+  /** Por mês, no ciclo da conta: o de hoje e o novo. */
+  valorAtual: number;
+  valorNovo: number;
+  /** Impede a troca: resolver antes (limites do plano novo). */
+  bloqueios: string[];
+  /** Deixa de usar (o que já foi lançado continua guardado). */
+  perdas: string[];
+}
+
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+
+/**
+ * Prévia da troca: subir vale na hora; descer só se a conta cabe no plano novo (unidades,
+ * profissionais ativos e, no Básico, WhatsApp desconectado) e mostra o que deixa de usar.
+ */
+export function conferirTrocaDePlano(d: {
+  de: PlanoConta;
+  para: PlanoConta;
+  ciclo: Ciclo;
+  uso: UsoDaConta;
+}): PreviaTrocaPlano {
+  const { de, para, uso } = d;
+  const limite = LIMITES_PLANO[para];
+  const bloqueios: string[] = [];
+  if (uso.unidades > limite.unidades)
+    bloqueios.push(
+      `O plano ${NOME_PLANO[para]} vai até ${plural(limite.unidades, 'unidade', 'unidades')}; a conta tem ${uso.unidades} ativas. Desative as que sobram em Configurações → Unidades.`,
+    );
+  if (uso.profissionais > limite.profissionais)
+    bloqueios.push(
+      `O plano ${NOME_PLANO[para]} vai até ${limite.profissionais} profissionais ativos; a conta tem ${uso.profissionais}. Registre a saída de quem não atende mais em Equipe.`,
+    );
+  if (!temRecurso(para, 'bot') && uso.whatsappConectado)
+    bloqueios.push(
+      `O bot do WhatsApp não faz parte do plano ${NOME_PLANO[para]}. Desconecte o WhatsApp em Bot → Conexão antes de mudar.`,
+    );
+  const perdas = (Object.keys(RECURSOS) as Recurso[])
+    .filter((r) => temRecurso(de, r) && !temRecurso(para, r))
+    .map((r) => {
+      const nome = RECURSOS[r].nome;
+      if (r === 'clube' && uso.adesoesAtivas > 0)
+        return `${nome} (${plural(uso.adesoesAtivas, 'assinante continua', 'assinantes continuam')} cadastrados, sem novas adesões nem baixas)`;
+      if (r === 'listaEspera' && uso.esperaAguardando > 0)
+        return `${nome} (${plural(uso.esperaAguardando, 'pessoa espera', 'pessoas esperam')} hoje; deixam de receber ofertas)`;
+      return nome;
+    });
+  return {
+    de,
+    para,
+    sobe: ORDEM[para] > ORDEM[de],
+    valorAtual: precoPorMes(de, d.ciclo, uso.unidades),
+    valorNovo: precoPorMes(para, d.ciclo, uso.unidades),
+    bloqueios,
+    perdas,
+  };
+}
+
+export const trocarPlanoSchema = z.object({
+  plano: z.enum(PLANOS, { error: 'Escolha o plano.' }),
+});
+export type TrocarPlanoEntrada = z.infer<typeof trocarPlanoSchema>;

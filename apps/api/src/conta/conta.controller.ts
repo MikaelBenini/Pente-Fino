@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, Inject, Patch, Post } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Inject, Patch, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { estadoAssinatura } from '@pente-fino/db';
 import {
@@ -11,13 +11,16 @@ import {
   type ContaEntrada,
   type EstadoDaConta,
   type FaturaDetalhe,
+  trocarPlanoSchema,
+  type PreviaTrocaPlano,
+  type TrocarPlanoEntrada,
 } from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { LivreSemAssinatura, Papeis } from '../auth/decoradores.js';
 import { CobrancaService } from '../cobranca/cobranca.service.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
-import { Corpo } from '../comum/validacao.js';
+import { Consulta, Corpo } from '../comum/validacao.js';
 import { emSequencia } from '../comum/sequencia.js';
 
 @ApiTags('Conta')
@@ -92,6 +95,27 @@ export class ContaController {
   })
   assinar(@Corpo(assinarSchema) d: AssinarEntrada) {
     return this.cobranca.assinar(d);
+  }
+
+  @Get('plano/previa')
+  @Papeis('dono')
+  @LivreSemAssinatura()
+  @ApiOperation({
+    summary: 'Prévia da troca de plano: valor novo, o que impede e o que deixa de usar',
+  })
+  previaPlano(@Consulta(trocarPlanoSchema) d: TrocarPlanoEntrada): Promise<PreviaTrocaPlano> {
+    return this.cobranca.previaTroca(d.plano);
+  }
+
+  @Put('plano')
+  @Papeis('dono')
+  @LivreSemAssinatura()
+  @Auditada()
+  @ApiOperation({
+    summary: 'Trocar de plano (subir vale na hora; descer só cabendo no plano novo)',
+  })
+  trocarPlano(@Corpo(trocarPlanoSchema) d: TrocarPlanoEntrada): Promise<PreviaTrocaPlano> {
+    return this.cobranca.trocarPlano(d.plano);
   }
 
   @Post('assinatura/conferir')

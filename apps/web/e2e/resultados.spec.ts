@@ -179,3 +179,34 @@ test('plano Básico: recursos do Pro e do Premium aparecem com convite, sem queb
   await page.getByRole('tab', { name: 'Comissões' }).click();
   await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toBeVisible();
 });
+
+test('o dono muda de plano sozinho: sobe na hora e desce confirmando o que perde', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'a mesma conta nos dois aparelhos: um só basta');
+  await entrar(page, 'basico@demo.pentefino.dev');
+  await page.goto('/configuracoes?aba=assinatura');
+  const secao = page.getByRole('region', { name: 'Mudar de plano' });
+  await secao.getByRole('radio', { name: 'Pro' }).click();
+  await expect(secao).toContainText('R$');
+  await secao.getByRole('button', { name: 'Mudar para o Pro' }).click();
+  await expect(secao.getByText('Pronto: a conta está no plano Pro.')).toBeVisible();
+  // Já vale: o convite do Pro some em Métricas (o do Premium continua).
+  await page.goto('/metricas');
+  await expect(page.getByRole('note', { name: 'Disponível no plano Premium' })).toBeVisible();
+  await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toHaveCount(0);
+
+  // Voltar ao Básico: mostra o que deixa de usar e pede confirmação.
+  await page.goto('/configuracoes?aba=assinatura');
+  const de_novo = page.getByRole('region', { name: 'Mudar de plano' });
+  await de_novo.getByRole('radio', { name: 'Básico' }).click();
+  await expect(de_novo.getByRole('list', { name: 'O que deixa de usar' })).toContainText(
+    'Comissão automática',
+  );
+  await de_novo.getByRole('button', { name: 'Mudar para o Básico' }).click();
+  await page
+    .getByRole('dialog', { name: 'Mudar para o Básico?' })
+    .getByRole('button', { name: 'Mudar para o Básico' })
+    .click();
+  await expect(de_novo.getByText('Pronto: a conta está no plano Básico.')).toBeVisible();
+});

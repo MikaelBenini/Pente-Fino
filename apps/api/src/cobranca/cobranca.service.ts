@@ -9,8 +9,13 @@ import {
   valorDaCobranca,
   type AssinarEntrada,
   type CobrancaExterna,
+  conferirTrocaDePlano,
+  type PlanoConta,
+  type PreviaTrocaPlano,
+  type UsoDaConta,
 } from '@pente-fino/shared';
 import { AssinaturaGuard } from '../assinatura/assinatura.guard.js';
+import { PlanoGuard } from '../assinatura/plano.guard.js';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
@@ -59,6 +64,7 @@ export class CobrancaService {
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(PROVEDOR_COBRANCA) private readonly provedor: ProvedorCobranca,
     @Inject(AssinaturaGuard) private readonly trava: AssinaturaGuard,
+    @Inject(PlanoGuard) private readonly planos: PlanoGuard,
   ) {}
 
   private async externo<T>(fn: () => Promise<T>): Promise<T> {
@@ -143,6 +149,60 @@ export class CobrancaService {
       }),
     );
     return { linkPagamento: pendente?.linkPagamento ?? null };
+  }
+
+  /** Uso da conta e prévia da troca para o plano escolhido. */
+  async previaTroca(para: PlanoConta): Promise<PreviaTrocaPlano> {
+    return this.banco.daConta(async (tx) => {
+      const conta = await tx.conta.findFirstOrThrow();
+      const hoje = dataLocal(new Date());
+      const uso: UsoDaConta = {
+        unidades: await tx.unidade.count({ where: { ativa: true } }),
+        profissionais: await tx.profissional.count({ where: { ativo: true } }),
+        whatsappConectado: (await tx.botConexao.count({ where: { status: 'conectado' } })) > 0,
+        adesoesAtivas: await tx.adesaoClube.count({ where: { status: 'ativa' } }),
+        esperaAguardando: await tx.listaEspera.count({
+          where: { status: 'aguardando', dia: { gte: new Date(`${hoje}T00:00:00Z`) } },
+        }),
+      };
+      return conferirTrocaDePlano({ de: conta.plano, para, ciclo: conta.ciclo ?? 'mensal', uso });
+    });
+  }
+
+  /**
+   * O dono troca de plano: subir vale na hora; descer só se a conta cabe no plano novo. Com
+   * assinatura no Asaas, o valor novo vale também para as cobranças em aberto.
+   */
+  async trocarPlano(para: PlanoConta): Promise<PreviaTrocaPlano> {
+    const previa = await this.previaTroca(para);
+    if (previa.de === para) throw Erros.conflito(`A conta já está no plano ${NOME_PLANO[para]}.`);
+    if (previa.bloqueios.length)
+      throw Erros.requisicaoInvalida('limite_plano', previa.bloqueios.join(' '));
+    const conta = await this.banco.daConta((tx) => tx.conta.findFirstOrThrow());
+    const ciclo = conta.ciclo ?? 'mensal';
+    if (conta.asaasAssinaturaId) {
+      const unidades = await this.banco.daConta((tx) =>
+        tx.unidade.count({ where: { ativa: true } }),
+      );
+      await this.externo(() =>
+        this.provedor.atualizarAssinatura(conta.asaasAssinaturaId!, {
+          valor: valorDaCobranca(para, ciclo, unidades),
+          descricao: `Pente Fino ${NOME_PLANO[para]} (${ciclo})`,
+        }),
+      );
+    }
+    await this.banco.daConta(async (tx) => {
+      await tx.conta.update({ where: { id: conta.id }, data: { plano: para } });
+      await auditar(tx, {
+        entidade: 'conta',
+        entidadeId: conta.id,
+        acao: 'trocar_plano',
+        antes: { plano: previa.de },
+        depois: { plano: para, perdas: previa.perdas },
+      });
+    });
+    this.planos.esquecer(conta.id);
+    return previa;
   }
 
   /** "Já paguei, conferir": busca as cobranças no Asaas e atualiza as faturas. */
