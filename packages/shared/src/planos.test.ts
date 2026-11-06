@@ -3,6 +3,7 @@ import {
   diasRestantesTeste,
   incluiRecurso,
   precoPorMes,
+  conferirTrocaDePlano,
   RECURSOS,
   RECURSOS_PLANO,
   temRecurso,
@@ -90,5 +91,60 @@ describe('recursos por plano', () => {
       const item = RECURSOS_PLANO.find((x) => x.recurso === r);
       expect(item?.desde).toBe(RECURSOS[r].desde);
     }
+  });
+});
+
+describe('troca de plano', () => {
+  const uso = {
+    unidades: 1,
+    profissionais: 4,
+    whatsappConectado: true,
+    adesoesAtivas: 12,
+    esperaAguardando: 0,
+  };
+
+  it('subir: sem bloqueio nem perda, com o valor novo', () => {
+    const p = conferirTrocaDePlano({
+      de: 'basico',
+      para: 'pro',
+      ciclo: 'mensal',
+      uso: { ...uso, whatsappConectado: false },
+    });
+    expect(p).toMatchObject({
+      sobe: true,
+      valorAtual: 7990,
+      valorNovo: 14990,
+      bloqueios: [],
+      perdas: [],
+    });
+  });
+
+  it('descer para o Básico: limites e WhatsApp bloqueiam; o que se perde aparece', () => {
+    const p = conferirTrocaDePlano({ de: 'pro', para: 'basico', ciclo: 'anual', uso });
+    expect(p.sobe).toBe(false);
+    expect(p.valorNovo).toBe(6690);
+    expect(p.bloqueios).toEqual([
+      'O plano Básico vai até 3 profissionais ativos; a conta tem 4. Registre a saída de quem não atende mais em Equipe.',
+      'O bot do WhatsApp não faz parte do plano Básico. Desconecte o WhatsApp em Bot → Conexão antes de mudar.',
+    ]);
+    expect(p.perdas).toContain(
+      'Clube da barbearia: assinatura, combos e convênios (12 assinantes continuam cadastrados, sem novas adesões nem baixas)',
+    );
+    expect(p.perdas).toHaveLength(8);
+  });
+
+  it('descer do Premium para o Pro com duas unidades: bloqueia', () => {
+    const p = conferirTrocaDePlano({
+      de: 'premium',
+      para: 'pro',
+      ciclo: 'mensal',
+      uso: { ...uso, unidades: 2 },
+    });
+    expect(p.bloqueios[0]).toMatch(/^O plano Pro vai até 1 unidade; a conta tem 2 ativas/);
+    expect(p.perdas).toEqual([
+      'Várias unidades e painel da rede',
+      'Lucro real e margem por serviço e produto',
+      'Automações do bot: retorno, aniversário e aviso do clube',
+    ]);
   });
 });

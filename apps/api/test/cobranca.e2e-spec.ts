@@ -1,7 +1,12 @@
 // Etapa 10.1: assinar pelo Asaas (provedor falso), conferir o pagamento e o webhook.
 import type { INestApplication } from '@nestjs/common';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
-import { dataLocal, type AssinaturaDetalhe, type EstadoAssinatura } from '@pente-fino/shared';
+import {
+  dataLocal,
+  type AssinaturaDetalhe,
+  type EstadoAssinatura,
+  type PreviaTrocaPlano,
+} from '@pente-fino/shared';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AssinaturaGuard } from '../src/assinatura/assinatura.guard.js';
@@ -169,5 +174,45 @@ describe('webhook do Asaas', () => {
     }).expect(200);
     d = (await dono.get('/conta/assinatura').expect(200)).body as AssinaturaDetalhe;
     expect(d.faturas.map((f) => f.status).sort()).toEqual(['cancelada', 'paga']);
+  });
+});
+
+describe('troca de plano pelo dono', () => {
+  it('descer confere os limites; trocar vale na hora e muda o valor das cobranças em aberto', async () => {
+    const assinatura = (await conta()).asaasAssinaturaId!;
+    // Uma cobrança ainda em aberto no Asaas: deve passar a ter o valor do plano novo.
+    provedor.assinaturas.get(assinatura)!.push({
+      id: 'pay_falso_aberta',
+      status: 'PENDING',
+      valor: 24990 + 9990,
+      vencimento: hoje,
+      link: null,
+      forma: null,
+      pagaEm: null,
+    });
+    const previa = (await dono.get('/conta/plano/previa?plano=pro').expect(200))
+      .body as PreviaTrocaPlano;
+    expect(previa).toMatchObject({ de: 'premium', para: 'pro', sobe: false });
+    expect(previa.bloqueios[0]).toMatch(/^O plano Pro vai até 1 unidade; a conta tem 2 ativas/);
+    expect(previa.perdas).toContain('Várias unidades e painel da rede');
+    await gestor.put('/conta/plano', { plano: 'pro' }).expect(403);
+    const recusa = await dono.put('/conta/plano', { plano: 'pro' }).expect(400);
+    expect(recusa.body.erro.codigo).toBe('limite_plano');
+
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.unidade.update({ where: { id: a.unidadeB }, data: { ativa: false } }),
+    );
+    await dono.put('/conta/plano', { plano: 'pro' }).expect(200);
+    expect((await conta()).plano).toBe('pro');
+    expect(
+      provedor.assinaturas.get(assinatura)!.find((c) => c.id === 'pay_falso_aberta')!.valor,
+    ).toBe(14990);
+    // Vale na hora: o painel da rede (Premium) já fecha.
+    await dono.get(`/rede?de=${hoje}&ate=${hoje}`).expect(403);
+    await dono.put('/conta/plano', { plano: 'pro' }).expect(409);
+
+    // Subir de volta: sem bloqueio, libera na hora.
+    await dono.put('/conta/plano', { plano: 'premium' }).expect(200);
+    await dono.get(`/rede?de=${hoje}&ate=${hoje}`).expect(200);
   });
 });
