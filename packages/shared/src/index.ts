@@ -18,6 +18,7 @@ export * from './permissoes.js';
 export * from './planos.js';
 export * from './publico.js';
 export * from './link-horario.js';
+export * from './push.js';
 export * from './vigencia.js';
 export * from './desempenho.js';
 export * from './resumo-dia.js';

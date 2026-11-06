@@ -6,6 +6,20 @@ export const FILA_EVENTOS = 'eventos';
 export const FILA_WHATSAPP_ENTRADA = 'whatsapp-entrada';
 /** Mensagens para enviar, uma por trabalho, espaçadas por número da barbearia. */
 export const FILA_WHATSAPP_SAIDA = 'whatsapp-saida';
+/** Notificações no celular (push do PWA). */
+export const FILA_NOTIFICACOES = 'notificacoes';
+
+/** Uma notificação para todos os aparelhos que a pessoa ligou. */
+export interface TrabalhoNotificacao {
+  contaId: string;
+  usuarioId: string;
+  titulo: string;
+  corpo: string;
+  /** Tela que abre ao tocar (caminho do app). */
+  url: string;
+  /** Mesma etiqueta substitui a notificação anterior no aparelho. */
+  etiqueta?: string;
+}
 
 export type StatusConexaoWhatsapp = 'desconectado' | 'aguardando_qr' | 'conectado';
 

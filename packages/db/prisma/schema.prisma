@@ -257,6 +257,7 @@ model Conta {
   assistentes        AssistenteEquipe[]
   linksHorario       LinkHorario[]
   tokensAgendamento  TokenAgendamento[]
+  inscricoesPush     InscricaoPush[]
 
   @@map("conta")
 }
@@ -354,6 +355,7 @@ model Usuario {
   auditorias          Auditoria[]
   tokenAcessos        TokenAcesso[]
   assistente          AssistenteEquipe?
+  inscricoesPush      InscricaoPush[]
 
   @@index([contaId])
   @@map("usuario")
@@ -1166,4 +1168,24 @@ model TokenAgendamento {
 
   @@index([contaId])
   @@map("token_agendamento")
+}
+
+/// Aparelho que ligou as notificações no Perfil (push do PWA). Some quando o navegador
+/// avisa que a inscrição acabou (404/410) ou a pessoa desliga.
+model InscricaoPush {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId   String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId String   @map("usuario_id") @db.Uuid
+  endpoint  String
+  p256dh    String
+  auth      String
+  aparelho  String?
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([contaId, endpoint])
+  @@index([usuarioId])
+  @@map("inscricao_push")
 }

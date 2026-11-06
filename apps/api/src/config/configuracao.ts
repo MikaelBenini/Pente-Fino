@@ -24,6 +24,8 @@ const esquema = z
     API_PORT: z.coerce.number().int().positive().default(3001),
     APP_URL: z.url(),
     API_URL: z.url(),
+    /** Push do PWA: só a pública vai para o navegador; sem ela, o Perfil diz que está desligado. */
+    VAPID_CHAVE_PUBLICA: z.string().default(''),
     DATABASE_URL: z.string().startsWith('postgresql://'),
     REDIS_URL: z.string().startsWith('redis://'),
     JWT_ACCESS_SECRET: z.string().min(16),
@@ -131,6 +133,8 @@ export interface Configuracao {
     /** null: webhook desligado (dev sem endereço público; use "conferir pagamento"). */
     webhookToken: string | null;
   };
+  /** Chave pública VAPID (push do PWA); null = notificações no celular desligadas. */
+  vapidChavePublica: string | null;
 }
 
 export const CONFIGURACAO = Symbol('CONFIGURACAO');
@@ -175,5 +179,6 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
       asaasChave: e.ASAAS_API_KEY,
       webhookToken: e.ASAAS_WEBHOOK_TOKEN ?? null,
     },
+    vapidChavePublica: e.VAPID_CHAVE_PUBLICA || null,
   };
 }

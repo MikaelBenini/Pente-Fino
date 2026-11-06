@@ -23,11 +23,13 @@ import {
   type ResultadoAtendimento,
 } from '@pente-fino/db';
 import {
+  FILA_NOTIFICACOES,
   FILA_WHATSAPP_ENTRADA,
   FILA_WHATSAPP_SAIDA,
   ESPERA_ATENDENTE_MAX_MIN,
   NOTA_BAIXA_ESPERA_MIN,
   proximoEnvio,
+  type TrabalhoNotificacao,
   type TrabalhoWhatsappEntrada,
   type TrabalhoWhatsappSaida,
 } from '@pente-fino/shared';
@@ -109,6 +111,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
   private saida?: Worker<TrabalhoWhatsappSaida>;
   private filaSaida?: Queue<TrabalhoWhatsappSaida>;
   private filaEntrada?: Queue<TrabalhoWhatsappEntrada>;
+  private filaNotificacoes?: Queue<TrabalhoNotificacao>;
   private redis?: Redis;
 
   constructor(
@@ -137,6 +140,16 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
       defaultJobOptions: { removeOnComplete: { count: 1_000 }, removeOnFail: { count: 5_000 } },
     });
     this.filaEntrada = filaEntrada;
+    const filaNotificacoes = new Queue<TrabalhoNotificacao>(FILA_NOTIFICACOES, {
+      connection,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5_000 },
+        removeOnComplete: { count: 1_000 },
+        removeOnFail: { count: 5_000 },
+      },
+    });
+    this.filaNotificacoes = filaNotificacoes;
     const redis = new Redis(this.config.REDIS_URL, { maxRetriesPerRequest: 3 });
     this.redis = redis;
     const chave = (instancia: string) => `whatsapp:proximo-envio:${instancia}`;
@@ -246,6 +259,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           for (const l of trabalhos)
             await filaEntrada.add(l.dados.tipo, l.dados, { delay: l.atrasoMs, jobId: l.jobId });
         }
+        if (r.notificacao) await filaNotificacoes.add('push', r.notificacao);
         if (r.notaBaixa) {
           const t = trabalhoNotaBaixa(
             r.contaId,
@@ -306,6 +320,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
     await Promise.all([this.entrada?.close(), this.saida?.close()]);
     await this.filaSaida?.close();
     await this.filaEntrada?.close();
+    await this.filaNotificacoes?.close();
     this.redis?.disconnect();
   }
 }

@@ -28,6 +28,7 @@ import {
   type FimDaEsperaDoAtendente,
   TEXTO_AGENDAR_POR_AQUI,
   type CanalAgendamento,
+  type TrabalhoNotificacao,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -39,6 +40,7 @@ import {
   type PassoDaAgenda,
 } from './agendar-bot.js';
 import { atenderEquipe, avisarEquipeSobreHorario } from './equipe-whatsapp.js';
+import { notificacaoDoHorario } from './push.js';
 import { confirmarPeloCliente } from './lembretes.js';
 import { gravarRespostaPesquisa, pesquisaValida } from './avaliacao.js';
 import { precoServicoVigente } from './vigencia.js';
@@ -352,6 +354,8 @@ export type ResultadoAtendimento =
       notaBaixa?: { avaliacaoId: string; concluida: boolean };
       /** Começou a esperar atendente (ISO): o worker agenda o fim da espera. */
       esperaAtendente?: string;
+      /** Push do PWA para o profissional cuja agenda mudou pela conversa. */
+      notificacao?: TrabalhoNotificacao;
     };
 
 const NOME_PADRAO_CLIENTE = 'Cliente do WhatsApp';
@@ -560,6 +564,10 @@ export async function atenderMensagem(
           );
           if (aviso) saidas.push(...aviso.mensagemIds);
         }
+        // E no celular (push), para os aparelhos que ele ligou no Perfil.
+        const notificacao = r.mudanca
+          ? await notificacaoDoHorario(tx, r.mudanca.agendamentoId, r.mudanca.tipo, agora)
+          : null;
         return {
           tipo: 'respondida',
           contaId,
@@ -571,6 +579,7 @@ export async function atenderMensagem(
           acao: r.acao,
           consentimento: r.consentimento,
           ...(r.agendamento ? { agendamento: r.agendamento } : {}),
+          ...(notificacao ? { notificacao } : {}),
           ...(notaBaixa
             ? { notaBaixa: { avaliacaoId: notaBaixa.id, concluida: r.avaliacao!.concluida } }
             : {}),

@@ -13,6 +13,8 @@ import {
   rodarRotinaEquipe,
   criarPrisma,
   encerrarEsperaDoAtendente,
+  enviarNotificacao,
+  notificacaoDoHorario,
   enviarLembrete,
   hashCodigoAssistente,
   hashTokenAgendamento,
@@ -873,5 +875,83 @@ describe('canal de agendamento', () => {
     const tel = '5511933332222';
     expect(await fala(tel, 'AGENDAR POR AQUI')).toContain('Qual serviço você quer?');
     expect(await canal(tel)).toBe('conversa');
+  });
+});
+
+describe('notificações no celular (push)', () => {
+  const quando = new Date('2026-12-01T12:30:00Z'); // terça, 09:30: dentro do expediente
+  let agId = '';
+  let usuarioId = '';
+
+  it('sem aparelho ligado não monta nada; com aparelho, monta só perto do expediente', async () => {
+    agId = await naMinhaConta(async (tx) => {
+      usuarioId = (await tx.profissional.findUniqueOrThrow({ where: { id: profissionalId } }))
+        .usuarioId;
+      const c = await tx.cliente.create({
+        data: { nome: 'Pedro Alves', telefone: '5511922223333' },
+      });
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: c.id,
+        inicio: new Date('2026-12-21T12:00:00Z'),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      return r.agendamentoId;
+    });
+    expect(await naMinhaConta((tx) => notificacaoDoHorario(tx, agId, 'novo', quando))).toBeNull();
+    await naMinhaConta((tx) =>
+      tx.inscricaoPush.createMany({
+        data: [
+          {
+            usuarioId,
+            endpoint: 'https://push.teste/um',
+            p256dh: 'chave-um-12345',
+            auth: 'auth-um-123',
+          },
+          {
+            usuarioId,
+            endpoint: 'https://push.teste/dois',
+            p256dh: 'chave-dois-1234',
+            auth: 'auth-dois-12',
+          },
+        ],
+      }),
+    );
+    expect(await naMinhaConta((tx) => notificacaoDoHorario(tx, agId, 'novo', quando))).toEqual({
+      contaId: conta,
+      usuarioId,
+      titulo: 'Horário novo',
+      corpo: 'Segunda, 21/12, 09:00 · Pedro · Corte',
+      url: '/agenda',
+      etiqueta: `horario-${agId}`,
+    });
+    // 23:00: fora da janela do expediente, não incomoda.
+    expect(
+      await naMinhaConta((tx) =>
+        notificacaoDoHorario(tx, agId, 'novo', new Date('2026-12-02T02:00:00Z')),
+      ),
+    ).toBeNull();
+  });
+
+  it('entrega a cada aparelho e remove o que o serviço diz que não existe mais', async () => {
+    const enviados: string[] = [];
+    const r = await enviarNotificacao(
+      prisma,
+      { contaId: conta, usuarioId, titulo: 'Teste', corpo: 'Oi', url: '/agenda' },
+      async (inscricao, carga) => {
+        enviados.push(inscricao.endpoint);
+        expect(JSON.parse(carga)).toMatchObject({ titulo: 'Teste', url: '/agenda' });
+        return inscricao.endpoint.endsWith('dois') ? 410 : 201;
+      },
+    );
+    expect(r).toEqual({ entregues: 1, aparelhos: 2, removidos: 1 });
+    expect(enviados).toHaveLength(2);
+    const restantes = await naMinhaConta((tx) =>
+      tx.inscricaoPush.findMany({ where: { usuarioId } }),
+    );
+    expect(restantes.map((x) => x.endpoint)).toEqual(['https://push.teste/um']);
   });
 });
