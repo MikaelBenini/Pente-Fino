@@ -72,4 +72,13 @@ test('dono cria o plano e coloca um cliente novo; a lista mostra o que resta', a
   });
   await receber.getByRole('button', { name: 'Confirmar recebimento' }).click();
   await expect(receber).toBeHidden();
+
+  // Resultado: a mensalidade recebida entra no lucro do plano.
+  await page.getByRole('tab', { name: 'Resultado' }).click();
+  const tabela = page.getByRole('table', { name: 'Resultado do clube por plano' });
+  await expect(tabela.getByRole('row', { name: new RegExp(plano) })).toContainText('99,90');
+  const sobra = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(sobra).toBeLessThanOrEqual(0);
 });

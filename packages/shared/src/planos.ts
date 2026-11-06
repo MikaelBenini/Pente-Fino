@@ -110,7 +110,7 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
   { nome: 'Importação da sua planilha', desde: 'basico', disponivel: true },
   { nome: 'Comissão automática por item, com extrato do barbeiro', desde: 'pro', disponivel: true },
   { nome: 'Metas por unidade e serviço, com ritmo e projeção', desde: 'pro', disponivel: true },
-  { nome: 'Clube da barbearia: assinatura, combos e convênios', desde: 'pro', disponivel: false },
+  { nome: 'Clube da barbearia: assinatura, combos e convênios', desde: 'pro', disponivel: true },
   { nome: 'Bot de WhatsApp sem custo por mensagem', desde: 'pro', disponivel: false },
   { nome: 'Lista de espera', desde: 'pro', disponivel: false },
   { nome: 'Várias unidades e painel da rede', desde: 'premium', disponivel: true },
