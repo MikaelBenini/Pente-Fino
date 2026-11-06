@@ -139,6 +139,24 @@ function Formulario({ unidadeId, inicial }: { unidadeId: string; inicial: Regras
           valor={f.prazoMudarMin}
           onMudar={(v) => mudar('prazoMudarMin', numero(v, 0))}
         />
+        <CampoQuantidade
+          id="regra-faltas"
+          rotulo="Faltas para marcar só com a recepção"
+          dica="0 = desligado. O balcão continua marcando"
+          min={0}
+          max={10}
+          valor={f.faltasParaBloquear}
+          onMudar={(v) => mudar('faltasParaBloquear', numero(v, 0))}
+        />
+        <CampoQuantidade
+          id="regra-faltas-dias"
+          rotulo="Contando faltas dos últimos (dias)"
+          min={7}
+          max={365}
+          passo={15}
+          valor={f.faltasJanelaDias}
+          onMudar={(v) => mudar('faltasJanelaDias', numero(v, 7))}
+        />
       </fieldset>
 
       <fieldset className="grid gap-4 rounded-lg border border-borda bg-superficie p-5 sm:grid-cols-2">

@@ -14,6 +14,7 @@ import {
   BlocoAgenda,
   Botao,
   Campo,
+  Carregando,
   Dialogo,
   EstadoVazio,
   Marcador,
@@ -21,8 +22,9 @@ import {
   cn,
 } from '@pente-fino/ui';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useMemo, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
   INVALIDAR_OPERACAO,
@@ -67,13 +69,38 @@ function periodo(visao: Visao, dia: string): [string, string] {
 }
 
 export function TelaAgenda() {
+  return (
+    <Suspense fallback={<Carregando />}>
+      <ConteudoAgenda />
+    </Suspense>
+  );
+}
+
+/** ?agendar=<clienteId> (atalho de Conversas): abre o novo agendamento com o cliente. */
+function useClienteParaAgendar() {
+  const id = useSearchParams().get('agendar');
+  const cliente = useQuery({
+    queryKey: ['clientes', id],
+    queryFn: () => api<{ id: string; nome: string }>(`clientes/${id}`),
+    enabled: !!id && /^[0-9a-f-]{36}$/.test(id),
+  });
+  return cliente.data ? { clienteId: cliente.data.id, nome: cliente.data.nome } : null;
+}
+
+function ConteudoAgenda() {
   const { papeis } = useApp();
+  const clienteInicial = useClienteParaAgendar();
   const { unidadeId, seletor } = useUnidadeTrabalho();
   const [dia, setDia] = useState(dataLocal(new Date()));
   const [visao, setVisao] = useState<Visao>('dia');
   const [de, ate] = periodo(visao, dia);
   const agenda = useAgenda(unidadeId, de, ate);
   const [novo, setNovo] = useState(false);
+  const [abriuDoAtalho, setAbriuDoAtalho] = useState(false);
+  if (clienteInicial && !abriuDoAtalho) {
+    setAbriuDoAtalho(true);
+    setNovo(true);
+  }
   const balcao = papeis.some((p) => p !== 'barbeiro');
   const passo = visao === 'dia' ? 1 : visao === 'semana' ? 7 : 31;
   const titulo =
@@ -200,6 +227,7 @@ export function TelaAgenda() {
           unidadeId={unidadeId}
           diaInicial={dia}
           agenda={agenda.data}
+          clienteInicial={clienteInicial}
           aberto={novo}
           onFechar={() => setNovo(false)}
         />
@@ -469,19 +497,26 @@ function NovoAgendamento({
   unidadeId,
   diaInicial,
   agenda,
+  clienteInicial,
   aberto,
   onFechar,
 }: {
   unidadeId: string;
   diaInicial: string;
   agenda?: Agenda;
+  clienteInicial?: ClienteEscolhido | null;
   aberto: boolean;
   onFechar: () => void;
 }) {
   const router = useRouter();
   const servicos = useServicos();
   const precos = usePrecos();
-  const [cliente, setCliente] = useState<ClienteEscolhido | null>(null);
+  const [cliente, setCliente] = useState<ClienteEscolhido | null>(clienteInicial ?? null);
+  const [clienteAnterior, setClienteAnterior] = useState(clienteInicial);
+  if (clienteInicial !== clienteAnterior) {
+    setClienteAnterior(clienteInicial);
+    if (clienteInicial) setCliente(clienteInicial);
+  }
   const [escolhidos, setEscolhidos] = useState<string[]>([]);
   const [dia, setDia] = useState(diaInicial);
   const [profissionalId, setProfissionalId] = useState('');

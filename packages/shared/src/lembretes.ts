@@ -40,10 +40,14 @@ export interface DadosDoLembrete {
 }
 
 /** O lembrete com as opções; o de 2 h só confirma (mudar em cima da hora é com a recepção). */
-export function textoLembrete(tipo: TipoLembrete, d: DadosDoLembrete): string {
+/**
+ * Lembrete: a abertura vem do texto editável do bot (já preenchido); dia, hora, serviços e
+ * opções são fixos, porque a resposta 1/2/3 depende deles.
+ */
+export function textoLembrete(tipo: TipoLembrete, d: DadosDoLembrete, abertura?: string): string {
   const ola = d.cliente ? `Oi, ${d.cliente.trim().split(/\s+/)[0]}!` : 'Oi!';
   const corpo = [
-    `${ola} Lembrete do seu horário na ${d.barbearia}:`,
+    abertura?.trim() || `${ola} Lembrete do seu horário na ${d.barbearia}:`,
     '',
     `📅 ${d.diaRotulo}, às ${formatarHora(d.inicio)}`,
     `✂️ ${d.servicos.join(' + ')} com ${d.profissional}`,

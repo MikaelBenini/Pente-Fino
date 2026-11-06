@@ -90,6 +90,9 @@ export const TIPOS_MENSAGEM_BOT = [
   'pesquisa_barbearia',
   'pesquisa_comentario',
   'pesquisa_obrigado',
+  'lembrete_primeiro',
+  'lembrete_segundo',
+  'atendente_sem_resposta',
 ] as const;
 export type TipoMensagemBot = (typeof TIPOS_MENSAGEM_BOT)[number];
 export type MensagensBot = Record<TipoMensagemBot, string>;
@@ -148,6 +151,21 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
     quando: 'Depois da nota da barbearia. O cliente escreve ou responde 0 para terminar.',
   },
   pesquisa_obrigado: { nome: 'Pesquisa: agradecimento', quando: 'No fim da pesquisa.' },
+  lembrete_primeiro: {
+    nome: 'Lembrete (o primeiro)',
+    quando:
+      'Abre o primeiro lembrete do horário (padrão: 24 h antes). Logo abaixo vão o dia, a hora, os serviços e as opções 1 Confirmo, 2 Remarcar e 3 Cancelar.',
+  },
+  lembrete_segundo: {
+    nome: 'Lembrete (perto do horário)',
+    quando:
+      'Abre o segundo lembrete (padrão: 2 h antes). Logo abaixo vão o dia, a hora, os serviços e a opção 1 Confirmo.',
+  },
+  atendente_sem_resposta: {
+    nome: 'Equipe não respondeu',
+    quando:
+      'Quando o cliente pediu atendente e ninguém da equipe respondeu em 2 horas: o bot volta a atender e avisa.',
+  },
 };
 
 export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
@@ -171,6 +189,10 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
     'Valeu! E de 1 a 5, que nota você dá para a barbearia (ambiente, recepção, pontualidade)?',
   pesquisa_comentario: 'Quer deixar um comentário? Escreva aqui, ou responda 0 para terminar.',
   pesquisa_obrigado: 'Obrigado pela avaliação! Ela ajuda a gente a melhorar.',
+  lembrete_primeiro: 'Oi, {cliente}! Lembrete do seu horário na {barbearia}:',
+  lembrete_segundo: 'Oi, {cliente}! Seu horário na {barbearia} é daqui a pouco:',
+  atendente_sem_resposta:
+    'Desculpe a demora! Nossa equipe não conseguiu responder agora. Voltei a atender por aqui: responda 0 para ver as opções, ou ATENDENTE para tentar de novo mais tarde.',
 };
 
 /** Resposta fora de 1 a 5 durante a pesquisa (uma vez só; na segunda, a pesquisa termina). */
@@ -436,6 +458,8 @@ export function dentroDoHorario(turnos: readonly TurnoBot[], agora: Date): boole
 export const EXPIRACAO_SESSAO_MIN = 30;
 /** Com atendente, o bot espera mais antes de voltar sozinho: a recepção pode demorar. */
 export const EXPIRACAO_ATENDENTE_MIN = 120;
+/** Sem ninguém da equipe responder em tanto tempo, o bot volta e avisa o cliente. */
+export const ESPERA_ATENDENTE_MAX_MIN = 120;
 
 export interface SessaoBot {
   /** Ids das opções que abriram submenus, da raiz até o menu atual. */

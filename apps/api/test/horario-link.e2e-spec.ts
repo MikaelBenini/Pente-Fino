@@ -253,3 +253,43 @@ describe('lembretes pedidos pelo site', () => {
     expect(await cliente('5511977772003')).toMatchObject({ consentimentoMsg: false });
   });
 });
+
+describe('faltas no site', () => {
+  it('3 faltas recentes: o site manda falar com a barbearia', async () => {
+    const { token } = await agendar(dia(9), '11977773001');
+    // Três faltas nos últimos dias (direto no banco: o passado não se marca pela tela).
+    await naConta(prisma, a.contaId, async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: '5511977773001' } });
+      const base = await tx.agendamento.findFirstOrThrow({ where: { clienteId: c.id } });
+      for (const n of [5, 10, 20])
+        await tx.agendamento.create({
+          data: {
+            unidadeId: base.unidadeId,
+            profissionalId: base.profissionalId,
+            clienteId: c.id,
+            inicio: new Date(Date.now() - n * 86_400_000),
+            fim: new Date(Date.now() - n * 86_400_000 + 30 * 60_000),
+            origem: 'balcao',
+            status: 'falta',
+          },
+        });
+    });
+    expect(token).toBeTruthy();
+    const livres = (
+      await http()
+        .get(`/publico/agendamento/${slug}/horarios?data=${dia(10)}&servicoIds=${corte}`)
+        .expect(200)
+    ).body[0].inicios as string[];
+    const r = await http()
+      .post(`/publico/agendamento/${slug}`)
+      .send({
+        nome: 'Cliente do Link',
+        telefone: '11977773001',
+        servicoIds: [corte],
+        profissionalId: prof,
+        inicio: livres[0],
+      })
+      .expect(409);
+    expect(r.body.erro.mensagem).toContain('fale com a barbearia');
+  });
+});

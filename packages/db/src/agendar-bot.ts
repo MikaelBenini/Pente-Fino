@@ -25,6 +25,7 @@ import {
   type ResumoAgendamento,
   type ServicoParaAgendar,
   caminhoDoHorario,
+  bloqueadoPorFaltas,
 } from '@pente-fino/shared';
 import {
   calcularLivres,
@@ -33,6 +34,7 @@ import {
   criarAgendamentoNoBanco,
   duracaoDosServicos,
   ErroAgenda,
+  faltasRecentes,
 } from './agenda.js';
 import { criarLinkDoHorario, remarcarPeloCliente } from './link-horario.js';
 import type { Prisma } from './generated/prisma/client.js';
@@ -359,6 +361,13 @@ export async function passoDaAgenda(
           },
           orderBy: { inicio: 'asc' },
         });
+    if (
+      !d.simulacao &&
+      bloqueadoPorFaltas(await faltasRecentes(tx, d.clienteId, d.agora, d.regras), d.regras)
+    )
+      return sair([
+        'Para marcar um novo horário, fale com a nossa equipe: responda ATENDENTE que a gente te ajuda.',
+      ]);
     if (futuros.length >= d.regras.maxFuturos)
       return sair([
         [

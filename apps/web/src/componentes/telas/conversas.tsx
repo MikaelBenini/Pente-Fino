@@ -250,6 +250,10 @@ function Conversa({
                   <Link href={`/clientes?id=${c.clienteId}`} className="underline">
                     Ver cliente
                   </Link>
+                  {' · '}
+                  <Link href={`/agenda?agendar=${c.clienteId}`} className="underline">
+                    Agendar
+                  </Link>
                 </>
               )}
             </p>

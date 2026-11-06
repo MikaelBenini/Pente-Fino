@@ -2,13 +2,14 @@
 // 1/2/3 confirma, remarca ou cancela.
 import {
   dataLocal,
+  preencher,
   rotuloDoDia,
   textoLembrete,
   variantesTelefone,
   type LembreteDeHorario,
   type SessaoBot,
 } from '@pente-fino/shared';
-import { json } from './bot.js';
+import { json, mensagensDoBot } from './bot.js';
 import type { Prisma, PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
 
@@ -64,14 +65,27 @@ export async function enviarLembrete(
     if (!conversa) return pular('cliente nunca escreveu');
 
     const conta = await tx.conta.findFirst({ select: { nome: true } });
-    const texto = textoLembrete(job.lembrete, {
-      cliente: cliente.nome,
-      barbearia: conta?.nome ?? ag.unidade.nome,
-      diaRotulo: rotuloDoDia(dataLocal(ag.inicio), dataLocal(agora)),
-      inicio: ag.inicio.toISOString(),
-      servicos: (ag.comanda?.itens ?? []).map((i) => i.servico?.nome ?? 'Serviço'),
-      profissional: ag.profissional.usuario.nome.trim().split(/\s+/)[0]!,
-    });
+    const barbearia = conta?.nome ?? ag.unidade.nome;
+    const profissional = ag.profissional.usuario.nome.trim().split(/\s+/)[0]!;
+    const mensagens = await mensagensDoBot(tx);
+    const texto = textoLembrete(
+      job.lembrete,
+      {
+        cliente: cliente.nome,
+        barbearia,
+        diaRotulo: rotuloDoDia(dataLocal(ag.inicio), dataLocal(agora)),
+        inicio: ag.inicio.toISOString(),
+        servicos: (ag.comanda?.itens ?? []).map((i) => i.servico?.nome ?? 'Serviço'),
+        profissional,
+      },
+      // Abertura editada em Bot → Mensagens (o resto do lembrete é fixo).
+      preencher(mensagens[job.lembrete === '24h' ? 'lembrete_primeiro' : 'lembrete_segundo'], {
+        cliente: cliente.nome.trim().split(/\s+/)[0],
+        barbearia,
+        unidade: ag.unidade.nome,
+        profissional,
+      }),
+    );
     const chave = { unidadeId: ag.unidadeId, telefone: conversa.telefone };
     const atual = await tx.botSessao.findUnique({ where: { unidadeId_telefone: chave } });
     const anterior = (atual?.sessao ?? null) as SessaoBot | null;

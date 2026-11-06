@@ -3,6 +3,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   aplicarModelosIniciais,
   criarLinkDoHorario,
+  faltasRecentes,
   precoServicoVigente,
   Prisma,
   type Transacao,
@@ -11,6 +12,7 @@ import {
 import {
   lerRegrasAgendamento,
   agendamentoPublicoSchema,
+  bloqueadoPorFaltas,
   caminhoDoHorario,
   cadastroContaSchema,
   dataLocal,
@@ -242,6 +244,13 @@ export class PublicoController {
           'O agendamento pelo link está indisponível no momento. Fale com a barbearia pelo telefone ou WhatsApp.',
         );
       const cliente = await tx.cliente.findFirst({ where: { telefone: d.telefone } });
+      if (
+        cliente &&
+        bloqueadoPorFaltas(await faltasRecentes(tx, cliente.id, new Date(), regras), regras)
+      )
+        throw Erros.conflito(
+          'Para marcar um novo horário, fale com a barbearia pelo WhatsApp ou telefone.',
+        );
       if (cliente) {
         const futuros = await tx.agendamento.count({
           where: {
