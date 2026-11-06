@@ -253,6 +253,8 @@ export interface ItemComandaDetalhe {
   precoUnitario: number;
   desconto: number;
   ehExtra: boolean;
+  /** Coberto pelo plano do clube: entra com valor zero e conta no uso do mês. */
+  cobertoClube: boolean;
   comissaoValor: number;
 }
 

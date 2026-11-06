@@ -1291,7 +1291,7 @@ model AdesaoClube {
   itemClubeId        String       @map("item_clube_id") @db.Uuid
   status             StatusAdesao @default(ativa)
   inicio             DateTime     @db.Date
-  /// Fim do ciclo pago; vencida a adesão, o plano para de cobrir até a próxima baixa.
+  /// Dia em que o plano renova (próxima mensalidade); a partir dele, sem baixa, para de cobrir.
   vencimento         DateTime     @db.Date
   canceladaEm        DateTime?    @map("cancelada_em") @db.Timestamptz(3)
   motivoCancelamento String?      @map("motivo_cancelamento")
