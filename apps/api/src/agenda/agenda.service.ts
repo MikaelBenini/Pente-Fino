@@ -70,7 +70,7 @@ export class AgendaService {
     });
     for (const l of trabalhos)
       await this.filas.whatsappEntrada
-        .add('lembrete', l.dados, { delay: l.atrasoMs, jobId: l.jobId })
+        .add(l.dados.tipo, l.dados, { delay: l.atrasoMs, jobId: l.jobId })
         .catch(() => undefined);
   }
 

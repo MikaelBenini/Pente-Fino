@@ -102,7 +102,7 @@ export class AssistenteController {
   @Put('avisos')
   @Papeis(...TODOS)
   @ApiOperation({ summary: 'Escolher os avisos que o assistente manda' })
-  avisos(@Corpo(avisosEquipeSchema) avisos: AvisosEquipe): Promise<EstadoAssistente> {
+  avisos(@Corpo(avisosEquipeSchema) avisos: Partial<AvisosEquipe>): Promise<EstadoAssistente> {
     return this.banco.daConta(async (tx) => {
       await this.ondeAtende(tx);
       const a = await tx.assistenteEquipe.findUnique({
@@ -111,7 +111,9 @@ export class AssistenteController {
       if (!a) throw Erros.naoEncontrado('Ligue o assistente primeiro.');
       await tx.assistenteEquipe.update({
         where: { id: a.id },
-        data: { avisos: avisos as unknown as Prisma.InputJsonValue },
+        data: {
+          avisos: { ...lerAvisosEquipe(a.avisos), ...avisos } as unknown as Prisma.InputJsonValue,
+        },
       });
       return this.estado(tx);
     });

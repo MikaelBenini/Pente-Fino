@@ -6,8 +6,11 @@ import {
   horariosLivres,
   instanteLocal,
   lerRegrasAgendamento,
+  momentoProximoCliente,
   trabalhosDeLembrete,
   type HorarioLivre,
+  type LembreteDeHorario,
+  type ProximoClienteDaEquipe,
   type RegrasAgendamento,
 } from '@pente-fino/shared';
 import type { OrigemAgendamento, Prisma } from './generated/prisma/client.js';
@@ -336,5 +339,23 @@ export async function lembretesDoAgendamento(
   const ag = await tx.agendamento.findUnique({ where: { id: agendamentoId } });
   if (!ag) return [];
   const regras = await regrasDaUnidade(tx, ag.unidadeId);
-  return trabalhosDeLembrete(contaId, ag.id, ag.inicio, agora, agora, regras.lembretesHoras);
+  const trabalhos: {
+    dados: LembreteDeHorario | ProximoClienteDaEquipe;
+    atrasoMs: number;
+    jobId: string;
+  }[] = trabalhosDeLembrete(contaId, ag.id, ag.inicio, agora, agora, regras.lembretesHoras);
+  // Assistente da equipe: "próximo cliente em 15 minutos" (o worker confere tudo na hora).
+  const quando = momentoProximoCliente(ag.inicio, agora, agora);
+  if (quando)
+    trabalhos.push({
+      dados: {
+        tipo: 'proximo_cliente',
+        contaId,
+        agendamentoId: ag.id,
+        inicio: ag.inicio.toISOString(),
+      },
+      atrasoMs: quando.getTime() - agora.getTime(),
+      jobId: `proximo_${ag.id}_${ag.inicio.getTime()}`,
+    });
+  return trabalhos;
 }

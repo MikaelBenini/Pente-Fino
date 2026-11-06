@@ -60,8 +60,30 @@ export interface LembreteDeHorario {
 }
 
 /** O que vai na fila `whatsapp-entrada`: eventos do provedor, envios do painel, pesquisas e lembretes. */
+/** Assistente da equipe: "próximo cliente em 15 minutos" (trabalho atrasado por agendamento). */
+export interface ProximoClienteDaEquipe {
+  tipo: 'proximo_cliente';
+  contaId: string;
+  agendamentoId: string;
+  inicio: string;
+}
+
+/** Assistente da equipe: agenda do dia ou resumo; ao rodar, agenda o próximo. */
+export interface RotinaDaEquipe {
+  tipo: 'rotina_equipe';
+  contaId: string;
+  assistenteId: string;
+  rotina: 'agenda' | 'resumo';
+  dia: string;
+}
+
 export type TrabalhoWhatsappEntrada =
-  EventoWhatsapp | EnvioDoPainel | InicioDePesquisa | LembreteDeHorario;
+  | EventoWhatsapp
+  | EnvioDoPainel
+  | InicioDePesquisa
+  | LembreteDeHorario
+  | ProximoClienteDaEquipe
+  | RotinaDaEquipe;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {
