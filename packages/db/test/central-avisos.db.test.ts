@@ -7,7 +7,7 @@ import {
   contasParaAvisos,
   criarPrisma,
   naConta,
-  rotinaComandasPendentes,
+  rotinaDosAvisos,
   type PrismaClient,
 } from '../src/index.js';
 
@@ -90,7 +90,7 @@ describe('comandas pendentes', () => {
     await comanda('14:50', 'em_atendimento'); // ainda na tolerância de 15 min
     await comanda('13:00', 'confirmada'); // confirmada: é da recepção fechar, não é pendente
 
-    await rotinaComandasPendentes(prisma, conta, agora);
+    await rotinaDosAvisos(prisma, conta, agora);
     const primeira = await avisosDe(recepcaoId);
     expect(primeira).toHaveLength(1);
     expect(primeira[0]).toMatchObject({
@@ -109,21 +109,77 @@ describe('comandas pendentes', () => {
     expect(marcada.pendenteAvisadaEm).not.toBeNull();
 
     // 15 min depois: a das 14:50 virou pendente; só ela entra no aviso novo.
-    await rotinaComandasPendentes(prisma, conta, new Date(agora.getTime() + 15 * 60_000));
+    await rotinaDosAvisos(prisma, conta, new Date(agora.getTime() + 15 * 60_000));
     const segunda = await avisosDe(recepcaoId);
     expect(segunda).toHaveLength(2);
     expect(segunda[1]!.texto).toContain('até 14:50');
     expect(segunda[1]!.texto).toContain('2 comandas pendentes');
 
     // Nada novo: não repete.
-    await rotinaComandasPendentes(prisma, conta, new Date(agora.getTime() + 30 * 60_000));
+    await rotinaDosAvisos(prisma, conta, new Date(agora.getTime() + 30 * 60_000));
     expect(await avisosDe(recepcaoId)).toHaveLength(2);
   });
 
   it('fora do expediente não roda', async () => {
     await comanda('08:00', 'prevista');
-    // 23h: muito depois do último turno (19h).
-    await rotinaComandasPendentes(prisma, conta, new Date('2026-12-02T02:00:00Z'));
+    // 6h: antes do expediente (abre às 9h).
+    await rotinaDosAvisos(prisma, conta, new Date('2026-12-01T09:00:00Z'));
     expect(await avisosDe(recepcaoId)).toHaveLength(2);
+  });
+});
+
+describe('fim do dia', () => {
+  // Terça, 01/12, 19:45: o último turno acaba às 19h; o dia da unidade, às 19:30.
+  const depois = new Date('2026-12-01T22:45:00Z');
+
+  it('resumo para o dono (por e-mail se escolheu) e aviso de caixa aberto, uma vez', async () => {
+    await naMinhaConta(async (tx) => {
+      await tx.usuario.update({
+        where: { id: donoId },
+        data: { preferenciasAvisos: { resumoPorEmail: true } },
+      });
+      const c = await tx.comanda.create({ data: { unidadeId, profissionalId, status: 'fechada' } });
+      await tx.pagamento.create({
+        data: {
+          comandaId: c.id,
+          forma: 'pix',
+          valor: 4500,
+          criadoEm: new Date('2026-12-01T15:00:00Z'),
+        },
+      });
+    });
+    // Antes do fim do dia: nada de resumo.
+    const cedo = await rotinaDosAvisos(
+      prisma,
+      conta,
+      new Date('2026-12-01T22:15:00Z'),
+      'https://app',
+    );
+    expect(cedo.emails).toEqual([]);
+    expect((await avisosDe(donoId)).filter((a) => a.tipo === 'resumo_dia')).toHaveLength(0);
+
+    const r = await rotinaDosAvisos(prisma, conta, depois, 'https://app');
+    const doDono = await avisosDe(donoId);
+    const resumo = doDono.find((a) => a.tipo === 'resumo_dia');
+    expect(resumo?.titulo).toBe('Resumo de 01/12 · Centro');
+    expect(resumo?.texto).toContain('projeção de');
+    expect(doDono.find((a) => a.tipo === 'caixa_sem_fechar')?.texto).toMatch(
+      /R\$\s45,00 recebidos hoje/,
+    );
+    expect(r.emails).toHaveLength(1);
+    expect(r.emails[0]!.assunto).toBe('Resumo de 01/12 · Centro');
+    expect(r.emails[0]!.texto).toContain('https://app/inicio');
+    // A recepção não recebe resumo nem caixa (são de dono e gestor).
+    expect((await avisosDe(recepcaoId)).some((a) => a.tipo === 'resumo_dia')).toBe(false);
+
+    // 15 min depois: não repete aviso nem e-mail.
+    const de_novo = await rotinaDosAvisos(
+      prisma,
+      conta,
+      new Date(depois.getTime() + 15 * 60_000),
+      'https://app',
+    );
+    expect(de_novo.emails).toEqual([]);
+    expect((await avisosDe(donoId)).filter((a) => a.tipo === 'resumo_dia')).toHaveLength(1);
   });
 });

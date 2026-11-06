@@ -30,6 +30,8 @@ import {
   type ProximoClienteDaEquipe,
   type RotinaDaEquipe,
   type RotinaEquipe,
+  diasDeTrabalho as diasDeTrabalhoDoMes,
+  projetar,
 } from '@pente-fino/shared';
 import type { Prisma, PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -515,8 +517,10 @@ export async function resumoGestao(
   const unidades = await tx.unidade.findMany({
     where: { id: { in: [...unidadeIds] } },
     orderBy: { criadoEm: 'asc' },
-    select: { id: true, nome: true },
+    select: { id: true, nome: true, diasTrabalho: true },
   });
+  const mes = dia.slice(0, 7);
+  const doMes = { gte: inicioDoDia(`${mes}-01`), lt: inicioDoDia(somarDias(dia, 1)) };
   return Promise.all(
     unidades.map(async (u) => {
       const fechadas = await tx.comanda.findMany({
@@ -543,8 +547,32 @@ export async function resumoGestao(
           },
         }),
       ]);
+      // Ritmo do mês: faturamento até hoje e a projeção pelos dias de trabalho da unidade.
+      const doMesFechadas = await tx.comanda.findMany({
+        where: { unidadeId: u.id, status: 'fechada', fechadaEm: doMes },
+        include: { itens: true },
+      });
+      const excecoes = await tx.calendarioUnidade.findMany({
+        where: {
+          unidadeId: u.id,
+          data: {
+            gte: new Date(`${mes}-01T00:00:00Z`),
+            lt: new Date(`${somarDias(`${mes}-01`, 32).slice(0, 7)}-01T00:00:00Z`),
+          },
+        },
+      });
+      const dias = diasDeTrabalhoDoMes(
+        mes,
+        u.diasTrabalho,
+        excecoes.map((e) => ({ data: e.data.toISOString().slice(0, 10), trabalha: e.trabalha })),
+      );
+      const faturamentoMes = calcularIndicadores(doMesFechadas).faturamento;
       return {
         unidade: u.nome,
+        mes: {
+          faturamento: faturamentoMes,
+          projecao: projetar(faturamentoMes, dias, dia).projecao,
+        },
         faturamento: ind.faturamento,
         clientes: ind.clientes,
         faltas,

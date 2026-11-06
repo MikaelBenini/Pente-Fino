@@ -228,12 +228,17 @@ export interface ResumoUnidade {
   notasBaixas: number;
   /** Comandas atendidas esperando a recepção fechar (em atendimento, confirmada, pendente, reaberta). */
   abertas: number;
+  /** Ritmo do mês: faturamento até hoje e a projeção pelos dias de trabalho da unidade. */
+  mes?: { faturamento: number; projecao: number };
 }
 
 export function textoResumoGestao(rotulo: string, unidades: readonly ResumoUnidade[]): string {
   const bloco = (u: ResumoUnidade) => [
     ...(unidades.length > 1 ? [`🏠 ${u.unidade}`] : []),
     `💰 ${formatarMoeda(u.faturamento)} em ${u.clientes} ${u.clientes === 1 ? 'cliente' : 'clientes'}${u.clientes > 0 ? ` · ticket ${formatarMoeda(Math.round(u.faturamento / u.clientes))}` : ''}`,
+    ...(u.mes
+      ? [`📈 Mês: ${formatarMoeda(u.mes.faturamento)} · projeção ${formatarMoeda(u.mes.projecao)}`]
+      : []),
     ...(u.faltas > 0 ? [`🚫 ${u.faltas} ${u.faltas === 1 ? 'falta' : 'faltas'}`] : []),
     ...(u.notasBaixas > 0
       ? [`⚠️ ${u.notasBaixas} ${u.notasBaixas === 1 ? 'nota baixa' : 'notas baixas'}`]
