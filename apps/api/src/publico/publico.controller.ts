@@ -272,6 +272,7 @@ export class PublicoController {
       .publicar('agendamento.criado', u.contaId, { comandaId: r.id, origem: 'link' })
       .catch(() => undefined);
     await this.agenda.agendarLembretes(u.contaId, r.id);
+    await this.agenda.avisarEquipeDaComanda(u.contaId, r.id, 'novo');
     const servicos = r.itens.map((i) => i.servico?.nome ?? 'Serviço');
     const profissional = r.profissional.usuario.nome.split(' ')[0]!;
     const quando = `${formatarDiaPorExtenso(r.agendamento!.inicio)} às ${formatarHora(r.agendamento!.inicio)}`;

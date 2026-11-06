@@ -52,3 +52,4 @@ export async function naConta<T>(
 export * from './agenda.js';
 export * from './agendar-bot.js';
 export * from './lembretes.js';
+export * from './equipe-whatsapp.js';

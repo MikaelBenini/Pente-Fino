@@ -32,7 +32,9 @@ import {
   passoDaAgenda,
   podeAgendarPelaConversa,
   type DadosDaConversa,
+  type PassoDaAgenda,
 } from './agendar-bot.js';
+import { atenderEquipe, avisarEquipeSobreHorario } from './equipe-whatsapp.js';
 import { confirmarPeloCliente } from './lembretes.js';
 import { gravarRespostaPesquisa, pesquisaValida } from './avaliacao.js';
 import { precoServicoVigente } from './vigencia.js';
@@ -215,7 +217,12 @@ export async function responderComAgenda(
     ctx: ContextoConversa;
     dados: DadosDaConversa;
   },
-): Promise<ResultadoConversa & { agendamento?: { id: string; inicio: string } }> {
+): Promise<
+  ResultadoConversa & {
+    agendamento?: { id: string; inicio: string };
+    mudanca?: PassoDaAgenda['mudanca'];
+  }
+> {
   const { agenda, lembrete, ...resto } = d.sessao ?? ({} as SessaoBot);
   const base: SessaoBot | null = d.sessao ? resto : null;
   const texto = normalizar(d.entrada);
@@ -287,6 +294,7 @@ export async function responderComAgenda(
       consentimento: null,
       avaliacao: null,
       ...(p.agendamento ? { agendamento: p.agendamento } : {}),
+      ...(p.mudanca ? { mudanca: p.mudanca } : {}),
     };
   }
 
@@ -350,6 +358,52 @@ export async function atenderMensagem(
           select: { id: true },
         });
         if (ja) return { tipo: 'repetida' } as const;
+
+        // Alguém da equipe (assistente): responde e nunca vira cliente.
+        const equipe = await atenderEquipe(tx, {
+          unidadeId,
+          telefone: evento.telefone,
+          texto: evento.texto,
+          agora,
+        });
+        if (equipe) {
+          await tx.mensagem.create({
+            data: {
+              unidadeId,
+              telefone: evento.telefone,
+              direcao: 'entrada',
+              texto: evento.texto,
+              status: 'recebida',
+              idExterno: evento.idExterno,
+              criadoEm: new Date(evento.recebidaEm),
+            },
+          });
+          const saidas: string[] = [];
+          for (const texto of equipe) {
+            const m = await tx.mensagem.create({
+              data: {
+                unidadeId,
+                telefone: evento.telefone,
+                direcao: 'saida',
+                texto,
+                status: 'pendente',
+              },
+              select: { id: true },
+            });
+            saidas.push(m.id);
+          }
+          return {
+            tipo: 'respondida',
+            contaId,
+            unidadeId,
+            instancia: conexao.instancia,
+            clienteId: '',
+            clienteNovo: false,
+            saidas,
+            acao: null,
+            consentimento: null,
+          } as const;
+        }
 
         const variantes = variantesTelefone(evento.telefone);
         const telefone = variantes[0]!;
@@ -452,6 +506,16 @@ export async function atenderMensagem(
             select: { id: true },
           });
           saidas.push(m.id);
+        }
+        // Mudou a agenda pela conversa: avisa o profissional (se ele ligou o assistente).
+        if (r.mudanca) {
+          const aviso = await avisarEquipeSobreHorario(
+            tx,
+            r.mudanca.agendamentoId,
+            r.mudanca.tipo,
+            agora,
+          );
+          if (aviso) saidas.push(...aviso.mensagemIds);
         }
         return {
           tipo: 'respondida',

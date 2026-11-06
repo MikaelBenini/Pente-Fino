@@ -7,6 +7,7 @@ import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
 import { AssinaturaGuard } from './assinatura/assinatura.guard.js';
 import { CobrancaService } from './cobranca/cobranca.service.js';
+import { AssistenteController } from './me/assistente.controller.js';
 import { provedorCobranca } from './cobranca/provedor.js';
 import { WebhookAsaasController } from './cobranca/webhook-asaas.controller.js';
 import { AutenticacaoGuard, PermissaoGuard } from './auth/guardas.js';
@@ -135,6 +136,7 @@ export class ComumModule {}
     WebhooksController,
     WebhookAsaasController,
     MeController,
+    AssistenteController,
     ConfiguracaoController,
     ImportacaoController,
     ExportacaoController,

@@ -16,6 +16,7 @@ import {
   type HorarioLivre,
   type NovoAgendamentoEntrada,
   type StatusComanda,
+  type MudancaNaAgenda,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -24,6 +25,7 @@ import { Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade } from '../comum/escopo.js';
 import { ComandasService } from '../comandas/comandas.service.js';
 import { EventosService, Filas } from '../filas/filas.module.js';
+import { avisarEquipe } from './aviso-equipe.js';
 import { emSequencia } from '../comum/sequencia.js';
 
 const BALCAO = ['dono', 'gestor', 'recepcao'] as const;
@@ -201,7 +203,17 @@ export class AgendaService {
       .publicar('agendamento.criado', quem.contaId, { comandaId })
       .catch(() => undefined);
     await this.agendarLembretes(quem.contaId, comandaId);
+    await this.avisarEquipeDaComanda(quem.contaId, comandaId, 'novo');
     return this.comandas.buscar(comandaId);
+  }
+
+  /** Avisa o profissional da comanda (assistente da equipe), se ele ligou o assistente. */
+  async avisarEquipeDaComanda(contaId: string, comandaId: string, tipo: MudancaNaAgenda) {
+    const c = await this.banco.naConta(contaId, (tx) =>
+      tx.comanda.findUnique({ where: { id: comandaId }, select: { agendamentoId: true } }),
+    );
+    if (c?.agendamentoId)
+      await avisarEquipe(this.banco, this.filas, contaId, c.agendamentoId, tipo);
   }
 
   /**
@@ -259,6 +271,7 @@ export class AgendaService {
       return r.comandaId;
     });
     await this.agendarLembretes(Contexto.usuario().contaId, comandaId);
+    await this.avisarEquipeDaComanda(Contexto.usuario().contaId, comandaId, 'remarcado');
     return this.comandas.buscar(comandaId);
   }
 }
