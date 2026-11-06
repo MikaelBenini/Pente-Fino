@@ -11,7 +11,10 @@ import {
   lembretesDoAgendamento,
   primeirasRotinas,
   rodarRotinaEquipe,
+  contasComAutomacoes,
   criarPrisma,
+  numerosDasAutomacoes,
+  rodarAutomacoes,
   encerrarEsperaDoAtendente,
   enviarNotificacao,
   notificacaoDoHorario,
@@ -953,5 +956,123 @@ describe('notificações no celular (push)', () => {
       tx.inscricaoPush.findMany({ where: { usuarioId } }),
     );
     expect(restantes.map((x) => x.endpoint)).toEqual(['https://push.teste/um']);
+  });
+});
+
+describe('automações: retorno e aniversário', () => {
+  const rotina = new Date('2026-12-01T13:00:00Z'); // terça, 10:00
+  const tel = { a: '5511988880001', b: '5511988880002', c: '5511988880003', d: '5511988880004' };
+
+  /** Visita fechada no dia (09:00 local), direto no banco. */
+  async function visita(clienteId: string, dia: string, hora = '12:00') {
+    await naMinhaConta(async (tx) => {
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId,
+        inicio: new Date(`${dia}T${hora}:00Z`),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      await tx.comanda.update({
+        where: { id: r.comandaId },
+        data: { status: 'fechada', fechadaEm: new Date(`${dia}T${hora}:30Z`) },
+      });
+    });
+  }
+  async function cliente(
+    telefone: string,
+    extra: { aniversario?: string; consentimento?: boolean } = {},
+  ) {
+    await fala(telefone, 'oi', new Date('2026-09-01T12:00:00Z'));
+    return naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone } });
+      await tx.cliente.update({
+        where: { id: c.id },
+        data: {
+          consentimentoMsg: extra.consentimento ?? true,
+          ...(extra.aniversario ? { aniversario: new Date(`${extra.aniversario}T00:00:00Z`) } : {}),
+        },
+      });
+      return c.id;
+    });
+  }
+  const textosPara = (telefone: string) =>
+    naMinhaConta((tx) =>
+      tx.mensagem.findMany({
+        where: { telefone, automacao: { not: null } },
+        orderBy: { criadoEm: 'asc' },
+      }),
+    );
+
+  it('convida quem passou do tempo de costume e dá parabéns no dia; respeita aceite e horário marcado', async () => {
+    const a = await cliente(tel.a);
+    await visita(a, '2026-10-01');
+    await visita(a, '2026-10-22', '12:30'); // costume: 21 dias → em 01/12 passou
+    const b = await cliente(tel.b, { aniversario: '1990-12-01' });
+    await visita(b, '2026-11-25', '13:00'); // veio há pouco, mas é aniversário
+    const c = await cliente(tel.c, { consentimento: false });
+    await visita(c, '2026-10-02', '13:30');
+    const d = await cliente(tel.d);
+    await visita(d, '2026-10-03', '14:00');
+    await naMinhaConta(async (tx) => {
+      await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: d,
+        inicio: new Date('2026-12-28T12:00:00Z'),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      await tx.conta.update({
+        where: { id: conta },
+        data: { automacoes: { retorno: true, retornoDiasPadrao: 30, aniversario: true } },
+      });
+    });
+    expect(await contasComAutomacoes(prisma)).toContain(conta);
+
+    const envios = await rodarAutomacoes(prisma, conta, rotina, 'http://app.teste');
+    expect(envios.flatMap((e) => e.mensagemIds).length).toBeGreaterThanOrEqual(2);
+    const [ma] = await textosPara(tel.a);
+    expect(ma).toMatchObject({ automacao: 'retorno', status: 'pendente' });
+    expect(ma!.texto).toContain('Faz um tempinho que você não passa na Barbearia Navalha');
+    const mb = await textosPara(tel.b);
+    expect(mb.map((m) => m.automacao)).toEqual(['aniversario']);
+    expect(mb[0]!.texto).toMatch(/^Feliz aniversário, Cliente!/);
+    expect(await textosPara(tel.c)).toEqual([]);
+    expect(await textosPara(tel.d)).toEqual([]);
+
+    // Rodou de novo no mesmo dia: nada repetido (um convite por ciclo, um parabéns por ano).
+    const deNovo = await rodarAutomacoes(prisma, conta, new Date(rotina.getTime() + 3_600_000));
+    expect(deNovo.flatMap((e) => e.mensagemIds).filter((id) => [ma!.id].includes(id))).toEqual([]);
+    expect((await textosPara(tel.a)).length).toBe(1);
+    expect((await textosPara(tel.b)).length).toBe(1);
+  });
+
+  it('números: enviadas, quem respondeu em 48 h e quem marcou em 7 dias', async () => {
+    await naMinhaConta((tx) =>
+      tx.mensagem.updateMany({
+        where: { telefone: tel.a, automacao: 'retorno' },
+        data: { criadoEm: rotina },
+      }),
+    );
+    const resposta = new Date(rotina.getTime() + 2 * 3_600_000);
+    await fala(tel.a, 'AGENDAR POR AQUI', resposta);
+    const n = await naMinhaConta((tx) =>
+      numerosDasAutomacoes(
+        tx,
+        { telefone: tel.a },
+        new Date('2026-12-01T03:00:00Z'),
+        new Date('2026-12-02T03:00:00Z'),
+      ),
+    );
+    expect(n.find((x) => x.automacao === 'retorno')).toEqual({
+      automacao: 'retorno',
+      enviadas: 1,
+      respondidas: 1,
+      agendamentos: 0,
+    });
   });
 });

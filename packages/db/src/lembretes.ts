@@ -102,7 +102,14 @@ export async function enviarLembrete(
       update: { clienteId: cliente.id, sessao: json(sessao) },
     });
     const m = await tx.mensagem.create({
-      data: { ...chave, clienteId: cliente.id, direcao: 'saida', texto, status: 'pendente' },
+      data: {
+        ...chave,
+        clienteId: cliente.id,
+        direcao: 'saida',
+        texto,
+        status: 'pendente',
+        automacao: 'lembrete',
+      },
       select: { id: true },
     });
     await tx.agendamento.update({

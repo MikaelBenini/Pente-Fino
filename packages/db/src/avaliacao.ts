@@ -132,6 +132,7 @@ export async function iniciarPesquisa(
         direcao: 'saida',
         texto,
         status: 'pendente',
+        automacao: 'pesquisa',
       },
       select: { id: true },
     });

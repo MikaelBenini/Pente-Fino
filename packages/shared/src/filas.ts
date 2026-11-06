@@ -108,6 +108,11 @@ export interface FimDaEsperaDoAtendente {
   desde: string;
 }
 
+/** Rotina diária das automações (retorno e aniversário) em todas as contas que ligaram. */
+export interface RotinaDasAutomacoes {
+  tipo: 'automacoes';
+}
+
 export type TrabalhoWhatsappEntrada =
   | EventoWhatsapp
   | EnvioDoPainel
@@ -116,7 +121,8 @@ export type TrabalhoWhatsappEntrada =
   | ProximoClienteDaEquipe
   | RotinaDaEquipe
   | NotaBaixaParaGestao
-  | FimDaEsperaDoAtendente;
+  | FimDaEsperaDoAtendente
+  | RotinaDasAutomacoes;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

@@ -17,6 +17,7 @@ import {
   type LinhaRankingEquipe,
   type ResumoAvaliacoes,
   type EstadoBot,
+  type EstadoAutomacoes,
   type TrabalhoWhatsappEntrada,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
@@ -307,5 +308,28 @@ describe('pesquisa depois do atendimento', () => {
       tx.avaliacao.count({ where: { comandaId } }),
     );
     expect(n).toBe(0);
+  });
+});
+
+describe('automações (retorno e aniversário)', () => {
+  it('começam desligadas; só o dono liga; os números trazem as quatro automações', async () => {
+    const antes = (await gestor.get('/bot/automacoes').expect(200)).body as EstadoAutomacoes;
+    expect(antes.config).toEqual({ retorno: false, retornoDiasPadrao: 30, aniversario: false });
+    expect(antes.numeros.map((n) => n.automacao)).toEqual([
+      'retorno',
+      'aniversario',
+      'pesquisa',
+      'lembrete',
+    ]);
+    // A pesquisa desta conta saiu neste mês.
+    expect(antes.numeros.find((n) => n.automacao === 'pesquisa')!.enviadas).toBeGreaterThan(0);
+    const novo = { retorno: true, retornoDiasPadrao: 45, aniversario: true };
+    await gestor.put('/bot/automacoes', novo).expect(403);
+    await dono.put('/bot/automacoes', { ...novo, retornoDiasPadrao: 5 }).expect(400);
+    await dono.put('/bot/automacoes', novo).expect(200);
+    expect(
+      ((await dono.get('/bot/automacoes').expect(200)).body as EstadoAutomacoes).config,
+    ).toEqual(novo);
+    await barbeiro.get('/bot/automacoes').expect(403);
   });
 });

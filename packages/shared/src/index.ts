@@ -27,6 +27,7 @@ export * from './esquemas-bot.js';
 export * from './whatsapp.js';
 export * from './equipe.js';
 export * from './avaliacao.js';
+export * from './automacoes.js';
 export * from './assinatura.js';
 export * from './agendar-bot.js';
 export * from './lembretes.js';

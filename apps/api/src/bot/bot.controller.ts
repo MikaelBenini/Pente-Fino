@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  automacoesSchema,
+  dataLocal,
   horarioBotSchema,
   mensagensBotSchema,
   pesquisaBotSchema,
@@ -19,7 +21,9 @@ import {
   type LinkGoogleEntrada,
   menuBotSchema,
   simularBotSchema,
+  type AutomacoesConta,
   type ConexaoBot,
+  type EstadoAutomacoes,
   type EstadoBot,
   type HorarioBotEntrada,
   type MensagensBotEntrada,
@@ -31,8 +35,14 @@ import {
 import { Auditada } from '../auditoria/auditoria.js';
 import { Papeis } from '../auth/decoradores.js';
 import { GESTAO } from '../comum/escopo.js';
-import { Corpo } from '../comum/validacao.js';
+import { Consulta, Corpo } from '../comum/validacao.js';
+import { z } from 'zod';
 import { BotService } from './bot.service.js';
+
+const periodoAutomacoes = z.object({
+  de: z.iso.date().optional(),
+  ate: z.iso.date().optional(),
+});
 
 @ApiTags('Bot do WhatsApp')
 @ApiBearerAuth()
@@ -108,6 +118,26 @@ export class BotController {
     @Corpo(horarioBotSchema) d: HorarioBotEntrada,
   ) {
     return this.servico.salvarHorario(unidadeId, d);
+  }
+
+  @Get('automacoes')
+  @Papeis(...GESTAO)
+  @ApiOperation({
+    summary: 'Automações (retorno e aniversário) e os números de cada uma no período',
+  })
+  automacoes(
+    @Consulta(periodoAutomacoes) p: z.infer<typeof periodoAutomacoes>,
+  ): Promise<EstadoAutomacoes> {
+    const hoje = dataLocal(new Date());
+    return this.servico.automacoes(p.de ?? `${hoje.slice(0, 7)}-01`, p.ate ?? hoje);
+  }
+
+  @Put('automacoes')
+  @Papeis('dono')
+  @Auditada()
+  @ApiOperation({ summary: 'Ligar e desligar o convite de retorno e o parabéns' })
+  salvarAutomacoes(@Corpo(automacoesSchema) d: AutomacoesConta): Promise<AutomacoesConta> {
+    return this.servico.salvarAutomacoes(d);
   }
 
   @Put('google/:unidadeId')

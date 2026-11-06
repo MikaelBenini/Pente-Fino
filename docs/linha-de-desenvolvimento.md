@@ -341,10 +341,10 @@ Depois que a comanda fecha, o cliente avalia o atendimento pelo WhatsApp. A nota
 - [x] Nota 5: convite opcional para avaliar a barbearia no Google (link configurado pelo dono) (feito: Bot → Mensagens → pesquisa, "Link para avaliar no Google" por unidade (só https; vazio desliga); no fim da pesquisa, nota 5 da barbearia (ou do atendimento, quando a da barbearia não veio) e nenhuma nota baixa recebem o convite, com texto editável "Convite para avaliar no Google" e a variável {google})
 - [x] Ficha do profissional e indicadores: nota média, número de respostas, taxa de resposta e comentários do período (adiantado na 10.1)
 - [x] Barbeiro vê a própria média e os comentários, sem o telefone do cliente, e não vê as notas dos colegas (adiantado na 10.1)
-- [ ] Mensagem de retorno: cliente que passou do intervalo habitual de visitas (pelo histórico; padrão 30 dias) recebe um convite para agendar, uma vez por ciclo
-- [ ] Mensagem de aniversário com o modelo da barbearia (liga e desliga)
+- [x] Mensagem de retorno: cliente que passou do intervalo habitual de visitas (pelo histórico; padrão 30 dias) recebe um convite para agendar, uma vez por ciclo (feito: Bot → Automações, "Convidar para voltar quem passou do tempo de costume"; o tempo de costume é a mediana das últimas visitas (14 a 120 dias), e quem veio uma vez usa o padrão da conta (30); quem tem horário marcado não recebe; um convite por ciclo (`cliente.retorno_convidado_em`); texto editável "Convite de retorno". Rotina diária às 10 h no worker (agendador do BullMQ), pela unidade da última visita, só para quem aceitou mensagens e já conversou com ela, até 20 por número por dia. Começa desligada)
+- [x] Mensagem de aniversário com o modelo da barbearia (liga e desliga) (feito: Bot → Automações, "Mandar parabéns no aniversário", para quem tem a data no cadastro, uma vez por ano (`cliente.aniversario_enviado_em`), texto editável "Aniversário"; no dia do parabéns o convite de retorno não sai junto. Começa desligada)
 - [ ] Lista "clientes para recuperar": os que sumiram, deram nota baixa ou faltaram
-- [ ] Cada automação mostra quantas mensagens saíram, quantas foram respondidas e quantos agendamentos gerou
+- [x] Cada automação mostra quantas mensagens saíram, quantas foram respondidas e quantos agendamentos gerou (feito: Bot → Automações → "Resultado no mês" para retorno, aniversário, pesquisa e lembrete: enviadas, responderam (escreveu de volta em até 48 h) e marcaram (horário criado em até 7 dias); cada mensagem guarda a automação de origem em `mensagem.automacao`)
 - [ ] **Pronto quando:** uma comanda fechada gera a pesquisa, a nota aparece na ficha do barbeiro e uma nota 1 chega ao dono em menos de 1 minuto
 
 ## Etapa 13 · Clube da barbearia
