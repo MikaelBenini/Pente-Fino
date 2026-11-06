@@ -236,6 +236,8 @@ model Conta {
   pesquisaPosAtendimento  Boolean       @default(true) @map("pesquisa_pos_atendimento")
   /// Automações do pós-atendimento (retorno, aniversário); JSON validado em packages/shared/src/automacoes.ts.
   automacoes              Json          @default("{}")
+  /// Pix da barbearia para a mensalidade do clube (chave, nome e cidade de quem recebe).
+  pix                     Json?
   /// CPF ou CNPJ de quem paga a assinatura (só dígitos); o Asaas exige.
   documento               String?
   /// Cliente e assinatura no Asaas (cobrança automática, Etapa 10.1 em teste e 23).
@@ -282,6 +284,7 @@ model Conta {
   itensClube         ItemClube[]
   servicosClube      ItemClubeServico[]
   adesoesClube       AdesaoClube[]
+  pagamentosClube    PagamentoClube[]
 
   @@map("conta")
 }
@@ -368,24 +371,25 @@ model Usuario {
   criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta               Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  papeis              PapelUsuario[]
-  profissionais       Profissional[]
-  notasCliente        NotaCliente[]
-  agendamentosCriados Agendamento[]       @relation("AgendamentoCriadoPor")
-  comandasFechadas    Comanda[]           @relation("ComandaFechadaPor")
-  comandasConfirmadas Comanda[]           @relation("ComandaConfirmadaPor")
-  botMenusPublicados  BotMenu[]           @relation("BotMenuPublicadoPor")
-  pagamentosRecebidos Pagamento[]
-  caixasAbertos       CaixaDia[]          @relation("CaixaAbertoPor")
-  caixasFechados      CaixaDia[]          @relation("CaixaFechadoPor")
-  comissoesPagas      PagamentoComissao[]
-  auditorias          Auditoria[]
-  tokenAcessos        TokenAcesso[]
-  assistente          AssistenteEquipe?
-  inscricoesPush      InscricaoPush[]
-  avaliacoesTratadas  Avaliacao[]         @relation("AvaliacaoTratadaPor")
-  adesoesCriadas      AdesaoClube[]       @relation("AdesaoCriadaPor")
+  conta                 Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  papeis                PapelUsuario[]
+  profissionais         Profissional[]
+  notasCliente          NotaCliente[]
+  agendamentosCriados   Agendamento[]       @relation("AgendamentoCriadoPor")
+  comandasFechadas      Comanda[]           @relation("ComandaFechadaPor")
+  comandasConfirmadas   Comanda[]           @relation("ComandaConfirmadaPor")
+  botMenusPublicados    BotMenu[]           @relation("BotMenuPublicadoPor")
+  pagamentosRecebidos   Pagamento[]
+  caixasAbertos         CaixaDia[]          @relation("CaixaAbertoPor")
+  caixasFechados        CaixaDia[]          @relation("CaixaFechadoPor")
+  comissoesPagas        PagamentoComissao[]
+  auditorias            Auditoria[]
+  tokenAcessos          TokenAcesso[]
+  assistente            AssistenteEquipe?
+  inscricoesPush        InscricaoPush[]
+  avaliacoesTratadas    Avaliacao[]         @relation("AvaliacaoTratadaPor")
+  adesoesCriadas        AdesaoClube[]       @relation("AdesaoCriadaPor")
+  mensalidadesRecebidas PagamentoClube[]
 
   @@index([contaId])
   @@map("usuario")
@@ -1295,17 +1299,43 @@ model AdesaoClube {
   vencimento         DateTime     @db.Date
   canceladaEm        DateTime?    @map("cancelada_em") @db.Timestamptz(3)
   motivoCancelamento String?      @map("motivo_cancelamento")
+  /// Aviso de vencimento pelo bot (um por ciclo).
+  avisoVencimentoEm  DateTime?    @map("aviso_vencimento_em") @db.Timestamptz(3)
   criadoPorId        String?      @map("criado_por_id") @db.Uuid
   criadoEm           DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm       DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta     Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  cliente   Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  itemClube ItemClube     @relation(fields: [itemClubeId], references: [id], onDelete: Restrict)
-  criadoPor Usuario?      @relation("AdesaoCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
-  itens     ItemComanda[]
+  conta      Conta            @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  cliente    Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  itemClube  ItemClube        @relation(fields: [itemClubeId], references: [id], onDelete: Restrict)
+  criadoPor  Usuario?         @relation("AdesaoCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  itens      ItemComanda[]
+  pagamentos PagamentoClube[]
 
   @@index([contaId])
   @@index([clienteId, status])
   @@map("adesao_clube")
+}
+
+/// Mensalidade do clube recebida no balcão (Pix da barbearia, dinheiro ou cartão). É receita do
+/// clube, separada da receita de serviço: não entra no faturamento das comandas.
+model PagamentoClube {
+  id            String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId       String         @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  adesaoId      String         @map("adesao_id") @db.Uuid
+  valor         Int
+  forma         FormaPagamento
+  pagoEm        DateTime       @map("pago_em") @db.Date
+  /// Vencimento que esta mensalidade pagou (o ciclo que ela cobre começa nele).
+  referenteA    DateTime       @map("referente_a") @db.Date
+  recebidoPorId String?        @map("recebido_por_id") @db.Uuid
+  criadoEm      DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta       Conta       @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  adesao      AdesaoClube @relation(fields: [adesaoId], references: [id], onDelete: Cascade)
+  recebidoPor Usuario?    @relation(fields: [recebidoPorId], references: [id], onDelete: SetNull)
+
+  @@index([contaId, pagoEm])
+  @@index([adesaoId])
+  @@map("pagamento_clube")
 }

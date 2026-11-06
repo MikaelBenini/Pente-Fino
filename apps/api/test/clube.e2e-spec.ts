@@ -2,7 +2,10 @@
 import type { INestApplication } from '@nestjs/common';
 import {
   dataLocal,
+  somarMeses,
   type AdesaoDetalhe,
+  type DataISO,
+  type MensalidadePix,
   type ComandaDetalhe,
   type ItemClubeDetalhe,
 } from '@pente-fino/shared';
@@ -270,5 +273,33 @@ describe('clube na comanda', () => {
         .expect(201)
     ).body as ComandaDetalhe;
     expect(c.itens[0]).toMatchObject({ precoUnitario: 3000, cobertoClube: false });
+  });
+});
+
+describe('mensalidade', () => {
+  it('o dono cadastra o Pix; a recepção mostra o copia e cola com o valor e dá baixa', async () => {
+    const pix = { chave: 'pix@barbearia.dev', nome: 'Barbearia Teste', cidade: 'São Paulo' };
+    await recepcao.put('/clube/pix', pix).expect(403);
+    await dono.put('/clube/pix', { ...pix, chave: 'sem-formato' }).expect(400);
+    await dono.put('/clube/pix', pix).expect(204);
+    expect((await dono.get('/clube/pix').expect(200)).body).toEqual({ pix });
+
+    const [ad] = (
+      (await recepcao.get('/clube/adesoes').expect(200)).body as AdesaoDetalhe[]
+    ).filter((x) => x.cliente.id === clienteId);
+    const m = (await recepcao.get(`/clube/adesoes/${ad!.id}/mensalidade`).expect(200))
+      .body as MensalidadePix;
+    expect(m).toMatchObject({ valor: 9990, vencimento: ad!.vencimento });
+    expect(m.copiaECola).toContain('0117pix@barbearia.dev');
+    expect(m.copiaECola).toContain('540599.90');
+
+    const r = (
+      await recepcao.post(`/clube/adesoes/${ad!.id}/pagamentos`, { forma: 'pix' }).expect(201)
+    ).body as { vencimento: string };
+    expect(r.vencimento).toBe(somarMeses(ad!.vencimento as DataISO, 1));
+    const depois = (await recepcao.get(`/clube/cliente/${clienteId}`).expect(200)).body
+      .adesao as AdesaoDetalhe;
+    expect(depois.vencimento).toBe(r.vencimento);
+    await barbeiro.post(`/clube/adesoes/${ad!.id}/pagamentos`, { forma: 'pix' }).expect(403);
   });
 });

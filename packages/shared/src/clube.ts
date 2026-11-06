@@ -183,3 +183,31 @@ export interface AdesaoDetalhe {
   usosNoCiclo: number;
   restantes: { servicoId: string; servico: string; restam: number | null }[];
 }
+
+// ─── Mensalidade ──────────────────────────────────────────────────────────
+
+/**
+ * Vencimento depois da baixa: um mês adiante, mantendo o dia. Se a adesão ficou vencida mais de
+ * um ciclo, recomeça a partir de hoje (não cobra os meses parados).
+ */
+export function vencimentoDepoisDaBaixa(vencimento: DataISO, hoje: DataISO): DataISO {
+  const proximo = somarMeses(vencimento, 1);
+  return proximo <= hoje ? somarMeses(hoje, 1) : proximo;
+}
+
+export const FORMAS_MENSALIDADE = ['pix', 'dinheiro', 'debito', 'credito'] as const;
+
+export const baixaMensalidadeSchema = z.object({
+  forma: z.enum(FORMAS_MENSALIDADE),
+  /** Padrão: o valor do plano. */
+  valor: z.number().int().min(0).max(10_000_000).optional(),
+});
+export type BaixaMensalidadeEntrada = z.infer<typeof baixaMensalidadeSchema>;
+
+/** O que a recepção mostra para o cliente pagar: QR/copia e cola do Pix da barbearia. */
+export interface MensalidadePix {
+  valor: number;
+  vencimento: DataISO;
+  /** null quando a conta não cadastrou a chave Pix. */
+  copiaECola: string | null;
+}

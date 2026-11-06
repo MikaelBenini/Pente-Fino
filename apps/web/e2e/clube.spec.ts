@@ -54,4 +54,22 @@ test('dono cria o plano e coloca um cliente novo; a lista mostra o que resta', a
     .filter({ hasText: `Assinante ${sufixo}` });
   await expect(linha).toContainText('Corte: restam 4');
   await expect(linha).toContainText('Ativa');
+
+  // Pix da barbearia e a mensalidade com QR.
+  await page.getByRole('tab', { name: 'Planos' }).click();
+  await page.getByLabel('Chave Pix').fill('pix@demo.pentefino.dev');
+  await page.getByLabel('Nome de quem recebe').fill('Barbearia Pente Fino');
+  await page.getByLabel('Cidade').fill('São Paulo');
+  await page.getByRole('button', { name: 'Salvar Pix' }).click();
+  await expect(page.getByText('Chave Pix salva.')).toBeVisible();
+  await page.getByRole('tab', { name: 'Assinantes' }).click();
+  await linha.getByRole('button', { name: 'Receber mensalidade' }).click();
+  const receber = page.getByRole('dialog', { name: 'Receber mensalidade' });
+  await expect(receber.getByRole('img', { name: 'QR Code do Pix da mensalidade' })).toBeVisible();
+  await expect(receber).toContainText('R$ 99,90');
+  await receber.screenshot({
+    path: test.info().outputPath('mensalidade.png'),
+  });
+  await receber.getByRole('button', { name: 'Confirmar recebimento' }).click();
+  await expect(receber).toBeHidden();
 });
