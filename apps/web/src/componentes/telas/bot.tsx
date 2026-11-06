@@ -127,6 +127,8 @@ const DICA_ACAO: Record<AcaoBot, string> = {
   endereco: 'Use {endereco} e {horario} no texto.',
   falar_com_atendente: 'O bot avisa e fica quieto até a recepção devolver a conversa.',
   voltar_menu: 'Mostra o menu principal de novo.',
+  ver_clube:
+    'Para o assinante: o plano, quando renova e o que resta no mês. Para os outros: os planos da unidade (Clube → Planos).',
 };
 
 interface Retorno {

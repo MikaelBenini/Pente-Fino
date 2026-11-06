@@ -109,6 +109,19 @@ function Configurar({ inicial, podeEditar }: { inicial: AutomacoesConta; podeEdi
           Para quem tem a data de aniversário no cadastro. Uma vez por ano.
         </p>
       </div>
+      <div className="flex flex-col gap-2">
+        <Marcador
+          id="automacao-clube"
+          rotulo="Avisar o assinante do clube 3 dias antes de renovar"
+          checked={f.avisoClube}
+          disabled={!podeEditar}
+          onChange={(e) => mudar('avisoClube', e.target.checked)}
+        />
+        <p className="text-sm text-tinta-suave">
+          Com o valor, a data e o Pix copia e cola (se a chave estiver cadastrada em Clube). Um
+          aviso por mês.
+        </p>
+      </div>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
       {salvo && <p className="text-sm text-acao-texto">Automações salvas.</p>}
       {podeEditar ? (

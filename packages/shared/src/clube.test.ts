@@ -6,6 +6,7 @@ import {
   restantesDoCiclo,
   situacaoDaAdesao,
   somarMeses,
+  textoClubeNoBot,
   vencimentoDepoisDaBaixa,
 } from './clube.js';
 
@@ -99,5 +100,39 @@ describe('baixa da mensalidade', () => {
     expect(vencimentoDepoisDaBaixa('2026-12-10', '2026-12-08')).toBe('2027-01-10');
     expect(vencimentoDepoisDaBaixa('2026-12-10', '2026-12-20')).toBe('2027-01-10');
     expect(vencimentoDepoisDaBaixa('2026-10-10', '2026-12-20')).toBe('2027-01-20');
+  });
+});
+
+describe('clube no bot', () => {
+  const moeda = (v: number) => `R$ ${(v / 100).toFixed(2).replace('.', ',')}`;
+  it('assinante vê o plano, a renovação e o que resta; quem não é vê os planos', () => {
+    expect(
+      textoClubeNoBot(
+        {
+          planos: [],
+          assinatura: {
+            plano: 'Clube Corte',
+            vencimento: '2026-12-10',
+            emDia: true,
+            restantes: [
+              { servico: 'Corte', restam: 2 },
+              { servico: 'Barba', restam: null },
+            ],
+          },
+        },
+        moeda,
+      ),
+    ).toBe(
+      'Seu plano: Clube Corte\nRenova em 10/12.\n\nNeste mês ainda tem:\n• Corte: 2\n• Barba: à vontade',
+    );
+    expect(
+      textoClubeNoBot(
+        { planos: [{ nome: 'Clube', valor: 9990, inclusos: '4 cortes' }], assinatura: null },
+        moeda,
+      ),
+    ).toContain('• Clube: R$ 99,90 por mês (4 cortes)');
+    expect(textoClubeNoBot({ planos: [], assinatura: null }, moeda)).toContain(
+      'Ainda não temos clube',
+    );
   });
 });

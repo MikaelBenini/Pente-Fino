@@ -211,3 +211,42 @@ export interface MensalidadePix {
   /** null quando a conta não cadastrou a chave Pix. */
   copiaECola: string | null;
 }
+
+// ─── No bot ───────────────────────────────────────────────────────────────
+
+export interface ClubeNoBot {
+  planos: readonly { nome: string; valor: number; inclusos: string }[];
+  /** O plano de quem está conversando, se for assinante desta unidade. */
+  assinatura: {
+    plano: string;
+    vencimento: DataISO;
+    emDia: boolean;
+    restantes: readonly { servico: string; restam: number | null }[];
+  } | null;
+}
+
+const ddmm = (d: DataISO) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+
+/** Resposta da opção "Clube" do bot: o plano do assinante ou os planos para quem não é. */
+export function textoClubeNoBot(c: ClubeNoBot, moeda: (v: number) => string): string {
+  if (c.assinatura) {
+    const a = c.assinatura;
+    return [
+      `Seu plano: ${a.plano}`,
+      a.emDia
+        ? `Renova em ${ddmm(a.vencimento)}.`
+        : `Venceu em ${ddmm(a.vencimento)}. Fale com a recepção para renovar.`,
+      '',
+      'Neste mês ainda tem:',
+      ...a.restantes.map((r) => `• ${r.servico}: ${r.restam === null ? 'à vontade' : r.restam}`),
+    ].join('\n');
+  }
+  if (c.planos.length === 0) return 'Ainda não temos clube por aqui. Pergunte na recepção!';
+  return [
+    'Nossos planos:',
+    '',
+    ...c.planos.map((p) => `• ${p.nome}: ${moeda(p.valor)} por mês (${p.inclusos})`),
+    '',
+    'Para entrar, fale com a recepção ou responda ATENDENTE.',
+  ].join('\n');
+}

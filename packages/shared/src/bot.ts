@@ -3,6 +3,7 @@
 // de verdade passam pelo mesmo `responder`.
 import type { AgendaNaConversa } from './agendar-bot.js';
 import { lerNota } from './avaliacao.js';
+import { textoClubeNoBot, type ClubeNoBot } from './clube.js';
 import { formatarMoeda } from './formatacao.js';
 
 // ─── Menu ─────────────────────────────────────────────────────────────────
@@ -14,6 +15,7 @@ export const ACOES_BOT = [
   'endereco',
   'falar_com_atendente',
   'voltar_menu',
+  'ver_clube',
 ] as const;
 export type AcaoBot = (typeof ACOES_BOT)[number];
 
@@ -24,6 +26,7 @@ export const NOME_ACAO_BOT: Readonly<Record<AcaoBot, string>> = {
   endereco: 'Endereço e horário de funcionamento',
   falar_com_atendente: 'Passar para um atendente',
   voltar_menu: 'Voltar ao menu',
+  ver_clube: 'Clube: os planos, e para o assinante o que resta no mês',
 };
 
 export interface OpcaoMenu {
@@ -67,6 +70,9 @@ export const VARIAVEIS_BOT = {
   link: 'Link de agendamento pelo site',
   profissional: 'Primeiro nome de quem atendeu (só na pesquisa depois do atendimento)',
   google: 'Link para avaliar a unidade no Google (só no convite depois da nota 5)',
+  plano: 'Nome do plano do clube (só no aviso de vencimento)',
+  valor: 'Valor da mensalidade (só no aviso de vencimento)',
+  vencimento: 'Data em que o plano renova (só no aviso de vencimento)',
 } as const;
 export type VariavelBot = keyof typeof VARIAVEIS_BOT;
 
@@ -97,6 +103,7 @@ export const TIPOS_MENSAGEM_BOT = [
   'convite_google',
   'convite_retorno',
   'parabens',
+  'aviso_clube',
 ] as const;
 export type TipoMensagemBot = (typeof TIPOS_MENSAGEM_BOT)[number];
 export type MensagensBot = Record<TipoMensagemBot, string>;
@@ -170,6 +177,11 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
     quando:
       'Automação (Bot → Automações): para quem passou do intervalo habitual de visitas, sem horário marcado. Uma vez por ciclo, às 10 h.',
   },
+  aviso_clube: {
+    nome: 'Clube: aviso de vencimento',
+    quando:
+      'Automação (Bot → Automações): 3 dias antes de renovar o plano, às 10 h. Logo depois vai o Pix copia e cola, se a chave estiver cadastrada. Use {plano}, {valor} e {vencimento}.',
+  },
   parabens: {
     nome: 'Aniversário',
     quando:
@@ -212,6 +224,8 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
   lembrete_segundo: 'Oi, {cliente}! Seu horário na {barbearia} é daqui a pouco:',
   convite_retorno:
     'Oi, {cliente}! Faz um tempinho que você não passa na {barbearia}. Bora marcar? Responda AGENDAR que eu te mostro os horários.',
+  aviso_clube:
+    'Oi, {cliente}! Seu plano {plano} na {barbearia} renova em {vencimento}: {valor}. Dá para pagar pelo Pix abaixo e mostrar o comprovante na recepção.',
   parabens:
     'Feliz aniversário, {cliente}! 🎉 A equipe da {barbearia} deseja um dia incrível. Quando quiser ficar no grau, responda AGENDAR.',
   convite_google:
@@ -536,6 +550,8 @@ export interface ContextoConversa {
    * o passo a passo em vez de mandar o link do site.
    */
   agendarPelaConversa?: boolean;
+  /** Planos da unidade e o plano de quem conversa (opção "Clube"). */
+  clube?: ClubeNoBot;
 }
 
 export interface ResultadoConversa {
@@ -752,6 +768,15 @@ export function responder(
       case 'voltar_menu':
         sessao.caminho = [];
         return resultado([...abertura, corpo, menuAtual()], { acao });
+      case 'ver_clube':
+        return resultado(
+          [
+            ...abertura,
+            `${corpo}\n${textoClubeNoBot(ctx.clube ?? { planos: [], assinatura: null }, formatarMoeda)}`.trim(),
+            'Digite 0 para ver o menu.',
+          ],
+          { acao },
+        );
       case 'ver_precos': {
         const tabela = ctx.precos.length
           ? ctx.precos.map((p) => `• ${p.nome}: ${formatarMoeda(p.valor)}`).join('\n')

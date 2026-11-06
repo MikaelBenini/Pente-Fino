@@ -8,6 +8,8 @@ export interface AutomacoesConta {
   /** Intervalo usado para quem ainda não tem histórico (2 visitas ou mais). */
   retornoDiasPadrao: number;
   aniversario: boolean;
+  /** Aviso ao assinante do clube antes do vencimento, com o Pix (ligado por padrão). */
+  avisoClube: boolean;
 }
 
 /** Começam desligadas: o dono escolhe ligar (mensagem que o cliente não pediu). */
@@ -15,12 +17,17 @@ export const AUTOMACOES_PADRAO: Readonly<AutomacoesConta> = {
   retorno: false,
   retornoDiasPadrao: 30,
   aniversario: false,
+  avisoClube: true,
 };
+
+/** Dias antes do vencimento em que o assinante recebe o aviso. */
+export const AVISO_CLUBE_DIAS = 3;
 
 export const automacoesSchema = z.object({
   retorno: z.boolean(),
   retornoDiasPadrao: z.number().int().min(14, { error: 'Pelo menos 14 dias.' }).max(120),
   aniversario: z.boolean(),
+  avisoClube: z.boolean().default(true),
 });
 
 export function lerAutomacoes(valor: unknown): AutomacoesConta {
@@ -80,12 +87,13 @@ export function ehAniversario(nascimento: string, hoje: string): boolean {
 
 // ─── Números de cada automação ────────────────────────────────────────────
 
-export const AUTOMACOES = ['retorno', 'aniversario', 'pesquisa', 'lembrete'] as const;
+export const AUTOMACOES = ['retorno', 'aniversario', 'clube', 'pesquisa', 'lembrete'] as const;
 export type Automacao = (typeof AUTOMACOES)[number];
 
 export const NOME_AUTOMACAO: Readonly<Record<Automacao, string>> = {
   retorno: 'Convite de retorno',
   aniversario: 'Aniversário',
+  clube: 'Aviso de vencimento do clube',
   pesquisa: 'Pesquisa depois do atendimento',
   lembrete: 'Lembrete do horário',
 };
