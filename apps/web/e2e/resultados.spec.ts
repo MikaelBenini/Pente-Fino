@@ -73,6 +73,14 @@ test('dono: início com metas e indicadores; financeiro e métricas', async ({ p
   const avaliacoes = page.getByRole('region', { name: 'Avaliações dos clientes' });
   await expect(avaliacoes.getByRole('list', { name: 'Notas de atendimento' })).toBeVisible();
   await expect(avaliacoes.getByRole('list', { name: 'Notas de barbearia' })).toBeVisible();
+  // Nota baixa ainda aberta (a demonstração sorteia algumas): resolver com a anotação.
+  const resolver = avaliacoes.getByRole('button', { name: 'Marcar como resolvida' });
+  if (info.project.name === 'computador' && (await resolver.count()) > 0) {
+    await resolver.first().click();
+    await avaliacoes.getByLabel('O que foi feito').fill('Liguei e pedi desculpas.');
+    await avaliacoes.getByRole('button', { name: 'Salvar como resolvida' }).click();
+    await expect(avaliacoes.getByText(/Liguei e pedi desculpas\./).first()).toBeVisible();
+  }
 });
 
 test('dono lança uma despesa e ela aparece no mês', async ({ page }, info) => {

@@ -66,6 +66,7 @@ export const VARIAVEIS_BOT = {
   horario: 'Horário de funcionamento, por extenso',
   link: 'Link de agendamento pelo site',
   profissional: 'Primeiro nome de quem atendeu (só na pesquisa depois do atendimento)',
+  google: 'Link para avaliar a unidade no Google (só no convite depois da nota 5)',
 } as const;
 export type VariavelBot = keyof typeof VARIAVEIS_BOT;
 
@@ -93,6 +94,7 @@ export const TIPOS_MENSAGEM_BOT = [
   'lembrete_primeiro',
   'lembrete_segundo',
   'atendente_sem_resposta',
+  'convite_google',
 ] as const;
 export type TipoMensagemBot = (typeof TIPOS_MENSAGEM_BOT)[number];
 export type MensagensBot = Record<TipoMensagemBot, string>;
@@ -161,6 +163,11 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
     quando:
       'Abre o segundo lembrete (padrão: 2 h antes). Logo abaixo vão o dia, a hora, os serviços e a opção 1 Confirmo.',
   },
+  convite_google: {
+    nome: 'Convite para avaliar no Google',
+    quando:
+      'No fim da pesquisa, para quem deu nota 5, se a unidade tem o link do Google cadastrado (Bot → Mensagens → Pesquisa). Use {google} para o link.',
+  },
   atendente_sem_resposta: {
     nome: 'Equipe não respondeu',
     quando:
@@ -191,6 +198,8 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
   pesquisa_obrigado: 'Obrigado pela avaliação! Ela ajuda a gente a melhorar.',
   lembrete_primeiro: 'Oi, {cliente}! Lembrete do seu horário na {barbearia}:',
   lembrete_segundo: 'Oi, {cliente}! Seu horário na {barbearia} é daqui a pouco:',
+  convite_google:
+    'Que bom que você gostou! Se puder, deixe sua avaliação da {barbearia} no Google, ajuda muito: {google}',
   atendente_sem_resposta:
     'Desculpe a demora! Nossa equipe não conseguiu responder agora. Voltei a atender por aqui: responda 0 para ver as opções, ou ATENDENTE para tentar de novo mais tarde.',
 };

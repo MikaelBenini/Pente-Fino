@@ -109,6 +109,7 @@ export class BotService {
             descricao: s.descricao,
             aberto: s.aberto,
             link: s.link,
+            linkGoogle: u.linkAvaliacaoGoogle,
             conexao: u.botConexao
               ? {
                   status: u.botConexao.status,
@@ -227,6 +228,22 @@ export class BotService {
         depois: { pesquisaPosAtendimento: ativa },
       });
       return { ativa };
+    });
+  }
+
+  /** Link do Google da unidade: convite depois da nota 5 (null desliga). */
+  async salvarLinkGoogle(unidadeId: string, link: string | null): Promise<void> {
+    exigirUnidade(unidadeId, GESTAO);
+    await this.banco.daConta(async (tx) => {
+      const u = await this.unidade(tx, unidadeId);
+      await tx.unidade.update({ where: { id: unidadeId }, data: { linkAvaliacaoGoogle: link } });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: unidadeId,
+        acao: 'link_google',
+        antes: { linkAvaliacaoGoogle: u.linkAvaliacaoGoogle },
+        depois: { linkAvaliacaoGoogle: link },
+      });
     });
   }
 

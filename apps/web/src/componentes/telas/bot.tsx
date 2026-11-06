@@ -706,7 +706,70 @@ function PesquisaLigada({ e }: { e: EstadoBot }) {
         profissional e em Métricas.
       </p>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {e.unidades.map((u) => (
+        <LinkGoogle key={u.id} unidade={u} varias={e.unidades.length > 1} />
+      ))}
     </div>
+  );
+}
+
+/** Link do Google da unidade: quem dá nota 5 recebe o convite para avaliar lá. */
+function LinkGoogle({
+  unidade,
+  varias,
+}: {
+  unidade: EstadoBot['unidades'][number];
+  varias: boolean;
+}) {
+  const [link, setLink] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [salvo, setSalvo] = useState(false);
+  const salvar = useAcao(
+    (valor: string) => api(`bot/google/${unidade.id}`, { metodo: 'PUT', corpo: { link: valor } }),
+    [chaveBot],
+  );
+  const valor = link ?? unidade.linkGoogle ?? '';
+  return (
+    <form
+      method="post"
+      noValidate
+      className="flex flex-col gap-2 border-t border-borda pt-3"
+      onSubmit={async (ev) => {
+        ev.preventDefault();
+        setErro(null);
+        setSalvo(false);
+        try {
+          await salvar.mutateAsync(valor.trim());
+          setSalvo(true);
+        } catch (er) {
+          setErro(mensagemDe(er));
+        }
+      }}
+    >
+      <Campo
+        id={`google-${unidade.id}`}
+        rotulo={`Link para avaliar no Google${varias ? ` (${unidade.nome})` : ''}`}
+        dica="Quem dá nota 5 recebe o convite com este link. Vazio = sem convite. No Google Meu Negócio, “Pedir avaliações” mostra o link."
+        type="url"
+        inputMode="url"
+        placeholder="https://g.page/r/..."
+        value={valor}
+        onChange={(ev) => {
+          setLink(ev.target.value);
+          setSalvo(false);
+        }}
+      />
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {salvo && <p className="text-sm text-acao-texto">Link salvo.</p>}
+      <Botao
+        type="submit"
+        variante="secundario"
+        className="self-start"
+        carregando={salvar.isPending}
+      >
+        Salvar link
+      </Botao>
+    </form>
   );
 }
 

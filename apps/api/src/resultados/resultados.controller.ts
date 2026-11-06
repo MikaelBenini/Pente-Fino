@@ -7,6 +7,7 @@ import {
   Inject,
   Param,
   ParseUUIDPipe,
+  Post,
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -14,6 +15,8 @@ import {
   metaSchema,
   periodoSchema,
   porCanal,
+  tratarAvaliacaoSchema,
+  type TratarAvaliacaoEntrada,
   type LinhaCanal,
   type MetaEntrada,
   type ResumoAvaliacoes,
@@ -23,6 +26,7 @@ import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { Papeis } from '../auth/decoradores.js';
 import { resumoAvaliacoes } from '../avaliacoes/avaliacoes.js';
 import { BancoService } from '../comum/banco.service.js';
+import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { data, exigirUnidade, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
@@ -59,6 +63,34 @@ export class ResultadosController {
   avaliacoes(@Consulta(periodoSchema) p: z.infer<typeof periodoSchema>): Promise<ResumoAvaliacoes> {
     const { filtro } = escopoUnidades(p.unidadeId, ['dono', 'gestor']);
     return this.banco.daConta((tx) => resumoAvaliacoes(tx, filtro, p.de, p.ate));
+  }
+
+  @Post('avaliacoes/:id/tratar')
+  @Papeis('dono', 'gestor')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Marcar a nota baixa como resolvida, com o que foi feito' })
+  tratar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(tratarAvaliacaoSchema) d: TratarAvaliacaoEntrada,
+  ): Promise<void> {
+    return this.banco.daConta(async (tx) => {
+      const a = await tx.avaliacao.findUnique({ where: { id } });
+      if (!a) throw Erros.naoEncontrado('Avaliação não encontrada.');
+      exigirUnidade(a.unidadeId, ['dono', 'gestor']);
+      if (a.status !== 'respondida') throw Erros.conflito('Esta avaliação não foi respondida.');
+      const agora = new Date();
+      await tx.avaliacao.update({
+        where: { id },
+        data: { tratadaEm: agora, tratadaPorId: Contexto.usuario().id, tratamento: d.anotacao },
+      });
+      await auditar(tx, {
+        entidade: 'avaliacao',
+        entidadeId: id,
+        acao: 'tratar_nota_baixa',
+        antes: { tratamento: a.tratamento },
+        depois: { tratamento: d.anotacao },
+      });
+    });
   }
 
   @Get('canais')

@@ -1,5 +1,6 @@
 // Avaliação depois do atendimento (Etapa 10.1, adiantando a 12): o cliente dá nota de 1 a 5
 // para o atendimento do profissional e para a barbearia, pelo WhatsApp, e pode comentar.
+import { z } from 'zod';
 
 /** Igual ao `normalizar` do bot (sem acento, minúsculo); aqui para o bot poder importar este arquivo. */
 function normalizar(texto: string): string {
@@ -76,6 +77,8 @@ export interface NotasDoPeriodo extends ResumoNotas {
 }
 
 export interface ComentarioAvaliacao {
+  /** Id da avaliação (para marcar a nota baixa como resolvida). */
+  id: string;
   comandaId: string;
   notaAtendimento: number;
   notaBarbearia: number | null;
@@ -85,6 +88,25 @@ export interface ComentarioAvaliacao {
   profissional: string;
   /** Nome do cliente (nunca o telefone); null para o barbeiro. */
   cliente: string | null;
+  /** Para o atalho "Ver cliente"; null para o barbeiro. */
+  clienteId: string | null;
+  /** Nota baixa já resolvida: quando, por quem e o que foi feito. */
+  tratamento: { em: string; por: string | null; anotacao: string } | null;
+}
+
+/** Marcar a nota baixa como resolvida, com o que foi feito. */
+export const tratarAvaliacaoSchema = z.object({
+  anotacao: z
+    .string()
+    .trim()
+    .min(3, { error: 'Conte em poucas palavras o que foi feito.' })
+    .max(500),
+});
+export type TratarAvaliacaoEntrada = z.infer<typeof tratarAvaliacaoSchema>;
+
+/** Nota que vale o convite para avaliar no Google: a da barbearia, ou a do atendimento sem ela. */
+export function mereceConviteGoogle(notaAtendimento: number | null, notaBarbearia: number | null) {
+  return (notaBarbearia ?? notaAtendimento) === 5 && (notaAtendimento ?? 5) > NOTA_BAIXA;
 }
 
 /** Avaliações da barbearia no período (Métricas e Início). */
