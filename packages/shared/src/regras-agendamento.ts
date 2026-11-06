@@ -17,6 +17,10 @@ export interface RegrasAgendamento {
   lembretesHoras: number[];
   /** "Agendar" no bot marca pela conversa; desligado, manda o link do site. */
   pelaConversa: boolean;
+  /** Faltas na janela que fazem o cliente marcar só com a recepção (0 = desligado). */
+  faltasParaBloquear: number;
+  /** Janela das faltas, em dias. */
+  faltasJanelaDias: number;
 }
 
 export const REGRAS_AGENDAMENTO_PADRAO: Readonly<RegrasAgendamento> = {
@@ -27,6 +31,8 @@ export const REGRAS_AGENDAMENTO_PADRAO: Readonly<RegrasAgendamento> = {
   intervaloMin: 0,
   lembretesHoras: [24, 2],
   pelaConversa: true,
+  faltasParaBloquear: 3,
+  faltasJanelaDias: 90,
 };
 
 export const regrasAgendamentoSchema = z.object({
@@ -44,7 +50,15 @@ export const regrasAgendamentoSchema = z.object({
     // O maior primeiro: o primeiro lembrete oferece remarcar e cancelar; o segundo só confirma.
     .transform((h) => [...h].sort((a, b) => b - a)),
   pelaConversa: z.boolean(),
+  // App antigo não manda estes: ficam no padrão.
+  faltasParaBloquear: z.number().int().min(0).max(10).default(3),
+  faltasJanelaDias: z.number().int().min(7).max(365).default(90),
 });
+
+/** Muitas faltas na janela: marca só com a recepção (bot e site); o balcão segue livre. */
+export function bloqueadoPorFaltas(faltas: number, regras: RegrasAgendamento): boolean {
+  return regras.faltasParaBloquear > 0 && faltas >= regras.faltasParaBloquear;
+}
 
 /** Regras gravadas na unidade (JSON) com o padrão no que faltar ou estiver inválido. */
 export function lerRegrasAgendamento(valor: unknown): RegrasAgendamento {

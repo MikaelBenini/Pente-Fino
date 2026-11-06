@@ -11,6 +11,7 @@ import {
   iniciarPesquisa,
   lembretesDoAgendamento,
   avisarNotaBaixa,
+  encerrarEsperaDoAtendente,
   avisarProximoCliente,
   trabalhoNotaBaixa,
   primeirasRotinas,
@@ -24,6 +25,7 @@ import {
 import {
   FILA_WHATSAPP_ENTRADA,
   FILA_WHATSAPP_SAIDA,
+  ESPERA_ATENDENTE_MAX_MIN,
   NOTA_BAIXA_ESPERA_MIN,
   proximoEnvio,
   type TrabalhoWhatsappEntrada,
@@ -221,6 +223,16 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             );
           return `nota baixa: ${avisos.length} aviso(s)`;
         }
+        // Pedido de atendente sem resposta em 2 h: o bot volta e avisa o cliente.
+        if (job.data.tipo === 'atendente_expira') {
+          const a = await encerrarEsperaDoAtendente(this.banco.prisma, job.data);
+          if (!a) return 'atendente: já respondido';
+          await agendarRespostas(
+            { contaId: a.contaId, instancia: a.instancia, saidas: a.mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'atendente: bot voltou';
+        }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {
           appUrl: this.config.APP_URL,
@@ -242,6 +254,26 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             NOTA_BAIXA_ESPERA_MIN * 60_000,
           );
           await filaEntrada.add(t.dados.tipo, t.dados, { delay: t.atrasoMs, jobId: t.jobId });
+        }
+        if (r.esperaAtendente) {
+          const desde = r.esperaAtendente;
+          await filaEntrada.add(
+            'atendente_expira',
+            {
+              tipo: 'atendente_expira',
+              contaId: r.contaId,
+              unidadeId: r.unidadeId,
+              telefone: job.data.telefone,
+              desde,
+            },
+            {
+              delay: Math.max(
+                0,
+                Date.parse(desde) + ESPERA_ATENDENTE_MAX_MIN * 60_000 - Date.now(),
+              ),
+              jobId: `atendente_${r.unidadeId}_${job.data.telefone}_${Date.parse(desde)}`,
+            },
+          );
         }
         if (r.assistenteAtivado) {
           const rotinas = await naConta(this.banco.prisma, r.contaId, (tx) =>

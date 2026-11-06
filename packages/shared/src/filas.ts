@@ -84,6 +84,16 @@ export interface NotaBaixaParaGestao {
   avaliacaoId: string;
 }
 
+/** 2 h depois do pedido de atendente: se ninguém respondeu, o bot volta e avisa o cliente. */
+export interface FimDaEsperaDoAtendente {
+  tipo: 'atendente_expira';
+  contaId: string;
+  unidadeId: string;
+  telefone: string;
+  /** Início da espera (ISO): outra espera depois desta não é encerrada por este trabalho. */
+  desde: string;
+}
+
 export type TrabalhoWhatsappEntrada =
   | EventoWhatsapp
   | EnvioDoPainel
@@ -91,7 +101,8 @@ export type TrabalhoWhatsappEntrada =
   | LembreteDeHorario
   | ProximoClienteDaEquipe
   | RotinaDaEquipe
-  | NotaBaixaParaGestao;
+  | NotaBaixaParaGestao
+  | FimDaEsperaDoAtendente;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

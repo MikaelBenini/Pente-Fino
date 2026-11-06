@@ -12,6 +12,7 @@ import {
   primeirasRotinas,
   rodarRotinaEquipe,
   criarPrisma,
+  encerrarEsperaDoAtendente,
   enviarLembrete,
   hashCodigoAssistente,
   hashTokenHorario,
@@ -334,6 +335,31 @@ describe('lembretes', () => {
       tipo: 'pular',
       motivo: 'já confirmado',
     });
+  });
+
+  it('abertura editada em Bot → Mensagens; dia, hora e opções continuam fixos', async () => {
+    const tel = '5511966663333';
+    const id = await clienteComHorario(tel, true, '2026-12-05T12:00:00.000Z');
+    await naMinhaConta((tx) =>
+      tx.modeloMensagem.create({
+        data: { tipo: 'lembrete_primeiro', texto: 'Fala, {cliente}! Amanhã tem {barbearia}:' },
+      }),
+    );
+    const r = await enviarLembrete(
+      prisma,
+      job(id, '24h', '2026-12-05T12:00:00.000Z'),
+      new Date('2026-12-04T12:00:00Z'),
+    );
+    const texto = await naMinhaConta((tx) =>
+      tx.mensagem.findUniqueOrThrow({
+        where: { id: (r as { mensagemIds: string[] }).mensagemIds[0]! },
+      }),
+    );
+    expect(texto.texto).toMatch(/^Fala, Cliente! Amanhã tem Barbearia Navalha:\n\n📅 Amanhã/);
+    expect(texto.texto).toContain('1. Confirmo\n2. Remarcar\n3. Cancelar');
+    await naMinhaConta((tx) =>
+      tx.modeloMensagem.deleteMany({ where: { tipo: 'lembrete_primeiro' } }),
+    );
   });
 
   it('remarcado depois: o lembrete do horário antigo não sai', async () => {
@@ -746,5 +772,60 @@ describe('gestão no assistente (dono e gestor)', () => {
       }),
     );
     expect(await naMinhaConta((tx) => avisarFaltaParaGestao(tx, agId, quando))).toEqual([]);
+  });
+});
+
+describe('faltas e atendente', () => {
+  it('3 faltas em 90 dias: o bot manda falar com a equipe em vez de agendar', async () => {
+    const tel = '5511911110000';
+    await fala(tel, 'oi');
+    await naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: tel } });
+      for (const dia of ['2026-10-05', '2026-10-12', '2026-11-02']) {
+        const r = await criarAgendamentoNoBanco(tx, {
+          unidadeId,
+          profissionalId,
+          clienteId: c.id,
+          inicio: new Date(`${dia}T13:00:00Z`),
+          servicoIds: [corte],
+          origem: 'balcao',
+          criadoPorId: null,
+        });
+        await tx.agendamento.update({ where: { id: r.agendamentoId }, data: { status: 'falta' } });
+      }
+    });
+    expect(await fala(tel, '1')).toContain('fale com a nossa equipe: responda ATENDENTE');
+  });
+
+  it('pediu atendente e ninguém respondeu em 2 h: o bot volta e avisa, uma vez só', async () => {
+    const tel = '5511911112222';
+    const pedido = new Date('2026-12-01T13:00:00Z');
+    await fala(tel, 'oi', pedido);
+    const r = await atenderMensagem(
+      prisma,
+      {
+        tipo: 'mensagem',
+        instancia,
+        idExterno: randomUUID(),
+        telefone: tel,
+        nome: null,
+        texto: 'atendente',
+        recebidaEm: pedido.toISOString(),
+      },
+      { appUrl: 'http://app.teste', agora: pedido },
+    );
+    if (r.tipo !== 'respondida') throw new Error(r.tipo);
+    expect(r.esperaAtendente).toBe(pedido.toISOString());
+    const job = { contaId: conta, unidadeId, telefone: tel, desde: r.esperaAtendente! };
+    const volta = await encerrarEsperaDoAtendente(prisma, job);
+    const texto = await naMinhaConta((tx) =>
+      tx.mensagem.findUniqueOrThrow({ where: { id: volta!.mensagemIds[0]! } }),
+    );
+    expect(texto.texto).toContain('Nossa equipe não conseguiu responder agora');
+    const sessao = await naMinhaConta((tx) =>
+      tx.botSessao.findFirstOrThrow({ where: { telefone: tel } }),
+    );
+    expect(sessao.atendenteDesde).toBeNull();
+    expect(await encerrarEsperaDoAtendente(prisma, job)).toBeNull();
   });
 });

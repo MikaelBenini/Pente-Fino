@@ -35,6 +35,16 @@ test('recepção vê o aviso, abre a conversa de quem pediu atendente e lê as m
   );
   expect(sobra).toBeLessThanOrEqual(0);
 
+  // "Agendar" abre a Agenda com o novo agendamento já com o cliente da conversa.
+  await conversa.getByRole('link', { name: 'Agendar' }).click();
+  await expect(page).toHaveURL(/\/agenda\?agendar=/);
+  const novo = page.getByRole('dialog', { name: 'Novo agendamento' });
+  await expect(novo).toBeVisible();
+  await novo.getByRole('button', { name: 'Fechar' }).first().click();
+  await page.goBack();
+  // No celular a conversa volta aberta; no computador, abre de novo pela lista.
+  if (!(await conversa.isVisible())) await esperando.getByRole('button').first().click();
+
   // "Ver cliente" abre a ficha; "Mandar mensagem" explica por que o bot não envia agora
   // (WhatsApp desconectado) e oferece o link com o texto pronto.
   await conversa.getByRole('link', { name: 'Ver cliente' }).click();

@@ -25,6 +25,7 @@ import {
   type StatusConexaoWhatsapp,
   type TurnoBot,
   NOTA_BAIXA_ATE,
+  type FimDaEsperaDoAtendente,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -331,6 +332,8 @@ export type ResultadoAtendimento =
       assistenteAtivado?: string;
       /** Nota 1 ou 2 na pesquisa: o worker agenda o aviso para dono e gestor. */
       notaBaixa?: { avaliacaoId: string; concluida: boolean };
+      /** Começou a esperar atendente (ISO): o worker agenda o fim da espera. */
+      esperaAtendente?: string;
     };
 
 const NOME_PADRAO_CLIENTE = 'Cliente do WhatsApp';
@@ -552,6 +555,10 @@ export async function atenderMensagem(
           ...(notaBaixa
             ? { notaBaixa: { avaliacaoId: notaBaixa.id, concluida: r.avaliacao!.concluida } }
             : {}),
+          // Passou a esperar atendente agora: o worker confere em 2 h se alguém respondeu.
+          ...(atendenteDesde && !salva?.atendenteDesde
+            ? { esperaAtendente: atendenteDesde.toISOString() }
+            : {}),
         } as const;
       },
       // O agendamento pela conversa consulta a agenda de vários dias numa mensagem só.
@@ -623,4 +630,43 @@ export async function registrarEnvio(
         : { status: 'falhou', erro: r.erro.slice(0, 500) },
     }),
   );
+}
+
+/**
+ * 2 horas depois do pedido de atendente: se ninguém da equipe assumiu nem respondeu (a espera
+ * é a mesma), o bot volta a atender e avisa o cliente. Devolve o que pôr na fila de saída.
+ */
+export async function encerrarEsperaDoAtendente(
+  prisma: PrismaClient,
+  job: Omit<FimDaEsperaDoAtendente, 'tipo'>,
+): Promise<{ contaId: string; instancia: string; mensagemIds: string[] } | null> {
+  return naConta(prisma, job.contaId, async (tx) => {
+    const s = await tx.botSessao.findUnique({
+      where: { unidadeId_telefone: { unidadeId: job.unidadeId, telefone: job.telefone } },
+      include: { unidade: { include: { botConexao: true } } },
+    });
+    if (!s?.atendenteDesde || s.atendenteDesde.toISOString() !== job.desde) return null;
+    const sessao = s.sessao as unknown as SessaoBot;
+    await tx.botSessao.update({
+      where: { id: s.id },
+      data: {
+        sessao: json({ ...sessao, comAtendente: false, caminho: [], erros: 0 }),
+        atendenteDesde: null,
+      },
+    });
+    const conexao = s.unidade.botConexao;
+    if (conexao?.status !== 'conectado') return null;
+    const texto = (await mensagensDoBot(tx)).atendente_sem_resposta;
+    const m = await tx.mensagem.create({
+      data: {
+        unidadeId: job.unidadeId,
+        telefone: job.telefone,
+        direcao: 'saida',
+        texto,
+        status: 'pendente',
+      },
+      select: { id: true },
+    });
+    return { contaId: job.contaId, instancia: conexao.instancia, mensagemIds: [m.id] };
+  });
 }

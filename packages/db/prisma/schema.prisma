@@ -173,6 +173,9 @@ enum TipoModeloMensagem {
   pesquisa_barbearia
   pesquisa_comentario
   pesquisa_obrigado
+  lembrete_primeiro
+  lembrete_segundo
+  atendente_sem_resposta
 
   @@map("tipo_modelo_mensagem")
 }

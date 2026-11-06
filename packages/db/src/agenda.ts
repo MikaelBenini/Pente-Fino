@@ -363,3 +363,19 @@ export async function lembretesDoAgendamento(
     });
   return trabalhos;
 }
+
+/** Faltas do cliente na janela da regra (todas as unidades da conta). */
+export async function faltasRecentes(
+  tx: Tx,
+  clienteId: string,
+  agora: Date,
+  regras: Pick<RegrasAgendamento, 'faltasJanelaDias'>,
+): Promise<number> {
+  return tx.agendamento.count({
+    where: {
+      clienteId,
+      status: 'falta',
+      inicio: { gte: new Date(agora.getTime() - regras.faltasJanelaDias * 86_400_000), lt: agora },
+    },
+  });
+}
