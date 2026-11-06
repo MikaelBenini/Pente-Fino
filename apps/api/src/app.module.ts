@@ -10,6 +10,7 @@ import { CobrancaService } from './cobranca/cobranca.service.js';
 import { AssistenteController } from './me/assistente.controller.js';
 import { PushController } from './me/push.controller.js';
 import { ClubeController } from './clube/clube.controller.js';
+import { EsperaController } from './agenda/espera.controller.js';
 import { provedorCobranca } from './cobranca/provedor.js';
 import { WebhookAsaasController } from './cobranca/webhook-asaas.controller.js';
 import { AutenticacaoGuard, PermissaoGuard } from './auth/guardas.js';
@@ -142,6 +143,7 @@ export class ComumModule {}
     AssistenteController,
     PushController,
     ClubeController,
+    EsperaController,
     ConfiguracaoController,
     ImportacaoController,
     ExportacaoController,

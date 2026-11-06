@@ -304,7 +304,8 @@ export async function moverAgendamento(
     data: { profissionalId: prof },
   });
   return {
-    antes: { inicio: ag.inicio, profissionalId: ag.profissionalId },
+    antes: { inicio: ag.inicio, fim: ag.fim, profissionalId: ag.profissionalId },
+    contaId: ag.contaId,
     comandaId: ag.comanda.id,
     unidadeId: ag.unidadeId,
   };
@@ -343,6 +344,14 @@ export async function cancelarPeloCliente(tx: Tx, agendamentoId: string, canal: 
       motivo,
     },
   });
+  // O horário que vagou (para a lista de espera).
+  return {
+    contaId: ag.contaId,
+    unidadeId: ag.unidadeId,
+    profissionalId: ag.profissionalId,
+    inicio: ag.inicio,
+    fim: ag.fim,
+  };
 }
 
 /**

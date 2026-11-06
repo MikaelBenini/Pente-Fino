@@ -325,6 +325,7 @@ describe('automações (retorno e aniversário)', () => {
       'retorno',
       'aniversario',
       'clube',
+      'espera',
       'pesquisa',
       'lembrete',
     ]);

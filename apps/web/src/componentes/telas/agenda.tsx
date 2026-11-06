@@ -21,7 +21,7 @@ import {
   Selecao,
   cn,
 } from '@pente-fino/ui';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, ListOrdered, Plus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
@@ -39,6 +39,7 @@ import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado } from '../pagina';
 import { useUnidadeTrabalho } from '../unidade-trabalho';
 import { BuscaCliente, clienteParaApi, type ClienteEscolhido } from './busca-cliente';
+import { ListaEspera } from './lista-espera';
 
 const PX_POR_MIN = 1.4;
 
@@ -96,6 +97,7 @@ function ConteudoAgenda() {
   const [de, ate] = periodo(visao, dia);
   const agenda = useAgenda(unidadeId, de, ate);
   const [novo, setNovo] = useState(false);
+  const [espera, setEspera] = useState(false);
   const [abriuDoAtalho, setAbriuDoAtalho] = useState(false);
   if (clienteInicial && !abriuDoAtalho) {
     setAbriuDoAtalho(true);
@@ -122,9 +124,14 @@ function ConteudoAgenda() {
         acao={
           balcao &&
           unidadeId && (
-            <Botao onClick={() => setNovo(true)}>
-              <Plus aria-hidden className="size-5" /> Novo agendamento
-            </Botao>
+            <div className="flex flex-wrap gap-2">
+              <Botao variante="secundario" onClick={() => setEspera(true)}>
+                <ListOrdered aria-hidden className="size-5" /> Lista de espera
+              </Botao>
+              <Botao onClick={() => setNovo(true)}>
+                <Plus aria-hidden className="size-5" /> Novo agendamento
+              </Botao>
+            </div>
           )
         }
       />
@@ -222,6 +229,14 @@ function ConteudoAgenda() {
           )
         }
       </Estado>
+      {unidadeId && (
+        <ListaEspera
+          unidadeId={unidadeId}
+          dia={dia}
+          aberto={espera}
+          onFechar={() => setEspera(false)}
+        />
+      )}
       {unidadeId && (
         <NovoAgendamento
           unidadeId={unidadeId}

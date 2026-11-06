@@ -113,6 +113,16 @@ export interface RotinaDasAutomacoes {
   tipo: 'automacoes';
 }
 
+/** Vagou um horário (cancelamento, falta, remarcação): oferecer para a lista de espera. */
+export interface VagaLiberada {
+  tipo: 'vaga';
+  contaId: string;
+  unidadeId: string;
+  profissionalId: string;
+  inicio: string;
+  fim: string;
+}
+
 export type TrabalhoWhatsappEntrada =
   | EventoWhatsapp
   | EnvioDoPainel
@@ -122,7 +132,8 @@ export type TrabalhoWhatsappEntrada =
   | RotinaDaEquipe
   | NotaBaixaParaGestao
   | FimDaEsperaDoAtendente
-  | RotinaDasAutomacoes;
+  | RotinaDasAutomacoes
+  | VagaLiberada;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

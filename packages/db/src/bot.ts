@@ -33,6 +33,7 @@ import {
   mereceConviteGoogle,
   type ClubeNoBot,
   type DataISO,
+  type VagaLiberada,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -45,6 +46,7 @@ import {
 } from './agendar-bot.js';
 import { atenderEquipe, avisarEquipeSobreHorario } from './equipe-whatsapp.js';
 import { notificacaoDoHorario } from './push.js';
+import { responderOferta } from './espera.js';
 import { adesaoDoCliente, detalharAdesao } from './clube.js';
 import { confirmarPeloCliente } from './lembretes.js';
 import { gravarRespostaPesquisa, pesquisaValida } from './avaliacao.js';
@@ -276,12 +278,38 @@ export async function responderComAgenda(
   ResultadoConversa & {
     agendamento?: { id: string; inicio: string };
     mudanca?: PassoDaAgenda['mudanca'];
+    /** Lista de espera: "já foi preenchido" para os outros que receberam a vaga. */
+    outrasSaidas?: string[];
+    /** Antecipou pela lista: o horário antigo vagou. */
+    vaga?: VagaLiberada;
   }
 > {
-  const { agenda, lembrete, ...resto } = d.sessao ?? ({} as SessaoBot);
+  const { agenda, lembrete, oferta, ...resto } = d.sessao ?? ({} as SessaoBot);
   const base: SessaoBot | null = d.sessao ? resto : null;
   const texto = normalizar(d.entrada);
   const agoraIso = d.dados.agora.toISOString();
+
+  // Resposta à oferta da lista de espera: 1 leva o horário, 2 recusa (continua na lista).
+  if (oferta && base && !base.comAtendente && !d.dados.simulacao) {
+    const numeros = lerNumeros(d.entrada);
+    const r = await responderOferta(tx, {
+      esperaId: oferta.esperaId,
+      entrada: numeros.length === 1 ? numeros[0]! : null,
+      agora: d.dados.agora,
+    });
+    if (r)
+      return {
+        respostas: r.respostas,
+        sessao: { ...base, ultimaEm: agoraIso, erros: 0 },
+        acao: null,
+        consentimento: null,
+        avaliacao: null,
+        outrasSaidas: r.outrasSaidas,
+        ...(r.agendamento ? { agendamento: r.agendamento } : {}),
+        ...(r.mudanca ? { mudanca: r.mudanca } : {}),
+        ...(r.vaga ? { vaga: r.vaga } : {}),
+      };
+  }
 
   // Resposta ao lembrete: 1 confirma; no de 24 h, 2 remarca e 3 cancela. Outra coisa segue
   // a conversa normal (e o lembrete sai da sessão).
@@ -350,6 +378,7 @@ export async function responderComAgenda(
       avaliacao: null,
       ...(p.agendamento ? { agendamento: p.agendamento } : {}),
       ...(p.mudanca ? { mudanca: p.mudanca } : {}),
+      ...(p.vaga ? { vaga: p.vaga } : {}),
     };
   }
 
@@ -402,6 +431,8 @@ export type ResultadoAtendimento =
       esperaAtendente?: string;
       /** Push do PWA para o profissional cuja agenda mudou pela conversa. */
       notificacao?: TrabalhoNotificacao;
+      /** Horário que vagou (cancelou ou antecipou pela conversa): o worker oferece para a lista. */
+      vaga?: VagaLiberada;
     };
 
 const NOME_PADRAO_CLIENTE = 'Cliente do WhatsApp';
@@ -618,6 +649,8 @@ export async function atenderMensagem(
           });
           saidas.push(m.id);
         }
+        // Lista de espera: "já foi preenchido" para os outros (cada mensagem tem o seu número).
+        saidas.push(...(r.outrasSaidas ?? []));
         // Mudou a agenda pela conversa: avisa o profissional (se ele ligou o assistente).
         if (r.mudanca) {
           const aviso = await avisarEquipeSobreHorario(
@@ -644,6 +677,7 @@ export async function atenderMensagem(
           consentimento: r.consentimento,
           ...(r.agendamento ? { agendamento: r.agendamento } : {}),
           ...(notificacao ? { notificacao } : {}),
+          ...(r.vaga ? { vaga: r.vaga } : {}),
           ...(notaBaixa
             ? { notaBaixa: { avaliacaoId: notaBaixa.id, concluida: r.avaliacao!.concluida } }
             : {}),

@@ -11,6 +11,7 @@ import {
   iniciarPesquisa,
   lembretesDoAgendamento,
   avisarNotaBaixa,
+  oferecerVaga,
   contasComAutomacoes,
   rodarAutomacoes,
   encerrarEsperaDoAtendente,
@@ -282,6 +283,16 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           }
           return `automações: ${total} mensagem(ns)`;
         }
+        // Vagou um horário: oferece para quem está na lista de espera e cabe nele.
+        if (job.data.tipo === 'vaga') {
+          const o = await oferecerVaga(this.banco.prisma, job.data);
+          if (!o) return 'vaga: ninguém na lista cabe';
+          await agendarRespostas(
+            { contaId: o.contaId, instancia: o.instancia, saidas: o.mensagemIds },
+            { relogio, adicionar },
+          );
+          return `vaga: oferecida a ${o.mensagemIds.length}`;
+        }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {
           appUrl: this.config.APP_URL,
@@ -296,6 +307,11 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             await filaEntrada.add(l.dados.tipo, l.dados, { delay: l.atrasoMs, jobId: l.jobId });
         }
         if (r.notificacao) await filaNotificacoes.add('push', r.notificacao);
+        // Vagou um horário pela conversa: oferecer para a lista de espera.
+        if (r.vaga)
+          await filaEntrada.add('vaga', r.vaga, {
+            jobId: `vaga_${r.vaga.profissionalId}_${Date.parse(r.vaga.inicio)}_${Date.now()}`,
+          });
         if (r.notaBaixa) {
           const t = trabalhoNotaBaixa(
             r.contaId,
