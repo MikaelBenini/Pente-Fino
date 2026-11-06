@@ -123,6 +123,13 @@ export interface VagaLiberada {
   fim: string;
 }
 
+/** "Não veio" por atraso: 5 min depois (tempo de desfazer), manda a remarcação rápida. */
+export interface RemarcacaoPorAtraso {
+  tipo: 'atraso';
+  contaId: string;
+  agendamentoId: string;
+}
+
 export type TrabalhoWhatsappEntrada =
   | EventoWhatsapp
   | EnvioDoPainel
@@ -133,7 +140,8 @@ export type TrabalhoWhatsappEntrada =
   | NotaBaixaParaGestao
   | FimDaEsperaDoAtendente
   | RotinaDasAutomacoes
-  | VagaLiberada;
+  | VagaLiberada
+  | RemarcacaoPorAtraso;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

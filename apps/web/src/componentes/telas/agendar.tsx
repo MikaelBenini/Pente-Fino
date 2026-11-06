@@ -7,6 +7,7 @@ import {
   formatarMoeda,
   formatarTelefone,
   NOMES_DIAS_CURTOS,
+  textoTolerancia,
   type AgendamentoPublicoCriado,
   type ClienteDoLink,
   type EsperaPublicaCriada,
@@ -181,6 +182,9 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
           <p className="text-tinta-suave">
             {feito.servicos.join(' + ')} · {formatarMoeda(feito.total)}
           </p>
+          {textoTolerancia(feito.toleranciaMin) && (
+            <p className="text-sm text-tinta-suave">{textoTolerancia(feito.toleranciaMin)}</p>
+          )}
           {feito.lembretes === 'ativar' && feito.linkLembretes && (
             <div className="flex flex-col gap-2 rounded-md border border-borda bg-fundo p-4">
               <p className="font-semibold">Falta um passo para os lembretes</p>

@@ -1,5 +1,6 @@
 // Lembretes do horário pelo WhatsApp (Etapa 11): quando mandar e o que dizer.
 import { formatarHora } from './formatacao.js';
+import { textoTolerancia } from './atraso.js';
 
 /**
  * Primeiro lembrete ("24h", o mais longe do horário: confirma, remarca ou cancela) e segundo
@@ -37,6 +38,8 @@ export interface DadosDoLembrete {
   inicio: string;
   servicos: readonly string[];
   profissional: string;
+  /** Atraso tolerado (minutos), avisado no lembrete. */
+  toleranciaMin?: number;
 }
 
 /** O lembrete com as opções; o de 2 h só confirma (mudar em cima da hora é com a recepção). */
@@ -51,6 +54,7 @@ export function textoLembrete(tipo: TipoLembrete, d: DadosDoLembrete, abertura?:
     '',
     `📅 ${d.diaRotulo}, às ${formatarHora(d.inicio)}`,
     `✂️ ${d.servicos.join(' + ')} com ${d.profissional}`,
+    ...(d.toleranciaMin ? [textoTolerancia(d.toleranciaMin)!] : []),
     '',
   ];
   if (tipo === '2h')

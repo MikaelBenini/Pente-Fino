@@ -445,6 +445,7 @@ export class PublicoController {
       lembretes: r.lembretes,
       linkLembretes: r.linkLembretes,
       podeAntecipar: r.podeAntecipar,
+      toleranciaMin: regras.toleranciaAtrasoMin,
     };
   }
 

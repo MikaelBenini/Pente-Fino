@@ -333,7 +333,13 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
               confirmado={i.confirmado}
               altura={Math.max(48, (minutosDoDia(i.fim) - minutosDoDia(i.inicio)) * PX_POR_MIN - 2)}
               onClick={() => abrirComanda(router, i)}
+              className={i.atrasado ? 'ring-2 ring-aviso-texto' : undefined}
             />
+            {i.atrasado && (
+              <span className="pointer-events-none absolute right-1 top-1 rounded-sm bg-aviso-texto px-1.5 font-denso text-xs font-semibold uppercase text-fundo">
+                Não chegou?
+              </span>
+            )}
           </div>
         ))}
     </div>

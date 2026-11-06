@@ -92,6 +92,8 @@ export interface AgendamentoPublicoCriado {
   linkLembretes: string | null;
   /** Foi empurrado para depois e aceita mensagens: oferece "me avise se vagar antes". */
   podeAntecipar: boolean;
+  /** Atraso tolerado (minutos) da unidade, avisado na confirmação. */
+  toleranciaMin: number;
 }
 
 /** "Avise-me se vagar" no site, quando o dia não tem horário livre. */

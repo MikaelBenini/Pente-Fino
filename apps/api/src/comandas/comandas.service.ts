@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   agendarPesquisa,
+  regrasDaUnidade,
+  validarHorario,
   comissaoFixaDoClube,
   partesDoServico,
   precoServicoVigente,
@@ -9,6 +11,8 @@ import {
 } from '@pente-fino/db';
 import {
   comissaoDoClube,
+  DESFAZER_NAO_VEIO_MIN,
+  estaAtrasado,
   comissaoItem,
   dataLocal,
   faltaReceber,
@@ -100,7 +104,7 @@ export function resumo(c: ComandaCompleta, agora = new Date()): ComandaResumo {
   };
 }
 
-function detalhe(c: ComandaCompleta): ComandaDetalhe {
+function detalhe(c: ComandaCompleta): Omit<ComandaDetalhe, 'atrasado' | 'podeDesfazerNaoVeio'> {
   return {
     ...resumo(c),
     agendamentoId: c.agendamentoId,
@@ -205,7 +209,133 @@ export class ComandasService {
   }
 
   async buscar(id: string): Promise<ComandaDetalhe> {
-    return this.banco.daConta(async (tx) => detalhe((await this.carregar(tx, id)).comanda));
+    return this.banco.daConta(async (tx) => {
+      const c = (await this.carregar(tx, id)).comanda;
+      const ag = c.agendamentoId
+        ? await tx.agendamento.findUnique({ where: { id: c.agendamentoId } })
+        : null;
+      const agora = new Date();
+      const regras = ag ? await regrasDaUnidade(tx, c.unidadeId) : null;
+      return {
+        ...detalhe(c),
+        atrasado:
+          !!ag &&
+          estaAtrasado({
+            statusComanda: c.status,
+            statusAgendamento: ag.status,
+            inicio: ag.inicio,
+            agora,
+            toleranciaMin: regras!.toleranciaAtrasoMin,
+          }),
+        podeDesfazerNaoVeio:
+          !!ag?.atrasou &&
+          ag.status === 'falta' &&
+          !!c.canceladaEm &&
+          agora.getTime() - c.canceladaEm.getTime() <= DESFAZER_NAO_VEIO_MIN * 60_000,
+      };
+    });
+  }
+
+  /**
+   * Passou da tolerância e o cliente não veio (confirmado pelo barbeiro ou pela recepção):
+   * cancela como atraso (conta nas faltas, separado da falta comum). A remarcação para o
+   * cliente e a vaga para a lista saem em 5 min, para dar tempo de desfazer.
+   */
+  async naoVeio(id: string): Promise<ComandaDetalhe> {
+    const contaId = Contexto.usuario().contaId;
+    const agendamentoId = await this.banco.daConta(async (tx) => {
+      const { comanda, propria, papeis } = await this.carregar(tx, id);
+      this.exigir('nao_veio', comanda, papeis, propria);
+      const ag = comanda.agendamentoId
+        ? await tx.agendamento.findUnique({ where: { id: comanda.agendamentoId } })
+        : null;
+      if (!ag)
+        throw Erros.requisicaoInvalida('sem_horario', 'Esta comanda não tem horário marcado.');
+      const regras = await regrasDaUnidade(tx, comanda.unidadeId);
+      if (
+        !estaAtrasado({
+          statusComanda: comanda.status,
+          statusAgendamento: ag.status,
+          inicio: ag.inicio,
+          agora: new Date(),
+          toleranciaMin: regras.toleranciaAtrasoMin,
+        })
+      )
+        throw Erros.conflito(
+          `Ainda dentro da tolerância de ${regras.toleranciaAtrasoMin} minutos. Espere um pouco mais.`,
+        );
+      await tx.comanda.update({
+        where: { id },
+        data: {
+          status: 'cancelada',
+          canceladaEm: new Date(),
+          motivoCancelamento: 'Não veio (atraso)',
+        },
+      });
+      await tx.agendamento.update({
+        where: { id: ag.id },
+        data: { status: 'falta', atrasou: true },
+      });
+      await auditar(tx, {
+        entidade: 'comanda',
+        entidadeId: id,
+        acao: 'nao_veio',
+        antes: { status: comanda.status },
+        depois: { status: 'cancelada', atraso: true },
+        motivo: 'Não veio (atraso)',
+      });
+      await liberarVaga(this.filas, contaId, ag, DESFAZER_NAO_VEIO_MIN * 60_000);
+      return ag.id;
+    });
+    await this.filas.whatsappEntrada
+      .add(
+        'atraso',
+        { tipo: 'atraso', contaId, agendamentoId },
+        { delay: DESFAZER_NAO_VEIO_MIN * 60_000, jobId: `atraso_${agendamentoId}_${Date.now()}` },
+      )
+      .catch(() => undefined);
+    return this.buscar(id);
+  }
+
+  /** Desfazer o "Não veio" em até 5 min (o cliente chegou): volta o horário, se ainda está livre. */
+  async desfazerNaoVeio(id: string): Promise<ComandaDetalhe> {
+    await this.banco.daConta(async (tx) => {
+      const { comanda, propria, papeis } = await this.carregar(tx, id);
+      if (!podeAgirNaComanda('editar_itens', 'prevista', papeis, propria).permitido)
+        throw Erros.semPermissao();
+      const ag = comanda.agendamentoId
+        ? await tx.agendamento.findUnique({ where: { id: comanda.agendamentoId } })
+        : null;
+      if (
+        !ag?.atrasou ||
+        ag.status !== 'falta' ||
+        comanda.status !== 'cancelada' ||
+        !comanda.canceladaEm ||
+        Date.now() - comanda.canceladaEm.getTime() > DESFAZER_NAO_VEIO_MIN * 60_000
+      )
+        throw Erros.conflito('Passou o tempo para desfazer. Marque um horário novo.');
+      await validarHorario(tx, ag.profissionalId, ag.unidadeId, ag.inicio, ag.fim, ag.id).catch(
+        (e: Error) => {
+          throw Erros.conflito(`O horário não está mais livre: ${e.message}`);
+        },
+      );
+      await tx.agendamento.update({
+        where: { id: ag.id },
+        data: { status: 'agendado', atrasou: false },
+      });
+      await tx.comanda.update({
+        where: { id },
+        data: { status: 'prevista', canceladaEm: null, motivoCancelamento: null },
+      });
+      await auditar(tx, {
+        entidade: 'comanda',
+        entidadeId: id,
+        acao: 'desfazer_nao_veio',
+        antes: { status: 'cancelada' },
+        depois: { status: 'prevista' },
+      });
+    });
+    return this.buscar(id);
   }
 
   /** Recalcula os totais a partir dos itens. */

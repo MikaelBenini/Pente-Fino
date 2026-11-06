@@ -12,6 +12,7 @@ import {
   lembretesDoAgendamento,
   avisarNotaBaixa,
   oferecerVaga,
+  remarcacaoPorAtraso,
   contasComAutomacoes,
   rodarAutomacoes,
   encerrarEsperaDoAtendente,
@@ -282,6 +283,21 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             }
           }
           return `automações: ${total} mensagem(ns)`;
+        }
+        // "Não veio" por atraso, passado o tempo de desfazer: manda a remarcação rápida.
+        if (job.data.tipo === 'atraso') {
+          const r = await remarcacaoPorAtraso(
+            this.banco.prisma,
+            job.data,
+            new Date(),
+            this.config.APP_URL,
+          );
+          if (!r) return 'atraso: desfeito ou sem aviso';
+          await agendarRespostas(
+            { contaId: r.contaId, instancia: r.instancia, saidas: r.mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'atraso: remarcação enviada';
         }
         // Vagou um horário: oferece para quem está na lista de espera e cabe nele.
         if (job.data.tipo === 'vaga') {

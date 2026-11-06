@@ -135,6 +135,24 @@ export class ComandasController {
     return this.servico.confirmar(id);
   }
 
+  @Post(':id/nao-veio')
+  @Papeis(...TODOS)
+  @Auditada()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Passou da tolerância e o cliente não veio: cancela como atraso' })
+  naoVeio(@Param('id', ParseUUIDPipe) id: string) {
+    return this.servico.naoVeio(id);
+  }
+
+  @Post(':id/desfazer-nao-veio')
+  @Papeis(...TODOS)
+  @Auditada()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Desfazer o "Não veio" em até 5 min (o cliente chegou)' })
+  desfazerNaoVeio(@Param('id', ParseUUIDPipe) id: string) {
+    return this.servico.desfazerNaoVeio(id);
+  }
+
   @Post(':id/fechar')
   @Papeis('dono', 'gestor', 'recepcao')
   @Auditada()

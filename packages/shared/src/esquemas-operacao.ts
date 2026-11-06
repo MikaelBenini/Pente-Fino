@@ -135,6 +135,8 @@ export interface AgendaItem {
   origem: string;
   /** O cliente respondeu "Confirmo" ao lembrete do WhatsApp. */
   confirmado: boolean;
+  /** Passou da tolerância sem começar: "Cliente não chegou?". */
+  atrasado: boolean;
 }
 
 export interface AgendaProfissional {
@@ -280,6 +282,10 @@ export interface ComandaDetalhe extends ComandaResumo {
   pagamentos: { forma: FormaPagamento; valor: number }[];
   fechadaEm: string | null;
   motivoCancelamento: string | null;
+  /** Passou da tolerância sem começar: mostra "Cliente não chegou?" (Chegou / Não veio). */
+  atrasado: boolean;
+  /** "Não veio" por atraso há menos de 5 min: ainda dá para desfazer. */
+  podeDesfazerNaoVeio: boolean;
 }
 
 // ─── Produtos ─────────────────────────────────────────────────────────────

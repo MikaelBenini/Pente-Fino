@@ -8,6 +8,7 @@ import {
   moverAgendamento,
   validarHorario,
   type Transacao,
+  regrasDaUnidade,
 } from '@pente-fino/db';
 import {
   podeNaUnidade,
@@ -17,6 +18,7 @@ import {
   type NovoAgendamentoEntrada,
   type StatusComanda,
   type MudancaNaAgenda,
+  estaAtrasado,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -118,6 +120,7 @@ export class AgendaService {
         }),
       ]);
       const agora = new Date();
+      const tolerancia = (await regrasDaUnidade(tx, unidadeId)).toleranciaAtrasoMin;
       return {
         profissionais: profissionais.map((p) => ({
           id: p.id,
@@ -145,6 +148,13 @@ export class AgendaService {
               : statusEfetivo((a.comanda?.status ?? 'prevista') as StatusComanda, a.fim, agora),
           origem: a.origem,
           confirmado: a.status === 'confirmado',
+          atrasado: estaAtrasado({
+            statusComanda: a.comanda?.status ?? 'prevista',
+            statusAgendamento: a.status,
+            inicio: a.inicio,
+            agora,
+            toleranciaMin: tolerancia,
+          }),
         })),
         bloqueios: bloqueios.map((b) => ({
           id: b.id,

@@ -59,3 +59,4 @@ export * from './push.js';
 export * from './automacoes.js';
 export * from './clube.js';
 export * from './espera.js';
+export * from './atraso.js';

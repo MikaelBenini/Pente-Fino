@@ -56,6 +56,11 @@ export function TelaHoje() {
                     {formatarHora(proximo.inicio)}–{formatarHora(proximo.fim)} ·{' '}
                     {proximo.servicos.join(' + ')}
                   </span>
+                  {proximo.atrasado && (
+                    <span className="mt-1 font-semibold text-aviso-texto">
+                      Passou da tolerância. O cliente chegou?
+                    </span>
+                  )}
                   <span className="mt-1 font-semibold text-tinta underline underline-offset-4">
                     Abrir comanda
                   </span>
@@ -77,7 +82,12 @@ export function TelaHoje() {
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {h.agenda.map((a) => (
-                      <li key={a.agendamentoId}>
+                      <li key={a.agendamentoId} className="flex flex-col gap-1">
+                        {a.atrasado && (
+                          <span className="text-sm font-semibold text-aviso-texto">
+                            Não chegou? Abra a comanda para confirmar.
+                          </span>
+                        )}
                         <BlocoAgenda
                           inicio={formatarHora(a.inicio)}
                           fim={formatarHora(a.fim)}

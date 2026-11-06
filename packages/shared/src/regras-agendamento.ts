@@ -21,6 +21,8 @@ export interface RegrasAgendamento {
   faltasParaBloquear: number;
   /** Janela das faltas, em dias. */
   faltasJanelaDias: number;
+  /** Atraso tolerado (minutos), avisado na confirmação; depois, "Cliente não chegou?". */
+  toleranciaAtrasoMin: number;
 }
 
 export const REGRAS_AGENDAMENTO_PADRAO: Readonly<RegrasAgendamento> = {
@@ -33,6 +35,7 @@ export const REGRAS_AGENDAMENTO_PADRAO: Readonly<RegrasAgendamento> = {
   pelaConversa: true,
   faltasParaBloquear: 3,
   faltasJanelaDias: 90,
+  toleranciaAtrasoMin: 10,
 };
 
 export const regrasAgendamentoSchema = z.object({
@@ -53,6 +56,7 @@ export const regrasAgendamentoSchema = z.object({
   // App antigo não manda estes: ficam no padrão.
   faltasParaBloquear: z.number().int().min(0).max(10).default(3),
   faltasJanelaDias: z.number().int().min(7).max(365).default(90),
+  toleranciaAtrasoMin: z.number().int().min(0).max(60).default(10),
 });
 
 /** Muitas faltas na janela: marca só com a recepção (bot e site); o balcão segue livre. */

@@ -1,4 +1,5 @@
 import { Controller, Get, Inject } from '@nestjs/common';
+import { regrasDaUnidade } from '@pente-fino/db';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   calcularIndicadores,
@@ -8,6 +9,7 @@ import {
   type ExtratoComissao,
   type PainelBarbeiro,
   type StatusComanda,
+  estaAtrasado,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Papeis } from '../auth/decoradores.js';
@@ -75,6 +77,9 @@ export class MeController {
           })
         )._sum.comissaoValor ?? 0;
       const agora = new Date();
+      const tolerancias = new Map<string, number>();
+      for (const uid of new Set(agendamentos.map((a) => a.unidadeId)))
+        tolerancias.set(uid, (await regrasDaUnidade(tx, uid)).toleranciaAtrasoMin);
       return {
         hoje,
         agenda: agendamentos.map((a) => ({
@@ -91,6 +96,13 @@ export class MeController {
           status: statusEfetivo((a.comanda?.status ?? 'prevista') as StatusComanda, a.fim, agora),
           origem: a.origem,
           confirmado: a.status === 'confirmado',
+          atrasado: estaAtrasado({
+            statusComanda: a.comanda?.status ?? 'prevista',
+            statusAgendamento: a.status,
+            inicio: a.inicio,
+            agora,
+            toleranciaMin: tolerancias.get(a.unidadeId) ?? 10,
+          }),
         })),
         comissaoDia: await soma(hoje),
         comissaoMes: await soma(`${mes}-01`),

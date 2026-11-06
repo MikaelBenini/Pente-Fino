@@ -17,6 +17,7 @@ import {
   cancelarPeloCliente,
   criarPrisma,
   oferecerVaga,
+  remarcacaoPorAtraso,
   vagaDe,
   numerosDasAutomacoes,
   rodarAutomacoes,
@@ -1332,5 +1333,77 @@ describe('lista de espera pela conversa e "avisar se vagar antes"', () => {
     );
     expect(pedido).toMatchObject({ origem: 'bot', deMin: 0, ateMin: 1440, servicoIds: [corte] });
     expect(pedido.dia.toISOString().slice(0, 10)).toBe('2026-12-29');
+  });
+});
+
+describe('atraso: remarcação rápida depois do "Não veio"', () => {
+  // Quarta, 30/12: horário das 9h (12:00Z); são 9h20 quando o barbeiro confirma o atraso.
+  const agoraAtraso = new Date('2026-12-30T12:20:00Z');
+  const tel = '5511944200001';
+
+  it('5 min depois, oferece os próximos 3 horários com o mesmo barbeiro; o número já marca', async () => {
+    await fala(tel, 'oi', new Date('2026-12-20T12:00:00Z'));
+    const agId = await naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: tel } });
+      await tx.cliente.update({ where: { id: c.id }, data: { consentimentoMsg: true } });
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: c.id,
+        inicio: new Date('2026-12-30T12:00:00Z'),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      await tx.agendamento.update({
+        where: { id: r.agendamentoId },
+        data: { status: 'falta', atrasou: true },
+      });
+      return r.agendamentoId;
+    });
+    const envio = await remarcacaoPorAtraso(
+      prisma,
+      { contaId: conta, agendamentoId: agId },
+      agoraAtraso,
+      'http://app.teste',
+    );
+    expect(envio?.mensagemIds).toHaveLength(1);
+    const texto = (
+      await naMinhaConta((tx) =>
+        tx.mensagem.findUniqueOrThrow({ where: { id: envio!.mensagemIds[0]! } }),
+      )
+    ).texto;
+    expect(texto).toContain('Seu horário das 09:00 foi cancelado pelo atraso. Quer remarcar?');
+    expect(texto).toMatch(/1\. Hoje \(qua, 30\/12\), às 09:30\n2\. .*09:45\n3\. .*10:00/);
+    expect(texto).toMatch(/4\. Outro dia \(pelo site\): http:\/\/app\.teste\/agendar\?u=.*&c=/);
+
+    const marcado = await fala(tel, '1', new Date(agoraAtraso.getTime() + 60_000));
+    expect(marcado).toContain('Pronto, horário marcado!');
+    expect(marcado).toContain('Tolerância de 10 minutos');
+    const novo = await naMinhaConta((tx) =>
+      tx.agendamento.findFirst({
+        where: { cliente: { telefone: tel }, status: 'agendado' },
+      }),
+    );
+    expect(novo?.inicio.toISOString()).toBe('2026-12-30T12:30:00.000Z');
+  });
+
+  it('desfeito o "Não veio" (horário voltou), não manda nada', async () => {
+    const agId = await naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: tel } });
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: c.id,
+        inicio: new Date('2026-12-31T12:00:00Z'),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      return r.agendamentoId;
+    });
+    expect(
+      await remarcacaoPorAtraso(prisma, { contaId: conta, agendamentoId: agId }, agoraAtraso),
+    ).toBeNull();
   });
 });

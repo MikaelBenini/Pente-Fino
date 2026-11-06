@@ -62,9 +62,14 @@ export async function liberarVaga(
   filas: Filas,
   contaId: string,
   a: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date },
+  /** Atraso: depois do "Não veio", espera o tempo de desfazer. */
+  delay = 0,
 ): Promise<void> {
   const vaga = vagaDe(contaId, a);
   await filas.whatsappEntrada
-    .add('vaga', vaga, { jobId: `vaga_${a.profissionalId}_${a.inicio.getTime()}_${Date.now()}` })
+    .add('vaga', vaga, {
+      delay,
+      jobId: `vaga_${a.profissionalId}_${a.inicio.getTime()}_${Date.now()}`,
+    })
     .catch(() => undefined);
 }

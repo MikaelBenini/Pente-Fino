@@ -379,6 +379,47 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
             fechar.
           </Aviso>
         )}
+        {c.atrasado && (
+          <div
+            role="status"
+            className="flex flex-col gap-3 rounded-lg border-2 border-aviso-texto/60 bg-superficie p-4"
+          >
+            <p className="font-semibold">Cliente não chegou?</p>
+            <p className="text-sm text-tinta-suave">
+              Passou da tolerância e o atendimento não começou. Nada acontece sozinho: confirme.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Botao carregando={acao.isPending} onClick={() => executar('iniciar')}>
+                Chegou
+              </Botao>
+              <Botao
+                variante="secundario"
+                carregando={acao.isPending}
+                onClick={() => executar('nao-veio')}
+              >
+                Não veio
+              </Botao>
+            </div>
+          </div>
+        )}
+        {c.podeDesfazerNaoVeio && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-borda bg-superficie p-4"
+          >
+            <p className="text-sm">
+              Marcado como <strong>não veio (atraso)</strong>. Em 5 minutos o cliente recebe a opção
+              de remarcar e o horário vai para a lista de espera.
+            </p>
+            <Botao
+              variante="secundario"
+              carregando={acao.isPending}
+              onClick={() => executar('desfazer-nao-veio')}
+            >
+              Desfazer
+            </Botao>
+          </div>
+        )}
         {c.motivoCancelamento && <Aviso tom="info">Cancelada: {c.motivoCancelamento}</Aviso>}
         {erro && <Aviso tom="erro">{erro}</Aviso>}
         {aviso && <Aviso tom="sucesso">{aviso}</Aviso>}

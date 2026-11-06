@@ -710,6 +710,8 @@ model Agendamento {
   criadoEm       DateTime          @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm   DateTime          @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
+  /// Falta por atraso ("Não veio" depois da tolerância): conta nas faltas, mas separada da comum.
+  atrasou      Boolean      @default(false)
   conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
   unidade      Unidade      @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
   profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
