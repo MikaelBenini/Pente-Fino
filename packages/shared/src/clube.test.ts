@@ -13,12 +13,12 @@ describe('ciclo da adesão', () => {
     expect(somarMeses('2026-01-31', 1)).toBe('2026-02-28');
     expect(somarMeses('2028-01-31', 1)).toBe('2028-02-29');
     expect(somarMeses('2026-03-15', -1)).toBe('2026-02-15');
-    expect(cicloDaAdesao('2026-12-10')).toEqual({ de: '2026-11-11', ate: '2026-12-10' });
+    expect(cicloDaAdesao('2026-12-10')).toEqual({ de: '2026-11-10', ate: '2026-12-09' });
   });
 
-  it('ativa até o dia do vencimento; cancelada continua cancelada', () => {
-    expect(situacaoDaAdesao('ativa', '2026-12-10', '2026-12-10')).toBe('ativa');
-    expect(situacaoDaAdesao('ativa', '2026-12-10', '2026-12-11')).toBe('vencida');
+  it('em dia até a véspera do vencimento; cancelada continua cancelada', () => {
+    expect(situacaoDaAdesao('ativa', '2026-12-10', '2026-12-09')).toBe('ativa');
+    expect(situacaoDaAdesao('ativa', '2026-12-10', '2026-12-10')).toBe('vencida');
     expect(situacaoDaAdesao('cancelada', '2026-12-10', '2026-12-01')).toBe('cancelada');
   });
 });

@@ -1,11 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   agendarPesquisa,
+  comissaoFixaDoClube,
+  partesDoServico,
   precoServicoVigente,
   regraComissaoVigente,
   type Transacao,
 } from '@pente-fino/db';
 import {
+  comissaoDoClube,
   comissaoItem,
   dataLocal,
   faltaReceber,
@@ -19,6 +22,7 @@ import {
   type AcaoComanda,
   type ComandaDetalhe,
   type ComandaResumo,
+  type DataISO,
   type FecharComandaEntrada,
   type NovaComandaEntrada,
   type NovoItemEntrada,
@@ -60,6 +64,8 @@ type ComandaCompleta = NonNullable<Awaited<ReturnType<Transacao['comanda']['find
     custoUnitario: number;
     pesoAtendimento: number;
     profissionalId: string | null;
+    cobertoClube: boolean;
+    adesaoId: string | null;
     servico: { nome: string } | null;
     produto: { nome: string } | null;
   }[];
@@ -110,6 +116,7 @@ function detalhe(c: ComandaCompleta): ComandaDetalhe {
       precoUnitario: i.precoUnitario,
       desconto: i.desconto,
       ehExtra: i.ehExtra,
+      cobertoClube: i.cobertoClube,
       comissaoValor: i.comissaoValor,
     })),
     pagamentos: c.pagamentos.map((p) => ({ forma: p.forma, valor: p.valor })),
@@ -211,7 +218,7 @@ export class ComandasService {
   /** Cria o item gravando preço, custo, peso e extra do momento. */
   async criarItem(
     tx: Transacao,
-    c: { id: string; unidadeId: string; profissionalId: string },
+    c: { id: string; unidadeId: string; profissionalId: string; clienteId: string | null },
     dia: string,
     item: NovoItemEntrada,
   ) {
@@ -224,19 +231,33 @@ export class ComandasService {
           'sem_preco',
           `"${s.nome}" não tem preço nesta unidade. Defina na tabela de preços.`,
         );
-      return tx.itemComanda.create({
-        data: {
-          comandaId: c.id,
-          tipo: 'servico',
-          servicoId: s.id,
-          profissionalId: c.profissionalId,
-          quantidade: item.quantidade,
-          precoUnitario: preco,
-          custoUnitario: s.custoProduto,
-          ehExtra: s.ehExtra,
-          pesoAtendimento: s.pesoAtendimento,
-        },
+      // Assinante do clube: o que o plano cobre entra com valor zero; o resto, preço normal.
+      const partes = await partesDoServico(tx, {
+        clienteId: c.clienteId,
+        unidadeId: c.unidadeId,
+        servicoId: s.id,
+        quantidade: item.quantidade,
+        preco,
+        dia: dia as DataISO,
       });
+      let criado;
+      for (const p of partes)
+        criado = await tx.itemComanda.create({
+          data: {
+            comandaId: c.id,
+            tipo: 'servico',
+            servicoId: s.id,
+            profissionalId: c.profissionalId,
+            quantidade: p.quantidade,
+            precoUnitario: p.precoUnitario,
+            cobertoClube: p.cobertoClube,
+            adesaoId: p.adesaoId,
+            custoUnitario: s.custoProduto,
+            ehExtra: s.ehExtra,
+            pesoAtendimento: s.pesoAtendimento,
+          },
+        });
+      return criado!;
     }
     if (item.tipo === 'produto') {
       const p = await tx.produto.findUnique({ where: { id: item.produtoId } });
@@ -375,11 +396,15 @@ export class ComandasService {
         );
       if (d.desconto !== undefined && !papeis.some((p) => p !== 'barbeiro'))
         throw Erros.semPermissao('Desconto é dado pela recepção.');
-      if (d.servicoId && d.servicoId !== item.servicoId) {
+      // Trocar o serviço, ou mudar a quantidade de um item do clube: lança de novo, e o plano
+      // decide outra vez o que cobre (o limite do mês não estoura).
+      const mudouQtdClube =
+        item.cobertoClube && d.quantidade !== undefined && d.quantidade !== item.quantidade;
+      if ((d.servicoId && d.servicoId !== item.servicoId) || mudouQtdClube) {
         await tx.itemComanda.delete({ where: { id: itemId } });
         await this.criarItem(tx, comanda, diaDaComanda(comanda), {
           tipo: 'servico',
-          servicoId: d.servicoId,
+          servicoId: d.servicoId ?? item.servicoId!,
           quantidade: d.quantidade ?? item.quantidade,
         });
       } else {
@@ -497,7 +522,26 @@ export class ComandasService {
           comissaoValorFixo: null as number | null,
           comissaoValor: 0,
         };
-        if (item.tipo !== 'nao_operacional' && item.profissionalId) {
+        if (item.cobertoClube && item.adesaoId && item.servicoId && item.profissionalId) {
+          // Clube: sobre o preço de tabela da unidade na data, ou a comissão fixa do plano.
+          const regra = await regraComissaoVigente(tx, item.profissionalId, 'servico', dia);
+          const fixo = await comissaoFixaDoClube(tx, item.adesaoId, item.servicoId);
+          comissao = {
+            comissaoPercentualBp: fixo === null ? (regra?.percentualBp ?? null) : null,
+            comissaoValorFixo: fixo ?? regra?.valorFixo ?? null,
+            comissaoValor: comissaoDoClube({
+              precoTabela:
+                (await precoServicoVigente(tx, item.servicoId, comanda.unidadeId, dia)) ?? 0,
+              quantidade: item.quantidade,
+              regraProfissional: regra
+                ? regra.percentualBp !== null
+                  ? { percentualBp: regra.percentualBp }
+                  : { valorFixo: regra.valorFixo! }
+                : null,
+              valorFixoClube: fixo,
+            }),
+          };
+        } else if (item.tipo !== 'nao_operacional' && item.profissionalId) {
           const regra = await regraComissaoVigente(tx, item.profissionalId, item.tipo, dia);
           if (regra) {
             const valor = valorItem(item);

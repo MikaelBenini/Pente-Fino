@@ -12,8 +12,10 @@ import {
   type LembreteDeHorario,
   type ProximoClienteDaEquipe,
   type RegrasAgendamento,
+  type DataISO,
 } from '@pente-fino/shared';
 import type { OrigemAgendamento, Prisma } from './generated/prisma/client.js';
+import { partesDoServico } from './clube.js';
 import { precoServicoVigente } from './vigencia.js';
 
 type Tx = Prisma.TransactionClient;
@@ -228,20 +230,33 @@ export async function criarAgendamentoNoBanco(
         'sem_preco',
         `"${s.nome}" não tem preço nesta unidade. Defina na tabela de preços.`,
       );
-    await tx.itemComanda.create({
-      data: {
-        comandaId: comanda.id,
-        tipo: 'servico',
-        servicoId: s.id,
-        profissionalId: d.profissionalId,
-        quantidade: 1,
-        precoUnitario: preco,
-        custoUnitario: s.custoProduto,
-        ehExtra: s.ehExtra,
-        pesoAtendimento: s.pesoAtendimento,
-      },
+    // Assinante do clube: o que o plano cobre entra com valor zero (RN-07).
+    const partes = await partesDoServico(tx, {
+      clienteId: d.clienteId,
+      unidadeId: d.unidadeId,
+      servicoId: s.id,
+      quantidade: 1,
+      preco,
+      dia: dia as DataISO,
     });
-    total += preco;
+    for (const p of partes) {
+      await tx.itemComanda.create({
+        data: {
+          comandaId: comanda.id,
+          tipo: 'servico',
+          servicoId: s.id,
+          profissionalId: d.profissionalId,
+          quantidade: p.quantidade,
+          precoUnitario: p.precoUnitario,
+          cobertoClube: p.cobertoClube,
+          adesaoId: p.adesaoId,
+          custoUnitario: s.custoProduto,
+          ehExtra: s.ehExtra,
+          pesoAtendimento: s.pesoAtendimento,
+        },
+      });
+      total += p.precoUnitario * p.quantidade;
+    }
   }
   await tx.comanda.update({
     where: { id: comanda.id },

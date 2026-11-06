@@ -25,22 +25,24 @@ export function somarMeses(dia: DataISO, meses: number): DataISO {
   return alvo.toISOString().slice(0, 10) as DataISO;
 }
 
-/** Ciclo que termina no vencimento: do dia seguinte ao vencimento anterior até ele (inclusive). */
+/**
+ * O vencimento é o dia em que o plano renova (a próxima mensalidade). O ciclo vai do vencimento
+ * anterior até a véspera: quem aderiu hoje já usa hoje.
+ */
 export function cicloDaAdesao(vencimento: DataISO): { de: DataISO; ate: DataISO } {
-  const anterior = somarMeses(vencimento, -1);
-  const de = new Date(`${anterior}T12:00:00Z`);
-  de.setUTCDate(de.getUTCDate() + 1);
-  return { de: de.toISOString().slice(0, 10) as DataISO, ate: vencimento };
+  const ate = new Date(`${vencimento}T12:00:00Z`);
+  ate.setUTCDate(ate.getUTCDate() - 1);
+  return { de: somarMeses(vencimento, -1), ate: ate.toISOString().slice(0, 10) as DataISO };
 }
 
-/** Ativa até o fim do dia do vencimento; depois, vencida até a próxima baixa. */
+/** Em dia até a véspera do vencimento; no vencimento sem baixa, vencida. */
 export function situacaoDaAdesao(
   status: SituacaoAdesao,
   vencimento: DataISO,
   hoje: DataISO,
 ): SituacaoAdesao {
   if (status !== 'ativa') return status;
-  return hoje > vencimento ? 'vencida' : 'ativa';
+  return hoje >= vencimento ? 'vencida' : 'ativa';
 }
 
 // ─── O que o plano cobre ──────────────────────────────────────────────────

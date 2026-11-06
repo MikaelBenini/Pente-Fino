@@ -145,9 +145,9 @@ export class ClubeController {
       q.situacao === 'cancelada'
         ? { status: 'cancelada' as const }
         : q.situacao === 'vencida'
-          ? { status: 'ativa' as const, vencimento: { lt: data(hoje) } }
+          ? { status: 'ativa' as const, vencimento: { lte: data(hoje) } }
           : q.situacao === 'ativa'
-            ? { status: 'ativa' as const, vencimento: { gte: data(hoje) } }
+            ? { status: 'ativa' as const, vencimento: { gt: data(hoje) } }
             : { status: 'ativa' as const };
     return this.banco.daConta(async (tx) => {
       const lista = await tx.adesaoClube.findMany({

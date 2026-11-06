@@ -2,6 +2,7 @@
 // contador): cancelar ou reabrir uma comanda já corrige o uso. Fonte única para API e bot.
 import {
   cicloDaAdesao,
+  coberturaDoServico,
   restantesDoCiclo,
   situacaoDaAdesao,
   type AdesaoDetalhe,
@@ -89,3 +90,75 @@ export async function detalharAdesao(
 }
 
 export { incluir as INCLUIR_ADESAO };
+
+export interface ParteDoItem {
+  quantidade: number;
+  precoUnitario: number;
+  cobertoClube: boolean;
+  adesaoId: string | null;
+}
+
+/**
+ * Serviço lançado para o cliente (RN-07): a parte que o plano cobre entra com valor zero, ligada
+ * à adesão; o que passa do limite (ou está fora do plano) entra com o preço normal. Só vale a
+ * adesão em dia e na unidade do plano.
+ */
+export async function partesDoServico(
+  tx: Tx,
+  d: {
+    clienteId: string | null;
+    unidadeId: string;
+    servicoId: string;
+    quantidade: number;
+    preco: number;
+    dia: DataISO;
+  },
+): Promise<ParteDoItem[]> {
+  const normal: ParteDoItem[] = [
+    { quantidade: d.quantidade, precoUnitario: d.preco, cobertoClube: false, adesaoId: null },
+  ];
+  if (!d.clienteId) return normal;
+  const a = await adesaoDoCliente(tx, d.clienteId);
+  if (!a || a.itemClube.unidadeId !== d.unidadeId) return normal;
+  const vencimento = iso(a.vencimento);
+  if (situacaoDaAdesao(a.status, vencimento, d.dia) !== 'ativa') return normal;
+  const plano = {
+    limiteUsoMes: a.itemClube.limiteUsoMes,
+    servicos: a.itemClube.servicos.map((s) => ({
+      servicoId: s.servicoId,
+      quantidade: s.quantidade,
+    })),
+  };
+  const { cobertas, extras } = coberturaDoServico(
+    plano,
+    await usosDoCiclo(tx, a.id, vencimento),
+    d.servicoId,
+    d.quantidade,
+  );
+  return [
+    ...(cobertas > 0
+      ? [{ quantidade: cobertas, precoUnitario: 0, cobertoClube: true, adesaoId: a.id }]
+      : []),
+    ...(extras > 0
+      ? [{ quantidade: extras, precoUnitario: d.preco, cobertoClube: false, adesaoId: null }]
+      : []),
+  ];
+}
+
+/** Comissão fixa que o dono definiu para o serviço no plano da adesão (null = % do barbeiro). */
+export async function comissaoFixaDoClube(
+  tx: Tx,
+  adesaoId: string,
+  servicoId: string,
+): Promise<number | null> {
+  const a = await tx.adesaoClube.findUnique({
+    where: { id: adesaoId },
+    select: { itemClubeId: true },
+  });
+  if (!a) return null;
+  const s = await tx.itemClubeServico.findUnique({
+    where: { itemClubeId_servicoId: { itemClubeId: a.itemClubeId, servicoId } },
+    select: { comissaoValorFixo: true },
+  });
+  return s?.comissaoValorFixo ?? null;
+}

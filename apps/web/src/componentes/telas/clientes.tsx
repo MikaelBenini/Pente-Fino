@@ -521,7 +521,7 @@ function ClubeDoCliente({ clienteId }: { clienteId: string }) {
         <Crown aria-hidden className="size-4" /> Clube: {a.plano.nome}
       </p>
       <p className="text-sm text-tinta-suave">
-        {a.situacao === 'ativa' ? 'Em dia até' : 'Vencido desde'} {formatarData(a.vencimento)}
+        {a.situacao === 'ativa' ? 'Renova em' : 'Vencido desde'} {formatarData(a.vencimento)}
         {a.situacao === 'ativa' &&
           ` · ${a.restantes.map((r) => (r.restam === null ? `${r.servico} à vontade` : `${r.servico}: restam ${r.restam}`)).join(' · ')}`}
       </p>
