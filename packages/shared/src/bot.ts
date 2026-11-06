@@ -125,8 +125,9 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
     quando: 'Quando o cliente responde SAIR: confirma que ele não recebe mais lembretes.',
   },
   volta_avisos: {
-    nome: 'Voltar a receber (RECEBER)',
-    quando: 'Quando o cliente responde RECEBER depois de ter saído.',
+    nome: 'Aceitar lembretes (RECEBER)',
+    quando:
+      'Quando o cliente responde RECEBER (depois de sair, pelo convite ou pelo botão "Ativar lembretes" do site).',
   },
   convite_avisos: {
     nome: 'Convite para receber avisos',
@@ -160,7 +161,8 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
   encerramento: 'Obrigado pelo contato! Quando precisar, é só mandar uma mensagem.',
   saida_avisos:
     'Pronto, você não vai mais receber lembretes nem avisos. Para voltar a receber, responda RECEBER.',
-  volta_avisos: 'Combinado! Você volta a receber os lembretes da {barbearia}.',
+  volta_avisos:
+    'Combinado! Você vai receber os lembretes dos seus horários da {barbearia} por aqui. Para parar, responda SAIR.',
   convite_avisos:
     'Quer receber lembretes dos seus horários por aqui? Responda RECEBER. Para parar a qualquer momento, responda SAIR.',
   pesquisa_atendimento:
@@ -639,7 +641,8 @@ export function responder(
     delete sessao.pesquisa;
     return resultado([msg('saida_avisos')], { consentimento: false });
   }
-  if (texto === 'receber') return resultado([msg('volta_avisos')], { consentimento: true });
+  if (texto === 'receber' || texto === 'receber lembretes')
+    return resultado([msg('volta_avisos')], { consentimento: true });
 
   // Pesquisa depois do atendimento: nota do atendimento → da barbearia → comentário.
   const pesquisa = sessao.pesquisa;

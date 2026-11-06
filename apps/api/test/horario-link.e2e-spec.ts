@@ -1,6 +1,6 @@
 // Etapa 11: link do cliente para ver, remarcar ou cancelar o próprio horário, sem login.
 import type { INestApplication } from '@nestjs/common';
-import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
+import { criarPrisma, instanciaDaUnidade, naConta, type PrismaClient } from '@pente-fino/db';
 import { dataLocal, type HorarioDoLink } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
@@ -169,5 +169,87 @@ describe('link do horário', () => {
     expect(h).toMatchObject({ situacao: 'marcado', podeMudar: false });
     expect(h.motivo).toContain('48 horas antes');
     await http().post(`/publico/horario/${token}/cancelar`).send({}).expect(409);
+  });
+});
+
+describe('lembretes pedidos pelo site', () => {
+  const corpo = (telefone: string, inicio: string, lembretes?: boolean) => ({
+    nome: 'Cliente Lembrete',
+    telefone,
+    servicoIds: [corte],
+    profissionalId: prof,
+    inicio,
+    ...(lembretes === undefined ? {} : { lembretes }),
+  });
+  const livres = async (data: string) =>
+    (
+      await http()
+        .get(`/publico/agendamento/${slug}/horarios?data=${data}&servicoIds=${corte}`)
+        .expect(200)
+    ).body[0].inicios as string[];
+  const cliente = (telefone: string) =>
+    naConta(prisma, a.contaId, (tx) => tx.cliente.findFirstOrThrow({ where: { telefone } }));
+
+  it('sem WhatsApp conectado, a caixa nem aparece', async () => {
+    expect((await http().get(`/publico/agendamento/${slug}`).expect(200)).body).toMatchObject({
+      lembretesWhatsapp: false,
+    });
+  });
+
+  it('com WhatsApp: quem nunca escreveu recebe o botão para ativar; o aceite fica gravado', async () => {
+    await naConta(prisma, a.contaId, async (tx) => {
+      await tx.unidade.update({ where: { id: a.unidadeA }, data: { regrasAgendamento: {} } });
+      await tx.botConexao.create({
+        data: {
+          unidadeId: a.unidadeA,
+          instancia: instanciaDaUnidade(a.unidadeA),
+          status: 'conectado',
+          numero: '5511900004444',
+        },
+      });
+    });
+    expect((await http().get(`/publico/agendamento/${slug}`).expect(200)).body).toMatchObject({
+      lembretesWhatsapp: true,
+    });
+    const inicio = (await livres(dia(8)))[0]!;
+    const r = await http()
+      .post(`/publico/agendamento/${slug}`)
+      .send(corpo('11977772001', inicio, true))
+      .expect(201);
+    expect(r.body).toMatchObject({
+      lembretes: 'ativar',
+      linkLembretes: 'https://wa.me/5511900004444?text=RECEBER%20LEMBRETES',
+    });
+    expect(await cliente('5511977772001')).toMatchObject({ consentimentoMsg: true });
+  });
+
+  it('quem já conversou com a barbearia fica com os lembretes ligados direto', async () => {
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.mensagem.create({
+        data: {
+          unidadeId: a.unidadeA,
+          telefone: '5511977772002',
+          direcao: 'entrada',
+          texto: 'oi',
+          status: 'recebida',
+        },
+      }),
+    );
+    const inicio = (await livres(dia(8)))[0]!;
+    const r = await http()
+      .post(`/publico/agendamento/${slug}`)
+      .send(corpo('(11) 97777-2002', inicio, true))
+      .expect(201);
+    expect(r.body).toMatchObject({ lembretes: 'ligados', linkLembretes: null });
+  });
+
+  it('caixa desmarcada não grava aceite', async () => {
+    const inicio = (await livres(dia(8)))[0]!;
+    const r = await http()
+      .post(`/publico/agendamento/${slug}`)
+      .send(corpo('11977772003', inicio))
+      .expect(201);
+    expect(r.body).toMatchObject({ lembretes: null, linkLembretes: null });
+    expect(await cliente('5511977772003')).toMatchObject({ consentimentoMsg: false });
   });
 });

@@ -190,8 +190,10 @@ describe('conversa', () => {
     };
     expect(fala(comAtendente, 'SAIR')).toMatchObject({ consentimento: false });
     expect(fala(null, 'Receber').respostas[0]).toBe(
-      'Combinado! Você volta a receber os lembretes da Barbearia Navalha.',
+      'Combinado! Você vai receber os lembretes dos seus horários da Barbearia Navalha por aqui. Para parar, responda SAIR.',
     );
+    // O botão "Ativar lembretes" do site manda este texto pronto.
+    expect(fala(null, 'RECEBER LEMBRETES')).toMatchObject({ consentimento: true });
   });
 
   it('com atendente, o bot espera 2 horas antes de voltar sozinho', () => {

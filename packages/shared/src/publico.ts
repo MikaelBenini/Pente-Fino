@@ -32,6 +32,8 @@ export const agendamentoPublicoSchema = z.object({
   servicoIds: z.array(z.uuid()).min(1, { error: 'Escolha um serviço.' }).max(5),
   profissionalId: z.uuid(),
   inicio: z.iso.datetime({ offset: true, error: 'Horário inválido.' }),
+  /** Marcou a caixa "quero receber lembrete pelo WhatsApp" (aceite ativo, começa desmarcada). */
+  lembretes: z.boolean().default(false),
 });
 export type AgendamentoPublicoEntrada = z.infer<typeof agendamentoPublicoSchema>;
 
@@ -48,7 +50,18 @@ export interface UnidadePublica {
     ehExtra: boolean;
   }[];
   profissionais: { id: string; nome: string }[];
+  /** WhatsApp da unidade conectado e com lembretes configurados: mostra a caixa de aceite. */
+  lembretesWhatsapp: boolean;
 }
+
+/** Texto pronto do botão "Ativar lembretes": o bot entende e liga os avisos. */
+export const TEXTO_ATIVAR_LEMBRETES = 'RECEBER LEMBRETES';
+
+/**
+ * Lembretes de quem marcou pelo site: ligados (já conversou com a barbearia), falta ativar
+ * (o número precisa escrever primeiro: proteção do WhatsApp) ou não pediu.
+ */
+export type LembretesDoSite = 'ligados' | 'ativar' | null;
 
 export interface AgendamentoPublicoCriado {
   inicio: string;
@@ -60,4 +73,7 @@ export interface AgendamentoPublicoCriado {
   linkWhatsapp: string | null;
   /** Caminho do link para ver, remarcar ou cancelar (/horario?t=token). */
   linkGerenciar: string;
+  lembretes: LembretesDoSite;
+  /** wa.me do número do bot com "RECEBER LEMBRETES" pronto, quando falta ativar. */
+  linkLembretes: string | null;
 }

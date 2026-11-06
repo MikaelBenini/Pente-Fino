@@ -14,6 +14,7 @@ import {
 import { Botao, Campo, Carregando, cn, EstadoVazio, Marcador } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
 import {
+  BellRing,
   CalendarCheck,
   CalendarClock,
   CircleCheck,
@@ -118,6 +119,7 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
   const [horario, setHorario] = useState<{ inicio: string; profissionalId: string } | null>(null);
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [lembretes, setLembretes] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [feito, setFeito] = useState<AgendamentoPublicoCriado | null>(null);
@@ -164,7 +166,30 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
           <p className="text-tinta-suave">
             {feito.servicos.join(' + ')} · {formatarMoeda(feito.total)}
           </p>
-          {feito.linkWhatsapp && (
+          {feito.lembretes === 'ativar' && feito.linkLembretes && (
+            <div className="flex flex-col gap-2 rounded-md border border-borda bg-fundo p-4">
+              <p className="font-semibold">Falta um passo para os lembretes</p>
+              <p className="text-sm text-tinta-suave">
+                O WhatsApp só deixa a barbearia te escrever depois que você manda a primeira
+                mensagem. Toque no botão e envie o texto que já vem pronto.
+              </p>
+              <a
+                href={feito.linkLembretes}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-acao px-4 text-lg font-semibold text-sobre-acao focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+              >
+                <BellRing aria-hidden className="size-5" /> Ativar lembretes no WhatsApp
+              </a>
+            </div>
+          )}
+          {feito.lembretes === 'ligados' && (
+            <p className="flex items-center gap-2 text-tinta-suave">
+              <BellRing aria-hidden className="size-5 shrink-0" /> Você vai receber o lembrete pelo
+              WhatsApp.
+            </p>
+          )}
+          {feito.linkWhatsapp && feito.lembretes !== 'ativar' && (
             <a
               href={feito.linkWhatsapp}
               target="_blank"
@@ -209,6 +234,7 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
                   servicoIds: servicos,
                   profissionalId: horario.profissionalId,
                   inicio: horario.inicio,
+                  lembretes: u.lembretesWhatsapp && lembretes,
                 },
               }),
             );
@@ -357,6 +383,14 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
               value={telefone}
               onChange={(e) => setTelefone(e.target.value)}
             />
+            {u.lembretesWhatsapp && (
+              <Marcador
+                id="agendar-lembretes"
+                rotulo="Quero receber lembrete do horário pelo WhatsApp"
+                checked={lembretes}
+                onChange={(e) => setLembretes(e.target.checked)}
+              />
+            )}
           </div>
         </fieldset>
 
