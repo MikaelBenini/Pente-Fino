@@ -18,6 +18,9 @@ import {
   formatarHora,
   gerarSlug,
   slugSchema,
+  TEXTO_ATIVAR_LEMBRETES,
+  variantesTelefone,
+  type LembretesDoSite,
   type AgendamentoPublicoCriado,
   type AgendamentoPublicoEntrada,
   type CadastroContaEntrada,
@@ -41,6 +44,13 @@ import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { emSequencia, umPorVez } from '../comum/sequencia.js';
 
 const slugParam = new PipeZod(slugSchema);
+
+/** Número do bot que manda os lembretes: WhatsApp conectado e lembretes ligados nas regras. */
+async function numeroDosLembretes(tx: Transacao, unidadeId: string, regras: unknown) {
+  if (lerRegrasAgendamento(regras).lembretesHoras.length === 0) return null;
+  const c = await tx.botConexao.findUnique({ where: { unidadeId } });
+  return c?.status === 'conectado' && c.numero ? c.numero : null;
+}
 const consultaHorarios = z.object({
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
   servicoIds: z
@@ -183,6 +193,7 @@ export class PublicoController {
           id: p.id,
           nome: p.usuario.nome.split(' ')[0]!,
         })),
+        lembretesWhatsapp: !!(await numeroDosLembretes(tx, u.id, u.regrasAgendamento)),
       };
     });
   }
@@ -268,8 +279,37 @@ export class PublicoController {
           itens: { include: { servico: true } },
         },
       });
+      // Caixa de lembretes marcada: aceite gravado no cliente. Os lembretes só saem para quem
+      // já escreveu para a unidade (proteção do número); se ainda não, o botão abre a conversa.
+      let lembretes: LembretesDoSite = null;
+      let linkLembretes: string | null = null;
+      const numero = d.lembretes ? await numeroDosLembretes(tx, u.id, u.regrasAgendamento) : null;
+      if (d.lembretes && c.clienteId) {
+        await tx.cliente.update({
+          where: { id: c.clienteId },
+          data: { consentimentoMsg: true, consentimentoEm: new Date() },
+        });
+        if (numero) {
+          const falou = await tx.mensagem.findFirst({
+            where: {
+              unidadeId: u.id,
+              telefone: { in: variantesTelefone(d.telefone) },
+              direcao: 'entrada',
+            },
+            select: { id: true },
+          });
+          lembretes = falou ? 'ligados' : 'ativar';
+          if (!falou)
+            linkLembretes = `https://wa.me/${numero}?text=${encodeURIComponent(TEXTO_ATIVAR_LEMBRETES)}`;
+        }
+      }
       // Link para o cliente remarcar ou cancelar sozinho (o token só aparece aqui).
-      return { ...c, token: await criarLinkDoHorario(tx, c.agendamentoId!) };
+      return {
+        ...c,
+        token: await criarLinkDoHorario(tx, c.agendamentoId!),
+        lembretes,
+        linkLembretes,
+      };
     });
     await this.eventos
       .publicar('agendamento.criado', u.contaId, { comandaId: r.id, origem: 'link' })
@@ -290,6 +330,8 @@ export class PublicoController {
         ? `https://wa.me/${u.telefone}?text=${encodeURIComponent(mensagem)}`
         : null,
       linkGerenciar: caminhoDoHorario(r.token),
+      lembretes: r.lembretes,
+      linkLembretes: r.linkLembretes,
     };
   }
 
