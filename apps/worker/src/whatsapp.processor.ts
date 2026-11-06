@@ -13,6 +13,7 @@ import {
   avisarNotaBaixa,
   oferecerVaga,
   remarcacaoPorAtraso,
+  avisoHorarioMudou,
   contasComAutomacoes,
   rodarAutomacoes,
   encerrarEsperaDoAtendente,
@@ -298,6 +299,21 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             { relogio, adicionar },
           );
           return 'atraso: remarcação enviada';
+        }
+        // A barbearia moveu o horário (passado o tempo de desfazer): avisa o cliente.
+        if (job.data.tipo === 'horario_mudou') {
+          const r = await avisoHorarioMudou(
+            this.banco.prisma,
+            job.data,
+            new Date(),
+            this.config.APP_URL,
+          );
+          if (!r) return 'horario_mudou: desfeito ou sem aviso';
+          await agendarRespostas(
+            { contaId: r.contaId, instancia: r.instancia, saidas: r.mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'horario_mudou: aviso enviado';
         }
         // Vagou um horário: oferece para quem está na lista de espera e cabe nele.
         if (job.data.tipo === 'vaga') {

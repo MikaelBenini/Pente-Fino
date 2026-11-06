@@ -1,0 +1,106 @@
+import { expect, test, type Page } from '@playwright/test';
+
+// Etapa 14: mover agendamento arrastando (computador) e pelo botão "Mover horário" (celular).
+const sufixo = Date.now().toString(36);
+
+async function entrar(page: Page, email: string) {
+  await page.goto('/entrar');
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Senha').fill('pentefino123');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await page.waitForURL(/inicio|agenda|hoje/);
+}
+
+/** Uma quarta-feira daqui a umas 6 semanas: agenda vazia na demonstração. */
+function quartaDistante(semanas: number) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + semanas * 7);
+  while (d.getUTCDay() !== 3) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+async function agendar(page: Page, cliente: string, dia: string) {
+  await page.goto(`/agenda?dia=${dia}`);
+  await page.getByRole('button', { name: 'Novo agendamento' }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Novo agendamento' });
+  await dialogo.getByRole('button', { name: 'Cadastrar cliente novo' }).click();
+  await dialogo.getByLabel('Nome do cliente').fill(cliente);
+  await dialogo.getByRole('button', { name: 'Usar este cliente' }).click();
+  await dialogo.getByLabel('Corte · 30 min').check();
+  await dialogo.getByLabel('Dia').fill(dia);
+  await dialogo.getByLabel('Barbeiro').selectOption({ label: 'Rafael Moura' });
+  await dialogo
+    .getByRole('button', { name: /^\d{2}:\d{2}$/ })
+    .first()
+    .click();
+  await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
+  await page.waitForURL(/\/comandas\?id=/);
+}
+
+test('a recepção arrasta o horário para outro barbeiro e 30 min depois, e desfaz', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'arrastar é no computador e no tablet');
+  const cliente = `Arrasta ${sufixo}`;
+  const dia = quartaDistante(6);
+  await entrar(page, 'recepcao.centro@demo.pentefino.dev');
+  await agendar(page, cliente, dia);
+  await page.goto(`/agenda?dia=${dia}`);
+
+  const bloco = page.getByRole('button', { name: new RegExp(cliente) }).filter({ visible: true });
+  await expect(bloco).toBeVisible();
+  const origem = page.locator('[data-profissional]', { has: bloco }).filter({ visible: true });
+  const idOrigem = await origem.getAttribute('data-profissional');
+  const destino = page
+    .locator(`[data-profissional]:not([data-profissional="${idOrigem}"])`)
+    .filter({ visible: true })
+    .first();
+  const b = (await bloco.boundingBox())!;
+  const d = (await destino.boundingBox())!;
+  // Segura, arrasta para a coluna do lado e 30 min para baixo (1,4 px por minuto).
+  await page.mouse.move(b.x + b.width / 2, b.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2 + 10, b.y + 20, { steps: 4 });
+  await page.mouse.move(d.x + d.width / 2, b.y + 10 + 42, { steps: 12 });
+  await page.mouse.up();
+
+  const confirmar = page.getByRole('dialog', { name: 'Mover horário' });
+  await expect(confirmar).toContainText(
+    new RegExp(
+      `Mover o horário de Corte do Arrasta das \\d{2}:\\d{2} com Rafael para \\d{2}:\\d{2} com \\w+\\?`,
+    ),
+  );
+  await expect(confirmar).toContainText('O cliente recebe o aviso pelo WhatsApp');
+  await confirmar.getByRole('button', { name: 'Mover' }).click();
+  await expect(page.getByRole('status').filter({ hasText: /Horário movido para/ })).toBeVisible();
+  await expect(destino.getByRole('button', { name: new RegExp(cliente) })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Desfazer' }).click();
+  await expect(origem.getByRole('button', { name: new RegExp(cliente) })).toBeVisible();
+  await expect(destino.getByRole('button', { name: new RegExp(cliente) })).toHaveCount(0);
+});
+
+test('no celular, "Mover horário" da comanda escolhe barbeiro e horário', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name !== 'celular', 'o mesmo movimento pelo botão');
+  const cliente = `Move ${sufixo}`;
+  const dia = quartaDistante(7);
+  await entrar(page, 'recepcao.centro@demo.pentefino.dev');
+  await agendar(page, cliente, dia);
+  await page.getByRole('button', { name: 'Mover horário' }).click();
+  const escolha = page.getByRole('dialog', { name: 'Mover horário' });
+  const barbeiro = escolha.getByLabel('Barbeiro');
+  const nomes = await barbeiro.locator('option').allTextContents();
+  await barbeiro.selectOption({ label: nomes.find((n) => n !== 'Rafael Moura')! });
+  await escolha
+    .getByRole('button', { name: /^\d{2}:\d{2}$/ })
+    .first()
+    .click();
+  const confirmar = page.getByRole('dialog', { name: 'Mover horário' });
+  await expect(confirmar).toContainText(/Mover o horário de Corte do Move/);
+  await confirmar.getByRole('button', { name: 'Mover' }).click();
+  await expect(page.getByRole('status').filter({ hasText: /Horário movido para/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Desfazer' }).click();
+  await expect(page.getByRole('status').filter({ hasText: /Horário movido para/ })).toHaveCount(0);
+});

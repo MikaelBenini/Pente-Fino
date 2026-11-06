@@ -60,6 +60,6 @@ export class AgendaController {
     @Param('id', ParseUUIDPipe) id: string,
     @Corpo(remarcarSchema) d: z.infer<typeof remarcarSchema>,
   ) {
-    return this.servico.remarcar(id, d.inicio, d.profissionalId);
+    return this.servico.remarcar(id, d.inicio, d.profissionalId, d.avisarCliente);
   }
 }

@@ -107,6 +107,8 @@ export type NovoAgendamentoEntrada = z.infer<typeof novoAgendamentoSchema>;
 export const remarcarSchema = z.object({
   inicio: z.iso.datetime({ offset: true, error: 'Horário inválido.' }),
   profissionalId: uuid('Profissional').optional(),
+  /** Mudou o horário: avisa, salvo false (o desfazer). Mudou só o barbeiro: avisa se true. */
+  avisarCliente: z.boolean().optional(),
 });
 
 export const cancelarSchema = z.object({

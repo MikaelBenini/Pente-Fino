@@ -10,7 +10,7 @@ import {
   type TrabalhoWhatsappEntrada,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
-import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
+import { avisoHorarioMudou, criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
 import type { App } from 'supertest/types.js';
 import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
 
@@ -310,5 +310,59 @@ describe('ocupação da unidade', () => {
       await dono.get(`/ocupacao?unidadeId=${a.unidadeA}&de=${dia(0)}&ate=${dia(20)}`).expect(200)
     ).body as OcupacaoDaUnidade;
     expect(futuro.ate).toBe(dia(0));
+  });
+});
+
+describe('mover agendamento', () => {
+  it('mudar o horário põe o aviso ao cliente na fila depois do desfazer; desfazer não avisa', async () => {
+    const livres = (
+      await dono
+        .get(
+          `/agenda/horarios-livres?unidadeId=${a.unidadeA}&data=${dia(9)}&duracaoMin=30&profissionalId=${prof}`,
+        )
+        .expect(200)
+    ).body as { inicios: string[] }[];
+    const [primeiro, , terceiro] = livres[0]!.inicios;
+    const c = (
+      await recepcao
+        .post('/agendamentos', {
+          unidadeId: a.unidadeA,
+          profissionalId: prof,
+          clienteNovo: { nome: 'Vai Mudar' },
+          inicio: primeiro,
+          servicoIds: [corte],
+        })
+        .expect(201)
+    ).body as { id: string; agendamentoId: string };
+    await barbeiro.patch(`/agendamentos/${c.agendamentoId}`, { inicio: terceiro }).expect(403);
+    const movida = (
+      await recepcao.patch(`/agendamentos/${c.agendamentoId}`, { inicio: terceiro }).expect(200)
+    ).body as ComandaDetalhe;
+    expect(movida.inicio).toBe(terceiro);
+    const avisos = async () =>
+      (await fila.getJobs(['delayed'])).filter(
+        (j) => j.data.tipo === 'horario_mudou' && j.data.contaId === a.contaId,
+      );
+    const depoisDeMover = await avisos();
+    expect(depoisDeMover.map((j) => j.data)).toEqual([
+      expect.objectContaining({
+        agendamentoId: c.agendamentoId,
+        inicio: terceiro,
+        profissionalId: prof,
+        mudouHorario: true,
+      }),
+    ]);
+    expect(depoisDeMover[0]!.opts.delay).toBeGreaterThanOrEqual(10_000);
+    // Desfazer: volta sem avisar; o aviso que estava na fila não sai (o horário não é mais aquele).
+    await recepcao
+      .patch(`/agendamentos/${c.agendamentoId}`, { inicio: primeiro, avisarCliente: false })
+      .expect(200);
+    expect(await avisos()).toHaveLength(1);
+    expect(await avisoHorarioMudou(prisma, depoisDeMover[0]!.data as never)).toBeNull();
+    // Mesmo barbeiro e mesmo horário pedindo aviso: nada mudou, nada a avisar.
+    await recepcao
+      .patch(`/agendamentos/${c.agendamentoId}`, { inicio: primeiro, avisarCliente: true })
+      .expect(200);
+    expect(await avisos()).toHaveLength(1);
   });
 });

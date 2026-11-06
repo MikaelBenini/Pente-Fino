@@ -43,6 +43,7 @@ import {
 } from '@/lib/consultas';
 import { enfileirarLancamento, useOnline } from '@/lib/fila';
 import { Aviso } from '../aviso';
+import { MoverComanda, useMoverHorario } from '../mover-horario';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado } from '../pagina';
 import { useUnidadeTrabalho } from '../unidade-trabalho';
@@ -317,6 +318,13 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
   const [fechar, setFechar] = useState(false);
   const [cancelar, setCancelar] = useState(false);
   const [reabrir, setReabrir] = useState(false);
+  const [mover, setMover] = useState(false);
+  const movimento = useMoverHorario();
+  const podeMover =
+    c.status === 'prevista' &&
+    !!c.agendamentoId &&
+    !!c.inicio &&
+    papeis.some((p) => p === 'dono' || p === 'gestor' || p === 'recepcao');
   const online = useOnline();
   const chave = [[...chavesOperacao.comandas, 'detalhe', c.id], ...INVALIDAR_OPERACAO];
   const acao = useAcao(
@@ -546,17 +554,35 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
               Reabrir comanda
             </Botao>
           )}
+          {podeMover && (
+            <Botao variante="secundario" onClick={() => setMover(true)}>
+              Mover horário
+            </Botao>
+          )}
           {pode('cancelar') && (
             <Botao variante="fantasma" onClick={() => setCancelar(true)}>
               Cancelar ou marcar falta
             </Botao>
           )}
-          {!['iniciar', 'confirmar', 'fechar', 'reabrir', 'cancelar'].some((a) =>
-            pode(a as AcaoComanda),
-          ) && <p className="text-sm text-tinta-suave">Nada a fazer nesta comanda agora.</p>}
+          {!podeMover &&
+            !['iniciar', 'confirmar', 'fechar', 'reabrir', 'cancelar'].some((a) =>
+              pode(a as AcaoComanda),
+            ) && <p className="text-sm text-tinta-suave">Nada a fazer nesta comanda agora.</p>}
         </div>
+        {movimento.elementos}
         {editavel && <LancarItens onLancar={lancar} podeProduto />}
       </aside>
+      {podeMover && (
+        <MoverComanda
+          c={c}
+          profissionais={(profissionais.data ?? [])
+            .filter((p) => p.unidadeId === c.unidadeId && p.ativo)
+            .map((p) => ({ id: p.id, nome: p.nome }))}
+          aberto={mover}
+          onFechar={() => setMover(false)}
+          onEscolher={movimento.pedir}
+        />
+      )}
 
       <Fechamento
         comanda={c}

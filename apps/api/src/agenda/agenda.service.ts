@@ -22,6 +22,9 @@ import {
   estaAtrasado,
   recorrentesNoDia,
   textoAvisosEncaixe,
+  deveAvisarClienteDoMovimento,
+  DESFAZER_MOVER_S,
+  type HorarioMudou,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -304,9 +307,15 @@ export class AgendaService {
     return r.comandaId;
   }
 
-  async remarcar(agendamentoId: string, novoInicio: string, profissionalId?: string) {
+  async remarcar(
+    agendamentoId: string,
+    novoInicio: string,
+    profissionalId?: string,
+    avisarCliente?: boolean,
+  ) {
     let liberado: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date } | null =
       null;
+    let aviso: HorarioMudou | null = null;
     const comandaId = await this.banco.daConta(async (tx) => {
       const ag = await tx.agendamento.findUnique({ where: { id: agendamentoId } });
       if (!ag) throw Erros.naoEncontrado('Agendamento não encontrado.');
@@ -321,8 +330,33 @@ export class AgendaService {
         depois: { inicio, profissionalId: profissionalId ?? ag.profissionalId },
       });
       liberado = { unidadeId: ag.unidadeId, ...r.antes };
+      const mudouHorario = r.antes.inicio.getTime() !== inicio.getTime();
+      const prof = profissionalId ?? ag.profissionalId;
+      if (
+        deveAvisarClienteDoMovimento({
+          mudouHorario,
+          mudouBarbeiro: r.antes.profissionalId !== prof,
+          avisarCliente,
+        })
+      )
+        aviso = {
+          tipo: 'horario_mudou',
+          contaId: ag.contaId,
+          agendamentoId: ag.id,
+          inicio: inicio.toISOString(),
+          profissionalId: prof,
+          mudouHorario,
+        };
       return r.comandaId;
     });
+    // Aviso ao cliente só depois do tempo de desfazer (o worker confere se ainda vale).
+    if (aviso)
+      await this.filas.whatsappEntrada
+        .add('horario_mudou', aviso, {
+          delay: (DESFAZER_MOVER_S + 5) * 1000,
+          jobId: `horario_mudou_${agendamentoId}_${Date.now()}`,
+        })
+        .catch(() => undefined);
     // O horário antigo vagou: oferecer para a lista de espera.
     if (liberado) await liberarVaga(this.filas, Contexto.usuario().contaId, liberado);
     await this.agendarLembretes(Contexto.usuario().contaId, comandaId);
