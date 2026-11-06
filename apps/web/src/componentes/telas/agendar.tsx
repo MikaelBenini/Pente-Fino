@@ -13,14 +13,21 @@ import {
 } from '@pente-fino/shared';
 import { Botao, Campo, Carregando, cn, EstadoVazio, Marcador } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarCheck, CircleCheck, MapPin, MessageCircle, SearchX } from 'lucide-react';
+import {
+  CalendarCheck,
+  CalendarClock,
+  CircleCheck,
+  MapPin,
+  MessageCircle,
+  SearchX,
+} from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { IconeMarca } from '../marca';
 
-function proximosDias(n: number): string[] {
+export function proximosDias(n: number): string[] {
   const hoje = dataLocal(new Date());
   return Array.from({ length: n }, (_, i) => {
     const d = new Date(`${hoje}T12:00:00Z`);
@@ -29,7 +36,7 @@ function proximosDias(n: number): string[] {
   });
 }
 
-const chip = (ativo: boolean) =>
+export const chip = (ativo: boolean) =>
   cn(
     'min-h-11 rounded-md border px-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco',
     ativo
@@ -74,7 +81,13 @@ function Agendar() {
   return <Formulario slug={slug} u={pagina.data} />;
 }
 
-function Moldura({ children, u }: { children: React.ReactNode; u?: UnidadePublica }) {
+export function Moldura({
+  children,
+  u,
+}: {
+  children: React.ReactNode;
+  u?: { nome: string; barbearia: string; endereco: string | null };
+}) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-6 px-[max(1rem,env(safe-area-inset-left))] pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-10">
       {u && (
@@ -161,11 +174,16 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
               <MessageCircle aria-hidden className="size-5" /> Confirmar pelo WhatsApp
             </a>
           )}
-          {u.telefone && (
-            <p className="text-sm text-tinta-suave">
-              Para remarcar ou cancelar, fale com a barbearia: {formatarTelefone(u.telefone)}
-            </p>
-          )}
+          <a
+            href={feito.linkGerenciar}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-borda-forte bg-superficie px-4 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+          >
+            <CalendarClock aria-hidden className="size-5" /> Ver, remarcar ou cancelar
+          </a>
+          <p className="text-sm text-tinta-suave">
+            Guarde este link: é por ele que você muda o horário sem precisar ligar
+            {u.telefone ? ` (ou fale com a barbearia: ${formatarTelefone(u.telefone)})` : ''}.
+          </p>
         </section>
       </Moldura>
     );

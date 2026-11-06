@@ -58,4 +58,6 @@ export interface AgendamentoPublicoCriado {
   total: number;
   /** Link wa.me para o cliente confirmar com a barbearia (quando a unidade tem telefone). */
   linkWhatsapp: string | null;
+  /** Caminho do link para ver, remarcar ou cancelar (/horario?t=token). */
+  linkGerenciar: string;
 }

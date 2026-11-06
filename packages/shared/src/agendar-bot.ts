@@ -179,7 +179,15 @@ export function textoConfirmar(r: ResumoAgendamento): string {
   ].join('\n');
 }
 
-export function textoMarcado(r: ResumoAgendamento, barbearia: string): string {
+/** Link do horário (ver, remarcar, cancelar) no fim da confirmação, quando há. */
+const comoMudar = (link: string | null | undefined, semLink: string) =>
+  link ? `Precisa mudar? Remarque ou cancele por aqui: ${link}` : semLink;
+
+export function textoMarcado(
+  r: ResumoAgendamento,
+  barbearia: string,
+  link?: string | null,
+): string {
   return [
     'Pronto, horário marcado! ✅',
     '',
@@ -187,7 +195,8 @@ export function textoMarcado(r: ResumoAgendamento, barbearia: string): string {
     `💈 Com ${r.profissional}`,
     `📅 ${quando(r)}`,
     '',
-    `Te esperamos na ${barbearia}. Precisa mudar? Responda ATENDENTE.`,
+    `Te esperamos na ${barbearia}.`,
+    comoMudar(link, 'Precisa mudar? Responda MEUS HORÁRIOS.'),
   ].join('\n');
 }
 
@@ -236,7 +245,11 @@ export function textoConfirmarCancelamento(h: HorarioDoCliente, hoje: string): s
   ].join('\n');
 }
 
-export function textoRemarcado(r: ResumoAgendamento, barbearia: string): string {
+export function textoRemarcado(
+  r: ResumoAgendamento,
+  barbearia: string,
+  link?: string | null,
+): string {
   return [
     'Pronto, horário remarcado! ✅',
     '',
@@ -245,5 +258,6 @@ export function textoRemarcado(r: ResumoAgendamento, barbearia: string): string 
     `📅 ${quando(r)}`,
     '',
     `Te esperamos na ${barbearia}.`,
+    ...(link ? [comoMudar(link, '')] : []),
   ].join('\n');
 }

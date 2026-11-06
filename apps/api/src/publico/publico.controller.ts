@@ -2,6 +2,7 @@ import { Controller, Get, HttpCode, HttpStatus, Inject, Param, Post } from '@nes
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   aplicarModelosIniciais,
+  criarLinkDoHorario,
   precoServicoVigente,
   Prisma,
   type Transacao,
@@ -10,6 +11,7 @@ import {
 import {
   lerRegrasAgendamento,
   agendamentoPublicoSchema,
+  caminhoDoHorario,
   cadastroContaSchema,
   dataLocal,
   formatarDiaPorExtenso,
@@ -266,7 +268,8 @@ export class PublicoController {
           itens: { include: { servico: true } },
         },
       });
-      return c;
+      // Link para o cliente remarcar ou cancelar sozinho (o token só aparece aqui).
+      return { ...c, token: await criarLinkDoHorario(tx, c.agendamentoId!) };
     });
     await this.eventos
       .publicar('agendamento.criado', u.contaId, { comandaId: r.id, origem: 'link' })
@@ -286,6 +289,7 @@ export class PublicoController {
       linkWhatsapp: u.telefone
         ? `https://wa.me/${u.telefone}?text=${encodeURIComponent(mensagem)}`
         : null,
+      linkGerenciar: caminhoDoHorario(r.token),
     };
   }
 

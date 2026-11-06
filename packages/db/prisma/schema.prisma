@@ -252,6 +252,7 @@ model Conta {
   avaliacoes         Avaliacao[]
   faturas            FaturaAssinatura[]
   assistentes        AssistenteEquipe[]
+  linksHorario       LinkHorario[]
 
   @@map("conta")
 }
@@ -637,6 +638,7 @@ model Agendamento {
   profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
   cliente      Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
   criadoPor    Usuario?     @relation("AgendamentoCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  link         LinkHorario?
   comanda      Comanda?
 
   @@index([contaId])
@@ -1120,4 +1122,20 @@ model AssistenteEquipe {
   @@unique([unidadeId, telefone])
   @@index([contaId])
   @@map("assistente_equipe")
+}
+
+/// Link para o cliente ver, remarcar ou cancelar o próprio horário sem login (/horario?t=token).
+/// Guarda só o SHA-256 do token; um link novo substitui o anterior.
+model LinkHorario {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId       String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  agendamentoId String   @unique @map("agendamento_id") @db.Uuid
+  tokenHash     String   @unique @map("token_hash")
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta       Conta       @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  agendamento Agendamento @relation(fields: [agendamentoId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@map("link_horario")
 }

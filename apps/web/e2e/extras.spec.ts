@@ -47,6 +47,27 @@ test('cliente agenda pelo link público, sem login', async ({ page }) => {
     'href',
     /^https:\/\/wa\.me\/551130000001\?text=/,
   );
+  // O link do horário: ver, remarcar com o mesmo barbeiro e cancelar, sem login.
+  await page.getByRole('link', { name: 'Ver, remarcar ou cancelar' }).click();
+  await page.waitForURL(/\/horario\?t=[A-Za-z0-9_-]{22}$/);
+  await expect(page.getByRole('heading', { name: 'Horário marcado' })).toBeVisible();
+  await page.getByRole('button', { name: 'Remarcar' }).click();
+  await page
+    .getByRole('button', { name: /^(domingo|segunda|terça|quarta|quinta|sexta|sábado), \d+ de / })
+    .nth(diasAteProximoUtil())
+    .click();
+  await page.getByRole('group', { name: 'Horários livres' }).getByRole('button').last().click();
+  await page.getByRole('button', { name: /^Remarcar para \d{2}:\d{2}$/ }).click();
+  await expect(page.getByText('Pronto, horário remarcado.')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancelar horário' }).click();
+  await page.getByRole('button', { name: 'Sim, cancelar' }).click();
+  await expect(page.getByRole('heading', { name: 'Horário cancelado' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Remarcar' })).toHaveCount(0);
+});
+
+test('link de horário que não existe explica o problema', async ({ page }) => {
+  await page.goto(`/horario?t=${'x'.repeat(22)}`);
+  await expect(page.getByRole('heading', { name: 'Link não encontrado' })).toBeVisible();
 });
 
 test('link de unidade inexistente explica o problema', async ({ page }) => {

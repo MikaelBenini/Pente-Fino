@@ -473,6 +473,7 @@ export async function atenderMensagem(
             clienteId: cliente.id,
             barbearia: ctx.barbearia,
             link: ctx.link,
+            appUrl: opcoes.appUrl,
             agora,
             regras: lerRegrasAgendamento(u.regrasAgendamento),
           },
