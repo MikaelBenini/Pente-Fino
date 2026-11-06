@@ -6,6 +6,7 @@ import { AuditoriaInterceptor } from './auditoria/auditoria.js';
 import { AuthController } from './auth/auth.controller.js';
 import { AuthService } from './auth/auth.service.js';
 import { AssinaturaGuard } from './assinatura/assinatura.guard.js';
+import { PlanoGuard } from './assinatura/plano.guard.js';
 import { CobrancaService } from './cobranca/cobranca.service.js';
 import { AssistenteController } from './me/assistente.controller.js';
 import { PushController } from './me/push.controller.js';
@@ -180,6 +181,9 @@ export class ComumModule {}
     // Depois do papel: conta só para consulta não grava (402).
     AssinaturaGuard,
     { provide: APP_GUARD, useExisting: AssinaturaGuard },
+    // Recursos por plano (@ExigeRecurso).
+    PlanoGuard,
+    { provide: APP_GUARD, useExisting: PlanoGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor },
     { provide: APP_FILTER, useClass: FiltroErros },
   ],

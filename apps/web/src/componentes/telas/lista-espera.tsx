@@ -14,6 +14,7 @@ import { useAcao, useProfissionais, useServicos } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { Estado, Ficha } from '../pagina';
 import { BuscaCliente, clienteParaApi, type ClienteEscolhido } from './busca-cliente';
+import { ConviteSeFaltar } from '../convite-plano';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
@@ -56,6 +57,7 @@ export function ListaEspera({
       }}
       largura="larga"
     >
+      <ConviteSeFaltar recurso="listaEspera" />
       {incluindo ? (
         <Incluir
           unidadeId={unidadeId}

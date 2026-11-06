@@ -1,5 +1,5 @@
 import { createParamDecorator, SetMetadata } from '@nestjs/common';
-import type { Papel } from '@pente-fino/shared';
+import type { Papel, Recurso } from '@pente-fino/shared';
 import { Contexto, type UsuarioAutenticado } from '../comum/contexto.js';
 
 export const ROTA_PUBLICA = 'rota_publica';
@@ -26,3 +26,22 @@ export const LimiteAutenticacao = () => SetMetadata(LIMITE_AUTENTICACAO, true);
 
 /** Usuário autenticado da requisição. */
 export const UsuarioAtual = createParamDecorator((): UsuarioAutenticado => Contexto.usuario());
+
+export const RECURSO_DO_PLANO = 'recurso_do_plano';
+export interface ExigenciaDePlano {
+  recurso: Recurso;
+  /** true: ler continua livre (o que já foi lançado aparece); só gravar exige o plano. */
+  soEscrita: boolean;
+}
+/**
+ * Recurso que só vale a partir de um plano (packages/shared/src/planos.ts). Sem o plano, a
+ * API responde 403 "recurso_do_plano" com o convite para mudar.
+ */
+export const ExigeRecurso = (recurso: Recurso, opcoes: { soEscrita?: boolean } = {}) =>
+  SetMetadata(RECURSO_DO_PLANO, {
+    recurso,
+    soEscrita: opcoes.soEscrita ?? false,
+  } satisfies ExigenciaDePlano);
+
+/** Rota livre do recurso exigido na classe (ex.: desconectar o WhatsApp num plano menor). */
+export const LivreDoPlano = () => SetMetadata(RECURSO_DO_PLANO, null);

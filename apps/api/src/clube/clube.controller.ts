@@ -34,7 +34,7 @@ import {
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
-import { Papeis } from '../auth/decoradores.js';
+import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
@@ -54,6 +54,7 @@ const consultaAdesoes = z.object({
  */
 @ApiTags('Clube')
 @ApiBearerAuth()
+@ExigeRecurso('clube', { soEscrita: true })
 @Controller('clube')
 export class ClubeController {
   constructor(@Inject(BancoService) private readonly banco: BancoService) {}

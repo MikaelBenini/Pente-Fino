@@ -156,3 +156,26 @@ test('dono: painel da rede com as unidades lado a lado e o total', async ({ page
   // A demonstração tem movimento nas duas: alguma unidade leva o destaque de faturamento.
   await expect(tabela.getByLabel('melhor da rede').first()).toBeVisible();
 });
+
+test('plano Básico: recursos do Pro e do Premium aparecem com convite, sem quebrar a tela', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'mesmas telas no computador');
+  await entrar(page, 'basico@demo.pentefino.dev');
+  await page.goto('/metricas');
+  await expect(page.getByRole('heading', { name: 'Métricas e metas' })).toBeVisible();
+  await expect(page.getByRole('note', { name: 'Disponível no plano Premium' })).toBeVisible();
+  await expect(page.getByRole('note', { name: 'Disponível no plano Pro' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Definir meta' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Ver planos e mudar' }).first()).toHaveAttribute(
+    'href',
+    '/configuracoes?aba=assinatura',
+  );
+  await page.goto('/rede');
+  await expect(page.getByRole('note', { name: 'Disponível no plano Premium' })).toContainText(
+    'Seu plano é o Básico',
+  );
+  await page.goto('/financeiro');
+  await page.getByRole('tab', { name: 'Comissões' }).click();
+  await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toBeVisible();
+});

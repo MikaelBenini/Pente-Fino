@@ -368,20 +368,22 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
               <div className="flex flex-col gap-2">
                 <p className="flex items-center gap-2 text-tinta-suave">
                   <CalendarCheck aria-hidden className="size-5" /> Sem horário livre neste dia.
-                  Tente outro dia{profissional ? ' ou outro barbeiro' : ''}, ou peça para ser
-                  avisado.
+                  Tente outro dia{profissional ? ' ou outro barbeiro' : ''}
+                  {u.listaEspera ? ', ou peça para ser avisado.' : '.'}
                 </p>
-                <AvisarSeVagar
-                  slug={slug}
-                  corpo={{
-                    nome: cliente?.nome ?? nome,
-                    telefone: cliente?.telefone ?? telefone,
-                    servicoIds: servicos,
-                    profissionalId: profissional || null,
-                    dia,
-                    ...(cliente ? { c: token } : {}),
-                  }}
-                />
+                {u.listaEspera && (
+                  <AvisarSeVagar
+                    slug={slug}
+                    corpo={{
+                      nome: cliente?.nome ?? nome,
+                      telefone: cliente?.telefone ?? telefone,
+                      servicoIds: servicos,
+                      profissionalId: profissional || null,
+                      dia,
+                      ...(cliente ? { c: token } : {}),
+                    }}
+                  />
+                )}
               </div>
             ) : (
               <div

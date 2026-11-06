@@ -17,6 +17,7 @@ import {
   type HorarioDoLink,
   type HorarioLivre,
   type RemarcarPeloLinkEntrada,
+  temRecurso,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { AgendaService, traduzir } from '../agenda/agenda.service.js';
@@ -166,6 +167,8 @@ export class HorarioPublicoController {
     return this.banco.naConta(l.contaId, async (tx) => {
       const { ag, decisao } = await this.carregar(tx, l.agendamentoId);
       this.exigirQuePode(decisao);
+      if (!temRecurso((await estadoAssinatura(tx)).plano, 'listaEspera'))
+        throw Erros.conflito('Esta barbearia não usa lista de espera.');
       const cliente = ag.clienteId
         ? await tx.cliente.findUnique({ where: { id: ag.clienteId } })
         : null;

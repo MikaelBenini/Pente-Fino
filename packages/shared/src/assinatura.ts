@@ -31,6 +31,11 @@ export interface EstadoAssinatura {
   mensagem: string;
 }
 
+/** Situação da conta para o painel: a da assinatura mais o plano (o que a tela libera). */
+export interface EstadoDaConta extends EstadoAssinatura {
+  plano: PlanoConta;
+}
+
 const dias = (de: DataISO, ate: DataISO) =>
   Math.round((Date.parse(`${ate}T00:00:00Z`) - Date.parse(`${de}T00:00:00Z`)) / 86_400_000);
 

@@ -36,6 +36,8 @@ const somarDiasISO = (dia: string, n: number) => {
   return d.toISOString().slice(0, 10);
 };
 import { Aviso } from '../aviso';
+import { ConvitePlano, SoNoPlano } from '../convite-plano';
+import { useTemRecurso } from '@/lib/plano';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores, SeletorMes } from '../indicadores';
 import { MapaDaSemana } from '../ocupacao';
@@ -46,6 +48,8 @@ import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 export function TelaMetricas() {
   const { unidadeAtiva, papeis, unidades } = useApp();
   const ehDono = papeis.includes('dono');
+  // Sem metas no plano: as já lançadas continuam aparecendo; criar e remover, não.
+  const podeMetas = useTemRecurso('metas') === true;
   const [mes, setMes] = useState(mesAtual());
   const [de, ate] = limitesDoMes(mes);
   const indicadores = useIndicadores(unidadeAtiva, de, ate);
@@ -80,18 +84,19 @@ export function TelaMetricas() {
           <h2 id="titulo-metas" className="text-xl font-semibold">
             Metas
           </h2>
-          {ehDono && (
+          {ehDono && podeMetas && (
             <Botao variante="secundario" onClick={() => setNova(true)}>
               <Plus aria-hidden className="size-4" /> Definir meta
             </Botao>
           )}
         </div>
+        {useTemRecurso('metas') === false && <ConvitePlano recurso="metas" compacto />}
         <Estado consulta={metas}>
           {() =>
             metas.data!.length === 0 ? (
               <p className="text-tinta-suave">
                 Nenhuma meta neste mês.
-                {ehDono ? ' Defina o faturamento ou a quantidade de um serviço.' : ''}
+                {ehDono && podeMetas ? ' Defina o faturamento ou a quantidade de um serviço.' : ''}
               </p>
             ) : (
               <ul className="grid gap-6 rounded-lg border border-borda bg-superficie p-5 md:grid-cols-2">
@@ -105,7 +110,7 @@ export function TelaMetricas() {
                       fracaoDoMes={m.fracaoDoMes}
                       formatar={m.tipo === 'faturamento' ? formatarMoeda : formatarNumero}
                     />
-                    {ehDono && (
+                    {ehDono && podeMetas && (
                       <Botao
                         variante="fantasma"
                         className="px-3"
@@ -140,14 +145,16 @@ export function TelaMetricas() {
         </Estado>
       </section>
 
-      <Estado consulta={lucro}>
-        {() => (
-          <>
-            <LucroServicos servicos={lucro.data!.servicos} />
-            <LucroProdutos produtos={lucro.data!.produtos} />
-          </>
-        )}
-      </Estado>
+      <SoNoPlano recurso="lucroReal">
+        <Estado consulta={lucro}>
+          {() => (
+            <>
+              <LucroServicos servicos={lucro.data!.servicos} />
+              <LucroProdutos produtos={lucro.data!.produtos} />
+            </>
+          )}
+        </Estado>
+      </SoNoPlano>
       <section className="flex flex-col gap-4" aria-labelledby="titulo-mapa-semana">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-1">
@@ -167,8 +174,12 @@ export function TelaMetricas() {
           <p className="text-tinta-suave">Escolha uma unidade para ver o mapa.</p>
         )}
       </section>
-      <Estado consulta={canais}>{() => <PorCanal linhas={canais.data!} />}</Estado>
-      <Estado consulta={avaliacoes}>{() => <Avaliacoes r={avaliacoes.data!} />}</Estado>
+      <SoNoPlano recurso="canais">
+        <Estado consulta={canais}>{() => <PorCanal linhas={canais.data!} />}</Estado>
+      </SoNoPlano>
+      <SoNoPlano recurso="avaliacoes">
+        <Estado consulta={avaliacoes}>{() => <Avaliacoes r={avaliacoes.data!} />}</Estado>
+      </SoNoPlano>
       {ehDono && <NovaMeta mes={mes} aberto={nova} onFechar={() => setNova(false)} />}
     </div>
   );

@@ -2,7 +2,7 @@ import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { PainelDaRede } from '@pente-fino/shared';
 import { z } from 'zod';
-import { Papeis } from '../auth/decoradores.js';
+import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { Erros } from '../comum/erros.js';
 import { GESTAO } from '../comum/escopo.js';
 import { Consulta } from '../comum/validacao.js';
@@ -17,6 +17,7 @@ type ConsultaRede = z.infer<typeof consultaSchema>;
 
 @ApiTags('Desempenho da equipe')
 @ApiBearerAuth()
+@ExigeRecurso('rede')
 @Controller('rede')
 export class RedeController {
   constructor(@Inject(DesempenhoService) private readonly servico: DesempenhoService) {}

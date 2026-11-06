@@ -33,7 +33,7 @@ import {
   type SimularBotDados,
 } from '@pente-fino/shared';
 import { Auditada } from '../auditoria/auditoria.js';
-import { Papeis } from '../auth/decoradores.js';
+import { ExigeRecurso, LivreDoPlano, Papeis } from '../auth/decoradores.js';
 import { GESTAO } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { z } from 'zod';
@@ -46,6 +46,7 @@ const periodoAutomacoes = z.object({
 
 @ApiTags('Bot do WhatsApp')
 @ApiBearerAuth()
+@ExigeRecurso('bot', { soEscrita: true })
 @Controller('bot')
 export class BotController {
   constructor(@Inject(BotService) private readonly servico: BotService) {}
@@ -132,6 +133,7 @@ export class BotController {
     return this.servico.automacoes(p.de ?? `${hoje.slice(0, 7)}-01`, p.ate ?? hoje);
   }
 
+  @ExigeRecurso('automacoes')
   @Put('automacoes')
   @Papeis('dono')
   @Auditada()
@@ -177,6 +179,7 @@ export class BotController {
     return this.servico.conectar(unidadeId);
   }
 
+  @LivreDoPlano()
   @Delete('conexao/:unidadeId')
   @Papeis(...GESTAO)
   @Auditada()

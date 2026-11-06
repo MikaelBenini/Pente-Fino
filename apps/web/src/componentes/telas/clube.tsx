@@ -33,6 +33,7 @@ import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 import { SeletorMes } from '../indicadores';
 import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { BuscaCliente, type ClienteEscolhido } from './busca-cliente';
+import { ConviteSeFaltar } from '../convite-plano';
 
 const chaveItens = ['clube', 'itens'] as const;
 const chaveAdesoes = ['clube', 'adesoes'] as const;
@@ -50,6 +51,7 @@ export function TelaClube() {
   return (
     <div className="flex flex-col gap-6">
       <CabecalhoPagina titulo="Clube" pergunta="Quem assina e o que o plano cobre?" />
+      <ConviteSeFaltar recurso="clube" />
       <Abas
         rotulo="Clube"
         atual={aba}

@@ -59,6 +59,8 @@ export interface UnidadePublica {
   lembretesWhatsapp: boolean;
   /** "Prefere pelo WhatsApp?": wa.me do bot com "AGENDAR POR AQUI", quando dá para marcar na conversa. */
   linkWhatsappAgendar: string | null;
+  /** O plano da barbearia tem lista de espera: mostra "Avise-me se vagar". */
+  listaEspera: boolean;
 }
 
 /** Quem chegou pelo link do bot: nome e telefone para preencher o formulário. */
