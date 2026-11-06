@@ -8,6 +8,7 @@ import {
   formatarTelefone,
   NOMES_DIAS_CURTOS,
   type AgendamentoPublicoCriado,
+  type ClienteDoLink,
   type HorarioLivre,
   type UnidadePublica,
 } from '@pente-fino/shared';
@@ -54,7 +55,9 @@ export function TelaAgendar() {
 }
 
 function Agendar() {
-  const slug = useSearchParams().get('u') ?? '';
+  const params = useSearchParams();
+  const slug = params.get('u') ?? '';
+  const token = params.get('c') ?? '';
   const pagina = useQuery({
     queryKey: ['publico', slug],
     queryFn: () => api<UnidadePublica>(`publico/agendamento/${slug}`),
@@ -79,7 +82,7 @@ function Agendar() {
         <Carregando />
       </Moldura>
     );
-  return <Formulario slug={slug} u={pagina.data} />;
+  return <Formulario slug={slug} u={pagina.data} token={token} />;
 }
 
 export function Moldura({
@@ -112,12 +115,23 @@ export function Moldura({
   );
 }
 
-function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
+function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token: string }) {
+  // Veio pelo link do bot: nome e telefone já preenchidos (o telefone vem do token).
+  const doLink = useQuery({
+    queryKey: ['publico', slug, 'cliente', token],
+    queryFn: () => api<ClienteDoLink>(`publico/agendamento/${slug}/cliente?c=${token}`),
+    enabled: /^[A-Za-z0-9_-]{10,20}$/.test(token),
+    retry: false,
+    staleTime: Infinity,
+  });
+  const [usarLink, setUsarLink] = useState(true);
+  const cliente = usarLink ? doLink.data : undefined;
   const [servicos, setServicos] = useState<string[]>([]);
   const [profissional, setProfissional] = useState<string>('');
   const [dia, setDia] = useState(dataLocal(new Date()));
   const [horario, setHorario] = useState<{ inicio: string; profissionalId: string } | null>(null);
-  const [nome, setNome] = useState('');
+  const [nomeDigitado, setNome] = useState<string | null>(null);
+  const nome = nomeDigitado ?? cliente?.nome ?? '';
   const [telefone, setTelefone] = useState('');
   const [lembretes, setLembretes] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -216,6 +230,16 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
 
   return (
     <Moldura u={u}>
+      {u.linkWhatsappAgendar && (
+        <a
+          href={u.linkWhatsappAgendar}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center gap-2 self-start font-semibold text-modulo-texto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+        >
+          <MessageCircle aria-hidden className="size-5" /> Prefere marcar pelo WhatsApp?
+        </a>
+      )}
       <form
         method="post"
         noValidate
@@ -235,6 +259,7 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
                   profissionalId: horario.profissionalId,
                   inicio: horario.inicio,
                   lembretes: u.lembretesWhatsapp && lembretes,
+                  ...(cliente ? { c: token } : {}),
                 },
               }),
             );
@@ -373,16 +398,35 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
               value={nome}
               onChange={(e) => setNome(e.target.value)}
             />
-            <Campo
-              id="agendar-telefone"
-              rotulo="WhatsApp"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              dica="Com DDD. A barbearia usa para confirmar o horário."
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-            />
+            {cliente ? (
+              <div className="flex flex-col gap-1">
+                <p className="text-sm font-medium">WhatsApp</p>
+                <p className="flex flex-wrap items-center gap-x-3 font-denso text-lg tabular-nums">
+                  {formatarTelefone(cliente.telefone)}
+                  <button
+                    type="button"
+                    className="min-h-11 font-sans text-sm font-semibold text-modulo-texto underline-offset-4 hover:underline"
+                    onClick={() => {
+                      setUsarLink(false);
+                      setNome('');
+                    }}
+                  >
+                    Não é você?
+                  </button>
+                </p>
+              </div>
+            ) : (
+              <Campo
+                id="agendar-telefone"
+                rotulo="WhatsApp"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                dica="Com DDD. A barbearia usa para confirmar o horário."
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+              />
+            )}
             {u.lembretesWhatsapp && (
               <Marcador
                 id="agendar-lembretes"
@@ -400,7 +444,11 @@ function Formulario({ slug, u }: { slug: string; u: UnidadePublica }) {
           larguraTotal
           className="min-h-12 text-lg"
           carregando={enviando}
-          disabled={!horario || nome.trim().length < 2 || telefone.replace(/\D/g, '').length < 10}
+          disabled={
+            !horario ||
+            nome.trim().length < 2 ||
+            (!cliente && telefone.replace(/\D/g, '').length < 10)
+          }
         >
           {horario
             ? `Agendar ${formatarHora(horario.inicio)} · ${formatarMoeda(total)}`

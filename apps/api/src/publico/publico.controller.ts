@@ -2,8 +2,10 @@ import { Controller, Get, HttpCode, HttpStatus, Inject, Param, Post } from '@nes
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   aplicarModelosIniciais,
+  clienteDoToken,
   criarLinkDoHorario,
   faltasRecentes,
+  usarToken,
   precoServicoVigente,
   Prisma,
   type Transacao,
@@ -20,7 +22,9 @@ import {
   formatarHora,
   gerarSlug,
   slugSchema,
+  TEXTO_AGENDAR_POR_AQUI,
   TEXTO_ATIVAR_LEMBRETES,
+  type ClienteDoLink,
   variantesTelefone,
   type LembretesDoSite,
   type AgendamentoPublicoCriado,
@@ -46,6 +50,16 @@ import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { emSequencia, umPorVez } from '../comum/sequencia.js';
 
 const slugParam = new PipeZod(slugSchema);
+
+/** "Prefere pelo WhatsApp?": o bot conectado e marcando pela conversa. */
+async function linkAgendarPelaConversa(tx: Transacao, unidadeId: string, regras: unknown) {
+  if (!lerRegrasAgendamento(regras).pelaConversa) return null;
+  const c = await tx.botConexao.findUnique({ where: { unidadeId } });
+  if (c?.status !== 'conectado' || !c.numero) return null;
+  return `https://wa.me/${c.numero}?text=${encodeURIComponent(TEXTO_AGENDAR_POR_AQUI)}`;
+}
+
+const consultaToken = z.object({ c: z.string().regex(/^[A-Za-z0-9_-]{10,20}$/, 'Link inválido.') });
 
 /** Número do bot que manda os lembretes: WhatsApp conectado e lembretes ligados nas regras. */
 async function numeroDosLembretes(tx: Transacao, unidadeId: string, regras: unknown) {
@@ -196,7 +210,25 @@ export class PublicoController {
           nome: p.usuario.nome.split(' ')[0]!,
         })),
         lembretesWhatsapp: !!(await numeroDosLembretes(tx, u.id, u.regrasAgendamento)),
+        linkWhatsappAgendar: await linkAgendarPelaConversa(tx, u.id, u.regrasAgendamento),
       };
+    });
+  }
+
+  @Get('agendamento/:slug/cliente')
+  @Publico()
+  @LimiteAutenticacao()
+  @ApiOperation({ summary: 'Quem veio pelo link do bot: nome e telefone para preencher' })
+  async clienteDoLink(
+    @Param('slug', slugParam) slug: string,
+    @Consulta(consultaToken) q: z.infer<typeof consultaToken>,
+  ): Promise<ClienteDoLink> {
+    const u = await this.unidade(slug);
+    return this.banco.naConta(u.contaId, async (tx) => {
+      const t = await clienteDoToken(tx, u.id, q.c);
+      if (!t?.cliente.telefone)
+        throw Erros.naoEncontrado('Este link já foi usado ou venceu. Preencha seus dados.');
+      return { nome: t.cliente.nome, telefone: t.cliente.telefone };
     });
   }
 
@@ -238,6 +270,13 @@ export class PublicoController {
           : 'Este horário já passou. Escolha outro.',
       );
     const r = await this.banco.naConta(u.contaId, async (tx) => {
+      // Veio pelo link do bot: o telefone é o do token (uso único), não o digitado.
+      const doLink = d.c ? await clienteDoToken(tx, u.id, d.c) : null;
+      if (doLink) {
+        if (!(await usarToken(tx, doLink.tokenId)))
+          throw Erros.conflito('Este link já foi usado. Preencha seus dados.');
+        if (doLink.cliente.telefone) d = { ...d, telefone: doLink.cliente.telefone };
+      }
       // Conta só para consulta não recebe agendamento novo pelo link.
       if ((await estadoAssinatura(tx)).somenteLeitura)
         throw Erros.conflito(
@@ -288,6 +327,9 @@ export class PublicoController {
           itens: { include: { servico: true } },
         },
       });
+      // Marcou pelo site: da próxima vez o bot já manda o link.
+      if (c.clienteId)
+        await tx.cliente.update({ where: { id: c.clienteId }, data: { canalPreferido: 'site' } });
       // Caixa de lembretes marcada: aceite gravado no cliente. Os lembretes só saem para quem
       // já escreveu para a unidade (proteção do número); se ainda não, o botão abre a conversa.
       let lembretes: LembretesDoSite = null;

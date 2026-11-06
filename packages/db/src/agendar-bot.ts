@@ -26,6 +26,9 @@ import {
   type ServicoParaAgendar,
   caminhoDoHorario,
   bloqueadoPorFaltas,
+  textoEscolherCanal,
+  textoLinkDoSite,
+  type CanalAgendamento,
 } from '@pente-fino/shared';
 import {
   calcularLivres,
@@ -37,6 +40,7 @@ import {
   faltasRecentes,
 } from './agenda.js';
 import { criarLinkDoHorario, remarcarPeloCliente } from './link-horario.js';
+import { criarTokenDeAgendamento } from './token-agendamento.js';
 import type { Prisma } from './generated/prisma/client.js';
 import { precoServicoVigente } from './vigencia.js';
 
@@ -64,6 +68,8 @@ export interface DadosDaConversa {
   agora: Date;
   /** Regras de agendamento da unidade (antecedência, janela, limite, prazo). */
   regras: RegrasAgendamento;
+  /** Último canal que o cliente usou: "conversa" pula a pergunta; "site" manda o link. */
+  canalPreferido?: CanalAgendamento | null;
   /** Endereço do sistema: a confirmação leva o link do horário (/horario?t=token). */
   appUrl?: string;
   /** Simulador do painel: faz o passo a passo, mas não grava o agendamento. */
@@ -71,6 +77,17 @@ export interface DadosDaConversa {
 }
 
 const primeiroNome = (n: string) => n.trim().split(/\s+/)[0]!;
+/** Link do site com o token do cliente (nome e telefone preenchidos). */
+async function linkDoSite(tx: Tx, d: DadosDaConversa): Promise<string> {
+  if (d.simulacao || !d.clienteId) return `${d.link}&c=exemplo`;
+  return `${d.link}&c=${await criarTokenDeAgendamento(tx, d.unidadeId, d.clienteId, d.agora)}`;
+}
+
+async function guardarCanal(tx: Tx, d: DadosDaConversa, canal: CanalAgendamento) {
+  if (d.simulacao || !d.clienteId || d.canalPreferido === canal) return;
+  await tx.cliente.update({ where: { id: d.clienteId }, data: { canalPreferido: canal } });
+}
+
 const linkDoHorario = async (tx: Tx, d: DadosDaConversa, agendamentoId: string) =>
   d.appUrl ? `${d.appUrl}${caminhoDoHorario(await criarLinkDoHorario(tx, agendamentoId))}` : null;
 const somarDias = (dia: string, n: number) => {
@@ -387,6 +404,13 @@ export async function passoDaAgenda(
           ? `Por aqui ainda não dá para marcar. Marque pelo site: ${d.link}`
           : 'Por aqui ainda não dá para marcar. Responda ATENDENTE que a gente marca para você.',
       ]);
+    // Com site ligado, o cliente escolhe por onde marcar (ou segue pelo que usou da última vez).
+    if (d.link && d.canalPreferido !== 'conversa')
+      return seguir({ ...agendaNova(), passo: 'canal' }, [
+        d.canalPreferido === 'site'
+          ? textoLinkDoSite(await linkDoSite(tx, d))
+          : textoEscolherCanal(),
+      ]);
     return seguir({ ...agendaNova(), opcoes: servicos.map((s) => s.id) }, [
       textoServicos(servicos, d.link),
     ]);
@@ -396,6 +420,21 @@ export async function passoDaAgenda(
   const um = numeros.length === 1 ? numeros[0]! : null;
 
   switch (agenda.passo) {
+    case 'canal': {
+      if (um === 0) return sair([]);
+      if (um === 1) {
+        await guardarCanal(tx, d, 'conversa');
+        const servicos = await servicosParaAgendar(tx, d.unidadeId, hoje);
+        return seguir({ ...agendaNova(), opcoes: servicos.map((s) => s.id) }, [
+          textoServicos(servicos, d.link),
+        ]);
+      }
+      if (um === 2) {
+        await guardarCanal(tx, d, 'site');
+        return seguir({ ...agenda, erros: 0 }, [textoLinkDoSite(await linkDoSite(tx, d))]);
+      }
+      return naoServiu(agenda, 'Responda 1 para marcar por aqui, 2 para o site, ou 0 para voltar.');
+    }
     case 'meus': {
       if (um === 0) return sair([]);
       if (um === null || um > agenda.opcoes.length)
@@ -542,6 +581,7 @@ export async function passoDaAgenda(
           origem: 'bot',
           criadoPorId: null,
         });
+        await guardarCanal(tx, d, 'conversa');
         await tx.$executeRawUnsafe('RELEASE SAVEPOINT agendar_bot');
         return {
           respostas: [

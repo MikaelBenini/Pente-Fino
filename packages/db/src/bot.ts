@@ -26,6 +26,8 @@ import {
   type TurnoBot,
   NOTA_BAIXA_ATE,
   type FimDaEsperaDoAtendente,
+  TEXTO_AGENDAR_POR_AQUI,
+  type CanalAgendamento,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -44,6 +46,9 @@ import { precoServicoVigente } from './vigencia.js';
 type Tx = Prisma.TransactionClient;
 
 export const json = (v: unknown) => structuredClone(v) as Prisma.InputJsonValue;
+
+const lerCanal = (c: string | null): CanalAgendamento | null =>
+  c === 'conversa' || c === 'site' ? c : null;
 
 /** O que está gravado passa de novo pelo esquema: menu estragado não chega ao motor. */
 export function lerMenu(valor: unknown): MenuBot {
@@ -300,9 +305,22 @@ export async function responderComAgenda(
     };
   }
 
-  const r = responder(d.menu, d.mensagens, base, d.entrada, d.ctx);
+  // "Prefere pelo WhatsApp?" do site: começa o agendamento já pela conversa.
+  const porAqui = texto === normalizar(TEXTO_AGENDAR_POR_AQUI);
+  const r = responder(d.menu, d.mensagens, base, porAqui ? 'agendar' : d.entrada, d.ctx);
   if ((r.acao !== 'agendar' && r.acao !== 'meus_horarios') || !d.ctx.agendarPelaConversa) return r;
-  const p = await passoDaAgenda(tx, null, null, d.dados, r.acao);
+  if (porAqui && d.dados.clienteId && !d.dados.simulacao)
+    await tx.cliente.update({
+      where: { id: d.dados.clienteId },
+      data: { canalPreferido: 'conversa' },
+    });
+  const p = await passoDaAgenda(
+    tx,
+    null,
+    null,
+    porAqui ? { ...d.dados, canalPreferido: 'conversa' } : d.dados,
+    r.acao,
+  );
   return {
     ...r,
     respostas: [...r.respostas, ...p.respostas],
@@ -476,6 +494,7 @@ export async function atenderMensagem(
             clienteId: cliente.id,
             barbearia: ctx.barbearia,
             link: ctx.link,
+            canalPreferido: lerCanal(cliente.canalPreferido),
             appUrl: opcoes.appUrl,
             agora,
             regras: lerRegrasAgendamento(u.regrasAgendamento),

@@ -15,6 +15,7 @@ import {
   encerrarEsperaDoAtendente,
   enviarLembrete,
   hashCodigoAssistente,
+  hashTokenAgendamento,
   hashTokenHorario,
   instanciaDaUnidade,
   moverAgendamento,
@@ -55,6 +56,12 @@ async function fala(telefone: string, texto: string, quando = agora) {
     tx.mensagem.findMany({ where: { id: { in: r.saidas } }, orderBy: { criadoEm: 'asc' } }),
   );
   return r.saidas.map((id) => ms.find((m) => m.id === id)!.texto).join('\n---\n');
+}
+
+/** "Agendar" no menu; com site ligado, o bot pergunta o canal e o cliente escolhe a conversa. */
+async function comecarAgendar(telefone: string, quando = agora) {
+  const r = await fala(telefone, '1', quando);
+  return r.includes('Como você prefere marcar?') ? fala(telefone, '1', quando) : r;
 }
 
 beforeAll(async () => {
@@ -111,6 +118,8 @@ describe('agendar pela conversa', () => {
 
   it('do menu ao horário marcado, com dois serviços', async () => {
     await fala(tel, 'oi');
+    // Com o site ligado, o bot pergunta por onde marcar.
+    expect(await fala(tel, '1')).toContain('Como você prefere marcar?\n\n1. Por aqui, na conversa');
     const servicos = await fala(tel, '1');
     expect(servicos).toContain('1. Barba · R$ 35,00 · 30 min\n2. Corte · R$ 45,00 · 30 min');
     expect(servicos).toContain('pelo site? http://app.teste/agendar?u=navalha-');
@@ -150,7 +159,7 @@ describe('agendar pela conversa', () => {
   it('horário ocupado por outra pessoa no meio: avisa e mostra os que sobraram', async () => {
     const t2 = '5511977772222';
     await fala(t2, 'oi');
-    await fala(t2, '1');
+    await comecarAgendar(t2);
     await fala(t2, '2'); // Corte
     await fala(t2, '1'); // hoje
     await fala(t2, '1'); // 09:00 → resumo
@@ -402,7 +411,7 @@ describe('regras da unidade', () => {
     await regras({ antecedenciaMin: 180 });
     const tel = '5511955550001';
     await fala(tel, 'oi');
-    await fala(tel, '1');
+    await comecarAgendar(tel);
     const dias = await fala(tel, '2'); // Corte → dias
     expect(dias).toContain('Qual dia fica melhor?');
     expect(dias).not.toContain('Hoje');
@@ -412,7 +421,7 @@ describe('regras da unidade', () => {
     await regras({ antecedenciaMin: 0, intervaloMin: 30 });
     const tel = '5511955550003';
     await fala(tel, 'oi');
-    await fala(tel, '1');
+    await comecarAgendar(tel);
     await fala(tel, '2');
     // Hoje não sobra horário com a folga; amanhã é a opção 1 (outro cliente das 09:00 às 09:30).
     const horarios = await fala(tel, '1');
@@ -467,7 +476,7 @@ describe('assistente da equipe', () => {
     const cli = '5511944441111';
     const marcar = async () => {
       await fala(cli, 'oi', quando);
-      await fala(cli, '1', quando);
+      await comecarAgendar(cli, quando);
       await fala(cli, '2', quando); // Corte
       await fala(cli, '2', quando); // amanhã
       await fala(cli, '1', quando);
@@ -827,5 +836,42 @@ describe('faltas e atendente', () => {
     );
     expect(sessao.atendenteDesde).toBeNull();
     expect(await encerrarEsperaDoAtendente(prisma, job)).toBeNull();
+  });
+});
+
+describe('canal de agendamento', () => {
+  const canal = (telefone: string) =>
+    naMinhaConta((tx) => tx.cliente.findFirstOrThrow({ where: { telefone } })).then(
+      (c) => c.canalPreferido,
+    );
+
+  it('escolhe o site: link com token curto (telefone fora da URL); da próxima vez o link vem direto', async () => {
+    const tel = '5511933331111';
+    await fala(tel, 'oi');
+    await fala(tel, '1');
+    const site = await fala(tel, '2');
+    const token = /http:\/\/app\.teste\/agendar\?u=navalha-[a-z0-9]+&c=([A-Za-z0-9_-]{10})\n/.exec(
+      site,
+    )?.[1];
+    expect(token).toBeDefined();
+    expect(site).not.toContain(tel);
+    expect(await canal(tel)).toBe('site');
+    const t = await naMinhaConta((tx) =>
+      tx.tokenAgendamento.findUnique({ where: { tokenHash: hashTokenAgendamento(token!) } }),
+    );
+    expect(t?.usadoEm).toBeNull();
+
+    // Volta outro dia: "Agendar" já manda o link; "1" troca para a conversa.
+    const depois = new Date(agora.getTime() + 3 * 3_600_000);
+    await fala(tel, '0', depois);
+    expect(await fala(tel, '1', depois)).toContain('Marque pelo site, com seu nome e telefone');
+    expect(await fala(tel, '1', depois)).toContain('Qual serviço você quer?');
+    expect(await canal(tel)).toBe('conversa');
+  });
+
+  it('"AGENDAR POR AQUI" (do site) vai direto para os serviços e guarda a conversa', async () => {
+    const tel = '5511933332222';
+    expect(await fala(tel, 'AGENDAR POR AQUI')).toContain('Qual serviço você quer?');
+    expect(await canal(tel)).toBe('conversa');
   });
 });

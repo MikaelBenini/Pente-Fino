@@ -32,6 +32,11 @@ export const agendamentoPublicoSchema = z.object({
   servicoIds: z.array(z.uuid()).min(1, { error: 'Escolha um serviço.' }).max(5),
   profissionalId: z.uuid(),
   inicio: z.iso.datetime({ offset: true, error: 'Horário inválido.' }),
+  /** Token do link mandado pelo bot (nome e telefone já preenchidos). */
+  c: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{10,20}$/)
+    .optional(),
   /** Marcou a caixa "quero receber lembrete pelo WhatsApp" (aceite ativo, começa desmarcada). */
   lembretes: z.boolean().default(false),
 });
@@ -52,6 +57,15 @@ export interface UnidadePublica {
   profissionais: { id: string; nome: string }[];
   /** WhatsApp da unidade conectado e com lembretes configurados: mostra a caixa de aceite. */
   lembretesWhatsapp: boolean;
+  /** "Prefere pelo WhatsApp?": wa.me do bot com "AGENDAR POR AQUI", quando dá para marcar na conversa. */
+  linkWhatsappAgendar: string | null;
+}
+
+/** Quem chegou pelo link do bot: nome e telefone para preencher o formulário. */
+export interface ClienteDoLink {
+  nome: string;
+  /** Só os dígitos, com 55. */
+  telefone: string;
 }
 
 /** Texto pronto do botão "Ativar lembretes": o bot entende e liga os avisos. */
