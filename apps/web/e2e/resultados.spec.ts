@@ -119,3 +119,19 @@ test('barbeiro no celular: hoje, comissões, desempenho e metas', async ({ page 
     page.getByRole('heading', { name: 'Esta tela não faz parte do seu acesso' }),
   ).toBeVisible();
 });
+
+test('gestor: ocupação do mês no início e mapa da semana nas métricas', async ({ page }) => {
+  await entrar(page, 'gestor@demo.pentefino.dev');
+  await page.goto('/inicio');
+  const card = page.getByRole('region', { name: 'Ocupação da agenda no mês' });
+  await expect(card).toBeVisible();
+  await expect(card.getByRole('list', { name: 'Ocupação por faixa do dia' })).toContainText(
+    /Manhã|Tarde/,
+  );
+  await page.goto('/metricas');
+  const mapa = page.getByRole('region', { name: 'Mapa da semana' });
+  await expect(mapa.getByRole('table')).toBeVisible();
+  await expect(mapa.getByRole('columnheader', { name: 'Seg' })).toBeVisible();
+  await expect(mapa.getByRole('list', { name: 'Mais vazios' })).toBeVisible();
+  await expect(mapa.getByRole('list', { name: 'Mais cheios' })).toBeVisible();
+});

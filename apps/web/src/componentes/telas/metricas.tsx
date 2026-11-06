@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  dataLocal,
   formatarFracao,
   formatarMoeda,
   formatarNumero,
@@ -24,12 +25,21 @@ import {
   useIndicadores,
   useLucratividade,
   useMetas,
+  useOcupacao,
   useServicos,
 } from '@/lib/consultas';
 import { limitesDoMes, mesAtual } from '@/lib/periodo';
+
+const somarDiasISO = (dia: string, n: number) => {
+  const d = new Date(`${dia}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores, SeletorMes } from '../indicadores';
+import { MapaDaSemana } from '../ocupacao';
+import { useUnidadeTrabalho } from '../unidade-trabalho';
 import { ComentarioDaPesquisa, NotaBaixa, ResumoDeNotas } from '../notas';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
@@ -43,6 +53,13 @@ export function TelaMetricas() {
   const lucro = useLucratividade(unidadeAtiva, de, ate);
   const avaliacoes = useAvaliacoes(unidadeAtiva, de, ate);
   const canais = useCanais(unidadeAtiva, de, ate);
+  const mapa = useUnidadeTrabalho();
+  const hoje = dataLocal(new Date());
+  const ocupacao = useOcupacao(
+    papeis.some((p) => p === 'dono' || p === 'gestor') ? mapa.unidadeId : null,
+    somarDiasISO(hoje, -27),
+    hoje,
+  );
   const [nova, setNova] = useState(false);
   const remover = useAcao(
     (id: string) => api(`metas/${id}`, { metodo: 'DELETE' }),
@@ -131,6 +148,25 @@ export function TelaMetricas() {
           </>
         )}
       </Estado>
+      <section className="flex flex-col gap-4" aria-labelledby="titulo-mapa-semana">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <h2 id="titulo-mapa-semana" className="text-xl font-semibold">
+              Mapa da semana
+            </h2>
+            <p className="text-sm text-tinta-suave">
+              Quanto da agenda foi ocupado em cada hora, nas últimas 4 semanas. Use os horários
+              vazios para promoção ou folga.
+            </p>
+          </div>
+          {mapa.seletor}
+        </div>
+        {mapa.unidadeId ? (
+          <Estado consulta={ocupacao}>{() => <MapaDaSemana o={ocupacao.data!} />}</Estado>
+        ) : (
+          <p className="text-tinta-suave">Escolha uma unidade para ver o mapa.</p>
+        )}
+      </section>
       <Estado consulta={canais}>{() => <PorCanal linhas={canais.data!} />}</Estado>
       <Estado consulta={avaliacoes}>{() => <Avaliacoes r={avaliacoes.data!} />}</Estado>
       {ehDono && <NovaMeta mes={mes} aberto={nova} onFechar={() => setNova(false)} />}
