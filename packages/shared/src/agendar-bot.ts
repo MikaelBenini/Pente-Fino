@@ -19,7 +19,9 @@ export type PassoAgenda =
   // "Meus horários": escolher qual, o que fazer e confirmar o cancelamento.
   | 'meus'
   | 'acao'
-  | 'cancelar';
+  | 'cancelar'
+  // Depois de marcar: "quer que eu avise se vagar antes?" (Etapa 14).
+  | 'antecipar';
 
 /** Estado do agendamento guardado na sessão do número. */
 export interface AgendaNaConversa {
@@ -38,6 +40,8 @@ export interface AgendaNaConversa {
   erros: number;
   /** Remarcando este agendamento (null = marcando um novo). */
   remarcarId: string | null;
+  /** A lista de horários tem a opção "Ver mais" (o "me avise" vem depois dela). */
+  temMais?: boolean;
 }
 
 export const agendaNova = (): AgendaNaConversa => ({
@@ -171,12 +175,17 @@ export function textoHorarios(
   diaRotulo: string,
   inicios: readonly string[],
   temMais: boolean,
+  /** Oferece entrar na lista de espera do dia ("nenhum serve"). */
+  avisar = false,
 ): string {
   return [
     `Horários livres ${diaRotulo.startsWith('Hoje') || diaRotulo.startsWith('Amanhã') ? diaRotulo.toLowerCase() : `na ${diaRotulo.toLowerCase()}`}:`,
     '',
     lista(inicios.map((i) => formatarHora(i))),
     ...(temMais ? [`${inicios.length + 1}. Ver mais horários`] : []),
+    ...(avisar
+      ? [`${inicios.length + (temMais ? 2 : 1)}. Nenhum serve: me avise se vagar neste dia`]
+      : []),
     '0. Outro dia',
   ].join('\n');
 }

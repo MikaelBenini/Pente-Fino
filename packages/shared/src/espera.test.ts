@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { cabeNaFaixa, esperaSchema, ofertaValida, textoFaixa, textoOfertaVaga } from './espera.js';
+import {
+  cabeNaFaixa,
+  deveOferecerAntecipar,
+  esperaSchema,
+  ofertaValida,
+  textoFaixa,
+  textoOfertaVaga,
+} from './espera.js';
 
 describe('lista de espera', () => {
   it('a vaga cabe quando começa dentro da faixa pedida', () => {
@@ -51,6 +58,41 @@ describe('lista de espera', () => {
     expect(esperaSchema.safeParse(base).success).toBe(false);
     expect(
       esperaSchema.safeParse({ ...base, clienteNovo: { nome: 'Ana' }, deMin: 800 }).success,
+    ).toBe(false);
+  });
+});
+
+describe('avisar se vagar antes', () => {
+  const h = (hhmm: string) => `2026-12-01T${hhmm}:00-03:00`;
+  const base = { primeiroPossivel: h('09:00'), jaNaLista: false };
+  it('pergunta: das 9h às 11h tudo ocupado, marcou 11h30 (o primeiro livre) e 12h também livre', () => {
+    expect(
+      deveOferecerAntecipar({ ...base, livres: [h('11:30'), h('12:00')], escolhido: h('11:30') }),
+    ).toBe(true);
+  });
+  it('não pergunta: havia horário livre antes (escolheu por preferência)', () => {
+    expect(
+      deveOferecerAntecipar({ ...base, livres: [h('10:00'), h('11:30')], escolhido: h('11:30') }),
+    ).toBe(false);
+  });
+  it('não pergunta: escolheu entre livres, não o primeiro deles', () => {
+    expect(
+      deveOferecerAntecipar({ ...base, livres: [h('11:30'), h('12:00')], escolhido: h('12:00') }),
+    ).toBe(false);
+  });
+  it('não pergunta: marcou o primeiro horário do dia (não há como antecipar)', () => {
+    expect(
+      deveOferecerAntecipar({ ...base, livres: [h('09:00'), h('09:30')], escolhido: h('09:00') }),
+    ).toBe(false);
+  });
+  it('não pergunta: já está na lista daquele dia', () => {
+    expect(
+      deveOferecerAntecipar({
+        ...base,
+        jaNaLista: true,
+        livres: [h('11:30')],
+        escolhido: h('11:30'),
+      }),
     ).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import {
   NOMES_DIAS_CURTOS,
   type AgendamentoPublicoCriado,
   type ClienteDoLink,
+  type EsperaPublicaCriada,
   type HorarioLivre,
   type UnidadePublica,
 } from '@pente-fino/shared';
@@ -197,6 +198,7 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
               </a>
             </div>
           )}
+          {feito.podeAntecipar && <AvisarAntes token={feito.linkGerenciar.split('t=')[1] ?? ''} />}
           {feito.lembretes === 'ligados' && (
             <p className="flex items-center gap-2 text-tinta-suave">
               <BellRing aria-hidden className="size-5 shrink-0" /> Você vai receber o lembrete pelo
@@ -359,10 +361,24 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
             ) : livres.isPending ? (
               <p className="text-tinta-suave">Procurando horários…</p>
             ) : opcoes.length === 0 ? (
-              <p className="flex items-center gap-2 text-tinta-suave">
-                <CalendarCheck aria-hidden className="size-5" /> Sem horário livre neste dia. Tente
-                outro dia{profissional ? ' ou outro barbeiro' : ''}.
-              </p>
+              <div className="flex flex-col gap-2">
+                <p className="flex items-center gap-2 text-tinta-suave">
+                  <CalendarCheck aria-hidden className="size-5" /> Sem horário livre neste dia.
+                  Tente outro dia{profissional ? ' ou outro barbeiro' : ''}, ou peça para ser
+                  avisado.
+                </p>
+                <AvisarSeVagar
+                  slug={slug}
+                  corpo={{
+                    nome: cliente?.nome ?? nome,
+                    telefone: cliente?.telefone ?? telefone,
+                    servicoIds: servicos,
+                    profissionalId: profissional || null,
+                    dia,
+                    ...(cliente ? { c: token } : {}),
+                  }}
+                />
+              </div>
             ) : (
               <div
                 className="flex flex-wrap gap-2"
@@ -456,5 +472,111 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
         </Botao>
       </form>
     </Moldura>
+  );
+}
+
+/** Ativar os avisos: ligados já, ou o botão que abre a conversa com o bot. */
+function ResultadoDoAviso({ r, texto }: { r: EsperaPublicaCriada; texto: string }) {
+  return (
+    <div className="flex flex-col gap-2" aria-live="polite">
+      <p className="flex items-center gap-2 text-acao-texto">
+        <BellRing aria-hidden className="size-5 shrink-0" /> {texto}
+      </p>
+      {r.lembretes === 'ativar' && r.linkLembretes && (
+        <a
+          href={r.linkLembretes}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center gap-2 self-start rounded-md bg-acao px-4 font-semibold text-sobre-acao focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+        >
+          <MessageCircle aria-hidden className="size-5" /> Ativar avisos no WhatsApp
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** Dia sem horário livre: entra na lista de espera do dia pelo site. */
+function AvisarSeVagar({ slug, corpo }: { slug: string; corpo: Record<string, unknown> }) {
+  const [r, setR] = useState<EsperaPublicaCriada | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  if (r)
+    return (
+      <ResultadoDoAviso
+        r={r}
+        texto="Combinado! Se vagar um horário nesse dia, avisamos pelo WhatsApp."
+      />
+    );
+  return (
+    <div className="flex flex-col gap-2">
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      <Botao
+        type="button"
+        variante="secundario"
+        className="self-start"
+        carregando={enviando}
+        onClick={async () => {
+          setErro(null);
+          setEnviando(true);
+          try {
+            setR(await api<EsperaPublicaCriada>(`publico/agendamento/${slug}/espera`, { corpo }));
+          } catch (e) {
+            setErro(
+              e instanceof ErroApi
+                ? (e.campos[0]?.mensagem ?? e.message)
+                : 'Não deu certo. Tente de novo.',
+            );
+          } finally {
+            setEnviando(false);
+          }
+        }}
+      >
+        <BellRing aria-hidden className="size-5" /> Avise-me se vagar neste dia
+      </Botao>
+      <p className="text-sm text-tinta-suave">Preencha seu nome e WhatsApp lá embaixo antes.</p>
+    </div>
+  );
+}
+
+/** Confirmação: foi empurrado para depois; oferece avisar se vagar antes. */
+function AvisarAntes({ token }: { token: string }) {
+  const [r, setR] = useState<EsperaPublicaCriada | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  if (r)
+    return (
+      <ResultadoDoAviso r={r} texto="Combinado! Se vagar um horário antes do seu, avisamos." />
+    );
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-borda p-4">
+      <p className="font-semibold">Queria mais cedo?</p>
+      <p className="text-sm text-tinta-suave">
+        Os horários antes deste estavam ocupados. Se algum vagar, avisamos pelo WhatsApp e você
+        troca respondendo 1.
+      </p>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      <Botao
+        type="button"
+        variante="secundario"
+        className="self-start"
+        carregando={enviando}
+        onClick={async () => {
+          setErro(null);
+          setEnviando(true);
+          try {
+            setR(
+              await api<EsperaPublicaCriada>(`publico/horario/${token}/antecipar`, { corpo: {} }),
+            );
+          } catch (e) {
+            setErro(e instanceof ErroApi ? e.message : 'Não deu certo. Tente de novo.');
+          } finally {
+            setEnviando(false);
+          }
+        }}
+      >
+        <BellRing aria-hidden className="size-5" /> Me avise se vagar antes
+      </Botao>
+    </div>
   );
 }

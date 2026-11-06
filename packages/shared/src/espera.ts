@@ -106,3 +106,25 @@ export function textoFaixa(deMin: number, ateMin: number): string {
     `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
   return `${h(deMin)} às ${h(ateMin)}`;
 }
+
+/**
+ * "Avisar se vagar antes" (pedido em 2026-11-05): só pergunta quando o cliente foi empurrado
+ * para depois — nenhum horário livre antes do escolhido (na grade que ele viu ao marcar) e o
+ * escolhido não é o primeiro horário possível do dia (abertura, ou agora com a antecedência).
+ */
+export function deveOferecerAntecipar(d: {
+  /** Inícios livres do dia (ISO) quando ele escolheu, para o profissional dele (ou todos). */
+  livres: readonly string[];
+  escolhido: string;
+  /** Primeiro horário possível do dia (ISO), livre ou não. */
+  primeiroPossivel: string;
+  jaNaLista: boolean;
+}): boolean {
+  if (d.jaNaLista) return false;
+  const escolhido = Date.parse(d.escolhido);
+  if (escolhido <= Date.parse(d.primeiroPossivel)) return false;
+  return d.livres.every((l) => Date.parse(l) >= escolhido);
+}
+
+export const TEXTO_PERGUNTA_ANTECIPAR =
+  'Quer que eu avise se vagar um horário antes do seu nesse dia?\n\n1. Sim, me avise\n2. Não precisa';

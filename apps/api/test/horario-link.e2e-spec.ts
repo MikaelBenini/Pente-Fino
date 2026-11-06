@@ -346,3 +346,67 @@ describe('link do site mandado pelo bot', () => {
     await http().get(`/publico/agendamento/${slug}/cliente?c=${token}`).expect(404);
   });
 });
+
+describe('lista de espera pelo site', () => {
+  const livresDe = async (data: string) =>
+    (
+      await http()
+        .get(`/publico/agendamento/${slug}/horarios?data=${data}&servicoIds=${corte}`)
+        .expect(200)
+    ).body[0].inicios as string[];
+  const marcar = (telefone: string, inicio: string, lembretes = false) =>
+    http()
+      .post(`/publico/agendamento/${slug}`)
+      .send({
+        nome: 'Site Espera',
+        telefone,
+        servicoIds: [corte],
+        profissionalId: prof,
+        inicio,
+        lembretes,
+      });
+
+  it('empurrado para depois e aceitando mensagens: oferece avisar se vagar antes', async () => {
+    // Outras pessoas pegam os três primeiros horários livres do dia, um depois do outro.
+    for (const i of [0, 1, 2])
+      await marcar(`1197700600${i}`, (await livresDe(dia(12)))[0]!).expect(201);
+    const primeiroLivre = (await livresDe(dia(12)))[0]!;
+    const sem = (await marcar('11977006010', primeiroLivre).expect(201)).body;
+    expect(sem.podeAntecipar).toBe(false); // não aceitou mensagens
+    const proximo = (await livresDe(dia(12)))[0]!;
+    const com = (await marcar('11977006011', proximo, true).expect(201)).body;
+    expect(com.podeAntecipar).toBe(true);
+    const token = (com.linkGerenciar as string).split('=')[1]!;
+    await http().post(`/publico/horario/${token}/antecipar`).send({}).expect(201);
+    const pedido = await naConta(prisma, a.contaId, (tx) =>
+      tx.listaEspera.findFirstOrThrow({ where: { cliente: { telefone: '5511977006011' } } }),
+    );
+    expect(pedido).toMatchObject({ origem: 'antecipar', profissionalId: prof });
+    expect(pedido.agendamentoId).toBeTruthy();
+  });
+
+  it('"avise-me se vagar" entra na lista do dia e aceita mensagens; ativa os avisos se nunca escreveu', async () => {
+    const r = await http()
+      .post(`/publico/agendamento/${slug}/espera`)
+      .send({
+        nome: 'Quer Vaga',
+        telefone: '(11) 97700-6020',
+        servicoIds: [corte],
+        profissionalId: null,
+        dia: dia(13),
+      })
+      .expect(201);
+    expect(r.body).toMatchObject({
+      lembretes: 'ativar',
+      linkLembretes: 'https://wa.me/5511900004444?text=RECEBER%20LEMBRETES',
+    });
+    const pedido = await naConta(prisma, a.contaId, (tx) =>
+      tx.listaEspera.findFirstOrThrow({
+        where: { cliente: { telefone: '5511977006020' } },
+        include: { cliente: true },
+      }),
+    );
+    expect(pedido).toMatchObject({ origem: 'site', deMin: 0, ateMin: 1440 });
+    expect(pedido.cliente.consentimentoMsg).toBe(true);
+  });
+});

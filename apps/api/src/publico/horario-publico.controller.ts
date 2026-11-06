@@ -13,6 +13,7 @@ import {
   decidirLink,
   lerRegrasAgendamento,
   remarcarPeloLinkSchema,
+  type EsperaPublicaCriada,
   type HorarioDoLink,
   type HorarioLivre,
   type RemarcarPeloLinkEntrada,
@@ -21,6 +22,7 @@ import { z } from 'zod';
 import { AgendaService, traduzir } from '../agenda/agenda.service.js';
 import { avisarEquipe, liberarVaga } from '../agenda/aviso-equipe.js';
 import { LimiteAutenticacao, Publico } from '../auth/decoradores.js';
+import { ativacaoDosAvisos } from './publico.controller.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
 import { Filas } from '../filas/filas.module.js';
@@ -150,6 +152,50 @@ export class HorarioPublicoController {
     await this.agenda.agendarLembretes(l.contaId, comandaId);
     await avisarEquipe(this.banco, this.filas, l.contaId, l.agendamentoId, 'remarcado');
     return this.ver(token);
+  }
+
+  @Post(':token/antecipar')
+  @Publico()
+  @LimiteAutenticacao()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: '"Me avise se vagar antes": entra na lista para antecipar este horário',
+  })
+  async antecipar(@Param('token', tokenParam) token: string): Promise<EsperaPublicaCriada> {
+    const l = await this.link(token);
+    return this.banco.naConta(l.contaId, async (tx) => {
+      const { ag, decisao } = await this.carregar(tx, l.agendamentoId);
+      this.exigirQuePode(decisao);
+      const cliente = ag.clienteId
+        ? await tx.cliente.findUnique({ where: { id: ag.clienteId } })
+        : null;
+      if (!cliente?.consentimentoMsg || !cliente.telefone)
+        throw Erros.conflito('O aviso vai pelo WhatsApp: aceite receber mensagens ao marcar.');
+      const dia = new Date(`${dataLocal(ag.inicio)}T00:00:00.000Z`);
+      const ja = await tx.listaEspera.findFirst({
+        where: { agendamentoId: ag.id, status: { in: ['aguardando', 'oferecido'] } },
+      });
+      if (!ja) {
+        const local = new Date(ag.inicio.getTime() - 3 * 3_600_000);
+        const minuto = local.getUTCHours() * 60 + local.getUTCMinutes();
+        await tx.listaEspera.create({
+          data: {
+            unidadeId: ag.unidadeId,
+            clienteId: cliente.id,
+            profissionalId: ag.profissionalId,
+            servicoIds: (ag.comanda?.itens ?? []).flatMap((i) =>
+              i.servicoId ? [i.servicoId] : [],
+            ),
+            dia,
+            deMin: 0,
+            ateMin: Math.max(0, minuto - 15),
+            origem: 'antecipar',
+            agendamentoId: ag.id,
+          },
+        });
+      }
+      return ativacaoDosAvisos(tx, ag.unidadeId, cliente.telefone);
+    });
   }
 
   @Post(':token/cancelar')

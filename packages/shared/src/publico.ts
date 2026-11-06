@@ -90,4 +90,29 @@ export interface AgendamentoPublicoCriado {
   lembretes: LembretesDoSite;
   /** wa.me do número do bot com "RECEBER LEMBRETES" pronto, quando falta ativar. */
   linkLembretes: string | null;
+  /** Foi empurrado para depois e aceita mensagens: oferece "me avise se vagar antes". */
+  podeAntecipar: boolean;
+}
+
+/** "Avise-me se vagar" no site, quando o dia não tem horário livre. */
+export const esperaPublicaSchema = z.object({
+  nome: z.string().trim().min(2, { error: 'Informe seu nome.' }).max(120),
+  telefone: z
+    .string()
+    .transform((t) => t.replace(/\D/g, ''))
+    .transform((d) => (d.length === 10 || d.length === 11 ? `55${d}` : d))
+    .pipe(z.string().regex(/^\d{12,13}$/, { error: 'Informe o WhatsApp com DDD.' })),
+  servicoIds: z.array(z.uuid()).min(1, { error: 'Escolha um serviço.' }).max(5),
+  profissionalId: z.uuid().nullable(),
+  dia: z.iso.date(),
+  c: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{10,20}$/)
+    .optional(),
+});
+export type EsperaPublicaEntrada = z.infer<typeof esperaPublicaSchema>;
+
+export interface EsperaPublicaCriada {
+  lembretes: LembretesDoSite;
+  linkLembretes: string | null;
 }

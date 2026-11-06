@@ -30,6 +30,8 @@ import {
   textoLinkDoSite,
   type CanalAgendamento,
   type VagaLiberada,
+  deveOferecerAntecipar,
+  TEXTO_PERGUNTA_ANTECIPAR,
 } from '@pente-fino/shared';
 import {
   calcularLivres,
@@ -39,6 +41,7 @@ import {
   duracaoDosServicos,
   ErroAgenda,
   faltasRecentes,
+  primeiroHorarioPossivel,
 } from './agenda.js';
 import { criarLinkDoHorario, remarcarPeloCliente } from './link-horario.js';
 import { criarTokenDeAgendamento } from './token-agendamento.js';
@@ -253,6 +256,7 @@ async function irParaHorarios(
     pagina: inicioPagina / HORARIOS_POR_VEZ,
     opcoes: pedaco.map((h) => `${h.inicio}|${h.profissionalId}`),
     erros: 0,
+    temMais,
   };
   return seguir(prox, [
     ...(aviso ? [aviso] : []),
@@ -260,6 +264,7 @@ async function irParaHorarios(
       rotuloDoDia(dia, dataLocal(d.agora)),
       pedaco.map((h) => h.inicio),
       temMais,
+      !a.remarcarId,
     ),
   ]);
 }
@@ -439,6 +444,22 @@ export async function passoDaAgenda(
       }
       return naoServiu(agenda, 'Responda 1 para marcar por aqui, 2 para o site, ou 0 para voltar.');
     }
+    case 'antecipar': {
+      if (um === 1 && agenda.remarcarId && agenda.escolha && !d.simulacao) {
+        const escolhido = new Date(agenda.escolha.inicio);
+        await entrarNaLista(
+          tx,
+          d,
+          agenda,
+          agenda.dia!,
+          0,
+          minutoLocal(escolhido) - 15,
+          agenda.remarcarId,
+        );
+        return sair(['Combinado! Se vagar um horário antes do seu, eu te aviso por aqui. 😉']);
+      }
+      return sair(['Tudo bem! Te esperamos.']);
+    }
     case 'meus': {
       if (um === 0) return sair([]);
       if (um === null || um > agenda.opcoes.length)
@@ -524,8 +545,15 @@ export async function passoDaAgenda(
     }
     case 'horario': {
       if (um === 0) return irParaDias(tx, agenda, d);
-      if (um === agenda.opcoes.length + 1)
+      if (agenda.temMais && um === agenda.opcoes.length + 1)
         return irParaHorarios(tx, agenda, d, agenda.dia!, agenda.pagina + 1);
+      // "Nenhum serve": entra na lista de espera do dia; o bot avisa se vagar.
+      if (!agenda.remarcarId && um === agenda.opcoes.length + (agenda.temMais ? 2 : 1)) {
+        if (!d.simulacao) await entrarNaLista(tx, d, agenda, agenda.dia!, 0, 24 * 60, null);
+        return sair([
+          'Combinado! Se vagar um horário nesse dia, eu te aviso por aqui. Quem responder primeiro leva. 😉',
+        ]);
+      }
       if (um === null || um > agenda.opcoes.length)
         return naoServiu(agenda, 'Responda com o número do horário (ou 0 para outro dia).');
       const [inicio, profissionalId] = agenda.opcoes[um - 1]!.split('|') as [string, string];
@@ -579,6 +607,9 @@ export async function passoDaAgenda(
             vaga: vagaDe(r2.contaId, { ...r2.antes, unidadeId: r2.unidadeId }),
           };
         }
+        // Para o "avisar se vagar antes": a grade que ele viu ao marcar e o primeiro horário do dia.
+        const livresAntes = (await horariosDoDia(tx, agenda, d, agenda.dia!)).map((h) => h.inicio);
+        const primeiroPossivel = await primeiroHorarioDoDia(tx, d, agenda, agenda.dia!);
         const criado = await criarAgendamentoNoBanco(tx, {
           unidadeId: d.unidadeId,
           profissionalId: agenda.escolha!.profissionalId,
@@ -590,11 +621,28 @@ export async function passoDaAgenda(
         });
         await guardarCanal(tx, d, 'conversa');
         await tx.$executeRawUnsafe('RELEASE SAVEPOINT agendar_bot');
+        const perguntar =
+          !!primeiroPossivel &&
+          deveOferecerAntecipar({
+            livres: livresAntes,
+            escolhido: agenda.escolha!.inicio,
+            primeiroPossivel,
+            jaNaLista: false,
+          });
         return {
           respostas: [
             textoMarcado(r, d.barbearia, await linkDoHorario(tx, d, criado.agendamentoId)),
+            ...(perguntar ? [TEXTO_PERGUNTA_ANTECIPAR] : []),
           ],
-          agenda: null,
+          agenda: perguntar
+            ? {
+                ...agenda,
+                passo: 'antecipar',
+                remarcarId: criado.agendamentoId,
+                opcoes: [],
+                erros: 0,
+              }
+            : null,
           voltarAoMenu: false,
           comandaId: criado.comandaId,
           agendamento: { id: criado.agendamentoId, inicio: agenda.escolha!.inicio },
@@ -618,4 +666,54 @@ export async function passoDaAgenda(
       }
     }
   }
+}
+
+/** Minutos desde 00:00 em São Paulo (-03:00 fixo). */
+function minutoLocal(d: Date): number {
+  const l = new Date(d.getTime() - 3 * 3_600_000);
+  return l.getUTCHours() * 60 + l.getUTCMinutes();
+}
+
+/** Lista de espera pela conversa (nenhum horário serviu, ou "avisar se vagar antes"). */
+async function entrarNaLista(
+  tx: Tx,
+  d: DadosDaConversa,
+  a: AgendaNaConversa,
+  dia: string,
+  deMin: number,
+  ateMin: number,
+  agendamentoId: string | null,
+) {
+  const ja = await tx.listaEspera.findFirst({
+    where: {
+      clienteId: d.clienteId,
+      unidadeId: d.unidadeId,
+      dia: new Date(`${dia}T00:00:00.000Z`),
+      status: { in: ['aguardando', 'oferecido'] },
+    },
+  });
+  if (ja) return ja;
+  return tx.listaEspera.create({
+    data: {
+      unidadeId: d.unidadeId,
+      clienteId: d.clienteId,
+      profissionalId: a.profissionalId,
+      servicoIds: a.servicoIds,
+      dia: new Date(`${dia}T00:00:00.000Z`),
+      deMin,
+      ateMin: Math.max(deMin, ateMin),
+      origem: agendamentoId ? 'antecipar' : 'bot',
+      agendamentoId,
+    },
+  });
+}
+
+/** Primeiro horário possível do dia para quem o cliente escolheu (ou todos, sem preferência). */
+async function primeiroHorarioDoDia(tx: Tx, d: DadosDaConversa, a: AgendaNaConversa, dia: string) {
+  const profs = a.profissionalId
+    ? [a.profissionalId]
+    : (await tx.profissional.findMany({ where: { unidadeId: d.unidadeId, ativo: true } })).map(
+        (p) => p.id,
+      );
+  return primeiroHorarioPossivel(tx, d.unidadeId, profs, dia, d.agora, d.regras.antecedenciaMin);
 }
