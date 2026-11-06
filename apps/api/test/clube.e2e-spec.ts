@@ -6,6 +6,7 @@ import {
   type AdesaoDetalhe,
   type DataISO,
   type MensalidadePix,
+  type RelatorioClube,
   type ComandaDetalhe,
   type ItemClubeDetalhe,
 } from '@pente-fino/shared';
@@ -301,5 +302,28 @@ describe('mensalidade', () => {
       .adesao as AdesaoDetalhe;
     expect(depois.vencimento).toBe(r.vencimento);
     await barbeiro.post(`/clube/adesoes/${ad!.id}/pagamentos`, { forma: 'pix' }).expect(403);
+  });
+});
+
+describe('relatório do clube', () => {
+  it('mensalidades contra comissões, por plano; cancelamentos com motivo; recepção não vê', async () => {
+    const r = (await dono.get('/clube/relatorio').expect(200)).body as RelatorioClube;
+    const plano = (nome: string) => r.porPlano.find((l) => l.plano === nome);
+    // Plano da mensalidade paga (9990) e o plano da comanda (comissões 2000 + 1000, sem mensalidade).
+    expect(plano('Clube Corte e Barba')).toMatchObject({
+      mensalidades: 9990,
+      comissoes: 0,
+      lucro: 9990,
+    });
+    expect(plano('Clube Comanda')).toMatchObject({
+      mensalidades: 0,
+      comissoes: 3000,
+      atendimentos: 2,
+      lucro: -3000,
+    });
+    expect(r).toMatchObject({ mensalidades: 9990, comissoes: 3000, lucro: 6990, cancelamentos: 1 });
+    expect(r.motivosCancelamento).toEqual(['Mudou de cidade']);
+    expect(r.ativos).toBe(2);
+    await recepcao.get('/clube/relatorio').expect(403);
   });
 });

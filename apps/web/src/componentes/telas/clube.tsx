@@ -15,6 +15,7 @@ import {
   type ItemClubeDetalhe,
   type ItemClubeEntrada,
   type MensalidadePix,
+  type RelatorioClube,
   type RecebimentoPix,
   type TipoItemClube,
 } from '@pente-fino/shared';
@@ -28,7 +29,9 @@ import { useAcao, useServicos } from '@/lib/consultas';
 import { useUnidades } from '@/lib/sessao';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
-import { CabecalhoPagina, Estado, Ficha } from '../pagina';
+import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
+import { SeletorMes } from '../indicadores';
+import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { BuscaCliente, type ClienteEscolhido } from './busca-cliente';
 
 const chaveItens = ['clube', 'itens'] as const;
@@ -42,6 +45,8 @@ const useItensClube = () =>
 /** Clube da barbearia: assinantes (balcão) e planos (o dono cadastra). */
 export function TelaClube() {
   const [aba, setAba] = useState('assinantes');
+  const { papeis } = useApp();
+  const gestao = papeis.some((p) => p === 'dono' || p === 'gestor');
   return (
     <div className="flex flex-col gap-6">
       <CabecalhoPagina titulo="Clube" pergunta="Quem assina e o que o plano cobre?" />
@@ -52,6 +57,7 @@ export function TelaClube() {
         abas={[
           { id: 'assinantes', rotulo: 'Assinantes', conteudo: <Assinantes /> },
           { id: 'planos', rotulo: 'Planos', conteudo: <Planos /> },
+          ...(gestao ? [{ id: 'resultado', rotulo: 'Resultado', conteudo: <Resultado /> }] : []),
         ]}
       />
     </div>
@@ -758,5 +764,116 @@ function PixDaBarbearia() {
         Salvar Pix
       </Botao>
     </form>
+  );
+}
+
+// ─── Resultado ────────────────────────────────────────────────────────────
+
+/** Se o clube dá lucro: mensalidades recebidas contra comissões e produto dos atendimentos. */
+function Resultado() {
+  const [mes, setMes] = useState(mesAtual());
+  const [de, ate] = limitesDoMes(mes);
+  const r = useQuery({
+    queryKey: ['clube', 'relatorio', de, ate],
+    queryFn: () => api<RelatorioClube>(`clube/relatorio?de=${de}&ate=${ate}`),
+  });
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-tinta-suave">
+          Mensalidades recebidas (receita do clube, fora do faturamento das comandas) contra o que
+          custaram os atendimentos cobertos: comissão e produto.
+        </p>
+        <SeletorMes mes={mes} onMudar={setMes} />
+      </div>
+      <Estado consulta={r}>
+        {() => {
+          const d = r.data!;
+          const cartoes: [string, string, string?][] = [
+            ['Mensalidades', formatarMoeda(d.mensalidades)],
+            ['Comissões do clube', formatarMoeda(d.comissoes)],
+            ['Produto nos atendimentos', formatarMoeda(d.custoProdutos)],
+            [
+              'Lucro do clube',
+              formatarMoeda(d.lucro),
+              d.lucro < 0 ? 'text-perigo-texto' : 'text-acao-texto',
+            ],
+          ];
+          return (
+            <>
+              <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {cartoes.map(([rotulo, valor, cor]) => (
+                  <div key={rotulo} className="rounded-lg border border-borda bg-superficie p-4">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+                      {rotulo}
+                    </dt>
+                    <dd className={`font-denso text-2xl tabular-nums ${cor ?? ''}`}>{valor}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-sm text-tinta-suave">
+                {d.ativos} {d.ativos === 1 ? 'assinante em dia' : 'assinantes em dia'} ·{' '}
+                {d.vencidos} {d.vencidos === 1 ? 'vencido' : 'vencidos'} · {d.novos}{' '}
+                {d.novos === 1 ? 'novo' : 'novos'} no mês · {d.cancelamentos}{' '}
+                {d.cancelamentos === 1 ? 'cancelamento' : 'cancelamentos'} · {d.atendimentos}{' '}
+                {d.atendimentos === 1 ? 'atendimento coberto' : 'atendimentos cobertos'}
+              </p>
+              {d.porPlano.length > 0 && (
+                <Tabela rotulo="Resultado do clube por plano">
+                  <thead className="bg-superficie-2">
+                    <tr>
+                      <th className={th}>Plano</th>
+                      <th className={`${th} text-right`}>Em dia</th>
+                      <th className={`${th} text-right`}>Mensalidades</th>
+                      <th className={`${th} text-right`}>Atendimentos</th>
+                      <th className={`${th} text-right`}>Comissões</th>
+                      <th className={`${th} text-right`}>Produto</th>
+                      <th className={`${th} text-right`}>Lucro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.porPlano.map((l) => (
+                      <tr key={l.planoId} className="border-t border-borda">
+                        <th scope="row" className={`${td} font-medium`}>
+                          {l.plano}
+                        </th>
+                        <td className={`${td} text-right font-denso tabular-nums`}>{l.ativos}</td>
+                        <td className={`${td} text-right font-denso tabular-nums`}>
+                          {formatarMoeda(l.mensalidades)}
+                        </td>
+                        <td className={`${td} text-right font-denso tabular-nums`}>
+                          {l.atendimentos}
+                        </td>
+                        <td className={`${td} text-right font-denso tabular-nums`}>
+                          {formatarMoeda(l.comissoes)}
+                        </td>
+                        <td className={`${td} text-right font-denso tabular-nums`}>
+                          {formatarMoeda(l.custoProdutos)}
+                        </td>
+                        <td
+                          className={`${td} text-right font-denso tabular-nums ${l.lucro < 0 ? 'text-perigo-texto' : ''}`}
+                        >
+                          {formatarMoeda(l.lucro)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Tabela>
+              )}
+              {d.motivosCancelamento.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <h3 className="font-semibold">Por que cancelaram</h3>
+                  <ul className="list-disc pl-5 text-tinta-suave">
+                    {d.motivosCancelamento.map((m, i) => (
+                      <li key={i}>{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          );
+        }}
+      </Estado>
+    </div>
   );
 }

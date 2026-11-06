@@ -4,6 +4,7 @@ import {
   coberturaDoServico,
   comissaoDoClube,
   restantesDoCiclo,
+  resumirClube,
   situacaoDaAdesao,
   somarMeses,
   textoClubeNoBot,
@@ -134,5 +135,43 @@ describe('clube no bot', () => {
     expect(textoClubeNoBot({ planos: [], assinatura: null }, moeda)).toContain(
       'Ainda não temos clube',
     );
+  });
+});
+
+describe('relatório do clube', () => {
+  it('mensalidades menos comissões e custo de produto, por plano e no total', () => {
+    const r = resumirClube({
+      planos: [
+        { id: 'a', nome: 'Clube Corte', ativos: 2 },
+        { id: 'b', nome: 'Clube Barba', ativos: 1 },
+      ],
+      mensalidades: [
+        { planoId: 'a', valor: 9990 },
+        { planoId: 'a', valor: 9990 },
+        { planoId: 'b', valor: 4990 },
+      ],
+      atendimentos: [
+        { planoId: 'a', quantidade: 3, comissao: 6000, custo: 450 },
+        { planoId: 'b', quantidade: 4, comissao: 4800, custo: 800 },
+      ],
+    });
+    expect(r.porPlano).toEqual([
+      expect.objectContaining({
+        plano: 'Clube Corte',
+        mensalidades: 19980,
+        comissoes: 6000,
+        custoProdutos: 450,
+        lucro: 13530,
+        atendimentos: 3,
+      }),
+      expect.objectContaining({ plano: 'Clube Barba', mensalidades: 4990, lucro: -610 }),
+    ]);
+    expect(r).toMatchObject({
+      mensalidades: 24970,
+      comissoes: 10800,
+      custoProdutos: 1250,
+      lucro: 12920,
+      atendimentos: 7,
+    });
   });
 });

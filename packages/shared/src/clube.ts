@@ -250,3 +250,74 @@ export function textoClubeNoBot(c: ClubeNoBot, moeda: (v: number) => string): st
     'Para entrar, fale com a recepção ou responda ATENDENTE.',
   ].join('\n');
 }
+
+// ─── Relatório do clube ───────────────────────────────────────────────────
+
+export interface LinhaPlanoNoRelatorio {
+  planoId: string;
+  plano: string;
+  ativos: number;
+  mensalidades: number;
+  /** Atendimentos cobertos pelo plano no período (soma das quantidades). */
+  atendimentos: number;
+  comissoes: number;
+  custoProdutos: number;
+  /** Mensalidades − (comissões + custo de produto dos atendimentos do clube). */
+  lucro: number;
+}
+
+export interface RelatorioClube {
+  ativos: number;
+  vencidos: number;
+  novos: number;
+  cancelamentos: number;
+  motivosCancelamento: string[];
+  mensalidades: number;
+  atendimentos: number;
+  comissoes: number;
+  custoProdutos: number;
+  lucro: number;
+  porPlano: LinhaPlanoNoRelatorio[];
+}
+
+/**
+ * Se o clube dá lucro: o que entrou de mensalidade (receita do clube, separada da de serviço)
+ * contra o que custaram os atendimentos cobertos (comissão + produto), por plano e no total.
+ */
+export function resumirClube(d: {
+  planos: readonly { id: string; nome: string; ativos: number }[];
+  mensalidades: readonly { planoId: string; valor: number }[];
+  atendimentos: readonly { planoId: string; quantidade: number; comissao: number; custo: number }[];
+}): Pick<
+  RelatorioClube,
+  'mensalidades' | 'atendimentos' | 'comissoes' | 'custoProdutos' | 'lucro' | 'porPlano'
+> {
+  const porPlano = d.planos.map((p): LinhaPlanoNoRelatorio => {
+    const mensalidades = d.mensalidades
+      .filter((m) => m.planoId === p.id)
+      .reduce((s, m) => s + m.valor, 0);
+    const doPlano = d.atendimentos.filter((a) => a.planoId === p.id);
+    const comissoes = doPlano.reduce((s, a) => s + a.comissao, 0);
+    const custoProdutos = doPlano.reduce((s, a) => s + a.custo, 0);
+    return {
+      planoId: p.id,
+      plano: p.nome,
+      ativos: p.ativos,
+      mensalidades,
+      atendimentos: doPlano.reduce((s, a) => s + a.quantidade, 0),
+      comissoes,
+      custoProdutos,
+      lucro: mensalidades - comissoes - custoProdutos,
+    };
+  });
+  const soma = (k: 'mensalidades' | 'atendimentos' | 'comissoes' | 'custoProdutos' | 'lucro') =>
+    porPlano.reduce((s, l) => s + l[k], 0);
+  return {
+    mensalidades: soma('mensalidades'),
+    atendimentos: soma('atendimentos'),
+    comissoes: soma('comissoes'),
+    custoProdutos: soma('custoProdutos'),
+    lucro: soma('lucro'),
+    porPlano,
+  };
+}

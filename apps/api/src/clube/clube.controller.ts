@@ -13,6 +13,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { adesaoDoCliente, detalharAdesao, INCLUIR_ADESAO, type Transacao } from '@pente-fino/db';
 import {
   adesaoClubeSchema,
+  resumirClube,
+  type RelatorioClube,
   baixaMensalidadeSchema,
   pixCopiaECola,
   recebimentoPixSchema,
@@ -41,6 +43,7 @@ import { Consulta, Corpo } from '../comum/validacao.js';
 
 /** Quem vê o clube e cuida das adesões no balcão. */
 const BALCAO = ['dono', 'gestor', 'recepcao'] as const;
+const periodoClube = z.object({ de: z.iso.date().optional(), ate: z.iso.date().optional() });
 const consultaAdesoes = z.object({
   situacao: z.enum(['ativa', 'vencida', 'cancelada']).optional(),
 });
@@ -214,6 +217,75 @@ export class ClubeController {
         depois: { ...d, vencimento },
       });
       return { id: a.id };
+    });
+  }
+
+  @Get('relatorio')
+  @Papeis('dono', 'gestor')
+  @ApiOperation({ summary: 'Se o clube dá lucro: mensalidades x comissões e produto, por plano' })
+  relatorio(@Consulta(periodoClube) p: z.infer<typeof periodoClube>): Promise<RelatorioClube> {
+    const hoje = dataLocal(new Date()) as DataISO;
+    const de = p.de ?? `${hoje.slice(0, 7)}-01`;
+    const ate = p.ate ?? hoje;
+    const inicio = new Date(`${de}T00:00:00-03:00`);
+    const fim = new Date(new Date(`${ate}T00:00:00-03:00`).getTime() + 86_400_000);
+    return this.banco.daConta(async (tx) => {
+      const escopo = filtroUnidade(['dono', 'gestor']);
+      const planos = await tx.itemClube.findMany({
+        where: escopo,
+        orderBy: { nome: 'asc' },
+        include: {
+          _count: {
+            select: { adesoes: { where: { status: 'ativa', vencimento: { gt: data(hoje) } } } },
+          },
+        },
+      });
+      const doEscopo = { itemClube: escopo };
+      const [vencidos, novos, canceladas, mensalidades, atendimentos] = await Promise.all([
+        tx.adesaoClube.count({
+          where: { ...doEscopo, status: 'ativa', vencimento: { lte: data(hoje) } },
+        }),
+        tx.adesaoClube.count({ where: { ...doEscopo, criadoEm: { gte: inicio, lt: fim } } }),
+        tx.adesaoClube.findMany({
+          where: { ...doEscopo, status: 'cancelada', canceladaEm: { gte: inicio, lt: fim } },
+          select: { motivoCancelamento: true },
+        }),
+        tx.pagamentoClube.findMany({
+          where: { adesao: doEscopo, pagoEm: { gte: data(de), lte: data(ate) } },
+          select: { valor: true, adesao: { select: { itemClubeId: true } } },
+        }),
+        tx.itemComanda.findMany({
+          where: {
+            cobertoClube: true,
+            adesao: doEscopo,
+            comanda: { status: 'fechada', fechadaEm: { gte: inicio, lt: fim } },
+          },
+          select: {
+            quantidade: true,
+            comissaoValor: true,
+            custoUnitario: true,
+            adesao: { select: { itemClubeId: true } },
+          },
+        }),
+      ]);
+      const resumo = resumirClube({
+        planos: planos.map((pl) => ({ id: pl.id, nome: pl.nome, ativos: pl._count.adesoes })),
+        mensalidades: mensalidades.map((m) => ({ planoId: m.adesao.itemClubeId, valor: m.valor })),
+        atendimentos: atendimentos.map((i) => ({
+          planoId: i.adesao!.itemClubeId,
+          quantidade: i.quantidade,
+          comissao: i.comissaoValor,
+          custo: i.custoUnitario * i.quantidade,
+        })),
+      });
+      return {
+        ...resumo,
+        ativos: planos.reduce((s, pl) => s + pl._count.adesoes, 0),
+        vencidos,
+        novos,
+        cancelamentos: canceladas.length,
+        motivosCancelamento: canceladas.map((c) => c.motivoCancelamento ?? '').filter(Boolean),
+      };
     });
   }
 
