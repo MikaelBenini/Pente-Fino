@@ -60,3 +60,4 @@ export * from './automacoes.js';
 export * from './clube.js';
 export * from './espera.js';
 export * from './atraso.js';
+export * from './mover.js';

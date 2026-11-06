@@ -9,6 +9,7 @@ import {
   type Agenda,
   type AgendaItem,
   type ComandaDetalhe,
+  minutosDoArrasto,
   recorteDoDia,
 } from '@pente-fino/shared';
 import {
@@ -23,6 +24,16 @@ import {
   cn,
 } from '@pente-fino/ui';
 import { Ban, CalendarDays, ChevronLeft, ChevronRight, ListOrdered, Plus } from 'lucide-react';
+import {
+  DndContext,
+  MouseSensor,
+  TouchSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
@@ -38,6 +49,7 @@ import {
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado } from '../pagina';
+import { useMoverHorario } from '../mover-horario';
 import { useUnidadeTrabalho } from '../unidade-trabalho';
 import { BuscaCliente, clienteParaApi, type ClienteEscolhido } from './busca-cliente';
 import { Bloqueios } from './bloqueios';
@@ -94,7 +106,11 @@ function ConteudoAgenda() {
   const { papeis } = useApp();
   const clienteInicial = useClienteParaAgendar();
   const { unidadeId, seletor } = useUnidadeTrabalho();
-  const [dia, setDia] = useState(dataLocal(new Date()));
+  // ?dia=AAAA-MM-DD abre a agenda naquele dia.
+  const diaPedido = useSearchParams().get('dia');
+  const [dia, setDia] = useState(
+    diaPedido && /^\d{4}-\d{2}-\d{2}$/.test(diaPedido) ? diaPedido : dataLocal(new Date()),
+  );
   const [visao, setVisao] = useState<Visao>('dia');
   const [de, ate] = periodo(visao, dia);
   const agenda = useAgenda(unidadeId, de, ate);
@@ -269,8 +285,74 @@ function abrirComanda(router: ReturnType<typeof useRouter>, item: AgendaItem) {
   if (item.comandaId) router.push(`/comandas?id=${item.comandaId}`);
 }
 
+/** Coluna do barbeiro que recebe o horário arrastado (computador e tablet). */
+function Soltavel({
+  id,
+  ativo,
+  className,
+  style,
+  children,
+}: {
+  id: string;
+  ativo: boolean;
+  className: string;
+  style: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id, disabled: !ativo });
+  return (
+    <div
+      ref={setNodeRef}
+      data-profissional={id}
+      className={cn(className, isOver && 'bg-superficie-2')}
+      style={style}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Horário que dá para segurar e arrastar (só comanda prevista, só balcão). */
+function Arrastavel({
+  id,
+  ativo,
+  top,
+  children,
+}: {
+  id: string;
+  ativo: boolean;
+  top: number;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, listeners, transform, isDragging } = useDraggable({ id, disabled: !ativo });
+  return (
+    <div
+      ref={setNodeRef}
+      {...(ativo ? listeners : {})}
+      className={cn(
+        'absolute inset-x-1',
+        ativo && 'touch-manipulation',
+        isDragging && 'z-20 opacity-90 shadow-lg',
+      )}
+      style={{
+        top,
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
   const router = useRouter();
+  const { papeis } = useApp();
+  const podeMover = papeis.some((p) => p === 'dono' || p === 'gestor' || p === 'recepcao');
+  const movimento = useMoverHorario();
+  const sensores = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
   const [escolhido, setEscolhido] = useState<string | null>(null);
   const ds = diaSemana(dia);
   const fechado = agenda.fechados.includes(dia) || !agenda.diasTrabalho.includes(ds);
@@ -313,8 +395,35 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
     );
   }
 
-  const coluna = (p: Agenda['profissionais'][number]) => (
-    <div key={p.id} className="relative min-w-0 border-l border-borda" style={{ height: altura }}>
+  const nomeDe = (id: string) => agenda.profissionais.find((p) => p.id === id)?.nome ?? '';
+  function soltar(e: DragEndEvent) {
+    const item = doDia.find((i) => i.agendamentoId === e.active.id);
+    if (!item) return;
+    const minutos = minutosDoArrasto(e.delta.y, PX_POR_MIN);
+    const destino = e.over ? String(e.over.id) : item.profissionalId;
+    if (minutos === 0 && destino === item.profissionalId) return;
+    const inicio = new Date(new Date(item.inicio).getTime() + minutos * 60_000).toISOString();
+    movimento.pedir({
+      agendamentoId: item.agendamentoId,
+      servicos: item.servicos,
+      cliente: item.cliente,
+      de: {
+        inicio: item.inicio,
+        profissionalId: item.profissionalId,
+        profissional: nomeDe(item.profissionalId),
+      },
+      para: { inicio, profissionalId: destino, profissional: nomeDe(destino) },
+    });
+  }
+
+  const coluna = (p: Agenda['profissionais'][number], arrastar = false) => (
+    <Soltavel
+      key={p.id}
+      id={p.id}
+      ativo={arrastar}
+      className="relative min-w-0 border-l border-borda"
+      style={{ height: altura }}
+    >
       {p.horarios
         .filter((h) => h.diaSemana === ds)
         .map((h, i) => (
@@ -348,10 +457,11 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
       {doDia
         .filter((i) => i.profissionalId === p.id)
         .map((i) => (
-          <div
+          <Arrastavel
             key={i.agendamentoId}
-            className="absolute inset-x-1"
-            style={{ top: (minutosDoDia(i.inicio) - inicioGrade) * PX_POR_MIN }}
+            id={i.agendamentoId}
+            ativo={arrastar && podeMover && i.status === 'prevista' && !!i.comandaId}
+            top={(minutosDoDia(i.inicio) - inicioGrade) * PX_POR_MIN}
           >
             <BlocoAgenda
               inicio={formatarHora(i.inicio)}
@@ -369,9 +479,9 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
                 Não chegou?
               </span>
             )}
-          </div>
+          </Arrastavel>
         ))}
-    </div>
+    </Soltavel>
   );
 
   const horas = Array.from(
@@ -393,8 +503,9 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
   );
 
   return (
-    <>
-      {/* Celular e tablet: um profissional por vez, para caber na tela. */}
+    <DndContext sensors={sensores} onDragEnd={soltar}>
+      {movimento.elementos}
+      {/* Celular: um profissional por vez, para caber na tela (mover pelo botão da comanda). */}
       <div className="flex flex-col gap-3 md:hidden">
         <Selecao
           id="agenda-profissional"
@@ -425,10 +536,10 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
             </div>
           ))}
           {regua}
-          {agenda.profissionais.map(coluna)}
+          {agenda.profissionais.map((p) => coluna(p, true))}
         </div>
       </div>
-    </>
+    </DndContext>
   );
 }
 

@@ -130,6 +130,17 @@ export interface RemarcacaoPorAtraso {
   agendamentoId: string;
 }
 
+/** A barbearia moveu o horário: avisa o cliente depois do tempo de desfazer, se nada mudou de novo. */
+export interface HorarioMudou {
+  tipo: 'horario_mudou';
+  contaId: string;
+  agendamentoId: string;
+  /** Horário e barbeiro depois do movimento: se mudaram de novo (desfazer), o aviso não sai. */
+  inicio: string;
+  profissionalId: string;
+  mudouHorario: boolean;
+}
+
 export type TrabalhoWhatsappEntrada =
   | EventoWhatsapp
   | EnvioDoPainel
@@ -141,7 +152,8 @@ export type TrabalhoWhatsappEntrada =
   | FimDaEsperaDoAtendente
   | RotinaDasAutomacoes
   | VagaLiberada
-  | RemarcacaoPorAtraso;
+  | RemarcacaoPorAtraso
+  | HorarioMudou;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {
