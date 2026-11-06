@@ -7,6 +7,7 @@ import {
   criarAgendamentoNoBanco,
   criarPrisma,
   enviarLembrete,
+  hashCodigoAssistente,
   instanciaDaUnidade,
   moverAgendamento,
   naConta,
@@ -388,5 +389,67 @@ describe('regras da unidade', () => {
     const r = await fala('5511955550002', 'agendar');
     expect(r).toContain('http://app.teste/agendar?u=navalha-');
     expect(r).not.toContain('Qual serviço');
+  });
+});
+
+describe('assistente da equipe', () => {
+  const equipe = '5511944440000';
+  const quando = new Date('2026-12-01T12:30:00Z'); // terça, 09:30: dentro do expediente
+
+  it('ATIVAR com o código liga o número, que não vira cliente', async () => {
+    await naMinhaConta(async (tx) => {
+      const p = await tx.profissional.findUniqueOrThrow({ where: { id: profissionalId } });
+      await tx.assistenteEquipe.create({
+        data: {
+          usuarioId: p.usuarioId,
+          unidadeId,
+          codigoHash: hashCodigoAssistente('123456'),
+          codigoExpiraEm: new Date(quando.getTime() + 30 * 60_000),
+        },
+      });
+    });
+    expect(await fala(equipe, 'ativar 123456', quando)).toContain('Pronto, Rafael!');
+    const cliente = await naMinhaConta((tx) =>
+      tx.cliente.findFirst({ where: { telefone: equipe } }),
+    );
+    expect(cliente).toBeNull();
+  });
+
+  it('responde agenda, comissão e ajuda — com o primeiro nome do cliente, nunca o telefone', async () => {
+    const agenda = await fala(equipe, 'agenda', quando);
+    expect(agenda).toMatch(/^Hoje \(ter, 01\/12\): \d+ horários?/);
+    expect(agenda).not.toMatch(/\d{10,}/);
+    expect(await fala(equipe, 'comissão', quando)).toContain('Comissão de dezembro');
+    expect(await fala(equipe, 'qual meu próximo?', quando)).toContain('AGENDA · seus horários');
+  });
+
+  it('cliente marcando pelo bot: o profissional recebe "horário novo"; PARAR pausa', async () => {
+    const cli = '5511944441111';
+    const marcar = async () => {
+      await fala(cli, 'oi', quando);
+      await fala(cli, '1', quando);
+      await fala(cli, '2', quando); // Corte
+      await fala(cli, '2', quando); // amanhã
+      await fala(cli, '1', quando);
+      return fala(cli, '1', quando);
+    };
+    const avisos = () =>
+      naMinhaConta((tx) =>
+        tx.mensagem.count({
+          where: { telefone: equipe, direcao: 'saida', texto: { startsWith: '📅 Horário novo' } },
+        }),
+      );
+    expect(await marcar()).toContain('📅 Horário novo na sua agenda:');
+    expect(await avisos()).toBe(1);
+
+    expect(await fala(equipe, 'PARAR', quando)).toContain('Avisos desligados');
+    await naMinhaConta((tx) =>
+      tx.agendamento.updateMany({
+        where: { cliente: { telefone: cli } },
+        data: { status: 'cancelado' },
+      }),
+    );
+    await marcar();
+    expect(await avisos()).toBe(1);
   });
 });

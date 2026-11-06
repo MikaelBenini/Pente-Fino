@@ -30,3 +30,4 @@ export * from './agendar-bot.js';
 export * from './lembretes.js';
 export * from './regras-agendamento.js';
 export * from './canais.js';
+export * from './assistente.js';

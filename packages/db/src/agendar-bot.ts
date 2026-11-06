@@ -49,6 +49,8 @@ export interface PassoDaAgenda {
   comandaId?: string;
   /** Marcou ou remarcou: para agendar os lembretes. */
   agendamento?: { id: string; inicio: string };
+  /** O que mudou na agenda, para avisar o profissional (assistente da equipe). */
+  mudanca?: { agendamentoId: string; tipo: 'novo' | 'remarcado' | 'cancelado' };
 }
 
 export interface DadosDaConversa {
@@ -427,6 +429,7 @@ export async function passoDaAgenda(
         ],
         agenda: null,
         voltarAoMenu: false,
+        mudanca: { agendamentoId: agenda.remarcarId!, tipo: 'cancelado' },
       };
     }
     case 'servico': {
@@ -527,6 +530,7 @@ export async function passoDaAgenda(
             voltarAoMenu: false,
             comandaId: r2.comandaId,
             agendamento: { id: agenda.remarcarId, inicio: agenda.escolha!.inicio },
+            mudanca: { agendamentoId: agenda.remarcarId, tipo: 'remarcado' },
           };
         }
         const criado = await criarAgendamentoNoBanco(tx, {
@@ -545,6 +549,7 @@ export async function passoDaAgenda(
           voltarAoMenu: false,
           comandaId: criado.comandaId,
           agendamento: { id: criado.agendamentoId, inicio: agenda.escolha!.inicio },
+          mudanca: { agendamentoId: criado.agendamentoId, tipo: 'novo' },
         };
       } catch (e) {
         await tx.$executeRawUnsafe('ROLLBACK TO SAVEPOINT agendar_bot');

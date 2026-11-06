@@ -34,6 +34,7 @@ import { data, exigirUnidade } from '../comum/escopo.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { pdfComandas } from './impressao.js';
 import { umPorVez } from '../comum/sequencia.js';
+import { avisarEquipe } from '../agenda/aviso-equipe.js';
 import { EventosService, Filas } from '../filas/filas.module.js';
 
 const INCLUIR = {
@@ -571,7 +572,7 @@ export class ComandasService {
   }
 
   async cancelar(id: string, motivo: string, falta: boolean): Promise<ComandaDetalhe> {
-    await this.banco.daConta(async (tx) => {
+    const agendamentoId = await this.banco.daConta(async (tx) => {
       const { comanda, propria, papeis } = await this.carregar(tx, id);
       const antes = this.exigir('cancelar', comanda, papeis, propria);
       await tx.comanda.update({
@@ -591,7 +592,17 @@ export class ComandasService {
         depois: { status: 'cancelada' },
         motivo,
       });
+      return comanda.agendamentoId;
     });
+    // Cancelado (não falta): o profissional fica sabendo pelo assistente, se ligou.
+    if (agendamentoId && !falta)
+      await avisarEquipe(
+        this.banco,
+        this.filas,
+        Contexto.usuario().contaId,
+        agendamentoId,
+        'cancelado',
+      );
     return this.buscar(id);
   }
 

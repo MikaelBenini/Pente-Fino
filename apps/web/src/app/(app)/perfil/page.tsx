@@ -5,6 +5,7 @@ import { trocarSenhaSchema, type TrocarSenhaEntrada } from '@pente-fino/shared';
 import { Botao, Campo, cn } from '@pente-fino/ui';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { AssistenteEquipe } from '@/componentes/assistente-equipe';
 import { Aviso } from '@/componentes/aviso';
 import { useApp } from '@/componentes/contexto-app';
 import { api } from '@/lib/api';
@@ -78,6 +79,8 @@ export default function Perfil() {
           O claro ajuda no balcão com muita luz. Vale só para este aparelho.
         </p>
       </section>
+
+      <AssistenteEquipe />
 
       <TrocarSenha />
     </div>

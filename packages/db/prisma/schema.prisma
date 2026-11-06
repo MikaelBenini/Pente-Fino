@@ -251,6 +251,7 @@ model Conta {
   tokenAcessos       TokenAcesso[]
   avaliacoes         Avaliacao[]
   faturas            FaturaAssinatura[]
+  assistentes        AssistenteEquipe[]
 
   @@map("conta")
 }
@@ -295,6 +296,7 @@ model Unidade {
   botSessoes      BotSessao[]
   mensagens       Mensagem[]
   avaliacoes      Avaliacao[]
+  assistentes     AssistenteEquipe[]
 
   @@index([contaId])
   @@map("unidade")
@@ -345,6 +347,7 @@ model Usuario {
   comissoesPagas      PagamentoComissao[]
   auditorias          Auditoria[]
   tokenAcessos        TokenAcesso[]
+  assistente          AssistenteEquipe?
 
   @@index([contaId])
   @@map("usuario")
@@ -1086,4 +1089,33 @@ model FaturaAssinatura {
   @@unique([origem, idExterno])
   @@index([contaId, vencimento])
   @@map("fatura_assinatura")
+}
+
+/// Assistente da equipe no WhatsApp (Etapa 11): o profissional confirma o próprio número
+/// mandando um código para o WhatsApp da unidade e recebe avisos da agenda dele.
+model AssistenteEquipe {
+  id             String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId      String    @unique @map("usuario_id") @db.Uuid
+  unidadeId      String    @map("unidade_id") @db.Uuid
+  /// Número confirmado (como chega do WhatsApp); null até mandar o código.
+  telefone       String?
+  /// SHA-256 do código de 6 dígitos (o código em si nunca fica gravado).
+  codigoHash     String?   @map("codigo_hash")
+  codigoExpiraEm DateTime? @map("codigo_expira_em") @db.Timestamptz(3)
+  confirmadoEm   DateTime? @map("confirmado_em") @db.Timestamptz(3)
+  /// Recebendo avisos; "PARAR" desliga, "LIGAR" religa.
+  ativo          Boolean   @default(false)
+  /// Quais avisos quer (JSON validado em packages/shared/src/assistente.ts).
+  avisos         Json      @default("{}")
+  criadoEm       DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@unique([unidadeId, telefone])
+  @@index([contaId])
+  @@map("assistente_equipe")
 }
