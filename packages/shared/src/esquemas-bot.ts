@@ -139,6 +139,8 @@ export interface UnidadeDoBot {
   descricao: string;
   aberto: boolean;
   link: string | null;
+  /** Link do Google para o convite depois da nota 5; null = sem convite. */
+  linkGoogle: string | null;
   conexao: {
     status: StatusConexaoWhatsapp;
     numero: string | null;
@@ -254,4 +256,15 @@ export const enviarParaClienteSchema = z.object({
 export type EnviarParaClienteEntrada = z.infer<typeof enviarParaClienteSchema>;
 
 export const pesquisaBotSchema = z.object({ ativa: z.boolean() });
+
+/** Link do Google da unidade para o convite depois da nota 5 (vazio = sem convite). */
+export const linkGoogleSchema = z.object({
+  link: z
+    .union([
+      z.url({ protocol: /^https$/, error: 'Cole o link completo, começando com https://' }),
+      z.literal(''),
+    ])
+    .transform((v) => v || null),
+});
+export type LinkGoogleEntrada = z.infer<typeof linkGoogleSchema>;
 export type PesquisaBotEntrada = z.infer<typeof pesquisaBotSchema>;

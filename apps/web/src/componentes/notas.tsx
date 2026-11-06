@@ -1,5 +1,13 @@
+'use client';
+
 import { formatarDataHora, type ComentarioAvaliacao, type ResumoNotas } from '@pente-fino/shared';
-import { Star } from 'lucide-react';
+import { Botao, Campo } from '@pente-fino/ui';
+import { CircleCheck, Star } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import { api, ErroApi } from '@/lib/api';
+import { chavesResultados, useAcao } from '@/lib/consultas';
+import { Aviso } from './aviso';
 
 const nota = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1 });
 
@@ -65,6 +73,94 @@ export function ComentarioDaPesquisa({ c }: { c: ComentarioAvaliacao }) {
       <p className="text-xs text-tinta-suave">
         {[c.cliente, c.profissional, formatarDataHora(c.respondidaEm)].filter(Boolean).join(' · ')}
       </p>
+    </li>
+  );
+}
+
+/**
+ * Nota baixa em Métricas: atalho para o cliente e "Marcar como resolvido" com o que foi feito.
+ * Resolvida, mostra quem resolveu, quando e a anotação.
+ */
+export function NotaBaixa({ c }: { c: ComentarioAvaliacao }) {
+  const [aberto, setAberto] = useState(false);
+  const [anotacao, setAnotacao] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const tratar = useAcao(
+    (texto: string) => api(`avaliacoes/${c.id}/tratar`, { corpo: { anotacao: texto } }),
+    [chavesResultados.indicadores],
+  );
+  return (
+    <li className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-3">
+      <p className="text-sm">
+        <span className="font-semibold">Atendimento {c.notaAtendimento}</span>
+        {c.notaBarbearia !== null && (
+          <span className="text-tinta-suave"> · barbearia {c.notaBarbearia}</span>
+        )}
+      </p>
+      {c.comentario && <p className="whitespace-pre-line">“{c.comentario}”</p>}
+      <p className="text-xs text-tinta-suave">
+        {[c.cliente, c.profissional, formatarDataHora(c.respondidaEm)].filter(Boolean).join(' · ')}
+        {c.clienteId && (
+          <>
+            {' · '}
+            <Link href={`/clientes?id=${c.clienteId}`} className="underline">
+              Ver cliente
+            </Link>
+          </>
+        )}
+      </p>
+      {c.tratamento ? (
+        <p className="flex items-start gap-2 text-sm text-acao-texto">
+          <CircleCheck aria-hidden className="mt-0.5 size-4 shrink-0" />
+          <span>
+            Resolvida
+            {c.tratamento.por ? ` por ${c.tratamento.por}` : ''} em{' '}
+            {formatarDataHora(c.tratamento.em)}:{' '}
+            <span className="text-tinta">{c.tratamento.anotacao}</span>
+          </span>
+        </p>
+      ) : aberto ? (
+        <form
+          method="post"
+          noValidate
+          className="flex flex-col gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setErro(null);
+            try {
+              await tratar.mutateAsync(anotacao);
+              setAberto(false);
+            } catch (er) {
+              setErro(er instanceof ErroApi ? er.message : 'Não foi possível salvar.');
+            }
+          }}
+        >
+          <Campo
+            id={`tratamento-${c.id}`}
+            rotulo="O que foi feito"
+            dica="Ex.: liguei, pedi desculpas e ofereci o próximo corte com desconto"
+            value={anotacao}
+            onChange={(e) => setAnotacao(e.target.value)}
+          />
+          {erro && <Aviso tom="erro">{erro}</Aviso>}
+          <div className="flex flex-wrap gap-2">
+            <Botao
+              type="submit"
+              carregando={tratar.isPending}
+              disabled={anotacao.trim().length < 3}
+            >
+              Salvar como resolvida
+            </Botao>
+            <Botao type="button" variante="fantasma" onClick={() => setAberto(false)}>
+              Cancelar
+            </Botao>
+          </div>
+        </form>
+      ) : (
+        <Botao variante="secundario" className="self-start" onClick={() => setAberto(true)}>
+          Marcar como resolvida
+        </Botao>
+      )}
     </li>
   );
 }

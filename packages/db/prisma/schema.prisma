@@ -176,6 +176,7 @@ enum TipoModeloMensagem {
   lembrete_primeiro
   lembrete_segundo
   atendente_sem_resposta
+  convite_google
 
   @@map("tipo_modelo_mensagem")
 }
@@ -263,28 +264,30 @@ model Conta {
 }
 
 model Unidade {
-  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contaId            String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
-  nome               String
-  endereco           String?
-  telefone           String?
+  id                  String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId             String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome                String
+  endereco            String?
+  telefone            String?
   /// Dias da semana com expediente: 0 = domingo … 6 = sábado.
-  diasTrabalho       Int[]    @default([1, 2, 3, 4, 5, 6]) @map("dias_trabalho")
+  diasTrabalho        Int[]    @default([1, 2, 3, 4, 5, 6]) @map("dias_trabalho")
   /// Cadeiras atendendo ao mesmo tempo; alimenta a ocupação.
-  capacidade         Int      @default(1)
-  fuso               String   @default("America/Sao_Paulo")
-  ativa              Boolean  @default(true)
+  capacidade          Int      @default(1)
+  fuso                String   @default("America/Sao_Paulo")
+  ativa               Boolean  @default(true)
   /// Endereço do link público de agendamento (/agendar?u=slug). Único no sistema.
-  slug               String?  @unique
+  slug                String?  @unique
   /// Link público ligado: só então a página de agendamento responde.
-  agendamentoPublico Boolean  @default(false) @map("agendamento_publico")
+  agendamentoPublico  Boolean  @default(false) @map("agendamento_publico")
   /// Regras de agendamento (antecedência, janela, prazos, intervalo, lembretes). JSON validado
   /// em packages/shared (regras-agendamento.ts); vazio = padrão.
-  regrasAgendamento  Json     @default("{}") @map("regras_agendamento")
+  regrasAgendamento   Json     @default("{}") @map("regras_agendamento")
+  /// Link para o cliente avaliar a unidade no Google (convite depois de nota 5).
+  linkAvaliacaoGoogle String?  @map("link_avaliacao_google")
   /// Horário do bot: lista de turnos (TurnoBot). Vazio = segue o expediente da equipe.
-  botHorario         Json?    @map("bot_horario")
-  criadoEm           DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm       DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  botHorario          Json?    @map("bot_horario")
+  criadoEm            DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm        DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   conta             Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
   calendario        CalendarioUnidade[]
@@ -356,6 +359,7 @@ model Usuario {
   tokenAcessos        TokenAcesso[]
   assistente          AssistenteEquipe?
   inscricoesPush      InscricaoPush[]
+  avaliacoesTratadas  Avaliacao[]         @relation("AvaliacaoTratadaPor")
 
   @@index([contaId])
   @@map("usuario")
@@ -1031,6 +1035,10 @@ model Avaliacao {
   motivo          String?
   /// Nota 1 ou 2: quando o aviso saiu para dono e gestor (só uma vez por avaliação).
   gestaoAvisadaEm DateTime?       @map("gestao_avisada_em") @db.Timestamptz(3)
+  /// Nota baixa tratada: quando, por quem e o que foi feito (falou com o cliente, desconto…).
+  tratadaEm       DateTime?       @map("tratada_em") @db.Timestamptz(3)
+  tratadaPorId    String?         @map("tratada_por_id") @db.Uuid
+  tratamento      String?
   criadoEm        DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
 
   conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
@@ -1038,6 +1046,7 @@ model Avaliacao {
   comanda      Comanda      @relation(fields: [comandaId], references: [id], onDelete: Cascade)
   profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
   cliente      Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tratadaPor   Usuario?     @relation("AvaliacaoTratadaPor", fields: [tratadaPorId], references: [id], onDelete: SetNull)
 
   @@index([contaId])
   @@index([profissionalId, respondidaEm])

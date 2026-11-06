@@ -15,6 +15,8 @@ import {
   horarioBotSchema,
   mensagensBotSchema,
   pesquisaBotSchema,
+  linkGoogleSchema,
+  type LinkGoogleEntrada,
   menuBotSchema,
   simularBotSchema,
   type ConexaoBot,
@@ -106,6 +108,18 @@ export class BotController {
     @Corpo(horarioBotSchema) d: HorarioBotEntrada,
   ) {
     return this.servico.salvarHorario(unidadeId, d);
+  }
+
+  @Put('google/:unidadeId')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Link do Google da unidade para o convite depois da nota 5' })
+  google(
+    @Param('unidadeId', ParseUUIDPipe) unidadeId: string,
+    @Corpo(linkGoogleSchema) d: LinkGoogleEntrada,
+  ) {
+    return this.servico.salvarLinkGoogle(unidadeId, d.link);
   }
 
   @Post('simular')

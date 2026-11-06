@@ -30,7 +30,7 @@ import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores, SeletorMes } from '../indicadores';
-import { ComentarioDaPesquisa, ResumoDeNotas } from '../notas';
+import { ComentarioDaPesquisa, NotaBaixa, ResumoDeNotas } from '../notas';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
 export function TelaMetricas() {
@@ -485,11 +485,12 @@ function Avaliacoes({ r }: { r: ResumoAvaliacoes }) {
         <div className="flex flex-col gap-2">
           <h3 className="text-lg font-semibold">Notas baixas para resolver</h3>
           <p className="text-sm text-tinta-suave">
-            Nota 1 ou 2 no atendimento ou na barbearia. Vale uma conversa com o cliente.
+            Nota 1 ou 2 no atendimento ou na barbearia. Vale uma conversa com o cliente; depois,
+            marque como resolvida contando o que foi feito.
           </p>
           <ul className="flex flex-col gap-2" aria-label="Notas baixas">
             {r.baixas.map((c) => (
-              <ComentarioDaPesquisa key={c.comandaId} c={c} />
+              <NotaBaixa key={c.id} c={c} />
             ))}
           </ul>
         </div>

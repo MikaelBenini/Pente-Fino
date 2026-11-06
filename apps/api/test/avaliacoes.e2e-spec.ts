@@ -16,6 +16,7 @@ import {
   type FichaProfissional,
   type LinhaRankingEquipe,
   type ResumoAvaliacoes,
+  type EstadoBot,
   type TrabalhoWhatsappEntrada,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
@@ -241,6 +242,60 @@ describe('pesquisa depois do atendimento', () => {
     });
     expect(r.baixas[0]).toMatchObject({ notaAtendimento: 2, cliente: 'Cliente 1100' });
     await barbeiro.get(`/avaliacoes?${periodo}`).expect(403);
+  });
+
+  it('nota baixa: o gestor marca como resolvida contando o que fez; o barbeiro não pode', async () => {
+    const antes = (await gestor.get(`/avaliacoes?${periodo}`).expect(200)).body as ResumoAvaliacoes;
+    const baixa = antes.baixas[0]!;
+    expect(baixa).toMatchObject({ tratamento: null });
+    expect(baixa.clienteId).toBeTruthy();
+    await barbeiro.post(`/avaliacoes/${baixa.id}/tratar`, { anotacao: 'Liguei.' }).expect(403);
+    await gestor.post(`/avaliacoes/${baixa.id}/tratar`, { anotacao: 'ok' }).expect(400);
+    await gestor
+      .post(`/avaliacoes/${baixa.id}/tratar`, {
+        anotacao: 'Liguei, pedi desculpas e ofereci desconto no próximo.',
+      })
+      .expect(204);
+    const depois = (await gestor.get(`/avaliacoes?${periodo}`).expect(200))
+      .body as ResumoAvaliacoes;
+    expect(depois.baixas[0]!.tratamento).toMatchObject({
+      anotacao: 'Liguei, pedi desculpas e ofereci desconto no próximo.',
+      por: 'Gestor Teste',
+    });
+    const audit = await naConta(prisma, a.contaId, (tx) =>
+      tx.auditoria.findFirst({ where: { entidadeId: baixa.id, acao: 'tratar_nota_baixa' } }),
+    );
+    expect(audit).not.toBeNull();
+  });
+
+  it('nota 5 com o link do Google na unidade: o convite sai no fim da pesquisa', async () => {
+    await dono.put(`/bot/google/${a.unidadeA}`, { link: 'http://inseguro.com' }).expect(400);
+    await dono
+      .put(`/bot/google/${a.unidadeA}`, { link: 'https://g.page/r/barbearia-teste/review' })
+      .expect(204);
+    const unidade = ((await dono.get('/bot').expect(200)).body as EstadoBot).unidades.find(
+      (u) => u.id === a.unidadeA,
+    );
+    expect(unidade?.linkGoogle).toBe('https://g.page/r/barbearia-teste/review');
+
+    const tel = '5511977001104';
+    const comandaId = await fecharComanda(await clienteDoWhatsapp(tel));
+    const av = await naConta(prisma, a.contaId, (tx) =>
+      tx.avaliacao.findUniqueOrThrow({ where: { comandaId } }),
+    );
+    await iniciarPesquisa(prisma, a.contaId, av.id, av.enviarEm);
+    const depois = (min: number) => new Date(av.enviarEm.getTime() + min * 60_000);
+    await responder(tel, '5', depois(1));
+    await responder(tel, '5', depois(2));
+    const fim = await responder(tel, '0', depois(3));
+    if (fim.tipo !== 'respondida') throw new Error(fim.tipo);
+    const textos = await naConta(prisma, a.contaId, (tx) =>
+      tx.mensagem.findMany({ where: { id: { in: fim.saidas } }, orderBy: { criadoEm: 'asc' } }),
+    );
+    expect(textos.map((m) => m.texto)).toEqual([
+      MENSAGENS_BOT_PADRAO.pesquisa_obrigado,
+      expect.stringContaining('no Google, ajuda muito: https://g.page/r/barbearia-teste/review'),
+    ]);
   });
 
   it('o dono desliga a pesquisa: fechar não agenda mais nada', async () => {

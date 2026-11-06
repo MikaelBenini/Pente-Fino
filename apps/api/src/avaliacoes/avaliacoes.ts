@@ -30,6 +30,7 @@ export async function avaliacoesDoPeriodo(
       include: {
         cliente: { select: { nome: true } },
         profissional: { include: { usuario: { select: { nome: true } } } },
+        tratadaPor: { select: { nome: true } },
       },
     }),
     tx.avaliacao.count({ where: { ...where, enviadaEm: periodo(de, ate) } }),
@@ -41,6 +42,7 @@ type Respondida = Awaited<ReturnType<typeof avaliacoesDoPeriodo>>['respondidas']
 
 export function comentarioDe(a: Respondida, comCliente: boolean): ComentarioAvaliacao {
   return {
+    id: a.id,
     comandaId: a.comandaId,
     notaAtendimento: a.notaAtendimento!,
     notaBarbearia: a.notaBarbearia,
@@ -48,6 +50,15 @@ export function comentarioDe(a: Respondida, comCliente: boolean): ComentarioAval
     respondidaEm: a.respondidaEm!.toISOString(),
     profissional: a.profissional.usuario.nome,
     cliente: comCliente ? a.cliente.nome : null,
+    clienteId: comCliente ? a.clienteId : null,
+    tratamento:
+      comCliente && a.tratadaEm
+        ? {
+            em: a.tratadaEm.toISOString(),
+            por: a.tratadaPor?.nome ?? null,
+            anotacao: a.tratamento ?? '',
+          }
+        : null,
   };
 }
 
@@ -108,8 +119,10 @@ export async function resumoAvaliacoes(
       enviadas,
     ),
     barbearia: resumirNotas(respondidas.map((a) => a.notaBarbearia)),
+    // As que faltam resolver primeiro; as resolvidas ficam embaixo, com o que foi feito.
     baixas: respondidas
       .filter((a) => baixa(a.notaAtendimento) || baixa(a.notaBarbearia))
+      .sort((x, y) => Number(!!x.tratadaEm) - Number(!!y.tratadaEm))
       .slice(0, 20)
       .map((a) => comentarioDe(a, true)),
     comentarios: respondidas

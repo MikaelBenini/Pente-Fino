@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { lerNota, resumirNotas } from './avaliacao.js';
+import { lerNota, resumirNotas, mereceConviteGoogle } from './avaliacao.js';
+import { linkGoogleSchema } from './esquemas-bot.js';
 
 describe('lerNota', () => {
   it.each([
@@ -30,5 +31,23 @@ describe('resumirNotas', () => {
 
   it('sem resposta, sem média', () => {
     expect(resumirNotas([])).toEqual({ media: null, respostas: 0, distribuicao: [0, 0, 0, 0, 0] });
+  });
+});
+
+describe('convite para o Google', () => {
+  it('nota 5 da barbearia, ou do atendimento quando a da barbearia não veio; nunca com nota baixa', () => {
+    expect(mereceConviteGoogle(5, 5)).toBe(true);
+    expect(mereceConviteGoogle(4, 5)).toBe(true);
+    expect(mereceConviteGoogle(5, null)).toBe(true);
+    expect(mereceConviteGoogle(5, 4)).toBe(false);
+    expect(mereceConviteGoogle(2, 5)).toBe(false);
+  });
+
+  it('link só com https; vazio desliga', () => {
+    expect(linkGoogleSchema.parse({ link: '' })).toEqual({ link: null });
+    expect(linkGoogleSchema.safeParse({ link: 'http://g.page/x' }).success).toBe(false);
+    expect(linkGoogleSchema.parse({ link: 'https://g.page/r/x/review' }).link).toBe(
+      'https://g.page/r/x/review',
+    );
   });
 });

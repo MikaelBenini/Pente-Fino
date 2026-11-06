@@ -29,6 +29,8 @@ import {
   TEXTO_AGENDAR_POR_AQUI,
   type CanalAgendamento,
   type TrabalhoNotificacao,
+  preencher,
+  mereceConviteGoogle,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -505,6 +507,23 @@ export async function atenderMensagem(
           },
         });
         if (r.avaliacao) await gravarRespostaPesquisa(tx, r.avaliacao, agora);
+        // Fim da pesquisa com nota 5 e link do Google na unidade: convite para avaliar lá.
+        if (r.avaliacao?.concluida && u.linkAvaliacaoGoogle) {
+          const av = await tx.avaliacao.findUnique({
+            where: { id: r.avaliacao.avaliacaoId },
+            select: { notaAtendimento: true, notaBarbearia: true },
+          });
+          if (av && mereceConviteGoogle(av.notaAtendimento, av.notaBarbearia)) {
+            const mensagens = await mensagensDoBot(tx);
+            r.respostas.push(
+              preencher(mensagens.convite_google, {
+                barbearia: ctx.barbearia,
+                unidade: u.nome,
+                google: u.linkAvaliacaoGoogle,
+              }),
+            );
+          }
+        }
         // Nota 1 ou 2 ainda sem aviso: o worker avisa dono e gestor (no fim ou depois da espera).
         const notaBaixa = r.avaliacao
           ? await tx.avaliacao.findFirst({
