@@ -1135,7 +1135,8 @@ describe('clube: aviso de vencimento e opção no bot', () => {
     const msgs = await naMinhaConta((tx) =>
       tx.mensagem.findMany({
         where: { telefone: tel, automacao: 'clube' },
-        orderBy: { criadoEm: 'asc' },
+        // Mesmo instante: o uuidv7 (crescente na mesma conexão) desempata.
+        orderBy: [{ criadoEm: 'asc' }, { id: 'asc' }],
       }),
     );
     expect(msgs).toHaveLength(2);
