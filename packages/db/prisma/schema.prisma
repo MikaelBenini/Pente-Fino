@@ -113,6 +113,22 @@ enum FormaPagamento {
   @@map("forma_pagamento")
 }
 
+enum TipoItemClube {
+  assinatura
+  combo
+  convenio
+
+  @@map("tipo_item_clube")
+}
+
+enum StatusAdesao {
+  ativa
+  vencida
+  cancelada
+
+  @@map("status_adesao")
+}
+
 enum GrupoDespesa {
   fixa
   variavel
@@ -263,6 +279,9 @@ model Conta {
   linksHorario       LinkHorario[]
   tokensAgendamento  TokenAgendamento[]
   inscricoesPush     InscricaoPush[]
+  itensClube         ItemClube[]
+  servicosClube      ItemClubeServico[]
+  adesoesClube       AdesaoClube[]
 
   @@map("conta")
 }
@@ -311,6 +330,8 @@ model Unidade {
   avaliacoes        Avaliacao[]
   assistentes       AssistenteEquipe[]
   tokenAgendamentos TokenAgendamento[]
+
+  itensClube ItemClube[]
 
   @@index([contaId])
   @@map("unidade")
@@ -364,6 +385,7 @@ model Usuario {
   assistente          AssistenteEquipe?
   inscricoesPush      InscricaoPush[]
   avaliacoesTratadas  Avaliacao[]         @relation("AvaliacaoTratadaPor")
+  adesoesCriadas      AdesaoClube[]       @relation("AdesaoCriadaPor")
 
   @@index([contaId])
   @@map("usuario")
@@ -524,10 +546,11 @@ model Servico {
   criadoEm        DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm    DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta  Conta          @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  conta  Conta              @relation(fields: [contaId], references: [id], onDelete: Cascade)
   precos PrecoServico[]
   itens  ItemComanda[]
   metas  Meta[]
+  clube  ItemClubeServico[]
 
   @@unique([contaId, nome])
   @@map("servico")
@@ -605,6 +628,8 @@ model Cliente {
   sessoesBot        BotSessao[]
   avaliacoes        Avaliacao[]
   tokenAgendamentos TokenAgendamento[]
+
+  adesoesClube AdesaoClube[]
 
   @@unique([contaId, telefone])
   @@index([contaId, nome])
@@ -726,6 +751,8 @@ model ItemComanda {
   /// Custo de produto por unidade no momento do lançamento.
   custoUnitario        Int             @default(0) @map("custo_unitario")
   cobertoClube         Boolean         @default(false) @map("coberto_clube")
+  /// Adesão do clube que cobriu o item (conta no uso do ciclo).
+  adesaoId             String?         @map("adesao_id") @db.Uuid
   ehExtra              Boolean         @default(false) @map("eh_extra")
   pesoAtendimento      Int             @default(0) @map("peso_atendimento")
   comissaoPercentualBp Int?            @map("comissao_percentual_bp")
@@ -739,6 +766,7 @@ model ItemComanda {
   servico      Servico?      @relation(fields: [servicoId], references: [id], onDelete: NoAction)
   produto      Produto?      @relation(fields: [produtoId], references: [id], onDelete: NoAction)
   profissional Profissional? @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+  adesao       AdesaoClube?  @relation(fields: [adesaoId], references: [id], onDelete: SetNull)
 
   @@index([contaId])
   @@index([comandaId])
@@ -1207,4 +1235,77 @@ model InscricaoPush {
   @@unique([contaId, endpoint])
   @@index([usuarioId])
   @@map("inscricao_push")
+}
+
+/// Plano do clube numa unidade: assinatura (mensal), combo ou convênio. O valor é por ciclo.
+model ItemClube {
+  id           String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String        @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String        @map("unidade_id") @db.Uuid
+  tipo         TipoItemClube
+  nome         String
+  descricao    String?
+  /// Valor do ciclo (mensalidade), em centavos.
+  valor        Int
+  /// Usos no ciclo somando todos os serviços; null = só o limite de cada serviço.
+  limiteUsoMes Int?          @map("limite_uso_mes")
+  ativo        Boolean       @default(true)
+  criadoEm     DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta    Conta              @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade  Unidade            @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  servicos ItemClubeServico[]
+  adesoes  AdesaoClube[]
+
+  @@index([contaId])
+  @@index([unidadeId])
+  @@map("item_clube")
+}
+
+/// Serviço incluso no plano: quantas vezes por ciclo e, se o dono quiser, a comissão fixa dele.
+model ItemClubeServico {
+  id                String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId           String @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  itemClubeId       String @map("item_clube_id") @db.Uuid
+  servicoId         String @map("servico_id") @db.Uuid
+  /// Vezes por ciclo; null = sem limite próprio (vale o limite do plano).
+  quantidade        Int?
+  /// Comissão fixa por atendimento do clube; null = % do profissional sobre o preço de tabela.
+  comissaoValorFixo Int?   @map("comissao_valor_fixo")
+
+  conta     Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  itemClube ItemClube @relation(fields: [itemClubeId], references: [id], onDelete: Cascade)
+  servico   Servico   @relation(fields: [servicoId], references: [id], onDelete: Restrict)
+
+  @@unique([itemClubeId, servicoId])
+  @@index([contaId])
+  @@map("item_clube_servico")
+}
+
+/// Cliente no plano: o ciclo vai do vencimento anterior (um mês antes) até o vencimento.
+model AdesaoClube {
+  id                 String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId            String       @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  clienteId          String       @map("cliente_id") @db.Uuid
+  itemClubeId        String       @map("item_clube_id") @db.Uuid
+  status             StatusAdesao @default(ativa)
+  inicio             DateTime     @db.Date
+  /// Fim do ciclo pago; vencida a adesão, o plano para de cobrir até a próxima baixa.
+  vencimento         DateTime     @db.Date
+  canceladaEm        DateTime?    @map("cancelada_em") @db.Timestamptz(3)
+  motivoCancelamento String?      @map("motivo_cancelamento")
+  criadoPorId        String?      @map("criado_por_id") @db.Uuid
+  criadoEm           DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm       DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta     Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  cliente   Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  itemClube ItemClube     @relation(fields: [itemClubeId], references: [id], onDelete: Restrict)
+  criadoPor Usuario?      @relation("AdesaoCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  itens     ItemComanda[]
+
+  @@index([contaId])
+  @@index([clienteId, status])
+  @@map("adesao_clube")
 }

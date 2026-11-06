@@ -6,12 +6,13 @@ import {
   formatarMoeda,
   formatarTelefone,
   NOME_MOTIVO_RECUPERAR,
+  type AdesaoDetalhe,
   type ClienteParaRecuperar,
   type ClienteResumo,
 } from '@pente-fino/shared';
 import { Abas, Botao, Campo, Dialogo, EstadoVazio } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarPlus, Contact, HeartHandshake, MessageCircle, Plus } from 'lucide-react';
+import { CalendarPlus, Contact, Crown, HeartHandshake, MessageCircle, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useDeferredValue, useState } from 'react';
@@ -260,6 +261,7 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
       <Estado consulta={cliente}>
         {() => (
           <div className="flex flex-col gap-6">
+            <ClubeDoCliente clienteId={c!.id} />
             <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
@@ -500,5 +502,29 @@ function NovoCliente({ aberto, onFechar }: { aberto: boolean; onFechar: () => vo
         </div>
       </form>
     </Dialogo>
+  );
+}
+
+/** Na ficha: o plano do clube, o vencimento e o que resta no mês. */
+function ClubeDoCliente({ clienteId }: { clienteId: string }) {
+  const clube = useQuery({
+    queryKey: ['clube', 'cliente', clienteId],
+    queryFn: () => api<{ adesao: AdesaoDetalhe | null }>(`clube/cliente/${clienteId}`),
+  });
+  const a = clube.data?.adesao;
+  if (!a) return null;
+  return (
+    <div
+      className={`flex flex-col gap-1 rounded-md border p-3 ${a.situacao === 'ativa' ? 'border-acao-texto/50' : 'border-aviso-texto/50'}`}
+    >
+      <p className="flex items-center gap-2 font-semibold">
+        <Crown aria-hidden className="size-4" /> Clube: {a.plano.nome}
+      </p>
+      <p className="text-sm text-tinta-suave">
+        {a.situacao === 'ativa' ? 'Em dia até' : 'Vencido desde'} {formatarData(a.vencimento)}
+        {a.situacao === 'ativa' &&
+          ` · ${a.restantes.map((r) => (r.restam === null ? `${r.servico} à vontade` : `${r.servico}: restam ${r.restam}`)).join(' · ')}`}
+      </p>
+    </div>
   );
 }

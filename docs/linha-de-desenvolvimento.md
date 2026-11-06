@@ -351,8 +351,8 @@ Depois que a comanda fecha, o cliente avalia o atendimento pelo WhatsApp. A nota
 
 Assinatura, combos e convênios reconhecidos na comanda, com o dono vendo se o clube dá lucro.
 
-- [ ] Itens do clube: assinatura, combo e convênio, com valor por unidade, serviços inclusos e limite de uso por mês (`item_clube`, `item_clube_servico`)
-- [ ] Adesão do cliente: início, vencimento, situação e usos no ciclo (`adesao_clube`)
+- [x] Itens do clube: assinatura, combo e convênio, com valor por unidade, serviços inclusos e limite de uso por mês (`item_clube`, `item_clube_servico`) (feito: Clube → Planos, só o dono cadastra: tipo, nome, valor por mês, unidade, limite total opcional de atendimentos no mês e os serviços inclusos com "vezes no mês" (vazio = à vontade) e comissão fixa opcional; editar troca os serviços e vale para os próximos atendimentos; desativado não recebe assinante novo. `item_clube` e `item_clube_servico` com RLS e na auditoria)
+- [x] Adesão do cliente: início, vencimento, situação e usos no ciclo (`adesao_clube`) (feito: Clube → Assinantes, dono, gestor e recepção: coloca o cliente (ou cadastra na hora) no plano com início e vencimento um mês depois; um plano ativo por cliente (índice único no banco); cancelar pede motivo e o histórico fica; a lista mostra situação (em dia, vencida, cancelada), vencimento e o que resta no ciclo; a ficha do cliente mostra o plano. Os usos do ciclo saem das comandas (`item_comanda.adesao_id`), nunca de um contador, e as regras de ciclo e cobertura ficam em `packages/shared/src/clube.ts` com teste)
 - [ ] A comanda reconhece o assinante: o que o plano cobre entra com valor zero e conta no uso; acima do limite ou fora do plano entra com preço normal, como extra (RN-07)
 - [ ] Comissão do item do clube sobre o preço de tabela da unidade na data, ou valor fixo definido pelo dono (regra em `packages/shared` com testes)
 - [ ] Mensalidade sem gateway: QR Pix da chave da barbearia e baixa pela recepção; receita do clube separada da receita de serviço

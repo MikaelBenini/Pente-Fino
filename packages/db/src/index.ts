@@ -57,3 +57,4 @@ export * from './link-horario.js';
 export * from './token-agendamento.js';
 export * from './push.js';
 export * from './automacoes.js';
+export * from './clube.js';
