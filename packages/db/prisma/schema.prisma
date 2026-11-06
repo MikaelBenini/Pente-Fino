@@ -256,6 +256,7 @@ model Conta {
   faturas            FaturaAssinatura[]
   assistentes        AssistenteEquipe[]
   linksHorario       LinkHorario[]
+  tokensAgendamento  TokenAgendamento[]
 
   @@map("conta")
 }
@@ -284,23 +285,24 @@ model Unidade {
   criadoEm           DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm       DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta           Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  calendario      CalendarioUnidade[]
-  papeis          PapelUsuario[]
-  profissionais   Profissional[]
-  precosServico   PrecoServico[]
-  clientesOrigem  Cliente[]
-  agendamentos    Agendamento[]
-  comandas        Comanda[]
-  caixas          CaixaDia[]
-  despesas        Despesa[]
-  metas           Meta[]
-  botConexao      BotConexao?
-  modelosMensagem ModeloMensagem[]
-  botSessoes      BotSessao[]
-  mensagens       Mensagem[]
-  avaliacoes      Avaliacao[]
-  assistentes     AssistenteEquipe[]
+  conta             Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  calendario        CalendarioUnidade[]
+  papeis            PapelUsuario[]
+  profissionais     Profissional[]
+  precosServico     PrecoServico[]
+  clientesOrigem    Cliente[]
+  agendamentos      Agendamento[]
+  comandas          Comanda[]
+  caixas            CaixaDia[]
+  despesas          Despesa[]
+  metas             Meta[]
+  botConexao        BotConexao?
+  modelosMensagem   ModeloMensagem[]
+  botSessoes        BotSessao[]
+  mensagens         Mensagem[]
+  avaliacoes        Avaliacao[]
+  assistentes       AssistenteEquipe[]
+  tokenAgendamentos TokenAgendamento[]
 
   @@index([contaId])
   @@map("unidade")
@@ -575,17 +577,20 @@ model Cliente {
   consentimentoMsg Boolean   @default(false) @map("consentimento_msg")
   /// Quando o cliente escolheu (RECEBER ou SAIR). Vazio = ainda não escolheu: o bot convida.
   consentimentoEm  DateTime? @map("consentimento_em") @db.Timestamptz(3)
+  /// Por onde marcou da última vez: "conversa" (bot) ou "site". O bot segue por ele.
+  canalPreferido   String?   @map("canal_preferido")
   criadoEm         DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta         Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  unidadeOrigem Unidade?      @relation(fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
-  notas         NotaCliente[]
-  agendamentos  Agendamento[]
-  comandas      Comanda[]
-  mensagens     Mensagem[]
-  sessoesBot    BotSessao[]
-  avaliacoes    Avaliacao[]
+  conta             Conta              @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidadeOrigem     Unidade?           @relation(fields: [unidadeOrigemId], references: [id], onDelete: SetNull)
+  notas             NotaCliente[]
+  agendamentos      Agendamento[]
+  comandas          Comanda[]
+  mensagens         Mensagem[]
+  sessoesBot        BotSessao[]
+  avaliacoes        Avaliacao[]
+  tokenAgendamentos TokenAgendamento[]
 
   @@unique([contaId, telefone])
   @@index([contaId, nome])
@@ -1141,4 +1146,24 @@ model LinkHorario {
 
   @@index([contaId])
   @@map("link_horario")
+}
+
+/// Link do site mandado pelo bot (/agendar?u=slug&c=token): nome e telefone já preenchidos,
+/// sem dado pessoal na URL. Curto, de uso único e com validade; guarda só o hash.
+model TokenAgendamento {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId   String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId String    @map("unidade_id") @db.Uuid
+  clienteId String    @map("cliente_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiraEm  DateTime  @map("expira_em") @db.Timestamptz(3)
+  usadoEm   DateTime? @map("usado_em") @db.Timestamptz(3)
+  criadoEm  DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@map("token_agendamento")
 }

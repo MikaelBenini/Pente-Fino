@@ -1,6 +1,12 @@
 // Etapa 11: link do cliente para ver, remarcar ou cancelar o próprio horário, sem login.
 import type { INestApplication } from '@nestjs/common';
-import { criarPrisma, instanciaDaUnidade, naConta, type PrismaClient } from '@pente-fino/db';
+import {
+  criarPrisma,
+  criarTokenDeAgendamento,
+  instanciaDaUnidade,
+  naConta,
+  type PrismaClient,
+} from '@pente-fino/db';
 import { dataLocal, type HorarioDoLink } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
@@ -291,5 +297,52 @@ describe('faltas no site', () => {
       })
       .expect(409);
     expect(r.body.erro.mensagem).toContain('fale com a barbearia');
+  });
+});
+
+describe('link do site mandado pelo bot', () => {
+  it('preenche nome e telefone pelo token, usa uma vez só e guarda o site como canal', async () => {
+    const token = await naConta(prisma, a.contaId, async (tx) => {
+      const c = await tx.cliente.create({
+        data: { nome: 'Cliente do Bot', telefone: '5511977774001' },
+      });
+      return criarTokenDeAgendamento(tx, a.unidadeA, c.id);
+    });
+    expect(token).toMatch(/^[A-Za-z0-9_-]{10}$/);
+    expect(
+      (await http().get(`/publico/agendamento/${slug}/cliente?c=${token}`).expect(200)).body,
+    ).toEqual({ nome: 'Cliente do Bot', telefone: '5511977774001' });
+    const pagina = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body;
+    // WhatsApp conectado (teste dos lembretes): o site oferece marcar pela conversa.
+    expect(pagina.linkWhatsappAgendar).toBe(
+      'https://wa.me/5511900004444?text=AGENDAR%20POR%20AQUI',
+    );
+
+    const livres = (
+      await http()
+        .get(`/publico/agendamento/${slug}/horarios?data=${dia(11)}&servicoIds=${corte}`)
+        .expect(200)
+    ).body[0].inicios as string[];
+    // O telefone digitado não vale: quem marca é o cliente do token.
+    await http()
+      .post(`/publico/agendamento/${slug}`)
+      .send({
+        nome: 'Cliente do Bot',
+        telefone: '11900000000',
+        servicoIds: [corte],
+        profissionalId: prof,
+        inicio: livres[0],
+        c: token,
+      })
+      .expect(201);
+    const c = await naConta(prisma, a.contaId, (tx) =>
+      tx.cliente.findFirstOrThrow({
+        where: { telefone: '5511977774001' },
+        include: { agendamentos: true },
+      }),
+    );
+    expect(c.agendamentos).toHaveLength(1);
+    expect(c.canalPreferido).toBe('site');
+    await http().get(`/publico/agendamento/${slug}/cliente?c=${token}`).expect(404);
   });
 });

@@ -9,6 +9,8 @@ export const DIAS_POR_VEZ = 6;
 export const HORARIOS_POR_VEZ = 6;
 
 export type PassoAgenda =
+  // Por onde marcar: conversa ou site (some quando a unidade não tem site ou o cliente já escolheu a conversa).
+  | 'canal'
   | 'servico'
   | 'profissional'
   | 'dia'
@@ -111,6 +113,31 @@ export interface ServicoParaAgendar {
   nome: string;
   preco: number;
   duracaoMin: number;
+}
+
+/** Canal de agendamento guardado no cliente: o último que ele usou. */
+export type CanalAgendamento = 'conversa' | 'site';
+
+/** Texto que o "Prefere pelo WhatsApp?" do site manda pronto: o bot vai direto para a conversa. */
+export const TEXTO_AGENDAR_POR_AQUI = 'AGENDAR POR AQUI';
+
+export function textoEscolherCanal(): string {
+  return [
+    'Como você prefere marcar?',
+    '',
+    '1. Por aqui, na conversa',
+    '2. Pelo site (seu nome e telefone já vão preenchidos)',
+    '0. Voltar ao menu',
+  ].join('\n');
+}
+
+export function textoLinkDoSite(link: string): string {
+  return [
+    `Marque pelo site, com seu nome e telefone já preenchidos:`,
+    link,
+    '',
+    'O link vale por 2 dias. Prefere marcar por aqui na conversa? Responda 1.',
+  ].join('\n');
 }
 
 export function textoServicos(

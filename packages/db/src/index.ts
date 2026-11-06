@@ -54,3 +54,4 @@ export * from './agendar-bot.js';
 export * from './lembretes.js';
 export * from './equipe-whatsapp.js';
 export * from './link-horario.js';
+export * from './token-agendamento.js';
