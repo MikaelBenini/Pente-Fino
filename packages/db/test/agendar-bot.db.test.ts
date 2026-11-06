@@ -947,6 +947,17 @@ describe('notificações no celular (push)', () => {
         notificacaoDoHorario(tx, agId, 'novo', new Date('2026-12-02T02:00:00Z')),
       ),
     ).toBeNull();
+    // Desligou "mudanças na minha agenda" em Perfil → Avisos: não sai mais.
+    await naMinhaConta((tx) =>
+      tx.usuario.update({
+        where: { id: usuarioId },
+        data: { preferenciasAvisos: { agendaNoCelular: false } },
+      }),
+    );
+    expect(await naMinhaConta((tx) => notificacaoDoHorario(tx, agId, 'novo', quando))).toBeNull();
+    await naMinhaConta((tx) =>
+      tx.usuario.update({ where: { id: usuarioId }, data: { preferenciasAvisos: {} } }),
+    );
   });
 
   it('entrega a cada aparelho e remove o que o serviço diz que não existe mais', async () => {

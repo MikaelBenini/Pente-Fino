@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { Aviso } from './aviso';
 
-type Resposta = PreferenciasAvisos & { tipos: TipoAviso[] };
+type Resposta = PreferenciasAvisos & { tipos: TipoAviso[]; profissional: boolean };
 const chave = ['avisos', 'preferencias'] as const;
 
 /**
@@ -19,7 +19,7 @@ export function PreferenciasDeAvisos() {
   const [salvo, setSalvo] = useState(false);
   // Escolha local: o checkbox muda na hora; o servidor só confirma.
   const [local, setLocal] = useState<PreferenciasAvisos | null>(null);
-  if (!prefs.data || prefs.data.tipos.length === 0) return null;
+  if (!prefs.data || (prefs.data.tipos.length === 0 && !prefs.data.profissional)) return null;
   const p = { ...prefs.data, ...(local ?? {}) };
 
   async function salvar(novo: PreferenciasAvisos) {
@@ -35,7 +35,11 @@ export function PreferenciasDeAvisos() {
       void prefs.refetch();
     }
   }
-  const atual: PreferenciasAvisos = { celular: p.celular, resumoPorEmail: p.resumoPorEmail };
+  const atual: PreferenciasAvisos = {
+    celular: p.celular,
+    resumoPorEmail: p.resumoPorEmail,
+    agendaNoCelular: p.agendaNoCelular,
+  };
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby="titulo-pref-avisos">
@@ -53,6 +57,17 @@ export function PreferenciasDeAvisos() {
         </p>
         <fieldset className="flex flex-col gap-1">
           <legend className="mb-1 text-sm font-medium">No celular</legend>
+          {p.profissional && (
+            <label className="flex min-h-11 items-center gap-3">
+              <input
+                type="checkbox"
+                checked={p.agendaNoCelular}
+                onChange={(e) => salvar({ ...atual, agendaNoCelular: e.target.checked })}
+                className="size-5 accent-[var(--modulo)]"
+              />
+              Horário novo, remarcado ou cancelado na minha agenda
+            </label>
+          )}
           {p.tipos.map((t) => (
             <label key={t} className="flex min-h-11 items-center gap-3">
               <input

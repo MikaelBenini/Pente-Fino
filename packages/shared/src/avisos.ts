@@ -216,13 +216,15 @@ export const preferenciasAvisosSchema = z.object({
   /** Tipo → vai para o celular? Sem a chave, vai (padrão ligado). */
   celular: z.partialRecord(z.enum(TIPOS_AVISO), z.boolean()).default({}),
   resumoPorEmail: z.boolean().default(false),
+  /** Horário novo, remarcado ou cancelado na minha agenda (quem atende). */
+  agendaNoCelular: z.boolean().default(true),
 });
 export type PreferenciasAvisos = z.infer<typeof preferenciasAvisosSchema>;
 
 /** Lê o JSON do banco sem quebrar com lixo antigo: o que não vale vira o padrão. */
 export function lerPreferenciasAvisos(json: unknown): PreferenciasAvisos {
   const r = preferenciasAvisosSchema.safeParse(json ?? {});
-  return r.success ? r.data : { celular: {}, resumoPorEmail: false };
+  return r.success ? r.data : { celular: {}, resumoPorEmail: false, agendaNoCelular: true };
 }
 
 export const vaiParaOCelular = (p: PreferenciasAvisos, tipo: TipoAviso) =>

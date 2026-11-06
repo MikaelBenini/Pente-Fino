@@ -4,6 +4,7 @@ import {
   dataLocal,
   diaDaSemana,
   formatarHora,
+  lerPreferenciasAvisos,
   podeAvisarAgora,
   rotuloDoDia,
   textoPushDoHorario,
@@ -43,6 +44,12 @@ export async function notificacaoDoHorario(
   if (!ag) return null;
   const usuarioId = ag.profissional.usuarioId;
   if ((await tx.inscricaoPush.count({ where: { usuarioId } })) === 0) return null;
+  // Desligou "Mudanças na minha agenda" em Perfil → Avisos.
+  const dono = await tx.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { preferenciasAvisos: true },
+  });
+  if (!lerPreferenciasAvisos(dono?.preferenciasAvisos).agendaNoCelular) return null;
   const hoje = dataLocal(agora);
   const turnos = ag.profissional.horarios.filter((h) => h.diaSemana === diaDaSemana(hoje));
   if (!podeAvisarAgora(turnos, minutoLocal(agora))) return null;
