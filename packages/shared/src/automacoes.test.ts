@@ -4,6 +4,7 @@ import {
   ehAniversario,
   intervaloHabitual,
   lerAutomacoes,
+  motivosParaRecuperar,
 } from './automacoes.js';
 
 const d = (s: string) => new Date(`${s}T15:00:00Z`);
@@ -53,4 +54,33 @@ it('automações começam desligadas e o que está gravado vale', () => {
     aniversario: false,
   });
   expect(lerAutomacoes({ retorno: true })).toMatchObject({ retorno: true, aniversario: false });
+});
+
+describe('clientes para recuperar', () => {
+  const agora = d('2026-12-01');
+  const base = {
+    visitas: [d('2026-11-20')],
+    padraoDias: 30,
+    temHorarioMarcado: false,
+    notaBaixaAberta: false,
+    ultimaFalta: null,
+    agora,
+  };
+  it('nota baixa aberta, falta sem volta e quem sumiu; cliente em dia fica fora', () => {
+    expect(motivosParaRecuperar(base)).toEqual([]);
+    expect(motivosParaRecuperar({ ...base, notaBaixaAberta: true })).toEqual(['nota_baixa']);
+    expect(motivosParaRecuperar({ ...base, ultimaFalta: d('2026-11-25') })).toEqual(['faltou']);
+    // Voltou depois da falta: não conta.
+    expect(motivosParaRecuperar({ ...base, ultimaFalta: d('2026-11-10') })).toEqual([]);
+    expect(motivosParaRecuperar({ ...base, visitas: [d('2026-10-01')] })).toEqual(['sumiu']);
+    // Com horário marcado, nem falta nem sumiço.
+    expect(
+      motivosParaRecuperar({
+        ...base,
+        visitas: [d('2026-10-01')],
+        ultimaFalta: d('2026-11-25'),
+        temHorarioMarcado: true,
+      }),
+    ).toEqual([]);
+  });
 });

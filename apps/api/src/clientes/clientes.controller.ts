@@ -13,6 +13,13 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Prisma } from '@pente-fino/db';
 import {
   buscaClientesSchema,
+  intervaloHabitual,
+  lerAutomacoes,
+  motivosParaRecuperar,
+  NOTA_BAIXA,
+  RECUPERAR_JANELA_DIAS,
+  type ClienteParaRecuperar,
+  type MotivoRecuperar,
   clienteSchema,
   notaClienteSchema,
   temAlgumPapel,
@@ -21,15 +28,18 @@ import {
   type ClienteResumo,
   type MensagemDoCliente,
 } from '@pente-fino/shared';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
-import { data, dataTexto, filtroUnidade, TODOS } from '../comum/escopo.js';
+import { data, dataTexto, exigirUnidade, filtroUnidade, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 
 const POR_PAGINA = 50;
+/** Quem trabalha o balcão: liga, manda mensagem e marca horário para o cliente. */
+const BALCAO_CLIENTES = ['dono', 'gestor', 'recepcao'] as const;
+const consultaRecuperar = z.object({ unidadeId: z.uuid().optional() });
 
 function telefoneRepetido(e: unknown): never {
   if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')
@@ -98,6 +108,123 @@ export class ClientesController {
         ultimaVisita: c.comandas[0]?.fechadaEm?.toISOString() ?? null,
         visitas: c.comandas.length,
       }));
+    });
+  }
+
+  @Get('recuperar')
+  @Papeis(...BALCAO_CLIENTES)
+  @ApiOperation({
+    summary: 'Clientes para recuperar: nota baixa sem resolver, faltou e não voltou, sumiu',
+  })
+  async recuperar(
+    @Consulta(consultaRecuperar) q: z.infer<typeof consultaRecuperar>,
+  ): Promise<ClienteParaRecuperar[]> {
+    if (q.unidadeId) exigirUnidade(q.unidadeId, BALCAO_CLIENTES);
+    const porUnidade = q.unidadeId ? { unidadeId: q.unidadeId } : filtroUnidade(BALCAO_CLIENTES);
+    const agora = new Date();
+    const janela = new Date(agora.getTime() - RECUPERAR_JANELA_DIAS * 86_400_000);
+    return this.banco.daConta(async (tx) => {
+      const conta = await tx.conta.findFirstOrThrow({ select: { automacoes: true } });
+      const padraoDias = lerAutomacoes(conta.automacoes).retornoDiasPadrao;
+      const [fechadas, baixas, faltas] = await Promise.all([
+        tx.comanda.findMany({
+          where: {
+            ...porUnidade,
+            status: 'fechada',
+            clienteId: { not: null },
+            fechadaEm: { gte: new Date(agora.getTime() - 365 * 86_400_000) },
+          },
+          select: { clienteId: true, fechadaEm: true },
+        }),
+        tx.avaliacao.findMany({
+          where: {
+            ...porUnidade,
+            status: 'respondida',
+            tratadaEm: null,
+            respondidaEm: { gte: janela },
+            OR: [{ notaAtendimento: { lte: NOTA_BAIXA } }, { notaBarbearia: { lte: NOTA_BAIXA } }],
+          },
+          orderBy: { respondidaEm: 'desc' },
+        }),
+        tx.agendamento.findMany({
+          where: {
+            ...porUnidade,
+            status: 'falta',
+            inicio: { gte: janela },
+            clienteId: { not: null },
+          },
+          select: { clienteId: true, inicio: true },
+        }),
+      ]);
+      const visitas = new Map<string, Date[]>();
+      for (const c of fechadas)
+        visitas.set(c.clienteId!, [...(visitas.get(c.clienteId!) ?? []), c.fechadaEm!]);
+      const baixaPorCliente = new Map<string, (typeof baixas)[number]>();
+      for (const b of baixas)
+        if (!baixaPorCliente.has(b.clienteId)) baixaPorCliente.set(b.clienteId, b);
+      const faltaPorCliente = new Map<string, Date>();
+      for (const f of faltas) {
+        const atual = faltaPorCliente.get(f.clienteId!);
+        if (!atual || f.inicio > atual) faltaPorCliente.set(f.clienteId!, f.inicio);
+      }
+      const ids = [
+        ...new Set([...visitas.keys(), ...baixaPorCliente.keys(), ...faltaPorCliente.keys()]),
+      ];
+      const [clientes, futuros] = await Promise.all([
+        tx.cliente.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, nome: true, telefone: true, retornoConvidadoEm: true },
+        }),
+        tx.agendamento.findMany({
+          where: {
+            clienteId: { in: ids },
+            inicio: { gt: agora },
+            status: { in: ['agendado', 'confirmado'] },
+          },
+          select: { clienteId: true },
+        }),
+      ]);
+      const comHorario = new Set(futuros.map((f) => f.clienteId));
+      const ordem: Record<MotivoRecuperar, number> = { nota_baixa: 0, faltou: 1, sumiu: 2 };
+      return clientes
+        .map((c): ClienteParaRecuperar => {
+          const v = visitas.get(c.id) ?? [];
+          const baixa = baixaPorCliente.get(c.id);
+          const ultima = v.reduce<Date | null>((m, x) => (!m || x > m ? x : m), null);
+          return {
+            id: c.id,
+            nome: c.nome,
+            telefone: c.telefone,
+            motivos: motivosParaRecuperar({
+              visitas: v,
+              padraoDias,
+              temHorarioMarcado: comHorario.has(c.id),
+              notaBaixaAberta: !!baixa,
+              ultimaFalta: faltaPorCliente.get(c.id) ?? null,
+              agora,
+            }),
+            ultimaVisita: ultima?.toISOString() ?? null,
+            diasSemVir: ultima
+              ? Math.floor((agora.getTime() - ultima.getTime()) / 86_400_000)
+              : null,
+            intervaloDias: v.length ? intervaloHabitual(v, padraoDias) : null,
+            conviteRetornoEm: c.retornoConvidadoEm?.toISOString() ?? null,
+            notaBaixa: baixa
+              ? {
+                  nota: Math.min(baixa.notaAtendimento ?? 5, baixa.notaBarbearia ?? 5),
+                  comentario: baixa.comentario,
+                  em: baixa.respondidaEm!.toISOString(),
+                }
+              : null,
+          };
+        })
+        .filter((c) => c.motivos.length > 0)
+        .sort(
+          (a, b) =>
+            ordem[a.motivos[0]!] - ordem[b.motivos[0]!] ||
+            (b.diasSemVir ?? 0) - (a.diasSemVir ?? 0),
+        )
+        .slice(0, 100);
     });
   }
 

@@ -115,3 +115,23 @@ test('gestor vê os preços sem editar e marca feriado na unidade dele', async (
   await item.getByRole('button', { name: /Remover/ }).click();
   await expect(item).toHaveCount(0);
 });
+
+test('clientes para recuperar: a recepção vê os motivos e abre a ficha', async ({ page }) => {
+  await entrar(page, 'recepcao.centro@demo.pentefino.dev');
+  await page.goto('/clientes');
+  await page.getByRole('tab', { name: 'Para recuperar' }).click();
+  const lista = page.getByRole('list', { name: 'Clientes para recuperar' });
+  const vazio = page.getByText('Ninguém para recuperar agora');
+  await expect(lista.or(vazio)).toBeVisible();
+  if (await lista.isVisible()) {
+    await expect(lista.getByRole('listitem').first()).toContainText(
+      /Nota baixa sem resolver|Faltou e não voltou|Passou do tempo de costume/,
+    );
+    await lista.getByRole('button', { name: 'Abrir ficha' }).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+  }
+  const sobra = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(sobra).toBeLessThanOrEqual(0);
+});
