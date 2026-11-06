@@ -82,3 +82,39 @@ test('Perfil → Avisos: a recepção escolhe o que vai para o celular e a escol
       .getByLabel('Comandas esperando confirmação do barbeiro'),
   ).toBeChecked({ checked: !antes });
 });
+
+test('Perfil → Avisos: o barbeiro escolhe se as mudanças da agenda vão para o celular', async ({
+  page,
+}) => {
+  await entrar(page, 'rafael@demo.pentefino.dev');
+  await page.goto('/perfil');
+  const secao = page.getByRole('region', { name: 'Avisos' });
+  await expect(
+    secao.getByLabel('Horário novo, remarcado ou cancelado na minha agenda'),
+  ).toBeVisible();
+  // Barbeiro não recebe avisos de gestão.
+  await expect(secao.getByLabel('Resumo do dia da unidade')).toHaveCount(0);
+});
+
+test('Perfil → Avisos: o barbeiro liga e desliga as mudanças da agenda no celular', async ({
+  page,
+}) => {
+  await entrar(page, 'rafael@demo.pentefino.dev');
+  await page.goto('/perfil');
+  const agenda = page
+    .getByRole('region', { name: 'Avisos' })
+    .getByLabel('Horário novo, remarcado ou cancelado na minha agenda');
+  await expect(agenda).toBeVisible();
+  const antes = await agenda.isChecked();
+  await agenda.setChecked(!antes);
+  await expect(page.getByRole('region', { name: 'Avisos' }).getByRole('status')).toHaveText(
+    'Preferências salvas.',
+  );
+  await agenda.setChecked(antes);
+  await page.reload();
+  await expect(
+    page
+      .getByRole('region', { name: 'Avisos' })
+      .getByLabel('Horário novo, remarcado ou cancelado na minha agenda'),
+  ).toBeChecked({ checked: antes });
+});

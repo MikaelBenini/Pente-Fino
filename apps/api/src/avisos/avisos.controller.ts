@@ -65,11 +65,14 @@ export class AvisosController {
   @Get('preferencias')
   @Papeis(...PAPEIS)
   @ApiOperation({ summary: 'Quais avisos vão para o celular e se o resumo vai por e-mail' })
-  preferencias(): Promise<PreferenciasAvisos & { tipos: TipoAviso[] }> {
+  preferencias(): Promise<PreferenciasAvisos & { tipos: TipoAviso[]; profissional: boolean }> {
     const u = Contexto.usuario();
     return this.banco.daConta(async (tx) => {
       const usuario = await tx.usuario.findUniqueOrThrow({ where: { id: u.id } });
+      const profissional =
+        (await tx.profissional.count({ where: { usuarioId: u.id, ativo: true } })) > 0;
       return {
+        profissional,
         ...lerPreferenciasAvisos(usuario.preferenciasAvisos),
         tipos: tiposDoPapel(u.papeis.map((p) => p.papel)),
       };

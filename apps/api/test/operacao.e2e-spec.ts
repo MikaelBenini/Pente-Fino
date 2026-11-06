@@ -395,7 +395,9 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
     expect((await recepcao.get('/avisos/preferencias').expect(200)).body).toEqual({
       celular: {},
       resumoPorEmail: false,
+      agendaNoCelular: true,
       tipos: ['comandas_pendentes'],
+      profissional: false,
     });
     await gestor
       .put('/avisos/preferencias', { celular: { resumo_dia: false }, resumoPorEmail: true })

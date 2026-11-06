@@ -123,9 +123,13 @@ describe('fim do dia', () => {
 describe('preferências de avisos', () => {
   it('padrão: tudo no celular, resumo sem e-mail; lixo vira padrão', () => {
     const p = lerPreferenciasAvisos({});
-    expect(p).toEqual({ celular: {}, resumoPorEmail: false });
+    expect(p).toEqual({ celular: {}, resumoPorEmail: false, agendaNoCelular: true });
     expect(vaiParaOCelular(p, 'comandas_pendentes')).toBe(true);
-    expect(lerPreferenciasAvisos({ celular: 'x' })).toEqual({ celular: {}, resumoPorEmail: false });
+    expect(lerPreferenciasAvisos({ celular: 'x' })).toEqual({
+      celular: {},
+      resumoPorEmail: false,
+      agendaNoCelular: true,
+    });
     const desligado = lerPreferenciasAvisos({
       celular: { resumo_dia: false },
       resumoPorEmail: true,
