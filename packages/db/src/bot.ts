@@ -326,6 +326,8 @@ export type ResultadoAtendimento =
       consentimento: boolean | null;
       /** Marcou ou remarcou pela conversa: o worker agenda os lembretes. */
       agendamento?: { id: string; inicio: string };
+      /** Alguém da equipe ligou o assistente agora: o worker agenda a agenda e o resumo do dia. */
+      assistenteAtivado?: string;
     };
 
 const NOME_PADRAO_CLIENTE = 'Cliente do WhatsApp';
@@ -379,7 +381,7 @@ export async function atenderMensagem(
             },
           });
           const saidas: string[] = [];
-          for (const texto of equipe) {
+          for (const texto of equipe.respostas) {
             const m = await tx.mensagem.create({
               data: {
                 unidadeId,
@@ -402,6 +404,7 @@ export async function atenderMensagem(
             saidas,
             acao: null,
             consentimento: null,
+            ...(equipe.ativado ? { assistenteAtivado: equipe.ativado } : {}),
           } as const;
         }
 

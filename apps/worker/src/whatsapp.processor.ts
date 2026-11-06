@@ -10,6 +10,9 @@ import {
   enviarLembrete,
   iniciarPesquisa,
   lembretesDoAgendamento,
+  avisarProximoCliente,
+  primeirasRotinas,
+  rodarRotinaEquipe,
   naConta,
   prepararEnvio,
   registrarEnvio,
@@ -180,6 +183,31 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           );
           return 'lembrete enviado';
         }
+        // Assistente da equipe: próximo cliente em 15 minutos.
+        if (job.data.tipo === 'proximo_cliente') {
+          const a = await avisarProximoCliente(this.banco.prisma, job.data);
+          if (!a) return 'próximo cliente: pulado';
+          await agendarRespostas(
+            { contaId: a.contaId, instancia: a.instancia, saidas: a.mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'próximo cliente avisado';
+        }
+        // Assistente da equipe: agenda do dia ou resumo, e já agenda a próxima.
+        if (job.data.tipo === 'rotina_equipe') {
+          const { aviso, proxima } = await rodarRotinaEquipe(this.banco.prisma, job.data);
+          if (proxima)
+            await filaEntrada.add(proxima.dados.tipo, proxima.dados, {
+              delay: proxima.atrasoMs,
+              jobId: proxima.jobId,
+            });
+          if (!aviso) return `${job.data.rotina}: pulada`;
+          await agendarRespostas(
+            { contaId: aviso.contaId, instancia: aviso.instancia, saidas: aviso.mensagemIds },
+            { relogio, adicionar },
+          );
+          return `${job.data.rotina} enviada`;
+        }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {
           appUrl: this.config.APP_URL,
@@ -191,7 +219,14 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             lembretesDoAgendamento(tx, r.contaId, r.agendamento!.id),
           );
           for (const l of trabalhos)
-            await filaEntrada.add('lembrete', l.dados, { delay: l.atrasoMs, jobId: l.jobId });
+            await filaEntrada.add(l.dados.tipo, l.dados, { delay: l.atrasoMs, jobId: l.jobId });
+        }
+        if (r.assistenteAtivado) {
+          const rotinas = await naConta(this.banco.prisma, r.contaId, (tx) =>
+            primeirasRotinas(tx, r.contaId, r.assistenteAtivado!),
+          );
+          for (const t of rotinas)
+            await filaEntrada.add(t.dados.tipo, t.dados, { delay: t.atrasoMs, jobId: t.jobId });
         }
         return r.tipo;
       },

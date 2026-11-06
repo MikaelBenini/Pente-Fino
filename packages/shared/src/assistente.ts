@@ -3,16 +3,31 @@
 import { z } from 'zod';
 import { formatarHora, formatarMoeda } from './formatacao.js';
 
-export const AVISOS_EQUIPE = ['horarioNovo', 'mudancas'] as const;
+export const AVISOS_EQUIPE = [
+  'horarioNovo',
+  'mudancas',
+  'proximoCliente',
+  'agendaDoDia',
+  'resumoDoDia',
+] as const;
 export type AvisoEquipe = (typeof AVISOS_EQUIPE)[number];
 export type AvisosEquipe = Record<AvisoEquipe, boolean>;
 
 export const NOME_AVISO_EQUIPE: Readonly<Record<AvisoEquipe, string>> = {
   horarioNovo: 'Horário novo na minha agenda',
   mudancas: 'Horário remarcado ou cancelado',
+  proximoCliente: 'Próximo cliente, 15 minutos antes',
+  agendaDoDia: 'Agenda do dia, antes de começar',
+  resumoDoDia: 'Resumo do dia, no fim do expediente',
 };
 
-export const AVISOS_EQUIPE_PADRAO: Readonly<AvisosEquipe> = { horarioNovo: true, mudancas: true };
+export const AVISOS_EQUIPE_PADRAO: Readonly<AvisosEquipe> = {
+  horarioNovo: true,
+  mudancas: true,
+  proximoCliente: true,
+  agendaDoDia: true,
+  resumoDoDia: true,
+};
 
 export function lerAvisosEquipe(valor: unknown): AvisosEquipe {
   const v = (valor && typeof valor === 'object' ? valor : {}) as Partial<Record<string, unknown>>;
@@ -143,7 +158,86 @@ export interface CodigoAssistente {
   link: string | null;
 }
 
-export const avisosEquipeSchema = z.object({
-  horarioNovo: z.boolean(),
-  mudancas: z.boolean(),
-});
+/** Só os avisos que mudam; os que faltam ficam como estão (app antigo manda menos chaves). */
+export const avisosEquipeSchema = z
+  .object({
+    horarioNovo: z.boolean(),
+    mudancas: z.boolean(),
+    proximoCliente: z.boolean(),
+    agendaDoDia: z.boolean(),
+    resumoDoDia: z.boolean(),
+  })
+  .partial();
+
+// ─── Avisos com hora marcada ──────────────────────────────────────────────
+
+/** "Próximo cliente": minutos antes do horário. */
+export const PROXIMO_CLIENTE_MIN = 15;
+/** Agenda do dia: minutos antes do primeiro turno; resumo: minutos depois do último. */
+export const AGENDA_DO_DIA_ANTES_MIN = 60;
+export const RESUMO_DO_DIA_DEPOIS_MIN = 15;
+
+/** Quando avisar "próximo cliente"; null se o horário foi marcado em cima da hora ou já passou. */
+export function momentoProximoCliente(inicio: Date, marcadoEm: Date, agora: Date): Date | null {
+  const quando = new Date(inicio.getTime() - PROXIMO_CLIENTE_MIN * 60_000);
+  return quando > agora && quando > marcadoEm ? quando : null;
+}
+
+export type RotinaEquipe = 'agenda' | 'resumo';
+
+/**
+ * Próxima agenda do dia (1 h antes do primeiro turno) ou resumo (15 min depois do último), a
+ * partir de `depoisDe`, procurando até 14 dias à frente (folga e dia sem turno pulam).
+ * Turnos por dia da semana (0 = domingo), em minutos; o instante sai em -03:00.
+ */
+export function proximaRotina(
+  turnos: readonly { diaSemana: number; inicioMin: number; fimMin: number }[],
+  rotina: RotinaEquipe,
+  depoisDe: Date,
+): { dia: string; quando: Date } | null {
+  const hoje = new Date(depoisDe.getTime() - 3 * 3_600_000).toISOString().slice(0, 10);
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(`${hoje}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + i);
+    const dia = d.toISOString().slice(0, 10);
+    const doDia = turnos.filter((t) => t.diaSemana === d.getUTCDay());
+    if (doDia.length === 0) continue;
+    const minuto =
+      rotina === 'agenda'
+        ? Math.min(...doDia.map((t) => t.inicioMin)) - AGENDA_DO_DIA_ANTES_MIN
+        : Math.max(...doDia.map((t) => t.fimMin)) + RESUMO_DO_DIA_DEPOIS_MIN;
+    const hh = String(Math.floor(minuto / 60)).padStart(2, '0');
+    const mm = String(minuto % 60).padStart(2, '0');
+    const quando = new Date(`${dia}T${hh}:${mm}:00-03:00`);
+    if (quando > depoisDe) return { dia, quando };
+  }
+  return null;
+}
+
+export function textoProximoCliente(h: {
+  inicio: string;
+  cliente: string;
+  servicos: readonly string[];
+  primeiraVez: boolean;
+}): string {
+  return `⏰ Próximo cliente às ${formatarHora(h.inicio)}: ${h.cliente}${h.primeiraVez ? ' (primeira vez)' : ''} · ${h.servicos.join(' + ')}`;
+}
+
+export function textoResumoDoDia(r: {
+  atendidos: number;
+  comissao: number;
+  faltas: number;
+  amanha: number;
+}): string {
+  return [
+    'Resumo de hoje:',
+    '',
+    `✂️ ${r.atendidos} ${r.atendidos === 1 ? 'atendimento fechado' : 'atendimentos fechados'}`,
+    `💰 Comissão do dia: ${formatarMoeda(r.comissao)}`,
+    ...(r.faltas > 0 ? [`🚫 ${r.faltas} ${r.faltas === 1 ? 'falta' : 'faltas'}`] : []),
+    '',
+    r.amanha > 0
+      ? `Amanhã: ${r.amanha} ${r.amanha === 1 ? 'horário marcado' : 'horários marcados'}. Bom descanso!`
+      : 'Amanhã: nenhum horário marcado por enquanto. Bom descanso!',
+  ].join('\n');
+}

@@ -4,7 +4,11 @@ import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   atenderMensagem,
+  avisarProximoCliente,
   criarAgendamentoNoBanco,
+  lembretesDoAgendamento,
+  primeirasRotinas,
+  rodarRotinaEquipe,
   criarPrisma,
   enviarLembrete,
   hashCodigoAssistente,
@@ -451,5 +455,177 @@ describe('assistente da equipe', () => {
     );
     await marcar();
     expect(await avisos()).toBe(1);
+  });
+
+  describe('avisos com hora marcada', () => {
+    // Quinta, 10/12: horário do João às 11:30 (14:30Z).
+    const inicio = '2026-12-10T14:30:00.000Z';
+    let agId = '';
+    let assistenteId = '';
+    let clienteId = '';
+
+    it('ao marcar, entra o "próximo cliente" 15 min antes; na hora avisa, com "primeira vez"', async () => {
+      expect(await fala(equipe, 'LIGAR', quando)).toContain('Avisos ligados');
+      agId = await naMinhaConta(async (tx) => {
+        const c = await tx.cliente.create({
+          data: { nome: 'João Pedro Lima', telefone: '5511955550000' },
+        });
+        clienteId = c.id;
+        const r = await criarAgendamentoNoBanco(tx, {
+          unidadeId,
+          profissionalId,
+          clienteId: c.id,
+          inicio: new Date(inicio),
+          servicoIds: [corte],
+          origem: 'balcao',
+          criadoPorId: null,
+        });
+        assistenteId = (await tx.assistenteEquipe.findFirstOrThrow({ where: { unidadeId } })).id;
+        return r.agendamentoId;
+      });
+      const trabalhos = await naMinhaConta((tx) => lembretesDoAgendamento(tx, conta, agId, quando));
+      const proximo = trabalhos.find((t) => t.dados.tipo === 'proximo_cliente')!;
+      expect(proximo.jobId).toBe(`proximo_${agId}_${new Date(inicio).getTime()}`);
+      expect(quando.getTime() + proximo.atrasoMs).toBe(new Date('2026-12-10T14:15:00Z').getTime());
+
+      const naHora = new Date('2026-12-10T14:15:00Z');
+      const a = await avisarProximoCliente(
+        prisma,
+        { contaId: conta, agendamentoId: agId, inicio },
+        naHora,
+      );
+      expect(a).toMatchObject({ instancia });
+      const texto = await naMinhaConta((tx) =>
+        tx.mensagem.findUniqueOrThrow({ where: { id: a!.mensagemIds[0]! } }),
+      );
+      expect(texto.texto).toBe('⏰ Próximo cliente às 11:30: João (primeira vez) · Corte');
+      // Remarcado depois: o trabalho do horário antigo não manda nada.
+      expect(
+        await avisarProximoCliente(
+          prisma,
+          { contaId: conta, agendamentoId: agId, inicio: '2026-12-10T15:00:00.000Z' },
+          naHora,
+        ),
+      ).toBeNull();
+    });
+
+    it('agenda do dia: manda só no próprio dia e já devolve a do dia seguinte', async () => {
+      const cedo = new Date('2026-12-10T11:00:00Z'); // 08:00, 1 h antes do expediente
+      const r = await rodarRotinaEquipe(
+        prisma,
+        { contaId: conta, assistenteId, rotina: 'agenda', dia: '2026-12-10' },
+        cedo,
+      );
+      const texto = await naMinhaConta((tx) =>
+        tx.mensagem.findUniqueOrThrow({ where: { id: r.aviso!.mensagemIds[0]! } }),
+      );
+      expect(texto.texto).toMatch(/^Bom dia! ☀️\nHoje \(qui, 10\/12\): 1 horário/);
+      expect(texto.texto).toContain('João');
+      expect(r.proxima?.jobId).toBe(`rotina_${assistenteId}_agenda_2026-12-11`);
+      expect(cedo.getTime() + r.proxima!.atrasoMs).toBe(new Date('2026-12-11T11:00:00Z').getTime());
+
+      // Trabalho atrasado (worker parado): não manda a agenda de ontem.
+      const atrasado = await rodarRotinaEquipe(
+        prisma,
+        { contaId: conta, assistenteId, rotina: 'agenda', dia: '2026-12-09' },
+        cedo,
+      );
+      expect(atrasado.aviso).toBeNull();
+      expect(atrasado.proxima?.dados.dia).toBe('2026-12-11');
+    });
+
+    it('resumo: atendidos e comissão do dia; cliente que já veio não é mais "primeira vez"', async () => {
+      await naMinhaConta(async (tx) => {
+        const c = await tx.comanda.findFirstOrThrow({ where: { agendamentoId: agId } });
+        await tx.itemComanda.updateMany({
+          where: { comandaId: c.id },
+          data: { comissaoValor: 1800 },
+        });
+        await tx.comanda.update({
+          where: { id: c.id },
+          data: { status: 'fechada', fechadaEm: new Date('2026-12-10T15:10:00Z') },
+        });
+      });
+      const fim = new Date('2026-12-10T15:15:00Z'); // 12:15, 15 min depois do expediente
+      const r = await rodarRotinaEquipe(
+        prisma,
+        { contaId: conta, assistenteId, rotina: 'resumo', dia: '2026-12-10' },
+        fim,
+      );
+      const texto = await naMinhaConta((tx) =>
+        tx.mensagem.findUniqueOrThrow({ where: { id: r.aviso!.mensagemIds[0]! } }),
+      );
+      expect(texto.texto).toContain('✂️ 1 atendimento fechado');
+      expect(texto.texto).toMatch(/Comissão do dia: R\$\s?18,00/);
+      expect(r.proxima?.jobId).toBe(`rotina_${assistenteId}_resumo_2026-12-11`);
+
+      const outro = '2026-12-15T13:00:00.000Z';
+      const id2 = await naMinhaConta(async (tx) => {
+        const x = await criarAgendamentoNoBanco(tx, {
+          unidadeId,
+          profissionalId,
+          clienteId,
+          inicio: new Date(outro),
+          servicoIds: [corte],
+          origem: 'balcao',
+          criadoPorId: null,
+        });
+        return x.agendamentoId;
+      });
+      const a = await avisarProximoCliente(
+        prisma,
+        { contaId: conta, agendamentoId: id2, inicio: outro },
+        new Date('2026-12-15T12:45:00Z'),
+      );
+      const t2 = await naMinhaConta((tx) =>
+        tx.mensagem.findUniqueOrThrow({ where: { id: a!.mensagemIds[0]! } }),
+      );
+      expect(t2.texto).toBe('⏰ Próximo cliente às 10:00: João · Corte');
+    });
+
+    it('aviso desligado não sai; assistente desligado no Perfil encerra a sequência', async () => {
+      const cedo = new Date('2026-12-04T11:00:00Z');
+      await naMinhaConta((tx) =>
+        tx.assistenteEquipe.update({
+          where: { id: assistenteId },
+          data: {
+            avisos: {
+              horarioNovo: true,
+              mudancas: true,
+              proximoCliente: true,
+              agendaDoDia: false,
+              resumoDoDia: true,
+            },
+          },
+        }),
+      );
+      const semAviso = await rodarRotinaEquipe(
+        prisma,
+        { contaId: conta, assistenteId, rotina: 'agenda', dia: '2026-12-04' },
+        cedo,
+      );
+      expect(semAviso.aviso).toBeNull();
+      expect(semAviso.proxima?.dados.dia).toBe('2026-12-05');
+
+      const primeiras = await naMinhaConta((tx) => primeirasRotinas(tx, conta, assistenteId, cedo));
+      expect(primeiras.map((t) => t.jobId)).toEqual([
+        `rotina_${assistenteId}_agenda_2026-12-05`,
+        `rotina_${assistenteId}_resumo_2026-12-04`,
+      ]);
+
+      await naMinhaConta((tx) =>
+        tx.assistenteEquipe.update({
+          where: { id: assistenteId },
+          data: { confirmadoEm: null, telefone: null },
+        }),
+      );
+      expect(
+        await rodarRotinaEquipe(
+          prisma,
+          { contaId: conta, assistenteId, rotina: 'resumo', dia: '2026-12-04' },
+          cedo,
+        ),
+      ).toEqual({ aviso: null, proxima: null });
+    });
   });
 });
