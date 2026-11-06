@@ -111,7 +111,8 @@ export async function calcularLivres(
   duracaoMin: number,
   profissionalId?: string,
   agora = new Date(),
-  opcoes: { antecedenciaMin?: number } = {},
+  /** `ignorar`: o próprio agendamento, ao remarcar (o horário dele conta como livre). */
+  opcoes: { antecedenciaMin?: number; ignorar?: string } = {},
 ): Promise<HorarioLivre[]> {
   const regras = await regrasDaUnidade(tx, unidadeId);
   const profs = await tx.profissional.findMany({
@@ -122,7 +123,10 @@ export async function calcularLivres(
   for (const p of profs) {
     const inicios = horariosLivres({
       expediente: await expedienteDoProfissional(tx, p.id, unidadeId, dia),
-      ocupados: comFolga(await ocupadosDoProfissional(tx, p.id, dia), regras.intervaloMin),
+      ocupados: comFolga(
+        await ocupadosDoProfissional(tx, p.id, dia, opcoes.ignorar),
+        regras.intervaloMin,
+      ),
       duracaoMin,
       passoMin: 15,
       agora: aPartirDe,

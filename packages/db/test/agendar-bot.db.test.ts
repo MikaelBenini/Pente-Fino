@@ -14,6 +14,7 @@ import {
   criarPrisma,
   enviarLembrete,
   hashCodigoAssistente,
+  hashTokenHorario,
   instanciaDaUnidade,
   moverAgendamento,
   naConta,
@@ -126,6 +127,13 @@ describe('agendar pela conversa', () => {
     );
     const pronto = await fala(tel, '1');
     expect(pronto).toContain('Pronto, horário marcado! ✅');
+    // A confirmação leva o link do horário; o banco guarda só o hash do token.
+    const token = /http:\/\/app\.teste\/horario\?t=([A-Za-z0-9_-]{22})/.exec(pronto)?.[1];
+    expect(token).toBeDefined();
+    const link = await naMinhaConta((tx) =>
+      tx.linkHorario.findUnique({ where: { tokenHash: hashTokenHorario(token!) } }),
+    );
+    expect(link).not.toBeNull();
 
     const ag = await naMinhaConta((tx) =>
       tx.agendamento.findFirst({

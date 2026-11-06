@@ -37,7 +37,7 @@ function somarDias(d: string, n: number) {
 }
 
 /** Regra da agenda (packages/db) → resposta HTTP. */
-async function traduzir<T>(fn: () => Promise<T>): Promise<T> {
+export async function traduzir<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (e) {
@@ -177,7 +177,7 @@ export class AgendaService {
     dia: string,
     duracaoMin: number,
     profissionalId?: string,
-    opcoes: { antecedenciaMin?: number } = {},
+    opcoes: { antecedenciaMin?: number; ignorar?: string } = {},
   ): Promise<HorarioLivre[]> {
     return traduzir(() =>
       calcularLivres(tx, unidadeId, dia, duracaoMin, profissionalId, new Date(), opcoes),

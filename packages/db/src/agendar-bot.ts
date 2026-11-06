@@ -24,6 +24,7 @@ import {
   type RegrasAgendamento,
   type ResumoAgendamento,
   type ServicoParaAgendar,
+  caminhoDoHorario,
 } from '@pente-fino/shared';
 import {
   calcularLivres,
@@ -32,8 +33,8 @@ import {
   criarAgendamentoNoBanco,
   duracaoDosServicos,
   ErroAgenda,
-  moverAgendamento,
 } from './agenda.js';
+import { criarLinkDoHorario, remarcarPeloCliente } from './link-horario.js';
 import type { Prisma } from './generated/prisma/client.js';
 import { precoServicoVigente } from './vigencia.js';
 
@@ -61,11 +62,15 @@ export interface DadosDaConversa {
   agora: Date;
   /** Regras de agendamento da unidade (antecedência, janela, limite, prazo). */
   regras: RegrasAgendamento;
+  /** Endereço do sistema: a confirmação leva o link do horário (/horario?t=token). */
+  appUrl?: string;
   /** Simulador do painel: faz o passo a passo, mas não grava o agendamento. */
   simulacao?: boolean;
 }
 
 const primeiroNome = (n: string) => n.trim().split(/\s+/)[0]!;
+const linkDoHorario = async (tx: Tx, d: DadosDaConversa, agendamentoId: string) =>
+  d.appUrl ? `${d.appUrl}${caminhoDoHorario(await criarLinkDoHorario(tx, agendamentoId))}` : null;
 const somarDias = (dia: string, n: number) => {
   const d = new Date(`${dia}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
@@ -500,32 +505,18 @@ export async function passoDaAgenda(
         // Ponto de salvamento: se o horário acabou de ser ocupado, o resto da transação segue.
         await tx.$executeRawUnsafe('SAVEPOINT agendar_bot');
         if (agenda.remarcarId) {
-          const r2 = await moverAgendamento(
+          const r2 = await remarcarPeloCliente(
             tx,
             agenda.remarcarId,
             new Date(agenda.escolha!.inicio),
+            'WhatsApp',
             agenda.escolha!.profissionalId,
           );
-          await tx.auditoria.create({
-            data: {
-              usuarioId: null,
-              entidade: 'agendamento',
-              entidadeId: agenda.remarcarId,
-              acao: 'remarcar_pelo_cliente',
-              antes: {
-                inicio: r2.antes.inicio.toISOString(),
-                profissionalId: r2.antes.profissionalId,
-              },
-              depois: {
-                inicio: agenda.escolha!.inicio,
-                profissionalId: agenda.escolha!.profissionalId,
-              },
-              motivo: 'Remarcado pelo cliente (WhatsApp)',
-            },
-          });
           await tx.$executeRawUnsafe('RELEASE SAVEPOINT agendar_bot');
           return {
-            respostas: [textoRemarcado(r, d.barbearia)],
+            respostas: [
+              textoRemarcado(r, d.barbearia, await linkDoHorario(tx, d, agenda.remarcarId)),
+            ],
             agenda: null,
             voltarAoMenu: false,
             comandaId: r2.comandaId,
@@ -544,7 +535,9 @@ export async function passoDaAgenda(
         });
         await tx.$executeRawUnsafe('RELEASE SAVEPOINT agendar_bot');
         return {
-          respostas: [textoMarcado(r, d.barbearia)],
+          respostas: [
+            textoMarcado(r, d.barbearia, await linkDoHorario(tx, d, criado.agendamentoId)),
+          ],
           agenda: null,
           voltarAoMenu: false,
           comandaId: criado.comandaId,

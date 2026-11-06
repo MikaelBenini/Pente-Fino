@@ -30,6 +30,7 @@ import { CaixaController } from './caixa/caixa.controller.js';
 import { ConfiguracaoController } from './configuracao/configuracao.controller.js';
 import { ExportacaoController } from './exportacao/exportacao.controller.js';
 import { ImportacaoController } from './importacao/importacao.controller.js';
+import { HorarioPublicoController } from './publico/horario-publico.controller.js';
 import { PublicoController } from './publico/publico.controller.js';
 import { ComissoesController } from './comissoes/comissoes.controller.js';
 import { ComissoesService } from './comissoes/comissoes.service.js';
@@ -141,6 +142,7 @@ export class ComumModule {}
     ImportacaoController,
     ExportacaoController,
     PublicoController,
+    HorarioPublicoController,
     SaudeController,
   ],
   providers: [

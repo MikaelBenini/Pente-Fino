@@ -9,6 +9,7 @@ const PUBLICAS = [
   '/offline',
   '/cadastro',
   '/agendar',
+  '/horario',
   '/planos',
   '/termos',
   '/privacidade',
