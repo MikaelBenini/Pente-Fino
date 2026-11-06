@@ -15,6 +15,12 @@ const TEXTOS: Record<IdSecao, { pergunta: string; vazio: string; texto: string }
     texto:
       'Faturamento contra a meta, ritmo, projeção, lucro, ticket médio, ocupação e extras, calculados das comandas fechadas. Aparecem assim que a primeira comanda for fechada.',
   },
+  rede: {
+    pergunta: 'Qual unidade vai melhor?',
+    vazio: 'As unidades aparecem lado a lado aqui',
+    texto:
+      'Faturamento, lucro, ticket, ocupação, nota e retorno de cada unidade no mês, com a melhor de cada indicador marcada e o total da rede.',
+  },
   dia: {
     pergunta: 'O que tem para hoje e o que já foi feito?',
     vazio: 'A agenda e o movimento do dia aparecem aqui',

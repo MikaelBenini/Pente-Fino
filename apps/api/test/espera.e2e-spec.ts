@@ -7,6 +7,7 @@ import {
   type ComandaDetalhe,
   type EsperaDetalhe,
   type OcupacaoDaUnidade,
+  type PainelDaRede,
   type TrabalhoWhatsappEntrada,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
@@ -364,5 +365,27 @@ describe('mover agendamento', () => {
       .patch(`/agendamentos/${c.agendamentoId}`, { inicio: primeiro, avisarCliente: true })
       .expect(200);
     expect(await avisos()).toHaveLength(1);
+  });
+});
+
+describe('painel da rede', () => {
+  it('dono vê as duas unidades e o total; gestor só a dele; barbeiro não entra', async () => {
+    const url = `/rede?de=${dia(-30)}&ate=${dia(0)}`;
+    await barbeiro.get(url).expect(403);
+    await dono.get(`/rede?de=${dia(0)}&ate=${dia(-1)}`).expect(400);
+    const p = (await dono.get(url).expect(200)).body as PainelDaRede;
+    expect(p.unidades.map((u) => u.unidadeId).sort()).toEqual([a.unidadeA, a.unidadeB].sort());
+    expect(p.rede.faturamento).toBe(p.unidades.reduce((s, u) => s + u.faturamento, 0));
+    expect(p.rede.ocupacao.disponivelMin).toBe(
+      p.unidades.reduce((s, u) => s + u.ocupacao.disponivelMin, 0),
+    );
+    expect(Object.keys(p.destaques).sort()).toEqual(
+      ['faturamento', 'lucro', 'nota', 'ocupacao', 'retorno', 'ticketMedio'].sort(),
+    );
+    const gestor = await como(app, a.emails.gestor);
+    const doGestor = (await gestor.get(url).expect(200)).body as PainelDaRede;
+    expect(doGestor.unidades.map((u) => u.unidadeId)).toEqual([a.unidadeA]);
+    // Uma unidade só: nada a destacar.
+    expect(Object.values(doGestor.destaques).every((d) => d === null)).toBe(true);
   });
 });
