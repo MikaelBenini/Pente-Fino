@@ -104,3 +104,21 @@ test('dono conecta o WhatsApp pelo QR Code e desconecta', async ({ page }, info)
   await expect(qr).toHaveCount(0);
   await expect(centro.getByText('Desconectado')).toBeVisible();
 });
+
+test('automações: o dono vê os números do mês e o que liga; o gestor só vê', async ({ page }) => {
+  await entrar(page, 'dono@demo.pentefino.dev');
+  await page.goto('/bot');
+  await page.getByRole('tab', { name: 'Automações' }).click();
+  await expect(
+    page.getByLabel('Convidar para voltar quem passou do tempo de costume'),
+  ).toBeVisible();
+  await expect(page.getByLabel('Mandar parabéns no aniversário')).toBeVisible();
+  const tabela = page.getByRole('table', { name: 'Resultado das automações no mês' });
+  await expect(tabela).toContainText('Convite de retorno');
+  await expect(tabela).toContainText('Lembrete do horário');
+  await expect(page.getByRole('button', { name: 'Salvar automações' })).toBeVisible();
+  const sobra = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(sobra).toBeLessThanOrEqual(0);
+});

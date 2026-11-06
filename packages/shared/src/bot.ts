@@ -95,6 +95,8 @@ export const TIPOS_MENSAGEM_BOT = [
   'lembrete_segundo',
   'atendente_sem_resposta',
   'convite_google',
+  'convite_retorno',
+  'parabens',
 ] as const;
 export type TipoMensagemBot = (typeof TIPOS_MENSAGEM_BOT)[number];
 export type MensagensBot = Record<TipoMensagemBot, string>;
@@ -163,6 +165,16 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
     quando:
       'Abre o segundo lembrete (padrão: 2 h antes). Logo abaixo vão o dia, a hora, os serviços e a opção 1 Confirmo.',
   },
+  convite_retorno: {
+    nome: 'Convite de retorno',
+    quando:
+      'Automação (Bot → Automações): para quem passou do intervalo habitual de visitas, sem horário marcado. Uma vez por ciclo, às 10 h.',
+  },
+  parabens: {
+    nome: 'Aniversário',
+    quando:
+      'Automação (Bot → Automações): no dia do aniversário do cliente, às 10 h, uma vez por ano.',
+  },
   convite_google: {
     nome: 'Convite para avaliar no Google',
     quando:
@@ -198,6 +210,10 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
   pesquisa_obrigado: 'Obrigado pela avaliação! Ela ajuda a gente a melhorar.',
   lembrete_primeiro: 'Oi, {cliente}! Lembrete do seu horário na {barbearia}:',
   lembrete_segundo: 'Oi, {cliente}! Seu horário na {barbearia} é daqui a pouco:',
+  convite_retorno:
+    'Oi, {cliente}! Faz um tempinho que você não passa na {barbearia}. Bora marcar? Responda AGENDAR que eu te mostro os horários.',
+  parabens:
+    'Feliz aniversário, {cliente}! 🎉 A equipe da {barbearia} deseja um dia incrível. Quando quiser ficar no grau, responda AGENDAR.',
   convite_google:
     'Que bom que você gostou! Se puder, deixe sua avaliação da {barbearia} no Google, ajuda muito: {google}',
   atendente_sem_resposta:

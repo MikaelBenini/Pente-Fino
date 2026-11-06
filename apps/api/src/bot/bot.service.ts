@@ -8,6 +8,7 @@ import {
   lerMenu,
   mensagensDoBot,
   menuPublicado,
+  numerosDasAutomacoes,
   Prisma,
   registrarEstadoConexao,
   situacaoDaUnidade,
@@ -16,8 +17,11 @@ import {
 } from '@pente-fino/db';
 import {
   dataLocal,
+  lerAutomacoes,
   lerRegrasAgendamento,
   validarMenu,
+  type AutomacoesConta,
+  type EstadoAutomacoes,
   type ConexaoBot,
   type EstadoBot,
   type HorarioBotEntrada,
@@ -228,6 +232,42 @@ export class BotService {
         depois: { pesquisaPosAtendimento: ativa },
       });
       return { ativa };
+    });
+  }
+
+  /** Automações (retorno e aniversário) e os números de cada uma no período (mês por padrão). */
+  async automacoes(de: string, ate: string): Promise<EstadoAutomacoes> {
+    return this.banco.daConta(async (tx) => {
+      const conta = await tx.conta.findFirstOrThrow({ select: { automacoes: true } });
+      return {
+        config: lerAutomacoes(conta.automacoes),
+        numeros: await numerosDasAutomacoes(
+          tx,
+          filtroUnidade(GESTAO),
+          new Date(`${de}T00:00:00-03:00`),
+          new Date(new Date(`${ate}T00:00:00-03:00`).getTime() + 86_400_000),
+        ),
+      };
+    });
+  }
+
+  /** Liga e desliga as automações da conta (só o dono). */
+  async salvarAutomacoes(d: AutomacoesConta): Promise<AutomacoesConta> {
+    this.exigirDono();
+    return this.banco.daConta(async (tx) => {
+      const conta = await tx.conta.findFirstOrThrow();
+      await tx.conta.update({
+        where: { id: conta.id },
+        data: { automacoes: d as unknown as Prisma.InputJsonValue },
+      });
+      await auditar(tx, {
+        entidade: 'conta',
+        entidadeId: conta.id,
+        acao: 'automacoes',
+        antes: { automacoes: lerAutomacoes(conta.automacoes) },
+        depois: { automacoes: d },
+      });
+      return d;
     });
   }
 

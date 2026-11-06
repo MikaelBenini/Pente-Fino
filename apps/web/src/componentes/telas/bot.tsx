@@ -50,6 +50,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { chaveBot, useAcao, useBot, useConexaoBot } from '@/lib/consultas';
 import { Aviso } from '../aviso';
+import { Automacoes } from './automacoes';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
 
 const mensagemDe = (e: unknown) =>
@@ -94,6 +95,11 @@ export function TelaBot() {
                 },
                 { id: 'mensagens', rotulo: 'Mensagens prontas', conteudo: <Mensagens e={e} /> },
                 { id: 'horario', rotulo: 'Horário', conteudo: <Horarios e={e} /> },
+                {
+                  id: 'automacoes',
+                  rotulo: 'Automações',
+                  conteudo: <Automacoes podeEditar={e.podeEditar} />,
+                },
                 { id: 'testar', rotulo: 'Testar', conteudo: <Simulador e={e} /> },
                 { id: 'conexao', rotulo: 'Conexão', conteudo: <Conexao e={e} /> },
               ]}

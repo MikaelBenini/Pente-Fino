@@ -11,6 +11,8 @@ import {
   iniciarPesquisa,
   lembretesDoAgendamento,
   avisarNotaBaixa,
+  contasComAutomacoes,
+  rodarAutomacoes,
   encerrarEsperaDoAtendente,
   avisarProximoCliente,
   trabalhoNotaBaixa,
@@ -27,6 +29,7 @@ import {
   FILA_WHATSAPP_ENTRADA,
   FILA_WHATSAPP_SAIDA,
   ESPERA_ATENDENTE_MAX_MIN,
+  HORA_DAS_AUTOMACOES,
   NOTA_BAIXA_ESPERA_MIN,
   proximoEnvio,
   type TrabalhoNotificacao,
@@ -150,6 +153,14 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
       },
     });
     this.filaNotificacoes = filaNotificacoes;
+    // Automações do pós-atendimento: todo dia às 10 h (São Paulo).
+    void filaEntrada
+      .upsertJobScheduler(
+        'automacoes-diarias',
+        { pattern: `0 ${HORA_DAS_AUTOMACOES} * * *`, tz: 'America/Sao_Paulo' },
+        { name: 'automacoes', data: { tipo: 'automacoes' } },
+      )
+      .catch((e: Error) => this.logger.error(`Agendar as automações: ${e.message}`));
     const redis = new Redis(this.config.REDIS_URL, { maxRetriesPerRequest: 3 });
     this.redis = redis;
     const chave = (instancia: string) => `whatsapp:proximo-envio:${instancia}`;
@@ -245,6 +256,31 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             { relogio, adicionar },
           );
           return 'atendente: bot voltou';
+        }
+        // Rotina diária: retorno e aniversário em cada conta que ligou as automações.
+        if (job.data.tipo === 'automacoes') {
+          let total = 0;
+          for (const contaId of await contasComAutomacoes(this.banco.prisma)) {
+            try {
+              const envios = await rodarAutomacoes(
+                this.banco.prisma,
+                contaId,
+                new Date(),
+                this.config.APP_URL,
+              );
+              for (const e of envios) {
+                total += e.mensagemIds.length;
+                await agendarRespostas(
+                  { contaId: e.contaId, instancia: e.instancia, saidas: e.mensagemIds },
+                  { relogio, adicionar },
+                );
+              }
+            } catch (erro) {
+              // Uma conta com problema não impede as outras.
+              this.logger.error(`Automações da conta ${contaId}: ${(erro as Error).message}`);
+            }
+          }
+          return `automações: ${total} mensagem(ns)`;
         }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {

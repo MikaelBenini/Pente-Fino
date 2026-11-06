@@ -56,3 +56,4 @@ export * from './equipe-whatsapp.js';
 export * from './link-horario.js';
 export * from './token-agendamento.js';
 export * from './push.js';
+export * from './automacoes.js';
