@@ -1,7 +1,8 @@
 import { Controller, Delete, Get, HttpCode, HttpStatus, Inject, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { hashCodigoAssistente, type Prisma, type Transacao } from '@pente-fino/db';
+import { hashCodigoAssistente, unidadesQueGere, type Prisma, type Transacao } from '@pente-fino/db';
 import {
+  avisosDisponiveis,
   avisosEquipeSchema,
   CODIGO_ASSISTENTE_VALIDADE_MIN,
   lerAvisosEquipe,
@@ -27,15 +28,36 @@ import { Corpo } from '../comum/validacao.js';
 export class AssistenteController {
   constructor(@Inject(BancoService) private readonly banco: BancoService) {}
 
-  /** A unidade onde o profissional atende (a primeira ativa) e o WhatsApp dela. */
+  /**
+   * Por qual número o assistente fala: a unidade onde a pessoa atende (a primeira ativa) ou,
+   * para dono e gestor fora da agenda, a primeira unidade que gere (de preferência conectada).
+   */
   private async ondeAtende(tx: Transacao) {
+    const usuarioId = Contexto.usuario().id;
     const p = await tx.profissional.findFirst({
-      where: { usuarioId: Contexto.usuario().id, ativo: true },
+      where: { usuarioId, ativo: true },
       orderBy: { criadoEm: 'asc' },
       include: { unidade: { include: { botConexao: true } } },
     });
-    if (!p) throw Erros.naoEncontrado('O assistente é para quem está na agenda de uma unidade.');
-    return p;
+    const gere = await unidadesQueGere(tx, usuarioId);
+    const ja = await tx.assistenteEquipe.findUnique({ where: { usuarioId } });
+    let unidade = p?.unidade;
+    if (!unidade && gere.length > 0) {
+      const opcoes = await tx.unidade.findMany({
+        where: { id: { in: gere } },
+        include: { botConexao: true },
+        orderBy: { criadoEm: 'asc' },
+      });
+      unidade =
+        opcoes.find((u) => u.id === ja?.unidadeId) ??
+        opcoes.find((u) => u.botConexao?.status === 'conectado') ??
+        opcoes[0];
+    }
+    if (!unidade)
+      throw Erros.naoEncontrado(
+        'O assistente é para quem está na agenda de uma unidade, para o dono e para o gestor.',
+      );
+    return { unidade, unidadeId: unidade.id, profissional: !!p, gestao: gere.length > 0 };
   }
 
   private async estado(tx: Transacao): Promise<EstadoAssistente> {
@@ -56,6 +78,7 @@ export class AssistenteController {
       whatsappConectado: conexao?.status === 'conectado',
       telefone: a?.confirmadoEm ? a.telefone : null,
       avisos: lerAvisosEquipe(a?.avisos),
+      disponiveis: avisosDisponiveis(p),
       codigoExpiraEm: aguardando ? a!.codigoExpiraEm!.toISOString() : null,
     };
   }

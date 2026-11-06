@@ -10,7 +10,9 @@ import {
   enviarLembrete,
   iniciarPesquisa,
   lembretesDoAgendamento,
+  avisarNotaBaixa,
   avisarProximoCliente,
+  trabalhoNotaBaixa,
   primeirasRotinas,
   rodarRotinaEquipe,
   naConta,
@@ -22,6 +24,7 @@ import {
 import {
   FILA_WHATSAPP_ENTRADA,
   FILA_WHATSAPP_SAIDA,
+  NOTA_BAIXA_ESPERA_MIN,
   proximoEnvio,
   type TrabalhoWhatsappEntrada,
   type TrabalhoWhatsappSaida,
@@ -208,6 +211,16 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           );
           return `${job.data.rotina} enviada`;
         }
+        // Nota 1 ou 2: dono e gestor ficam sabendo (uma vez por avaliação).
+        if (job.data.tipo === 'nota_baixa') {
+          const avisos = await avisarNotaBaixa(this.banco.prisma, job.data);
+          for (const a of avisos)
+            await agendarRespostas(
+              { contaId: a.contaId, instancia: a.instancia, saidas: a.mensagemIds },
+              { relogio, adicionar },
+            );
+          return `nota baixa: ${avisos.length} aviso(s)`;
+        }
         if (job.data.tipo !== 'mensagem') return;
         const r = await atenderMensagem(this.banco.prisma, job.data, {
           appUrl: this.config.APP_URL,
@@ -220,6 +233,15 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           );
           for (const l of trabalhos)
             await filaEntrada.add(l.dados.tipo, l.dados, { delay: l.atrasoMs, jobId: l.jobId });
+        }
+        if (r.notaBaixa) {
+          const t = trabalhoNotaBaixa(
+            r.contaId,
+            r.notaBaixa.avaliacaoId,
+            r.notaBaixa.concluida,
+            NOTA_BAIXA_ESPERA_MIN * 60_000,
+          );
+          await filaEntrada.add(t.dados.tipo, t.dados, { delay: t.atrasoMs, jobId: t.jobId });
         }
         if (r.assistenteAtivado) {
           const rotinas = await naConta(this.banco.prisma, r.contaId, (tx) =>

@@ -93,4 +93,14 @@ describe('assistente da equipe', () => {
     const d = (await barbeiro.delete('/me/assistente').expect(200)).body as EstadoAssistente;
     expect(d).toMatchObject({ situacao: 'desligado', telefone: null });
   });
+
+  it('dono fora da agenda tem o assistente só com os avisos de gestão; barbeiro, só os da agenda', async () => {
+    const d = (await dono.get('/me/assistente').expect(200)).body as EstadoAssistente;
+    expect(d).toMatchObject({ unidade: 'Unidade A', situacao: 'desligado' });
+    expect(d.disponiveis).toEqual(['faltas', 'notaBaixa', 'resumoGestao']);
+    const b = (await barbeiro.get('/me/assistente').expect(200)).body as EstadoAssistente;
+    expect(b.disponiveis).not.toContain('faltas');
+    expect(b.disponiveis).toContain('proximoCliente');
+    await recepcao.get('/me/assistente').expect(404);
+  });
 });
