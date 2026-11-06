@@ -364,6 +364,8 @@ export class PublicoController {
           inicio: d.inicio,
           servicoIds: d.servicoIds,
           origem: 'link',
+          encaixe: false,
+          confirmarEncaixe: false,
         },
         null,
       );

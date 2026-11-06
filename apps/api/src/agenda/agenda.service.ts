@@ -9,6 +9,7 @@ import {
   validarHorario,
   type Transacao,
   regrasDaUnidade,
+  avisosDoEncaixe,
 } from '@pente-fino/db';
 import {
   podeNaUnidade,
@@ -19,6 +20,8 @@ import {
   type StatusComanda,
   type MudancaNaAgenda,
   estaAtrasado,
+  recorrentesNoDia,
+  textoAvisosEncaixe,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -36,6 +39,13 @@ function somarDias(d: string, n: number) {
   const x = new Date(`${d}T12:00:00Z`);
   x.setUTCDate(x.getUTCDate() + n);
   return x.toISOString().slice(0, 10);
+}
+
+/** Todos os dias de `de` a `ate` (AAAA-MM-DD). */
+function diasDoPeriodo(de: string, ate: string): string[] {
+  const dias: string[] = [];
+  for (let d = de; d <= ate && dias.length < 62; d = somarDias(d, 1)) dias.push(d);
+  return dias;
 }
 
 /** Regra da agenda (packages/db) → resposta HTTP. */
@@ -99,7 +109,7 @@ export class AgendaService {
         orderBy: { usuario: { nome: 'asc' } },
       });
       const ids = profissionais.map((p) => p.id);
-      const [agendamentos, bloqueios, calendario] = await emSequencia([
+      const [agendamentos, bloqueios, calendario, recorrentes] = await emSequencia([
         tx.agendamento.findMany({
           where: {
             profissionalId: { in: ids },
@@ -118,6 +128,7 @@ export class AgendaService {
         tx.calendarioUnidade.findMany({
           where: { unidadeId, data: { gte: data(de), lte: data(ate) } },
         }),
+        tx.bloqueioRecorrente.findMany({ where: { profissionalId: { in: ids } } }),
       ]);
       const agora = new Date();
       const tolerancia = (await regrasDaUnidade(tx, unidadeId)).toleranciaAtrasoMin;
@@ -156,13 +167,39 @@ export class AgendaService {
             toleranciaMin: tolerancia,
           }),
         })),
-        bloqueios: bloqueios.map((b) => ({
-          id: b.id,
-          profissionalId: b.profissionalId,
-          inicio: b.inicio.toISOString(),
-          fim: b.fim.toISOString(),
-          motivo: b.motivo,
-        })),
+        bloqueios: [
+          ...bloqueios.map((b) => ({
+            id: b.id,
+            profissionalId: b.profissionalId,
+            inicio: b.inicio.toISOString(),
+            fim: b.fim.toISOString(),
+            motivo: b.motivo,
+          })),
+          // Os que repetem toda semana, já abertos em cada dia do período.
+          ...diasDoPeriodo(de, ate).flatMap((dia) =>
+            recorrentes.flatMap((r) =>
+              recorrentesNoDia(
+                [
+                  {
+                    diaSemana: r.diaSemana,
+                    inicioMin: r.inicioMin,
+                    fimMin: r.fimMin,
+                    desde: dataTexto(r.desde),
+                    ate: r.ate ? dataTexto(r.ate) : null,
+                  },
+                ],
+                dia,
+              ).map((o) => ({
+                id: r.id,
+                profissionalId: r.profissionalId,
+                inicio: o.inicio.toISOString(),
+                fim: o.fim.toISOString(),
+                motivo: r.motivo,
+                recorrente: true,
+              })),
+            ),
+          ),
+        ],
         fechados: calendario.filter((c) => !c.trabalha).map((c) => dataTexto(c.data)),
         diasTrabalho: unidade.diasTrabalho,
       };
@@ -240,13 +277,15 @@ export class AgendaService {
     // Confere serviços e horário antes de cadastrar cliente novo.
     const duracao = await traduzir(() => duracaoDosServicos(tx, d.servicoIds));
     const inicio = new Date(d.inicio);
-    await this.validarHorario(
-      tx,
-      d.profissionalId,
-      d.unidadeId,
-      inicio,
-      new Date(inicio.getTime() + duracao * 60_000),
-    );
+    const fimPrevisto = new Date(inicio.getTime() + duracao * 60_000);
+    if (d.encaixe) {
+      // Encaixe: avisa (fora do expediente, bloqueio, unidade fechada) e pede confirmação.
+      const avisos = await traduzir(() =>
+        avisosDoEncaixe(tx, d.profissionalId, d.unidadeId, inicio, fimPrevisto),
+      );
+      if (avisos.length > 0 && !d.confirmarEncaixe)
+        throw Erros.requisicaoInvalida('encaixe_com_aviso', textoAvisosEncaixe(avisos));
+    } else await this.validarHorario(tx, d.profissionalId, d.unidadeId, inicio, fimPrevisto);
     const clienteId =
       d.clienteId ?? (await this.comandas.clienteNovo(tx, d.clienteNovo!, d.unidadeId));
     const r = await traduzir(() =>
@@ -259,6 +298,7 @@ export class AgendaService {
         origem: d.origem,
         observacao: d.observacao ?? null,
         criadoPorId,
+        encaixe: d.encaixe,
       }),
     );
     return r.comandaId;

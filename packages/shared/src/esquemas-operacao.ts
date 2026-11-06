@@ -93,6 +93,10 @@ export const novoAgendamentoSchema = z
       .max(10),
     origem: z.enum(['balcao', 'bot', 'app', 'link']).default('balcao'),
     observacao: z.string().trim().max(300).optional(),
+    /** Encaixe: qualquer horário, mesmo fora da grade (só a recepção). */
+    encaixe: z.boolean().default(false),
+    /** A recepção viu os avisos do encaixe e confirmou. */
+    confirmarEncaixe: z.boolean().default(false),
   })
   .refine((d) => d.clienteId || d.clienteNovo, {
     error: 'Escolha o cliente ou cadastre um novo.',
@@ -154,6 +158,8 @@ export interface Agenda {
     inicio: string;
     fim: string;
     motivo: string | null;
+    /** Vem de um bloqueio que repete toda semana (o id é o dele). */
+    recorrente?: boolean;
   }[];
   /** Dias fechados da unidade no período. */
   fechados: string[];

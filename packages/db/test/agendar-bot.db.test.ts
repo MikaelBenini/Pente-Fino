@@ -5,6 +5,8 @@ import { formatarMoeda } from '@pente-fino/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   atenderMensagem,
+  avisosDoEncaixe,
+  calcularLivres,
   avisarFaltaParaGestao,
   avisarNotaBaixa,
   avisarProximoCliente,
@@ -1405,5 +1407,87 @@ describe('atraso: remarcação rápida depois do "Não veio"', () => {
     expect(
       await remarcacaoPorAtraso(prisma, { contaId: conta, agendamentoId: agId }, agoraAtraso),
     ).toBeNull();
+  });
+});
+
+describe('bloqueios que repetem e encaixe', () => {
+  // Quinta, 07/01/2027 (o expediente do Rafael é das 9h às 12h todo dia).
+  const dia = '2027-01-07';
+
+  it('o almoço de toda quinta sai dos horários livres', async () => {
+    const antes = await naMinhaConta((tx) =>
+      calcularLivres(tx, unidadeId, dia, 30, profissionalId, new Date('2027-01-01T12:00:00Z')),
+    );
+    expect(antes[0]!.inicios).toContain('2027-01-07T14:00:00.000Z'); // 11:00
+    await naMinhaConta((tx) =>
+      tx.bloqueioRecorrente.create({
+        data: {
+          profissionalId,
+          diaSemana: 4,
+          inicioMin: 10 * 60 + 30,
+          fimMin: 12 * 60,
+          desde: new Date('2027-01-01T00:00:00Z'),
+          motivo: 'Almoço',
+        },
+      }),
+    );
+    const depois = await naMinhaConta((tx) =>
+      calcularLivres(tx, unidadeId, dia, 30, profissionalId, new Date('2027-01-01T12:00:00Z')),
+    );
+    expect(depois[0]!.inicios).not.toContain('2027-01-07T14:00:00.000Z');
+    expect(depois[0]!.inicios).toContain('2027-01-07T13:00:00.000Z'); // 10:00 segue livre
+  });
+
+  it('encaixe: avisa fora do expediente e em cima de bloqueio, grava se confirmado; outro cliente no horário, nunca', async () => {
+    const cliente = await naMinhaConta((tx) =>
+      tx.cliente.create({ data: { nome: 'Encaixe', telefone: '5511944300001' } }),
+    );
+    // 12:30 local: fora do expediente; 11:00: em cima do almoço.
+    expect(
+      await naMinhaConta((tx) =>
+        avisosDoEncaixe(
+          tx,
+          profissionalId,
+          unidadeId,
+          new Date('2027-01-07T15:30:00Z'),
+          new Date('2027-01-07T16:00:00Z'),
+        ),
+      ),
+    ).toEqual(['fora_do_expediente']);
+    expect(
+      await naMinhaConta((tx) =>
+        avisosDoEncaixe(
+          tx,
+          profissionalId,
+          unidadeId,
+          new Date('2027-01-07T14:00:00Z'),
+          new Date('2027-01-07T14:30:00Z'),
+        ),
+      ),
+    ).toEqual(['bloqueio']);
+    const r = await naMinhaConta((tx) =>
+      criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: cliente.id,
+        inicio: new Date('2027-01-07T15:30:00Z'),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+        encaixe: true,
+      }),
+    );
+    expect(r.agendamentoId).toBeTruthy();
+    await expect(
+      naMinhaConta((tx) =>
+        avisosDoEncaixe(
+          tx,
+          profissionalId,
+          unidadeId,
+          new Date('2027-01-07T15:45:00Z'),
+          new Date('2027-01-07T16:15:00Z'),
+        ),
+      ),
+    ).rejects.toThrow('já tem um cliente nesse horário');
   });
 });

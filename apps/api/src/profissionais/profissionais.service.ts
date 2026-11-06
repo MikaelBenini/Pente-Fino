@@ -9,6 +9,8 @@ import {
   type NovaRegraComissaoEntrada,
   type NovoProfissionalEntrada,
   type ProfissionalDetalhe,
+  type BloqueioRecorrente,
+  type BloqueioRecorrenteEntrada,
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import type { profissionalParcialSchema } from '@pente-fino/shared';
@@ -328,6 +330,54 @@ export class ProfissionaisService {
     await this.banco.daConta(async (tx) => {
       await this.carregar(tx, id, ['dono', 'gestor', 'recepcao']);
       const r = await tx.bloqueioAgenda.deleteMany({
+        where: { id: bloqueioId, profissionalId: id },
+      });
+      if (r.count === 0) throw Erros.naoEncontrado('Bloqueio não encontrado.');
+    });
+  }
+
+  /** Bloqueios que repetem toda semana (almoço de toda terça). */
+  async bloqueiosRecorrentes(id: string): Promise<BloqueioRecorrente[]> {
+    return this.banco.daConta(async (tx) => {
+      await this.carregar(tx, id, ['dono', 'gestor', 'recepcao']);
+      const lista = await tx.bloqueioRecorrente.findMany({
+        where: { profissionalId: id },
+        orderBy: [{ diaSemana: 'asc' }, { inicioMin: 'asc' }],
+      });
+      return lista.map((b) => ({
+        id: b.id,
+        diaSemana: b.diaSemana,
+        inicioMin: b.inicioMin,
+        fimMin: b.fimMin,
+        desde: dataTexto(b.desde),
+        ate: b.ate ? dataTexto(b.ate) : null,
+        motivo: b.motivo,
+      }));
+    });
+  }
+
+  async novoBloqueioRecorrente(id: string, d: BloqueioRecorrenteEntrada): Promise<{ id: string }> {
+    return this.banco.daConta(async (tx) => {
+      await this.carregar(tx, id, ['dono', 'gestor', 'recepcao']);
+      const b = await tx.bloqueioRecorrente.create({
+        data: {
+          profissionalId: id,
+          diaSemana: d.diaSemana,
+          inicioMin: d.inicioMin,
+          fimMin: d.fimMin,
+          desde: data(d.desde),
+          ate: d.ate ? data(d.ate) : null,
+          motivo: d.motivo,
+        },
+      });
+      return { id: b.id };
+    });
+  }
+
+  async removerBloqueioRecorrente(id: string, bloqueioId: string): Promise<void> {
+    await this.banco.daConta(async (tx) => {
+      await this.carregar(tx, id, ['dono', 'gestor', 'recepcao']);
+      const r = await tx.bloqueioRecorrente.deleteMany({
         where: { id: bloqueioId, profissionalId: id },
       });
       if (r.count === 0) throw Erros.naoEncontrado('Bloqueio não encontrado.');

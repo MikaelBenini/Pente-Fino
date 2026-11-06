@@ -9,6 +9,7 @@ import {
   type Agenda,
   type AgendaItem,
   type ComandaDetalhe,
+  recorteDoDia,
 } from '@pente-fino/shared';
 import {
   BlocoAgenda,
@@ -21,7 +22,7 @@ import {
   Selecao,
   cn,
 } from '@pente-fino/ui';
-import { CalendarDays, ChevronLeft, ChevronRight, ListOrdered, Plus } from 'lucide-react';
+import { Ban, CalendarDays, ChevronLeft, ChevronRight, ListOrdered, Plus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
@@ -39,6 +40,7 @@ import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado } from '../pagina';
 import { useUnidadeTrabalho } from '../unidade-trabalho';
 import { BuscaCliente, clienteParaApi, type ClienteEscolhido } from './busca-cliente';
+import { Bloqueios } from './bloqueios';
 import { ListaEspera } from './lista-espera';
 
 const PX_POR_MIN = 1.4;
@@ -98,6 +100,7 @@ function ConteudoAgenda() {
   const agenda = useAgenda(unidadeId, de, ate);
   const [novo, setNovo] = useState(false);
   const [espera, setEspera] = useState(false);
+  const [bloquear, setBloquear] = useState(false);
   const [abriuDoAtalho, setAbriuDoAtalho] = useState(false);
   if (clienteInicial && !abriuDoAtalho) {
     setAbriuDoAtalho(true);
@@ -125,6 +128,9 @@ function ConteudoAgenda() {
           balcao &&
           unidadeId && (
             <div className="flex flex-wrap gap-2">
+              <Botao variante="secundario" onClick={() => setBloquear(true)}>
+                <Ban aria-hidden className="size-5" /> Bloquear horário
+              </Botao>
               <Botao variante="secundario" onClick={() => setEspera(true)}>
                 <ListOrdered aria-hidden className="size-5" /> Lista de espera
               </Botao>
@@ -229,6 +235,14 @@ function ConteudoAgenda() {
           )
         }
       </Estado>
+      {unidadeId && agenda.data && (
+        <Bloqueios
+          profissionais={agenda.data.profissionais}
+          dia={dia}
+          aberto={bloquear}
+          onFechar={() => setBloquear(false)}
+        />
+      )}
       {unidadeId && (
         <ListaEspera
           unidadeId={unidadeId}
@@ -262,7 +276,19 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
   const fechado = agenda.fechados.includes(dia) || !agenda.diasTrabalho.includes(ds);
   const turnos = agenda.profissionais.flatMap((p) => p.horarios.filter((h) => h.diaSemana === ds));
   const doDia = agenda.itens.filter((i) => dataLocal(new Date(i.inicio)) === dia);
-  const bloqueiosDia = agenda.bloqueios.filter((b) => dataLocal(new Date(b.inicio)) === dia);
+  // Bloqueios que tocam o dia (férias de vários dias aparecem recortadas em cada um).
+  const bloqueiosDia = agenda.bloqueios.flatMap((b) => {
+    const r = recorteDoDia({ inicio: new Date(b.inicio), fim: new Date(b.fim) }, dia);
+    if (!r) return [];
+    const abre = new Date(`${dia}T00:00:00-03:00`).getTime();
+    return [
+      {
+        ...b,
+        iniMin: Math.round((r.inicio.getTime() - abre) / 60_000),
+        fimMin: Math.round((r.fim.getTime() - abre) / 60_000),
+      },
+    ];
+  });
   const minimo = Math.min(
     540,
     ...turnos.map((t) => t.inicioMin),
@@ -309,8 +335,11 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
             key={b.id}
             className="absolute inset-x-1 rounded-md border border-dashed border-borda-forte bg-[repeating-linear-gradient(135deg,transparent_0_6px,var(--superficie-3)_6px_8px)] px-2 py-1 text-xs text-tinta-suave"
             style={{
-              top: (minutosDoDia(b.inicio) - inicioGrade) * PX_POR_MIN,
-              height: Math.max(24, (minutosDoDia(b.fim) - minutosDoDia(b.inicio)) * PX_POR_MIN),
+              top: (Math.max(b.iniMin, inicioGrade) - inicioGrade) * PX_POR_MIN,
+              height: Math.max(
+                24,
+                (Math.min(b.fimMin, maximo) - Math.max(b.iniMin, inicioGrade)) * PX_POR_MIN,
+              ),
             }}
           >
             {b.motivo ?? 'Bloqueado'}
@@ -542,6 +571,9 @@ function NovoAgendamento({
   const [dia, setDia] = useState(diaInicial);
   const [profissionalId, setProfissionalId] = useState('');
   const [horario, setHorario] = useState<{ profissionalId: string; inicio: string } | null>(null);
+  const [encaixe, setEncaixe] = useState(false);
+  const [horaEncaixe, setHoraEncaixe] = useState('12:00');
+  const [avisoEncaixe, setAvisoEncaixe] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const duracao = escolhidos.reduce(
     (s, id) => s + (servicos.data?.find((x) => x.id === id)?.duracaoMin ?? 0),
@@ -588,19 +620,27 @@ function NovoAgendamento({
           e.preventDefault();
           setErro(null);
           if (!cliente) return setErro('Escolha o cliente.');
-          if (!horario) return setErro('Escolha um horário livre.');
+          if (encaixe && !profissionalId) return setErro('No encaixe, escolha o barbeiro.');
+          if (!encaixe && !horario) return setErro('Escolha um horário livre.');
           try {
             const r = await agendar.mutateAsync({
               unidadeId,
-              profissionalId: horario.profissionalId,
+              profissionalId: encaixe ? profissionalId : horario!.profissionalId,
               ...clienteParaApi(cliente),
-              inicio: horario.inicio,
+              inicio: encaixe
+                ? new Date(`${dia}T${horaEncaixe}:00-03:00`).toISOString()
+                : horario!.inicio,
               servicoIds: escolhidos,
               origem: 'balcao',
+              ...(encaixe ? { encaixe: true, confirmarEncaixe: !!avisoEncaixe } : {}),
             });
             fechar();
             router.push(`/comandas?id=${r.id}`);
           } catch (er) {
+            if (er instanceof ErroApi && er.codigo === 'encaixe_com_aviso') {
+              setAvisoEncaixe(er.message);
+              return;
+            }
             setErro(
               er instanceof ErroApi
                 ? (er.campos[0]?.mensagem ?? er.message)
@@ -713,12 +753,47 @@ function NovoAgendamento({
             </div>
           </fieldset>
         )}
+        <div className="flex flex-col gap-3 rounded-md border border-borda p-3">
+          <Marcador
+            id="agendar-encaixe"
+            rotulo="Encaixe: digitar o horário, mesmo fora da grade"
+            checked={encaixe}
+            onChange={(e) => {
+              setEncaixe(e.target.checked);
+              setAvisoEncaixe(null);
+            }}
+          />
+          {encaixe && (
+            <Campo
+              id="agendar-hora-encaixe"
+              rotulo="Horário do encaixe"
+              type="time"
+              dica="Com o barbeiro escolhido acima. Fora do expediente ou em cima de bloqueio, o sistema avisa antes."
+              value={horaEncaixe}
+              onChange={(e) => {
+                setHoraEncaixe(e.target.value);
+                setAvisoEncaixe(null);
+              }}
+            />
+          )}
+          {avisoEncaixe && <Aviso tom="aviso">{avisoEncaixe}</Aviso>}
+        </div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Botao variante="secundario" onClick={fechar}>
             Cancelar
           </Botao>
-          <Botao type="submit" carregando={agendar.isPending} disabled={!cliente || !horario}>
-            {horario ? `Agendar ${formatarHora(horario.inicio)}` : 'Agendar'}
+          <Botao
+            type="submit"
+            carregando={agendar.isPending}
+            disabled={!cliente || (encaixe ? !horaEncaixe || escolhidos.length === 0 : !horario)}
+          >
+            {encaixe
+              ? avisoEncaixe
+                ? 'Encaixar mesmo assim'
+                : `Encaixar ${horaEncaixe}`
+              : horario
+                ? `Agendar ${formatarHora(horario.inicio)}`
+                : 'Agendar'}
           </Botao>
         </div>
       </form>

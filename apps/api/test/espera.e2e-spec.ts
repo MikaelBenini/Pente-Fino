@@ -3,6 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import {
   dataLocal,
   FILA_WHATSAPP_ENTRADA,
+  type Agenda,
   type ComandaDetalhe,
   type EsperaDetalhe,
   type TrabalhoWhatsappEntrada,
@@ -218,5 +219,74 @@ describe('tolerância de atraso: "Não veio" e desfazer', () => {
     );
     expect(ag).toMatchObject({ status: 'agendado', atrasou: false });
     await barbeiro.post(`/comandas/${c.id}/desfazer-nao-veio`, {}).expect(409);
+  });
+});
+
+describe('encaixe e bloqueios que repetem', () => {
+  it('encaixe fora do expediente: avisa e só grava quando a recepção confirma', async () => {
+    const corpo = {
+      unidadeId: a.unidadeA,
+      profissionalId: prof,
+      clienteNovo: { nome: 'Encaixe Tarde' },
+      inicio: new Date(`${dia(6)}T23:00:00-03:00`).toISOString(),
+      servicoIds: [corte],
+      encaixe: true,
+    };
+    const aviso = await recepcao.post('/agendamentos', corpo).expect(400);
+    expect(aviso.body.erro).toMatchObject({ codigo: 'encaixe_com_aviso' });
+    expect(aviso.body.erro.mensagem).toContain('fora do expediente');
+    await recepcao.post('/agendamentos', { ...corpo, confirmarEncaixe: true }).expect(201);
+    // Sem encaixe, o mesmo horário é recusado como antes.
+    await recepcao
+      .post('/agendamentos', {
+        ...corpo,
+        encaixe: false,
+        inicio: new Date(`${dia(6)}T23:30:00-03:00`).toISOString(),
+      })
+      .expect(409);
+  });
+
+  it('bloqueio de toda semana: cadastra, aparece na agenda nos dias certos e sai', async () => {
+    const ds = new Date(`${dia(7)}T12:00:00Z`).getUTCDay();
+    const { id } = (
+      await recepcao
+        .post(`/profissionais/${prof}/bloqueios-recorrentes`, {
+          diaSemana: ds,
+          inicioMin: 12 * 60,
+          fimMin: 13 * 60,
+          desde: dia(0),
+          ate: null,
+          motivo: 'Almoço',
+        })
+        .expect(201)
+    ).body as { id: string };
+    await barbeiro
+      .post(`/profissionais/${prof}/bloqueios-recorrentes`, {
+        diaSemana: ds,
+        inicioMin: 600,
+        fimMin: 660,
+        desde: dia(0),
+        ate: null,
+        motivo: null,
+      })
+      .expect(403);
+    expect(
+      (
+        (await recepcao.get(`/profissionais/${prof}/bloqueios-recorrentes`).expect(200)).body as {
+          id: string;
+        }[]
+      ).map((b) => b.id),
+    ).toEqual([id]);
+    const agenda = (
+      await recepcao.get(`/agenda?unidadeId=${a.unidadeA}&de=${dia(7)}&ate=${dia(8)}`).expect(200)
+    ).body as Agenda;
+    const doAlmoco = agenda.bloqueios.filter((b) => b.recorrente);
+    expect(doAlmoco).toHaveLength(1);
+    expect(doAlmoco[0]).toMatchObject({
+      id,
+      motivo: 'Almoço',
+      inicio: new Date(`${dia(7)}T12:00:00-03:00`).toISOString(),
+    });
+    await recepcao.delete(`/profissionais/${prof}/bloqueios-recorrentes/${id}`).expect(204);
   });
 });
