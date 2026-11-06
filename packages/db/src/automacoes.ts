@@ -4,6 +4,10 @@
 import {
   AGENDOU_ATE_DIAS,
   AUTOMACOES,
+  AVISO_CLUBE_DIAS,
+  formatarMoeda,
+  pixCopiaECola,
+  recebimentoPixSchema,
   dataLocal,
   deveConvidarRetorno,
   ehAniversario,
@@ -24,6 +28,13 @@ type Tx = Prisma.TransactionClient;
 
 const primeiroNome = (n: string) => n.trim().split(/\s+/)[0] ?? n;
 const inicioDoDia = (dia: string) => new Date(`${dia}T00:00:00-03:00`);
+/** Coluna date do banco (meia-noite UTC). */
+const dataBanco = (dia: string) => new Date(`${dia}T00:00:00.000Z`);
+const somarDiasIso = (dia: string, n: number) => {
+  const d = new Date(`${dia}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
 
 /** Contas com alguma automação ligada (política conta_rotina_automacoes). */
 export async function contasComAutomacoes(prisma: PrismaClient): Promise<string[]> {
@@ -54,7 +65,7 @@ export async function rodarAutomacoes(
   return naConta(prisma, contaId, async (tx) => {
     const conta = await tx.conta.findUniqueOrThrow({ where: { id: contaId } });
     const config = lerAutomacoes(conta.automacoes);
-    if (!config.retorno && !config.aniversario) return [];
+    if (!config.retorno && !config.aniversario && !config.avisoClube) return [];
     const hoje = dataLocal(agora);
     const mensagens = await mensagensDoBot(tx);
 
@@ -89,7 +100,7 @@ export async function rodarAutomacoes(
       const enviadas = await tx.mensagem.count({
         where: {
           unidadeId,
-          automacao: { in: ['retorno', 'aniversario'] },
+          automacao: { in: ['retorno', 'aniversario', 'clube'] },
           criadoEm: { gte: inicioDoDia(hoje) },
         },
       });
@@ -113,7 +124,9 @@ export async function rodarAutomacoes(
       unidadeId: string,
       cliente: { id: string; nome: string; telefone: string },
       automacao: Automacao,
-      tipo: 'convite_retorno' | 'parabens',
+      tipo: 'convite_retorno' | 'parabens' | 'aviso_clube',
+      valores: Partial<Record<'plano' | 'valor' | 'vencimento', string>> = {},
+      depois: string[] = [],
     ) => {
       const u = await unidadeDoEnvio(unidadeId);
       if (!u || u.enviadas >= LIMITE_AUTOMACOES_DIA) return false;
@@ -123,21 +136,24 @@ export async function rodarAutomacoes(
         barbearia: conta.nome,
         unidade: u.nome,
         link: u.link,
+        ...valores,
       });
-      const m = await tx.mensagem.create({
-        data: {
-          unidadeId,
-          clienteId: cliente.id,
-          telefone: cliente.telefone,
-          direcao: 'saida',
-          texto,
-          status: 'pendente',
-          automacao,
-        },
-        select: { id: true },
-      });
+      for (const t of [texto, ...depois]) {
+        const m = await tx.mensagem.create({
+          data: {
+            unidadeId,
+            clienteId: cliente.id,
+            telefone: cliente.telefone,
+            direcao: 'saida',
+            texto: t,
+            status: 'pendente',
+            automacao,
+          },
+          select: { id: true },
+        });
+        u.ids.push(m.id);
+      }
       u.enviadas++;
-      u.ids.push(m.id);
       return true;
     };
 
@@ -195,6 +211,45 @@ export async function rodarAutomacoes(
         (await enviar(v.unidadeId, cliente, 'retorno', 'convite_retorno'))
       )
         await tx.cliente.update({ where: { id: c.id }, data: { retornoConvidadoEm: agora } });
+    }
+
+    // Clube: aviso ao assinante até 3 dias antes de renovar, um por ciclo, com o Pix.
+    if (config.avisoClube) {
+      const limite = somarDiasIso(hoje, AVISO_CLUBE_DIAS);
+      const adesoes = await tx.adesaoClube.findMany({
+        where: {
+          status: 'ativa',
+          avisoVencimentoEm: null,
+          vencimento: { gt: dataBanco(hoje), lte: dataBanco(limite) },
+          cliente: { consentimentoMsg: true, telefone: { not: null } },
+        },
+        include: { cliente: true, itemClube: true },
+      });
+      const pix = recebimentoPixSchema.safeParse(conta.pix);
+      for (const a of adesoes) {
+        const vencimento = a.vencimento.toISOString().slice(0, 10);
+        const copia = pix.success
+          ? pixCopiaECola({
+              ...pix.data,
+              valor: a.itemClube.valor,
+              identificador: `CLUBE${a.id.slice(0, 8)}`,
+            })
+          : null;
+        const enviou = await enviar(
+          a.itemClube.unidadeId,
+          { id: a.cliente.id, nome: a.cliente.nome, telefone: a.cliente.telefone! },
+          'clube',
+          'aviso_clube',
+          {
+            plano: a.itemClube.nome,
+            valor: formatarMoeda(a.itemClube.valor),
+            vencimento: `${vencimento.slice(8, 10)}/${vencimento.slice(5, 7)}`,
+          },
+          copia ? [copia] : [],
+        );
+        if (enviou)
+          await tx.adesaoClube.update({ where: { id: a.id }, data: { avisoVencimentoEm: agora } });
+      }
     }
     return [...unidades.values()]
       .filter((u) => u.ids.length > 0)

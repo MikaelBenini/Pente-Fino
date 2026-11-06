@@ -448,3 +448,50 @@ describe('saudação no meio da conversa', () => {
     }
   });
 });
+
+describe('opção Clube', () => {
+  const menuComClube: MenuBot = {
+    ...MENU_BOT_PADRAO,
+    menu: {
+      ...MENU_BOT_PADRAO.menu,
+      opcoes: [
+        {
+          id: 'clube',
+          rotulo: 'Clube',
+          resposta: 'Nosso clube:',
+          acao: 'ver_clube',
+          submenu: null,
+        },
+      ],
+    },
+  };
+  it('assinante vê o que resta; quem não é vê os planos', () => {
+    const assinante = fala(
+      { caminho: [], ultimaEm: agora.toISOString(), comAtendente: false },
+      '1',
+      ctx({
+        clube: {
+          planos: [],
+          assinatura: {
+            plano: 'Clube Corte',
+            vencimento: '2026-12-10',
+            emDia: true,
+            restantes: [{ servico: 'Corte', restam: 3 }],
+          },
+        },
+      }),
+      menuComClube,
+    );
+    expect(assinante.respostas[0]).toContain('Seu plano: Clube Corte\nRenova em 10/12.');
+    expect(assinante.respostas[0]).toContain('• Corte: 3');
+    const outro = fala(
+      { caminho: [], ultimaEm: agora.toISOString(), comAtendente: false },
+      '1',
+      ctx({
+        clube: { planos: [{ nome: 'Clube', valor: 9990, inclusos: '4 corte' }], assinatura: null },
+      }),
+      menuComClube,
+    );
+    expect(outro.respostas[0]).toContain('• Clube: R$ 99,90 por mês (4 corte)');
+  });
+});

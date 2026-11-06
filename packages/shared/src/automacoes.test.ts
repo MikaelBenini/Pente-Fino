@@ -52,6 +52,8 @@ it('automações começam desligadas e o que está gravado vale', () => {
     retorno: false,
     retornoDiasPadrao: 30,
     aniversario: false,
+    // O aviso do clube é o que o assinante espera: começa ligado.
+    avisoClube: true,
   });
   expect(lerAutomacoes({ retorno: true })).toMatchObject({ retorno: true, aniversario: false });
 });

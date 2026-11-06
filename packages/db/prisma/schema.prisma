@@ -195,6 +195,7 @@ enum TipoModeloMensagem {
   convite_google
   convite_retorno
   parabens
+  aviso_clube
 
   @@map("tipo_modelo_mensagem")
 }

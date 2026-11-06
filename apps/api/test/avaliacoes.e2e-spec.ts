@@ -313,12 +313,18 @@ describe('pesquisa depois do atendimento', () => {
 });
 
 describe('automações (retorno e aniversário)', () => {
-  it('começam desligadas; só o dono liga; os números trazem as quatro automações', async () => {
+  it('retorno e aniversário começam desligados, o aviso do clube ligado; só o dono muda', async () => {
     const antes = (await gestor.get('/bot/automacoes').expect(200)).body as EstadoAutomacoes;
-    expect(antes.config).toEqual({ retorno: false, retornoDiasPadrao: 30, aniversario: false });
+    expect(antes.config).toEqual({
+      retorno: false,
+      retornoDiasPadrao: 30,
+      aniversario: false,
+      avisoClube: true,
+    });
     expect(antes.numeros.map((n) => n.automacao)).toEqual([
       'retorno',
       'aniversario',
+      'clube',
       'pesquisa',
       'lembrete',
     ]);
@@ -330,7 +336,7 @@ describe('automações (retorno e aniversário)', () => {
     await dono.put('/bot/automacoes', novo).expect(200);
     expect(
       ((await dono.get('/bot/automacoes').expect(200)).body as EstadoAutomacoes).config,
-    ).toEqual(novo);
+    ).toEqual({ ...novo, avisoClube: true }); // app antigo, sem o campo: o aviso fica ligado
     await barbeiro.get('/bot/automacoes').expect(403);
   });
 });

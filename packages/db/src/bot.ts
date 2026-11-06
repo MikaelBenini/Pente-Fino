@@ -31,6 +31,8 @@ import {
   type TrabalhoNotificacao,
   preencher,
   mereceConviteGoogle,
+  type ClubeNoBot,
+  type DataISO,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -43,6 +45,7 @@ import {
 } from './agendar-bot.js';
 import { atenderEquipe, avisarEquipeSobreHorario } from './equipe-whatsapp.js';
 import { notificacaoDoHorario } from './push.js';
+import { adesaoDoCliente, detalharAdesao } from './clube.js';
 import { confirmarPeloCliente } from './lembretes.js';
 import { gravarRespostaPesquisa, pesquisaValida } from './avaliacao.js';
 import { precoServicoVigente } from './vigencia.js';
@@ -137,8 +140,11 @@ export async function contextoDaConversa(
   u: UnidadeDoBotNoBanco,
   agora: Date,
   appUrl: string,
-  extra: Pick<ContextoConversa, 'cliente'> & Partial<ContextoConversa> = { cliente: null },
+  extra: Pick<ContextoConversa, 'cliente'> & Partial<ContextoConversa> & { clienteId?: string } = {
+    cliente: null,
+  },
 ): Promise<ContextoConversa> {
+  const { clienteId, ...resto } = extra;
   const s = await situacaoDaUnidade(tx, u, agora, appUrl);
   const servicos = await tx.servico.findMany({
     where: { ativo: true },
@@ -160,7 +166,45 @@ export async function contextoDaConversa(
     dentroDoHorario: s.aberto,
     link: s.link,
     precos,
-    ...extra,
+    clube: await clubeNoBot(tx, u.id, clienteId, hoje as DataISO),
+    ...resto,
+  };
+}
+
+/** Opção "Clube" do bot: planos ativos da unidade e o plano de quem conversa. */
+async function clubeNoBot(
+  tx: Tx,
+  unidadeId: string,
+  clienteId: string | undefined,
+  hoje: DataISO,
+): Promise<ClubeNoBot> {
+  const planos = await tx.itemClube.findMany({
+    where: { unidadeId, ativo: true },
+    orderBy: { valor: 'asc' },
+    include: { servicos: { include: { servico: { select: { nome: true } } } } },
+  });
+  const a = clienteId ? await adesaoDoCliente(tx, clienteId) : null;
+  const d = a && a.itemClube.unidadeId === unidadeId ? await detalharAdesao(tx, a, hoje) : null;
+  return {
+    planos: planos.map((p) => ({
+      nome: p.nome,
+      valor: p.valor,
+      inclusos: p.servicos
+        .map((s) =>
+          s.quantidade === null
+            ? `${s.servico.nome} à vontade`
+            : `${s.quantidade} ${s.servico.nome.toLowerCase()}`,
+        )
+        .join(', '),
+    })),
+    assinatura: d
+      ? {
+          plano: d.plano.nome,
+          vencimento: d.vencimento,
+          emDia: d.situacao === 'ativa',
+          restantes: d.restantes.map((r) => ({ servico: r.servico, restam: r.restam })),
+        }
+      : null,
   };
 }
 
@@ -479,6 +523,7 @@ export async function atenderMensagem(
         const ctx = await contextoDaConversa(tx, u, agora, opcoes.appUrl, {
           // Só cumprimenta pelo nome quem a barbearia já conhecia.
           cliente: clienteNovo ? null : cliente.nome,
+          clienteId: cliente.id,
           pedirConsentimento: cliente.consentimentoEm === null && !conversouAntes,
           agendarPelaConversa: await podeAgendarPelaConversa(tx, unidadeId, dataLocal(agora)),
         });

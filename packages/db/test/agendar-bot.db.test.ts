@@ -1,6 +1,7 @@
 // Etapa 11: agendar pela conversa do WhatsApp, do "oi" ao horário marcado.
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { formatarMoeda } from '@pente-fino/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   atenderMensagem,
@@ -12,6 +13,7 @@ import {
   primeirasRotinas,
   rodarRotinaEquipe,
   contasComAutomacoes,
+  contextoDaConversa,
   criarPrisma,
   numerosDasAutomacoes,
   rodarAutomacoes,
@@ -1073,6 +1075,88 @@ describe('automações: retorno e aniversário', () => {
       enviadas: 1,
       respondidas: 1,
       agendamentos: 0,
+    });
+  });
+});
+
+describe('clube: aviso de vencimento e opção no bot', () => {
+  const rotina = new Date('2026-12-01T13:00:00Z');
+  const tel = '5511977771212';
+  let adesaoId = '';
+
+  it('3 dias antes de renovar: aviso com plano, valor e data, e o Pix copia e cola; um por ciclo', async () => {
+    await fala(tel, 'oi', new Date('2026-11-20T12:00:00Z'));
+    adesaoId = await naMinhaConta(async (tx) => {
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: tel } });
+      await tx.cliente.update({ where: { id: c.id }, data: { consentimentoMsg: true } });
+      await tx.conta.update({
+        where: { id: conta },
+        data: { pix: { chave: 'pix@navalha.dev', nome: 'Barbearia Navalha', cidade: 'Sao Paulo' } },
+      });
+      const plano = await tx.itemClube.create({
+        data: {
+          unidadeId,
+          tipo: 'assinatura',
+          nome: 'Clube Navalha',
+          valor: 9990,
+          servicos: { create: [{ servicoId: corte, quantidade: 4 }] },
+        },
+      });
+      const a = await tx.adesaoClube.create({
+        data: {
+          clienteId: c.id,
+          itemClubeId: plano.id,
+          inicio: new Date('2026-11-03T00:00:00Z'),
+          vencimento: new Date('2026-12-03T00:00:00Z'),
+        },
+      });
+      return a.id;
+    });
+    await rodarAutomacoes(prisma, conta, rotina, 'http://app.teste');
+    const msgs = await naMinhaConta((tx) =>
+      tx.mensagem.findMany({
+        where: { telefone: tel, automacao: 'clube' },
+        orderBy: { criadoEm: 'asc' },
+      }),
+    );
+    expect(msgs).toHaveLength(2);
+    expect(msgs[0]!.texto).toBe(
+      'Oi, Cliente! Seu plano Clube Navalha na Barbearia Navalha renova em 03/12: R$ 99,90. Dá para pagar pelo Pix abaixo e mostrar o comprovante na recepção.'.replace(
+        'R$ 99,90',
+        formatarMoeda(9990),
+      ),
+    );
+    expect(msgs[1]!.texto).toMatch(/^000201.*0115pix@navalha\.dev/);
+    await rodarAutomacoes(prisma, conta, new Date(rotina.getTime() + 3_600_000));
+    expect(
+      await naMinhaConta((tx) =>
+        tx.mensagem.count({ where: { telefone: tel, automacao: 'clube' } }),
+      ),
+    ).toBe(2);
+    expect(
+      (await naMinhaConta((tx) => tx.adesaoClube.findUniqueOrThrow({ where: { id: adesaoId } })))
+        .avisoVencimentoEm,
+    ).not.toBeNull();
+  });
+
+  it('o contexto do bot traz o plano do assinante e os planos da unidade', async () => {
+    const ctx = await naMinhaConta(async (tx) => {
+      const u = await tx.unidade.findUniqueOrThrow({
+        where: { id: unidadeId },
+        include: { profissionais: { include: { horarios: true } }, botConexao: true },
+      });
+      const c = await tx.cliente.findFirstOrThrow({ where: { telefone: tel } });
+      return contextoDaConversa(tx, u, rotina, 'http://app.teste', {
+        cliente: null,
+        clienteId: c.id,
+      });
+    });
+    expect(ctx.clube?.planos.map((p) => p.nome)).toContain('Clube Navalha');
+    expect(ctx.clube?.assinatura).toMatchObject({
+      plano: 'Clube Navalha',
+      vencimento: '2026-12-03',
+      emDia: true,
+      restantes: [{ servico: 'Corte', restam: 4 }],
     });
   });
 });
