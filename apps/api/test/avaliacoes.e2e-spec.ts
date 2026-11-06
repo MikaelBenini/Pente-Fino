@@ -35,7 +35,9 @@ let prof = '';
 let corte = '';
 let instancia = '';
 const hoje = dataLocal(new Date());
-const periodo = `de=${hoje.slice(0, 7)}-01&ate=${hoje}`;
+// A pesquisa sai 1 h depois do fechamento: perto da meia-noite a resposta cai no dia seguinte.
+const ateAmanha = dataLocal(new Date(Date.now() + 2 * 3_600_000));
+const periodo = `de=${hoje.slice(0, 7)}-01&ate=${ateAmanha}`;
 
 /** Cliente que aceitou avisos e já escreveu para a unidade (pode receber a pesquisa). */
 async function clienteDoWhatsapp(telefone: string, consentimento = true) {
@@ -192,8 +194,12 @@ describe('pesquisa depois do atendimento', () => {
     const depois = (min: number) => new Date(enviarEm.getTime() + min * 60_000);
     const r1 = await responder(telefone, '2', depois(10));
     if (r1.tipo !== 'respondida') throw new Error(r1.tipo);
+    // Nota 2: o worker agenda o aviso para dono e gestor (espera, caso o cliente pare aqui)...
+    expect(r1.notaBaixa).toEqual({ avaliacaoId, concluida: false });
     await responder(telefone, '4', depois(11));
-    await responder(telefone, 'Demorou para começar.', depois(12));
+    const fim = await responder(telefone, 'Demorou para começar.', depois(12));
+    // ...e no fim da pesquisa, já com o comentário.
+    expect(fim).toMatchObject({ notaBaixa: { avaliacaoId, concluida: true } });
     const av = await naConta(prisma, a.contaId, (tx) =>
       tx.avaliacao.findUnique({ where: { id: avaliacaoId } }),
     );

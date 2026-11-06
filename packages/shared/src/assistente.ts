@@ -9,6 +9,10 @@ export const AVISOS_EQUIPE = [
   'proximoCliente',
   'agendaDoDia',
   'resumoDoDia',
+  // Gestão (dono e gestor):
+  'faltas',
+  'notaBaixa',
+  'resumoGestao',
 ] as const;
 export type AvisoEquipe = (typeof AVISOS_EQUIPE)[number];
 export type AvisosEquipe = Record<AvisoEquipe, boolean>;
@@ -19,7 +23,31 @@ export const NOME_AVISO_EQUIPE: Readonly<Record<AvisoEquipe, string>> = {
   proximoCliente: 'Próximo cliente, 15 minutos antes',
   agendaDoDia: 'Agenda do dia, antes de começar',
   resumoDoDia: 'Resumo do dia, no fim do expediente',
+  faltas: 'Cliente que faltou',
+  notaBaixa: 'Nota 1 ou 2 na pesquisa',
+  resumoGestao: 'Resumo da unidade, no fim do dia',
 };
+
+/** Avisos de quem atende (está na agenda). */
+export const AVISOS_PROFISSIONAL: readonly AvisoEquipe[] = [
+  'horarioNovo',
+  'mudancas',
+  'proximoCliente',
+  'agendaDoDia',
+  'resumoDoDia',
+];
+/** Avisos de dono e gestor. */
+export const AVISOS_GESTAO: readonly AvisoEquipe[] = ['faltas', 'notaBaixa', 'resumoGestao'];
+
+/** Quais avisos a pessoa pode escolher: os da agenda se atende, os de gestão se é dono/gestor. */
+export function avisosDisponiveis(d: { profissional: boolean; gestao: boolean }): AvisoEquipe[] {
+  return [...(d.profissional ? AVISOS_PROFISSIONAL : []), ...(d.gestao ? AVISOS_GESTAO : [])];
+}
+
+/** Nota que vira aviso para dono e gestor. */
+export const NOTA_BAIXA_ATE = 2;
+/** Sem o fim da pesquisa (cliente parou de responder), o aviso de nota baixa sai depois disto. */
+export const NOTA_BAIXA_ESPERA_MIN = 15;
 
 export const AVISOS_EQUIPE_PADRAO: Readonly<AvisosEquipe> = {
   horarioNovo: true,
@@ -27,6 +55,9 @@ export const AVISOS_EQUIPE_PADRAO: Readonly<AvisosEquipe> = {
   proximoCliente: true,
   agendaDoDia: true,
   resumoDoDia: true,
+  faltas: true,
+  notaBaixa: true,
+  resumoGestao: true,
 };
 
 export function lerAvisosEquipe(valor: unknown): AvisosEquipe {
@@ -46,7 +77,7 @@ const FOLGA_DEPOIS_MIN = 30;
 
 export type ComandoEquipe =
   | { tipo: 'ativar'; codigo: string }
-  | { tipo: 'agenda' | 'amanha' | 'comissao' | 'parar' | 'ligar' | 'ajuda' };
+  | { tipo: 'agenda' | 'amanha' | 'comissao' | 'resumo' | 'parar' | 'ligar' | 'ajuda' };
 
 const sem = (t: string) =>
   t
@@ -64,6 +95,7 @@ export function lerComandoEquipe(entrada: string): ComandoEquipe | null {
   if (/^(agenda|hoje|agenda de hoje|minha agenda)$/.test(t)) return { tipo: 'agenda' };
   if (/^(amanha|agenda de amanha)$/.test(t)) return { tipo: 'amanha' };
   if (/^(comissao|minha comissao|comissoes)$/.test(t)) return { tipo: 'comissao' };
+  if (/^(resumo|resumo do dia|resumo de hoje|caixa)$/.test(t)) return { tipo: 'resumo' };
   if (/^(parar|pare|sair|desligar)$/.test(t)) return { tipo: 'parar' };
   if (/^(ligar|voltar|religar)$/.test(t)) return { tipo: 'ligar' };
   if (/^(ajuda|menu|oi|ola|comandos)$/.test(t)) return { tipo: 'ajuda' };
@@ -101,6 +133,24 @@ export const TEXTO_AJUDA_EQUIPE = [
   'PARAR · para de mandar avisos',
 ].join('\n');
 
+/** Ajuda conforme quem é: quem atende, quem gere ou os dois. */
+export function textoAjudaEquipe(d: { profissional: boolean; gestao: boolean }): string {
+  if (d.profissional && !d.gestao) return TEXTO_AJUDA_EQUIPE;
+  return [
+    'Assistente da equipe. Responda:',
+    '',
+    ...(d.profissional
+      ? [
+          'AGENDA · seus horários de hoje',
+          'AMANHÃ · seus horários de amanhã',
+          'COMISSÃO · sua comissão do mês',
+        ]
+      : []),
+    'RESUMO · como está o dia nas unidades',
+    'PARAR · para de mandar avisos',
+  ].join('\n');
+}
+
 export function textoAgendaEquipe(rotulo: string, horarios: readonly HorarioDaAgenda[]): string {
   if (horarios.length === 0) return `${rotulo}: nenhum horário marcado.`;
   return [
@@ -135,6 +185,72 @@ export function textoAvisoEquipe(
   return `❌ Horário cancelado:\n${linha}`;
 }
 
+// ─── Gestão: falta, nota baixa e resumo da unidade ────────────────────────
+
+export function textoFaltaGestao(f: {
+  unidade: string;
+  cliente: string;
+  profissional: string;
+  inicio: string;
+}): string {
+  return `🚫 Falta · ${f.unidade}\n${f.cliente} não veio às ${formatarHora(f.inicio)} com ${f.profissional}.`;
+}
+
+export function textoNotaBaixa(n: {
+  unidade: string;
+  profissional: string;
+  cliente: string;
+  notaAtendimento: number | null;
+  notaBarbearia: number | null;
+  comentario: string | null;
+  /** wa.me do cliente, para o dono falar com ele; null quando não há número. */
+  link: string | null;
+}): string {
+  const notas = [
+    n.notaAtendimento !== null ? `atendimento ${n.notaAtendimento}` : null,
+    n.notaBarbearia !== null ? `barbearia ${n.notaBarbearia}` : null,
+  ].filter(Boolean);
+  return [
+    `⚠️ Nota baixa · ${n.unidade}`,
+    `${n.cliente}, atendido por ${n.profissional}: ${notas.join(', ')}`,
+    ...(n.comentario ? [`"${n.comentario}"`] : []),
+    ...(n.link ? ['', `Falar com o cliente: ${n.link}`] : []),
+  ].join('\n');
+}
+
+export interface ResumoUnidade {
+  unidade: string;
+  /** Total líquido das comandas fechadas hoje. */
+  faturamento: number;
+  /** Comandas fechadas com ao menos um serviço. */
+  clientes: number;
+  faltas: number;
+  notasBaixas: number;
+  /** Comandas atendidas esperando a recepção fechar (em atendimento, confirmada, pendente, reaberta). */
+  abertas: number;
+}
+
+export function textoResumoGestao(rotulo: string, unidades: readonly ResumoUnidade[]): string {
+  const bloco = (u: ResumoUnidade) => [
+    ...(unidades.length > 1 ? [`🏠 ${u.unidade}`] : []),
+    `💰 ${formatarMoeda(u.faturamento)} em ${u.clientes} ${u.clientes === 1 ? 'cliente' : 'clientes'}${u.clientes > 0 ? ` · ticket ${formatarMoeda(Math.round(u.faturamento / u.clientes))}` : ''}`,
+    ...(u.faltas > 0 ? [`🚫 ${u.faltas} ${u.faltas === 1 ? 'falta' : 'faltas'}`] : []),
+    ...(u.notasBaixas > 0
+      ? [`⚠️ ${u.notasBaixas} ${u.notasBaixas === 1 ? 'nota baixa' : 'notas baixas'}`]
+      : []),
+    ...(u.abertas > 0
+      ? [
+          `⏳ ${u.abertas} ${u.abertas === 1 ? 'comanda esperando fechamento' : 'comandas esperando fechamento'}`,
+        ]
+      : []),
+  ];
+  return [
+    `${rotulo}${unidades.length === 1 ? ` · ${unidades[0]!.unidade}` : ''}`,
+    '',
+    ...unidades.flatMap((u, i) => [...(i > 0 ? [''] : []), ...bloco(u)]),
+  ].join('\n');
+}
+
 // ─── Perfil: ligar e configurar ───────────────────────────────────────────
 
 export interface EstadoAssistente {
@@ -148,6 +264,8 @@ export interface EstadoAssistente {
   /** Número confirmado do profissional. */
   telefone: string | null;
   avisos: AvisosEquipe;
+  /** Os avisos que esta pessoa pode escolher (agenda, gestão ou os dois). */
+  disponiveis: AvisoEquipe[];
   codigoExpiraEm: string | null;
 }
 
@@ -166,6 +284,9 @@ export const avisosEquipeSchema = z
     proximoCliente: z.boolean(),
     agendaDoDia: z.boolean(),
     resumoDoDia: z.boolean(),
+    faltas: z.boolean(),
+    notaBaixa: z.boolean(),
+    resumoGestao: z.boolean(),
   })
   .partial();
 
@@ -183,7 +304,7 @@ export function momentoProximoCliente(inicio: Date, marcadoEm: Date, agora: Date
   return quando > agora && quando > marcadoEm ? quando : null;
 }
 
-export type RotinaEquipe = 'agenda' | 'resumo';
+export type RotinaEquipe = 'agenda' | 'resumo' | 'gestao';
 
 /**
  * Próxima agenda do dia (1 h antes do primeiro turno) ou resumo (15 min depois do último), a

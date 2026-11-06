@@ -10,8 +10,16 @@ import {
   lerComandoEquipe,
   podeAvisarAgora,
   proximaRotina,
+  calcularIndicadores,
+  NOTA_BAIXA_ATE,
   rotuloDoDia,
   TEXTO_AJUDA_EQUIPE,
+  textoAjudaEquipe,
+  textoFaltaGestao,
+  textoNotaBaixa,
+  textoResumoGestao,
+  type NotaBaixaParaGestao,
+  type ResumoUnidade,
   textoAgendaEquipe,
   textoAvisoEquipe,
   textoComissaoEquipe,
@@ -133,7 +141,7 @@ async function responderEquipe(
   if (comando?.tipo === 'parar') {
     await tx.assistenteEquipe.update({ where: { id: a.id }, data: { ativo: false } });
     return [
-      'Avisos desligados. Você ainda pode perguntar AGENDA, AMANHÃ e COMISSÃO. Para voltar a receber, responda LIGAR.',
+      'Avisos desligados. Você ainda pode fazer perguntas (responda AJUDA). Para voltar a receber, responda LIGAR.',
     ];
   }
   if (comando?.tipo === 'ligar') {
@@ -142,10 +150,21 @@ async function responderEquipe(
   }
 
   const prof = await tx.profissional.findFirst({
-    where: { usuarioId: a.usuarioId, unidadeId: a.unidadeId },
+    where: { usuarioId: a.usuarioId, unidadeId: a.unidadeId, ativo: true },
   });
-  if (!prof) return ['Você não está mais na agenda desta unidade. Fale com o dono da barbearia.'];
+  const gestao = (await unidadesQueGere(tx, a.usuarioId)).length > 0;
+  const quem = { profissional: !!prof, gestao };
   const hoje = dataLocal(d.agora);
+  if (comando?.tipo === 'resumo' && gestao)
+    return [
+      (await textoDoResumoGestao(tx, a.usuarioId, hoje, 'Hoje até agora')) ??
+        'Nenhuma unidade ativa.',
+    ];
+  if (!prof) {
+    if (!gestao)
+      return ['Você não está mais na agenda desta unidade. Fale com o dono da barbearia.'];
+    return [textoAjudaEquipe(quem)];
+  }
 
   if (comando?.tipo === 'agenda' || comando?.tipo === 'amanha') {
     const dia = comando.tipo === 'agenda' ? hoje : somarDias(hoje, 1);
@@ -178,7 +197,7 @@ async function responderEquipe(
       ),
     ];
   }
-  return [TEXTO_AJUDA_EQUIPE];
+  return [textoAjudaEquipe(quem)];
 }
 
 export type AvisoParaEquipe = { contaId: string; instancia: string; mensagemIds: string[] } | null;
@@ -349,15 +368,35 @@ export async function primeirasRotinas(
 ): Promise<TrabalhoAgendado<RotinaDaEquipe>[]> {
   const a = await tx.assistenteEquipe.findUnique({ where: { id: assistenteId } });
   if (!a) return [];
+  const trabalhos: TrabalhoAgendado<RotinaDaEquipe>[] = [];
+  for (const rotina of ['agenda', 'resumo', 'gestao'] as const) {
+    const turnos = await turnosDaRotina(tx, a, rotina);
+    const p = turnos && proximaRotina(turnos, rotina, agora);
+    if (p) trabalhos.push(rotinaAgendada(contaId, assistenteId, rotina, p, agora));
+  }
+  return trabalhos;
+}
+
+/**
+ * Expediente que marca a hora da rotina: o do profissional (agenda e resumo) ou o da unidade
+ * do número, juntando os turnos de todos (gestão, só dono e gestor). null = não é para ele.
+ */
+async function turnosDaRotina(
+  tx: Tx,
+  a: { usuarioId: string; unidadeId: string },
+  rotina: RotinaEquipe,
+) {
+  if (rotina === 'gestao') {
+    if ((await unidadesQueGere(tx, a.usuarioId)).length === 0) return null;
+    return tx.horarioProfissional.findMany({
+      where: { profissional: { unidadeId: a.unidadeId, ativo: true } },
+    });
+  }
   const prof = await tx.profissional.findFirst({
-    where: { usuarioId: a.usuarioId, unidadeId: a.unidadeId },
+    where: { usuarioId: a.usuarioId, unidadeId: a.unidadeId, ativo: true },
     include: { horarios: true },
   });
-  if (!prof) return [];
-  return (['agenda', 'resumo'] as const).flatMap((rotina) => {
-    const p = proximaRotina(prof.horarios, rotina, agora);
-    return p ? [rotinaAgendada(contaId, assistenteId, rotina, p, agora)] : [];
-  });
+  return prof?.horarios ?? null;
 }
 
 const rotinaAgendada = (
@@ -384,12 +423,9 @@ export async function rodarRotinaEquipe(
   return naConta(prisma, job.contaId, async (tx) => {
     const a = await tx.assistenteEquipe.findUnique({ where: { id: job.assistenteId } });
     if (!a?.confirmadoEm || !a.telefone) return { aviso: null, proxima: null };
-    const prof = await tx.profissional.findFirst({
-      where: { usuarioId: a.usuarioId, unidadeId: a.unidadeId, ativo: true },
-      include: { horarios: true },
-    });
-    if (!prof) return { aviso: null, proxima: null };
-    const p = proximaRotina(prof.horarios, job.rotina, new Date(agora.getTime() + 60_000));
+    const turnos = await turnosDaRotina(tx, a, job.rotina);
+    if (!turnos) return { aviso: null, proxima: null };
+    const p = proximaRotina(turnos, job.rotina, new Date(agora.getTime() + 60_000));
     const hoje = dataLocal(agora);
     // Sem expediente nos próximos 14 dias: confere de novo em 7 (sem mandar nada nesse dia).
     const proxima = rotinaAgendada(
@@ -405,13 +441,20 @@ export async function rodarRotinaEquipe(
     // Worker parado e trabalho atrasado: não manda a agenda de outro dia.
     if (job.dia !== hoje) return { aviso: null, proxima };
 
-    const instancia = await podeMandar(
-      tx,
-      a,
-      job.rotina === 'agenda' ? 'agendaDoDia' : 'resumoDoDia',
-      agora,
-    );
+    const aviso = (
+      { agenda: 'agendaDoDia', resumo: 'resumoDoDia', gestao: 'resumoGestao' } as const
+    )[job.rotina];
+    const instancia = await podeMandar(tx, a, aviso, agora);
     if (!instancia) return { aviso: null, proxima };
+    if (job.rotina === 'gestao') {
+      const texto = await textoDoResumoGestao(tx, a.usuarioId, hoje, 'Resumo de hoje');
+      if (!texto) return { aviso: null, proxima };
+      const id = await gravarAviso(tx, { unidadeId: a.unidadeId, telefone: a.telefone }, texto);
+      return { aviso: { contaId: job.contaId, instancia, mensagemIds: [id] }, proxima };
+    }
+    const prof = await tx.profissional.findFirstOrThrow({
+      where: { usuarioId: a.usuarioId, unidadeId: a.unidadeId, ativo: true },
+    });
     let texto: string;
     if (job.rotina === 'agenda') {
       const horarios = await agendaDoDia(tx, prof.id, hoje);
@@ -439,5 +482,197 @@ export async function rodarRotinaEquipe(
     }
     const id = await gravarAviso(tx, { unidadeId: a.unidadeId, telefone: a.telefone }, texto);
     return { aviso: { contaId: job.contaId, instancia, mensagemIds: [id] }, proxima };
+  });
+}
+
+// ─── Gestão: dono e gestor ────────────────────────────────────────────────
+
+/** Unidades ativas que a pessoa gere (dono em todas; gestor nas dele, ou em todas sem unidade). */
+export async function unidadesQueGere(tx: Tx, usuarioId: string): Promise<string[]> {
+  const papeis = await tx.papelUsuario.findMany({
+    where: { usuarioId, papel: { in: ['dono', 'gestor'] }, usuario: { ativo: true } },
+  });
+  if (papeis.length === 0) return [];
+  const todas = papeis.some((p) => p.papel === 'dono' || p.unidadeId === null);
+  const unidades = await tx.unidade.findMany({
+    where: {
+      ativa: true,
+      ...(todas ? {} : { id: { in: papeis.map((p) => p.unidadeId!) } }),
+    },
+    orderBy: { criadoEm: 'asc' },
+    select: { id: true },
+  });
+  return unidades.map((u) => u.id);
+}
+
+/** Como está o dia em cada unidade: faturamento e clientes (só comanda fechada), faltas, notas. */
+export async function resumoGestao(
+  tx: Tx,
+  unidadeIds: readonly string[],
+  dia: string,
+): Promise<ResumoUnidade[]> {
+  const doDia = { gte: inicioDoDia(dia), lt: inicioDoDia(somarDias(dia, 1)) };
+  const unidades = await tx.unidade.findMany({
+    where: { id: { in: [...unidadeIds] } },
+    orderBy: { criadoEm: 'asc' },
+    select: { id: true, nome: true },
+  });
+  return Promise.all(
+    unidades.map(async (u) => {
+      const fechadas = await tx.comanda.findMany({
+        where: { unidadeId: u.id, status: 'fechada', fechadaEm: doDia },
+        include: { itens: true },
+      });
+      const ind = calcularIndicadores(fechadas);
+      const [faltas, notasBaixas, abertas] = await Promise.all([
+        tx.agendamento.count({ where: { unidadeId: u.id, status: 'falta', inicio: doDia } }),
+        tx.avaliacao.count({
+          where: {
+            unidadeId: u.id,
+            respondidaEm: doDia,
+            OR: [
+              { notaAtendimento: { lte: NOTA_BAIXA_ATE } },
+              { notaBarbearia: { lte: NOTA_BAIXA_ATE } },
+            ],
+          },
+        }),
+        tx.comanda.count({
+          where: {
+            unidadeId: u.id,
+            status: { in: ['em_atendimento', 'confirmada', 'pendente', 'reaberta'] },
+          },
+        }),
+      ]);
+      return {
+        unidade: u.nome,
+        faturamento: ind.faturamento,
+        clientes: ind.clientes,
+        faltas,
+        notasBaixas,
+        abertas,
+      };
+    }),
+  );
+}
+
+async function textoDoResumoGestao(tx: Tx, usuarioId: string, dia: string, rotulo: string) {
+  const unidades = await unidadesQueGere(tx, usuarioId);
+  if (unidades.length === 0) return null;
+  return textoResumoGestao(rotulo, await resumoGestao(tx, unidades, dia));
+}
+
+/**
+ * Manda o mesmo aviso a cada dono e gestor da unidade que ligou o assistente e quer este aviso
+ * (pelo número da unidade em que cada um ligou). Devolve o que pôr na fila.
+ */
+async function avisarGestao(
+  tx: Tx,
+  unidadeId: string,
+  aviso: 'faltas' | 'notaBaixa',
+  texto: string,
+  agora: Date,
+): Promise<NonNullable<AvisoParaEquipe>[]> {
+  const assistentes = await tx.assistenteEquipe.findMany({
+    where: { ativo: true, confirmadoEm: { not: null }, telefone: { not: null } },
+  });
+  const saidas: NonNullable<AvisoParaEquipe>[] = [];
+  for (const a of assistentes) {
+    if (!(await unidadesQueGere(tx, a.usuarioId)).includes(unidadeId)) continue;
+    const instancia = await podeMandar(tx, a, aviso, agora);
+    if (!instancia) continue;
+    const id = await gravarAviso(tx, { unidadeId: a.unidadeId, telefone: a.telefone! }, texto);
+    saidas.push({ contaId: a.contaId, instancia, mensagemIds: [id] });
+  }
+  return saidas;
+}
+
+/** Cliente marcado como falta: dono e gestor da unidade ficam sabendo. */
+export async function avisarFaltaParaGestao(
+  tx: Tx,
+  agendamentoId: string,
+  agora = new Date(),
+): Promise<NonNullable<AvisoParaEquipe>[]> {
+  const ag = await tx.agendamento.findUnique({
+    where: { id: agendamentoId },
+    include: {
+      cliente: { select: { nome: true } },
+      profissional: { include: { usuario: { select: { nome: true } } } },
+      unidade: { select: { nome: true } },
+    },
+  });
+  if (ag?.status !== 'falta') return [];
+  return avisarGestao(
+    tx,
+    ag.unidadeId,
+    'faltas',
+    textoFaltaGestao({
+      unidade: ag.unidade.nome,
+      cliente: ag.cliente?.nome ?? 'Cliente sem cadastro',
+      profissional: primeiroNome(ag.profissional.usuario.nome),
+      inicio: ag.inicio.toISOString(),
+    }),
+    agora,
+  );
+}
+
+/** Nota 1 ou 2 respondida agora: o trabalho a pôr na fila (já no fim da pesquisa, ou depois da espera). */
+export function trabalhoNotaBaixa(
+  contaId: string,
+  avaliacaoId: string,
+  concluida: boolean,
+  esperaMs: number,
+): TrabalhoAgendado<NotaBaixaParaGestao> {
+  return {
+    dados: { tipo: 'nota_baixa', contaId, avaliacaoId },
+    atrasoMs: concluida ? 0 : esperaMs,
+    jobId: `nota_baixa_${avaliacaoId}_${concluida ? 'fim' : 'espera'}`,
+  };
+}
+
+/**
+ * Nota baixa para dono e gestor, com o comentário e o link para falar com o cliente.
+ * Sai uma vez por avaliação (`gestao_avisada_em`), seja no fim da pesquisa ou depois da espera.
+ */
+export async function avisarNotaBaixa(
+  prisma: PrismaClient,
+  job: Omit<NotaBaixaParaGestao, 'tipo'>,
+  agora = new Date(),
+): Promise<NonNullable<AvisoParaEquipe>[]> {
+  return naConta(prisma, job.contaId, async (tx) => {
+    const marcada = await tx.avaliacao.updateMany({
+      where: {
+        id: job.avaliacaoId,
+        gestaoAvisadaEm: null,
+        OR: [
+          { notaAtendimento: { lte: NOTA_BAIXA_ATE } },
+          { notaBarbearia: { lte: NOTA_BAIXA_ATE } },
+        ],
+      },
+      data: { gestaoAvisadaEm: agora },
+    });
+    if (marcada.count === 0) return [];
+    const av = await tx.avaliacao.findUniqueOrThrow({
+      where: { id: job.avaliacaoId },
+      include: {
+        cliente: { select: { nome: true } },
+        profissional: { include: { usuario: { select: { nome: true } } } },
+        unidade: { select: { nome: true } },
+      },
+    });
+    return avisarGestao(
+      tx,
+      av.unidadeId,
+      'notaBaixa',
+      textoNotaBaixa({
+        unidade: av.unidade.nome,
+        profissional: primeiroNome(av.profissional.usuario.nome),
+        cliente: av.cliente.nome,
+        notaAtendimento: av.notaAtendimento,
+        notaBarbearia: av.notaBarbearia,
+        comentario: av.comentario,
+        link: `https://wa.me/${av.telefone.replace(/\D/g, '')}`,
+      }),
+      agora,
+    );
   });
 }

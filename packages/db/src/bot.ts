@@ -24,6 +24,7 @@ import {
   type SessaoBot,
   type StatusConexaoWhatsapp,
   type TurnoBot,
+  NOTA_BAIXA_ATE,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -328,6 +329,8 @@ export type ResultadoAtendimento =
       agendamento?: { id: string; inicio: string };
       /** Alguém da equipe ligou o assistente agora: o worker agenda a agenda e o resumo do dia. */
       assistenteAtivado?: string;
+      /** Nota 1 ou 2 na pesquisa: o worker agenda o aviso para dono e gestor. */
+      notaBaixa?: { avaliacaoId: string; concluida: boolean };
     };
 
 const NOME_PADRAO_CLIENTE = 'Cliente do WhatsApp';
@@ -475,6 +478,20 @@ export async function atenderMensagem(
           },
         });
         if (r.avaliacao) await gravarRespostaPesquisa(tx, r.avaliacao, agora);
+        // Nota 1 ou 2 ainda sem aviso: o worker avisa dono e gestor (no fim ou depois da espera).
+        const notaBaixa = r.avaliacao
+          ? await tx.avaliacao.findFirst({
+              where: {
+                id: r.avaliacao.avaliacaoId,
+                gestaoAvisadaEm: null,
+                OR: [
+                  { notaAtendimento: { lte: NOTA_BAIXA_ATE } },
+                  { notaBarbearia: { lte: NOTA_BAIXA_ATE } },
+                ],
+              },
+              select: { id: true },
+            })
+          : null;
 
         // Pediu atendente agora: entra na fila da tela Conversas; o bot voltou: sai dela.
         const atendenteDesde = r.sessao.comAtendente ? (salva?.atendenteDesde ?? agora) : null;
@@ -531,6 +548,9 @@ export async function atenderMensagem(
           acao: r.acao,
           consentimento: r.consentimento,
           ...(r.agendamento ? { agendamento: r.agendamento } : {}),
+          ...(notaBaixa
+            ? { notaBaixa: { avaliacaoId: notaBaixa.id, concluida: r.avaliacao!.concluida } }
+            : {}),
         } as const;
       },
       // O agendamento pela conversa consulta a agenda de vários dias numa mensagem só.

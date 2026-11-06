@@ -4,6 +4,8 @@ import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   atenderMensagem,
+  avisarFaltaParaGestao,
+  avisarNotaBaixa,
   avisarProximoCliente,
   criarAgendamentoNoBanco,
   lembretesDoAgendamento,
@@ -627,5 +629,114 @@ describe('assistente da equipe', () => {
         ),
       ).toEqual({ aviso: null, proxima: null });
     });
+  });
+});
+
+describe('gestão no assistente (dono e gestor)', () => {
+  const dona = '5511933330000';
+  const dia = '2026-12-17'; // quinta
+  const quando = new Date('2026-12-17T12:30:00Z'); // 09:30
+  let assistenteId = '';
+  let agId = '';
+  const texto = (id: string) =>
+    naMinhaConta((tx) => tx.mensagem.findUniqueOrThrow({ where: { id } })).then((m) => m.texto);
+
+  beforeAll(async () => {
+    await naMinhaConta(async (tx) => {
+      const u = await tx.usuario.create({
+        data: { nome: 'Ana Souza', email: `ana-${conta}@teste.dev` },
+      });
+      await tx.papelUsuario.create({ data: { usuarioId: u.id, papel: 'dono' } });
+      const a = await tx.assistenteEquipe.create({
+        data: { usuarioId: u.id, unidadeId, telefone: dona, confirmadoEm: quando, ativo: true },
+      });
+      assistenteId = a.id;
+      const c = await tx.cliente.create({
+        data: { nome: 'Marcos Prado', telefone: '5511922220000' },
+      });
+      const r = await criarAgendamentoNoBanco(tx, {
+        unidadeId,
+        profissionalId,
+        clienteId: c.id,
+        inicio: new Date(`${dia}T13:00:00.000Z`),
+        servicoIds: [corte],
+        origem: 'balcao',
+        criadoPorId: null,
+      });
+      agId = r.agendamentoId;
+    });
+  });
+
+  it('dona fora da agenda: RESUMO responde; a ajuda não fala de agenda nem comissão', async () => {
+    expect(await fala(dona, 'resumo', quando)).toMatch(/^Hoje até agora · Centro\n\n💰 R\$/);
+    const ajuda = await fala(dona, 'agenda', quando);
+    expect(ajuda).toContain('RESUMO');
+    expect(ajuda).not.toContain('COMISSÃO');
+  });
+
+  it('falta marcada: a dona recebe com o nome do cliente e de quem atenderia', async () => {
+    const avisos = await naMinhaConta(async (tx) => {
+      await tx.agendamento.update({ where: { id: agId }, data: { status: 'falta' } });
+      return avisarFaltaParaGestao(tx, agId, quando);
+    });
+    expect(avisos).toHaveLength(1);
+    expect(await texto(avisos[0]!.mensagemIds[0]!)).toBe(
+      '🚫 Falta · Centro\nMarcos Prado não veio às 10:00 com Rafael.',
+    );
+  });
+
+  it('nota baixa: sai uma vez só, com o comentário e o link do cliente', async () => {
+    const avaliacaoId = await naMinhaConta(async (tx) => {
+      const c = await tx.comanda.findFirstOrThrow({ where: { agendamentoId: agId } });
+      const av = await tx.avaliacao.create({
+        data: {
+          unidadeId,
+          comandaId: c.id,
+          profissionalId,
+          clienteId: c.clienteId!,
+          telefone: '5511922220000',
+          status: 'respondida',
+          notaAtendimento: 2,
+          comentario: 'Demorou',
+          enviarEm: quando,
+          respondidaEm: new Date('2026-12-17T14:00:00Z'),
+          expiraEm: new Date('2026-12-18T12:00:00Z'),
+        },
+      });
+      return av.id;
+    });
+    const primeiro = await avisarNotaBaixa(prisma, { contaId: conta, avaliacaoId }, quando);
+    expect(primeiro).toHaveLength(1);
+    const t = await texto(primeiro[0]!.mensagemIds[0]!);
+    expect(t).toContain('Marcos Prado, atendido por Rafael: atendimento 2');
+    expect(t).toContain('"Demorou"');
+    expect(t).toContain('https://wa.me/5511922220000');
+    expect(await avisarNotaBaixa(prisma, { contaId: conta, avaliacaoId }, quando)).toEqual([]);
+  });
+
+  it('resumo da unidade no fim do expediente, com falta e nota baixa; só a rotina de gestão', async () => {
+    const r = await rodarRotinaEquipe(
+      prisma,
+      { contaId: conta, assistenteId, rotina: 'gestao', dia },
+      new Date(`${dia}T15:15:00Z`),
+    );
+    const t = await texto(r.aviso!.mensagemIds[0]!);
+    expect(t.split('\n')[0]).toBe('Resumo de hoje · Centro');
+    expect(t).toContain('🚫 1 falta');
+    expect(t).toContain('⚠️ 1 nota baixa');
+    expect(r.proxima?.jobId).toBe(`rotina_${assistenteId}_gestao_2026-12-18`);
+
+    const primeiras = await naMinhaConta((tx) => primeirasRotinas(tx, conta, assistenteId, quando));
+    expect(primeiras.map((p) => p.dados.rotina)).toEqual(['gestao']);
+  });
+
+  it('quem não é dono nem gestor não recebe aviso de gestão', async () => {
+    await naMinhaConta((tx) =>
+      tx.papelUsuario.updateMany({
+        where: { usuario: { email: `ana-${conta}@teste.dev` } },
+        data: { papel: 'recepcao' },
+      }),
+    );
+    expect(await naMinhaConta((tx) => avisarFaltaParaGestao(tx, agId, quando))).toEqual([]);
   });
 });

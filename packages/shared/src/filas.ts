@@ -73,8 +73,15 @@ export interface RotinaDaEquipe {
   tipo: 'rotina_equipe';
   contaId: string;
   assistenteId: string;
-  rotina: 'agenda' | 'resumo';
+  rotina: 'agenda' | 'resumo' | 'gestao';
   dia: string;
+}
+
+/** Nota 1 ou 2: aviso para dono e gestor (no fim da pesquisa ou depois da espera). */
+export interface NotaBaixaParaGestao {
+  tipo: 'nota_baixa';
+  contaId: string;
+  avaliacaoId: string;
 }
 
 export type TrabalhoWhatsappEntrada =
@@ -83,7 +90,8 @@ export type TrabalhoWhatsappEntrada =
   | InicioDePesquisa
   | LembreteDeHorario
   | ProximoClienteDaEquipe
-  | RotinaDaEquipe;
+  | RotinaDaEquipe
+  | NotaBaixaParaGestao;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

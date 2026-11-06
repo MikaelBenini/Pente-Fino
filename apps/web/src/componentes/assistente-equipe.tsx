@@ -2,9 +2,11 @@
 
 import {
   AVISOS_EQUIPE,
+  AVISOS_GESTAO,
   formatarHora,
   formatarTelefone,
   NOME_AVISO_EQUIPE,
+  type AvisoEquipe,
   type CodigoAssistente,
   type EstadoAssistente,
 } from '@pente-fino/shared';
@@ -40,9 +42,18 @@ export function AssistenteEquipe() {
     (corpo: object) => api('me/assistente/avisos', { metodo: 'PUT', corpo }),
     [chave],
   );
-  // Quem não está na agenda (recepção, dono sem cadeira) não tem assistente.
+  // Recepção fora da agenda não tem assistente.
   if (estado.isError || !estado.data) return null;
   const e = estado.data;
+  // Resposta antiga da API, sem a lista: mostra tudo como antes.
+  const disponiveis: readonly AvisoEquipe[] =
+    (e.disponiveis as AvisoEquipe[] | undefined) ?? AVISOS_EQUIPE;
+  const atende = disponiveis.some((k) => !AVISOS_GESTAO.includes(k));
+  const gere = disponiveis.some((k) => AVISOS_GESTAO.includes(k));
+  const comandos = [
+    ...(atende ? ['AGENDA', 'AMANHÃ', 'COMISSÃO'] : []),
+    ...(gere ? ['RESUMO'] : []),
+  ];
 
   const acao = async (fn: () => Promise<unknown>) => {
     setErro(null);
@@ -70,24 +81,26 @@ export function AssistenteEquipe() {
               {e.situacao === 'pausado' && ' · avisos pausados (responda LIGAR no WhatsApp)'}.
             </p>
             <p className="text-sm text-tinta-suave">
-              Mande AGENDA, AMANHÃ ou COMISSÃO para o WhatsApp da barbearia. PARAR pausa os avisos.
+              Mande {comandos.slice(0, -1).join(', ')}
+              {comandos.length > 1 ? ' ou ' : ''}
+              {comandos.at(-1)} para o WhatsApp da barbearia. PARAR pausa os avisos.
             </p>
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1 text-sm font-medium">Avisos que quero receber</legend>
-              {AVISOS_EQUIPE.map((k) => (
+              {disponiveis.map((k) => (
                 <Marcador
                   key={k}
                   id={`aviso-equipe-${k}`}
                   rotulo={NOME_AVISO_EQUIPE[k]}
                   checked={e.avisos[k]}
                   disabled={avisos.isPending}
-                  onChange={(ev) =>
-                    acao(() => avisos.mutateAsync({ ...e.avisos, [k]: ev.target.checked }))
-                  }
+                  onChange={(ev) => acao(() => avisos.mutateAsync({ [k]: ev.target.checked }))}
                 />
               ))}
               <p className="text-sm text-tinta-suave">
-                Os avisos só saem perto do seu expediente, nunca de madrugada.
+                {atende
+                  ? 'Os avisos da agenda só saem perto do seu expediente, nunca de madrugada.'
+                  : 'O resumo sai no fim do expediente da unidade.'}
               </p>
             </fieldset>
             <Botao
@@ -102,8 +115,12 @@ export function AssistenteEquipe() {
         ) : (
           <>
             <p className="text-tinta-suave">
-              Receba no seu WhatsApp os horários novos, remarcados e cancelados da sua agenda, e
-              pergunte a agenda do dia e a comissão do mês pelo número da {e.unidade}.
+              {atende
+                ? `Receba no seu WhatsApp os horários novos, remarcados e cancelados da sua agenda, e pergunte a agenda do dia e a comissão do mês pelo número da ${e.unidade}.`
+                : `Receba no seu WhatsApp as faltas, as notas baixas e o resumo do dia, pelo número da ${e.unidade}.`}
+              {atende &&
+                gere &&
+                ' Como gestor, também recebe faltas, notas baixas e o resumo da unidade.'}
             </p>
             {!e.whatsappConectado && (
               <Aviso tom="aviso">

@@ -34,7 +34,7 @@ import { data, exigirUnidade } from '../comum/escopo.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { pdfComandas } from './impressao.js';
 import { umPorVez } from '../comum/sequencia.js';
-import { avisarEquipe } from '../agenda/aviso-equipe.js';
+import { avisarEquipe, avisarFalta } from '../agenda/aviso-equipe.js';
 import { EventosService, Filas } from '../filas/filas.module.js';
 
 const INCLUIR = {
@@ -595,6 +595,8 @@ export class ComandasService {
       return comanda.agendamentoId;
     });
     // Cancelado (não falta): o profissional fica sabendo pelo assistente, se ligou.
+    if (agendamentoId && falta)
+      await avisarFalta(this.banco, this.filas, Contexto.usuario().contaId, agendamentoId);
     if (agendamentoId && !falta)
       await avisarEquipe(
         this.banco,

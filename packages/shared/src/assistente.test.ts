@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  avisosDisponiveis,
   lerAvisosEquipe,
   lerComandoEquipe,
   momentoProximoCliente,
   podeAvisarAgora,
   proximaRotina,
   textoAgendaEquipe,
+  textoAjudaEquipe,
+  textoFaltaGestao,
+  textoNotaBaixa,
   textoProximoCliente,
+  textoResumoGestao,
 } from './assistente.js';
 
 describe('lerComandoEquipe', () => {
@@ -16,6 +21,7 @@ describe('lerComandoEquipe', () => {
     ['Agenda', { tipo: 'agenda' }],
     ['amanhã', { tipo: 'amanha' }],
     ['Comissão', { tipo: 'comissao' }],
+    ['Resumo do dia', { tipo: 'resumo' }],
     ['PARAR', { tipo: 'parar' }],
     ['ligar', { tipo: 'ligar' }],
     ['oi', { tipo: 'ajuda' }],
@@ -122,5 +128,70 @@ describe('avisos com hora marcada', () => {
         primeiraVez: true,
       }),
     ).toBe('⏰ Próximo cliente às 14:00: João (primeira vez) · Corte');
+  });
+});
+
+describe('avisos de gestão', () => {
+  it('cada um escolhe só os avisos que cabem a ele', () => {
+    expect(avisosDisponiveis({ profissional: true, gestao: false })).not.toContain('faltas');
+    expect(avisosDisponiveis({ profissional: false, gestao: true })).toEqual([
+      'faltas',
+      'notaBaixa',
+      'resumoGestao',
+    ]);
+    expect(avisosDisponiveis({ profissional: true, gestao: true })).toHaveLength(8);
+  });
+
+  it('ajuda de quem só gere não fala de agenda nem comissão', () => {
+    const t = textoAjudaEquipe({ profissional: false, gestao: true });
+    expect(t).toContain('RESUMO');
+    expect(t).not.toContain('COMISSÃO');
+  });
+
+  it('falta e nota baixa, com o comentário e o link do cliente', () => {
+    expect(
+      textoFaltaGestao({
+        unidade: 'Centro',
+        cliente: 'João Lima',
+        profissional: 'Rafael',
+        inicio: '2026-12-01T17:00:00.000Z',
+      }),
+    ).toBe('🚫 Falta · Centro\nJoão Lima não veio às 14:00 com Rafael.');
+    expect(
+      textoNotaBaixa({
+        unidade: 'Centro',
+        profissional: 'Rafael',
+        cliente: 'João Lima',
+        notaAtendimento: 2,
+        notaBarbearia: null,
+        comentario: 'Demorou',
+        link: 'https://wa.me/5511999990000',
+      }),
+    ).toBe(
+      '⚠️ Nota baixa · Centro\nJoão Lima, atendido por Rafael: atendimento 2\n"Demorou"\n\nFalar com o cliente: https://wa.me/5511999990000',
+    );
+  });
+
+  it('resumo: uma unidade no título; várias em blocos; ticket só com cliente', () => {
+    const centro = {
+      unidade: 'Centro',
+      faturamento: 30000,
+      clientes: 4,
+      faltas: 1,
+      notasBaixas: 0,
+      abertas: 2,
+    };
+    const t = textoResumoGestao('Resumo de hoje', [centro]);
+    expect(t.split('\n')[0]).toBe('Resumo de hoje · Centro');
+    expect(t).toMatch(/4 clientes · ticket R\$\s?75,00/);
+    expect(t).toContain('🚫 1 falta');
+    expect(t).toContain('⏳ 2 comandas esperando fechamento');
+    expect(t).not.toContain('nota');
+    const duas = textoResumoGestao('Resumo de hoje', [
+      centro,
+      { ...centro, unidade: 'Norte', faturamento: 0, clientes: 0 },
+    ]);
+    expect(duas).toContain('🏠 Norte');
+    expect(duas).not.toMatch(/0 clientes · ticket/);
   });
 });
