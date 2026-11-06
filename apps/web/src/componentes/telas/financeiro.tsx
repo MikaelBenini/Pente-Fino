@@ -39,6 +39,7 @@ import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { SeletorMes } from '../indicadores';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
+import { SoNoPlano } from '../convite-plano';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
@@ -61,7 +62,15 @@ export function TelaFinanceiro() {
         abas={[
           { id: 'resultado', rotulo: 'Resultado do mês', conteudo: <Resultado mes={mes} /> },
           { id: 'despesas', rotulo: 'Despesas', conteudo: <Despesas mes={mes} /> },
-          { id: 'comissoes', rotulo: 'Comissões', conteudo: <Comissoes mes={mes} /> },
+          {
+            id: 'comissoes',
+            rotulo: 'Comissões',
+            conteudo: (
+              <SoNoPlano recurso="comissoes">
+                <Comissoes mes={mes} />
+              </SoNoPlano>
+            ),
+          },
         ]}
       />
     </div>

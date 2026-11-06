@@ -3,7 +3,10 @@ import {
   diasRestantesTeste,
   incluiRecurso,
   precoPorMes,
+  RECURSOS,
   RECURSOS_PLANO,
+  temRecurso,
+  textoRecursoBloqueado,
   resumoAnual,
   verificarLimite,
 } from './planos.js';
@@ -64,5 +67,28 @@ describe('diasRestantesTeste', () => {
     expect(diasRestantesTeste(new Date('2026-11-19T01:00:00Z'), agora)).toBe(14);
     expect(diasRestantesTeste(new Date('2026-11-04T23:00:00Z'), agora)).toBe(0);
     expect(diasRestantesTeste(new Date('2026-11-02T12:00:00Z'), agora)).toBe(-2);
+  });
+});
+
+describe('recursos por plano', () => {
+  it('Básico não tem os do Pro; Pro não tem os do Premium', () => {
+    expect(temRecurso('basico', 'comissoes')).toBe(false);
+    expect(temRecurso('pro', 'comissoes')).toBe(true);
+    expect(temRecurso('pro', 'rede')).toBe(false);
+    expect(temRecurso('premium', 'rede')).toBe(true);
+    expect(temRecurso('premium', 'listaEspera')).toBe(true);
+  });
+
+  it('a frase diz em que plano está e qual é o da conta', () => {
+    expect(textoRecursoBloqueado('rede', 'pro')).toBe(
+      'Várias unidades e painel da rede: faz parte do plano Premium. Seu plano é o Pro; mude de plano para usar.',
+    );
+  });
+
+  it('o comparativo traz cada recurso conferido pela API, no plano certo', () => {
+    for (const r of Object.keys(RECURSOS) as (keyof typeof RECURSOS)[]) {
+      const item = RECURSOS_PLANO.find((x) => x.recurso === r);
+      expect(item?.desde).toBe(RECURSOS[r].desde);
+    }
   });
 });

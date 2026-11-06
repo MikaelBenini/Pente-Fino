@@ -37,6 +37,7 @@ export const SENHA_DEMO = 'pentefino123';
 /** Contas para testar a cobrança sem esperar: teste vencido e fatura recusada. */
 export const CONTA_EXPIRADA_ID = '019a4b2c-0000-7000-8000-00000000e001';
 export const CONTA_RECUSADA_ID = '019a4b2c-0000-7000-8000-00000000e002';
+export const CONTA_BASICO_ID = '019a4b2c-0000-7000-8000-00000000e003';
 /** Meses completos antes do atual (6 meses no total: evolução, retorno e "sumidos" com cara de verdade). */
 const MESES_DE_HISTORICO = 6;
 /** Clientes da demonstração: com 700, quem é fiel volta a cada duas ou três semanas. */
@@ -207,7 +208,7 @@ async function main(): Promise<void> {
       `Login: dono@demo.pentefino.dev (e os demais @demo.pentefino.dev) · senha: ${SENHA_DEMO}`,
     );
     console.log(
-      'Cobrança: expirado@demo.pentefino.dev (teste terminou) e recusado@demo.pentefino.dev (fatura recusada), mesma senha.',
+      'Cobrança: expirado@demo.pentefino.dev (teste terminou) e recusado@demo.pentefino.dev (fatura recusada); plano Básico: basico@demo.pentefino.dev (convites para mudar de plano). Mesma senha.',
     );
     console.table(resumo);
   } finally {
@@ -975,7 +976,8 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
 /**
  * Duas contas pequenas para testar a cobrança sem esperar 14 dias:
  * - expirado@: teste grátis terminou ontem → só consulta;
- * - recusado@: Pro mensal com a fatura recusada no cartão há 8 dias → só consulta.
+ * - recusado@: Pro mensal com a fatura recusada no cartão há 8 dias → só consulta;
+ * - basico@: plano Básico em teste (10 dias), para ver os convites dos recursos do Pro e Premium.
  */
 async function contasDeCobranca(prisma: ReturnType<typeof criarPrisma>, hoje: string, agora: Date) {
   const senhaHash = await hash(SENHA_DEMO);
@@ -1002,6 +1004,18 @@ async function contasDeCobranca(prisma: ReturnType<typeof criarPrisma>, hoje: st
         const inicio = somarMeses(primeiroDoMes(hoje), m);
         return { inicio, vencimento: `${inicio.slice(0, 7)}-05`, status: 'paga' as const };
       }),
+    },
+    {
+      id: CONTA_BASICO_ID,
+      nome: 'Barbearia Plano Básico',
+      email: 'basico@demo.pentefino.dev',
+      dono: 'Bruno Básico',
+      conta: {
+        status: 'teste' as const,
+        plano: 'basico' as const,
+        testeAte: new Date(agora.getTime() + 10 * 86_400_000),
+      },
+      faturas: [],
     },
   ];
   for (const c of contas) {

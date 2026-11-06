@@ -86,13 +86,57 @@ export function resumoAnual(plano: PlanoConta, unidades = 1): { total: number; e
   return { total, economia: precoPorMes(plano, 'mensal', unidades) * 12 - total };
 }
 
+// ─── Recursos por plano (aplicados na API e na tela) ──────────────────────
+
+/**
+ * Recursos que a API confere pelo plano da conta. O que não está no plano aparece na tela com
+ * convite para mudar; o que já foi lançado continua visível (só gravar de novo é bloqueado).
+ */
+export const RECURSOS = {
+  comissoes: { nome: 'Comissão automática por item, com extrato do barbeiro', desde: 'pro' },
+  metas: { nome: 'Metas por unidade e serviço, com ritmo e projeção', desde: 'pro' },
+  clube: { nome: 'Clube da barbearia: assinatura, combos e convênios', desde: 'pro' },
+  bot: { nome: 'Bot de WhatsApp sem custo por mensagem', desde: 'pro' },
+  listaEspera: { nome: 'Lista de espera: o horário que vaga vai para quem pediu', desde: 'pro' },
+  fichaProfissional: { nome: 'Ficha e ranking dos barbeiros', desde: 'pro' },
+  avaliacoes: { nome: 'Pesquisa depois do atendimento, com as notas', desde: 'pro' },
+  canais: { nome: 'Agendamentos por canal: balcão, WhatsApp e site', desde: 'pro' },
+  rede: { nome: 'Várias unidades e painel da rede', desde: 'premium' },
+  lucroReal: { nome: 'Lucro real e margem por serviço e produto', desde: 'premium' },
+  automacoes: {
+    nome: 'Automações do bot: retorno, aniversário e aviso do clube',
+    desde: 'premium',
+  },
+} as const satisfies Record<string, { nome: string; desde: PlanoConta }>;
+export type Recurso = keyof typeof RECURSOS;
+
+const ORDEM: Record<PlanoConta, number> = { basico: 0, pro: 1, premium: 2 };
+
+export const temRecurso = (plano: PlanoConta, r: Recurso) =>
+  ORDEM[plano] >= ORDEM[RECURSOS[r].desde];
+
+/** Frase do bloqueio (API) e do convite (tela). */
+export function textoRecursoBloqueado(r: Recurso, plano: PlanoConta): string {
+  const { nome, desde } = RECURSOS[r];
+  return `${nome}: faz parte do plano ${NOME_PLANO[desde]}. Seu plano é o ${NOME_PLANO[plano]}; mude de plano para usar.`;
+}
+
 export interface RecursoPlano {
   nome: string;
   /** Plano a partir do qual o recurso vem. */
   desde: PlanoConta;
   /** false = ainda em construção; a página de vendas mostra "em breve". */
   disponivel: boolean;
+  /** Recurso que a API confere (os demais vêm em todos os planos). */
+  recurso?: Recurso;
 }
+
+const doRecurso = (recurso: Recurso): RecursoPlano => ({
+  nome: RECURSOS[recurso].nome,
+  desde: RECURSOS[recurso].desde,
+  disponivel: true,
+  recurso,
+});
 
 /** O que cada plano destrava, na ordem da página de vendas. */
 export const RECURSOS_PLANO: readonly RecursoPlano[] = [
@@ -108,17 +152,20 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
   { nome: 'App do barbeiro no celular, funciona sem internet', desde: 'basico', disponivel: true },
   { nome: 'Comanda impressa em PDF com QR code', desde: 'basico', disponivel: true },
   { nome: 'Importação da sua planilha', desde: 'basico', disponivel: true },
-  { nome: 'Comissão automática por item, com extrato do barbeiro', desde: 'pro', disponivel: true },
-  { nome: 'Metas por unidade e serviço, com ritmo e projeção', desde: 'pro', disponivel: true },
-  { nome: 'Clube da barbearia: assinatura, combos e convênios', desde: 'pro', disponivel: true },
-  { nome: 'Bot de WhatsApp sem custo por mensagem', desde: 'pro', disponivel: false },
-  { nome: 'Lista de espera', desde: 'pro', disponivel: false },
-  { nome: 'Várias unidades e painel da rede', desde: 'premium', disponivel: true },
+  doRecurso('comissoes'),
+  doRecurso('metas'),
+  doRecurso('clube'),
+  doRecurso('bot'),
+  doRecurso('listaEspera'),
+  doRecurso('fichaProfissional'),
+  doRecurso('avaliacoes'),
+  doRecurso('canais'),
+  doRecurso('rede'),
   { nome: 'Preço por unidade', desde: 'premium', disponivel: true },
-  { nome: 'Lucro real e margem por serviço', desde: 'premium', disponivel: true },
+  doRecurso('lucroReal'),
+  doRecurso('automacoes'),
   { nome: 'Campeonato dos barbeiros e TV da unidade', desde: 'premium', disponivel: false },
-  { nome: 'Automações do bot e cobrança automática do clube', desde: 'premium', disponivel: false },
+  { nome: 'Cobrança automática do clube', desde: 'premium', disponivel: false },
 ];
 
-const ORDEM: Record<PlanoConta, number> = { basico: 0, pro: 1, premium: 2 };
 export const incluiRecurso = (plano: PlanoConta, r: RecursoPlano) => ORDEM[plano] >= ORDEM[r.desde];

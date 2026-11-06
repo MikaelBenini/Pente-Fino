@@ -15,6 +15,7 @@ import { useProfissionais, useRankingEquipe } from '@/lib/consultas';
 import { mesAtual } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
+import { SoNoPlano } from '../convite-plano';
 import {
   FichaDoProfissional,
   limitesDoPeriodo,
@@ -169,7 +170,9 @@ export function TelaFichaProfissional() {
         <ArrowLeft aria-hidden className="size-5" /> Equipe
       </Link>
       {valido ? (
-        <FichaDoProfissional id={id} periodo={periodo} onPeriodo={mudar} />
+        <SoNoPlano recurso="fichaProfissional">
+          <FichaDoProfissional id={id} periodo={periodo} onPeriodo={mudar} />
+        </SoNoPlano>
       ) : (
         <EstadoVazio
           icone={UserRound}
@@ -218,12 +221,14 @@ export function TelaDesempenhoBarbeiro() {
                 className="max-w-xs"
               />
             )}
-            <FichaDoProfissional
-              id={id}
-              periodo={periodo}
-              onPeriodo={setPeriodo}
-              titulo="Desempenho"
-            />
+            <SoNoPlano recurso="fichaProfissional">
+              <FichaDoProfissional
+                id={id}
+                periodo={periodo}
+                onPeriodo={setPeriodo}
+                titulo="Desempenho"
+              />
+            </SoNoPlano>
           </div>
         );
       }}

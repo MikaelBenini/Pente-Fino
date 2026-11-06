@@ -23,7 +23,7 @@ import {
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
-import { Papeis } from '../auth/decoradores.js';
+import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { resumoAvaliacoes } from '../avaliacoes/avaliacoes.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
@@ -55,6 +55,7 @@ export class ResultadosController {
     return this.servico.indicadores(p.unidadeId, p.de, p.ate);
   }
 
+  @ExigeRecurso('avaliacoes')
   @Get('avaliacoes')
   @Papeis('dono', 'gestor')
   @ApiOperation({
@@ -65,6 +66,7 @@ export class ResultadosController {
     return this.banco.daConta((tx) => resumoAvaliacoes(tx, filtro, p.de, p.ate));
   }
 
+  @ExigeRecurso('avaliacoes')
   @Post('avaliacoes/:id/tratar')
   @Papeis('dono', 'gestor')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -93,6 +95,7 @@ export class ResultadosController {
     });
   }
 
+  @ExigeRecurso('canais')
   @Get('canais')
   @Papeis('dono', 'gestor')
   @ApiOperation({
@@ -130,6 +133,7 @@ export class ResultadosController {
     });
   }
 
+  @ExigeRecurso('lucroReal')
   @Get('lucratividade')
   @Papeis('dono', 'gestor')
   @ApiOperation({ summary: 'Lucro e margem por serviço (receita − custo de produto − comissão)' })
@@ -145,6 +149,7 @@ export class ResultadosController {
     return this.banco.daConta((tx) => this.servico.metas(tx, c.mes, filtro));
   }
 
+  @ExigeRecurso('metas')
   @Put('metas')
   @Papeis('dono')
   @Auditada()
@@ -188,6 +193,7 @@ export class ResultadosController {
     });
   }
 
+  @ExigeRecurso('metas')
   @Delete('metas/:id')
   @Papeis('dono')
   @Auditada()

@@ -15,7 +15,7 @@ import { api } from './api';
 import type {
   AssinaturaDetalhe,
   ConexaoBot,
-  EstadoAssinatura,
+  EstadoDaConta,
   EnvioParaCliente,
   EstadoBot,
   ListaConversas,
@@ -46,6 +46,7 @@ import type {
   HorarioLivre,
   ProdutoDetalhe,
 } from '@pente-fino/shared';
+import { temRecurso, type Recurso } from '@pente-fino/shared';
 
 export interface ContaResumo {
   id: string;
@@ -219,6 +220,7 @@ export function useLucratividade(unidade: string | null, de: string, ate: string
     queryKey: [...chavesResultados.indicadores, 'lucro', unidade, de, ate],
     queryFn: () =>
       api<RespostaLucratividade>(`lucratividade?de=${de}&ate=${ate}${comUnidade(unidade)}`),
+    enabled: useLiberado('lucroReal'),
   });
 }
 
@@ -247,6 +249,7 @@ export function useResumoComissoes(unidade: string | null, de: string, ate: stri
   return useQuery({
     queryKey: [...chavesResultados.comissoes, unidade, de, ate],
     queryFn: () => api<ResumoComissao[]>(`comissoes?de=${de}&ate=${ate}${comUnidade(unidade)}`),
+    enabled: useLiberado('comissoes'),
   });
 }
 
@@ -254,7 +257,7 @@ export function useExtrato(profissionalId: string | null, de: string, ate: strin
   return useQuery({
     queryKey: [...chavesResultados.comissoes, 'extrato', profissionalId, de, ate],
     queryFn: () => api<ExtratoComissao>(`comissoes/${profissionalId}/extrato?de=${de}&ate=${ate}`),
-    enabled: !!profissionalId,
+    enabled: useLiberado('comissoes') && !!profissionalId,
   });
 }
 
@@ -273,6 +276,7 @@ export const useMeComissoes = (de: string, ate: string) =>
   useQuery({
     queryKey: [...chavesResultados.me, 'comissoes', de, ate],
     queryFn: () => api<ExtratoComissao[]>(`me/comissoes?de=${de}&ate=${ate}`),
+    enabled: useLiberado('comissoes'),
   });
 
 /** Ficha do profissional (dono, gestor da unidade ou o próprio barbeiro). */
@@ -280,7 +284,7 @@ export const useFichaProfissional = (id: string | null, de: string, ate: string)
   useQuery({
     queryKey: [...chavesResultados.desempenho, 'ficha', id, de, ate],
     queryFn: () => api<FichaProfissional>(`profissionais/${id}/desempenho?de=${de}&ate=${ate}`),
-    enabled: !!id,
+    enabled: useLiberado('fichaProfissional') && !!id,
   });
 
 /** Ranking da equipe no período; unidade ativa ou a rede inteira. */
@@ -291,6 +295,7 @@ export const useRankingEquipe = (unidade: string | null, de: string, ate: string
       api<LinhaRankingEquipe[]>(
         `profissionais/desempenho?de=${de}&ate=${ate}${comUnidade(unidade)}`,
       ),
+    enabled: useLiberado('fichaProfissional'),
   });
 
 const comProfissional = (id: string | null) => (id ? `&profissionalId=${id}` : '');
@@ -373,10 +378,17 @@ export function useAvaliacoes(unidade: string | null, de: string, ate: string) {
   return useQuery({
     queryKey: [...chavesResultados.indicadores, 'avaliacoes', unidade, de, ate],
     queryFn: () => api<ResumoAvaliacoes>(`avaliacoes?de=${de}&ate=${ate}${comUnidade(unidade)}`),
+    enabled: useLiberado('avaliacoes'),
   });
 }
 
 // ─── Assinatura do Pente Fino ─────────────────────────────────────────────
+
+/** O plano da conta tem o recurso? (false enquanto carrega: não chama a API do recurso.) */
+function useLiberado(r: Recurso): boolean {
+  const plano = useSituacaoConta().data?.plano;
+  return plano !== undefined && temRecurso(plano, r);
+}
 
 export const chaveAssinatura = ['assinatura'] as const;
 
@@ -384,7 +396,7 @@ export const chaveAssinatura = ['assinatura'] as const;
 export const useSituacaoConta = () =>
   useQuery({
     queryKey: [...chaveAssinatura, 'situacao'],
-    queryFn: () => api<EstadoAssinatura>('conta/situacao'),
+    queryFn: () => api<EstadoDaConta>('conta/situacao'),
     refetchInterval: 5 * 60_000,
     staleTime: 60_000,
   });
@@ -402,6 +414,7 @@ export function useCanais(unidade: string | null, de: string, ate: string) {
   return useQuery({
     queryKey: [...chavesResultados.indicadores, 'canais', unidade, de, ate],
     queryFn: () => api<LinhaCanal[]>(`canais?de=${de}&ate=${ate}${comUnidade(unidade)}`),
+    enabled: useLiberado('canais'),
   });
 }
 

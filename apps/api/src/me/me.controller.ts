@@ -12,7 +12,7 @@ import {
   estaAtrasado,
 } from '@pente-fino/shared';
 import { z } from 'zod';
-import { Papeis } from '../auth/decoradores.js';
+import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { TODOS } from '../comum/escopo.js';
@@ -145,6 +145,7 @@ export class MeController {
     });
   }
 
+  @ExigeRecurso('comissoes')
   @Get('comissoes')
   @Papeis(...TODOS)
   @ApiOperation({ summary: 'Meu extrato de comissões no período' })

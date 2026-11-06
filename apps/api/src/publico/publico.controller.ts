@@ -41,6 +41,7 @@ import {
   type UnidadePublica,
   DIAS_TESTE,
   VERSAO_TERMOS,
+  temRecurso,
 } from '@pente-fino/shared';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -237,6 +238,7 @@ export class PublicoController {
         })),
         lembretesWhatsapp: !!(await numeroDosLembretes(tx, u.id, u.regrasAgendamento)),
         linkWhatsappAgendar: await linkAgendarPelaConversa(tx, u.id, u.regrasAgendamento),
+        listaEspera: temRecurso((await estadoAssinatura(tx)).plano, 'listaEspera'),
       };
     });
   }
@@ -409,6 +411,7 @@ export class PublicoController {
         !!(await tx.cliente.findUnique({ where: { id: c.clienteId } }))?.consentimentoMsg;
       const podeAntecipar =
         aceita &&
+        temRecurso((await estadoAssinatura(tx)).plano, 'listaEspera') &&
         !!primeiroPossivel &&
         deveOferecerAntecipar({
           livres: livresAntes,
@@ -464,8 +467,11 @@ export class PublicoController {
     const regras = lerRegrasAgendamento(u.regrasAgendamento);
     this.exigirJanela(d.dia, regras.janelaDias);
     return this.banco.naConta(u.contaId, async (tx) => {
-      if ((await estadoAssinatura(tx)).somenteLeitura)
+      const estado = await estadoAssinatura(tx);
+      if (estado.somenteLeitura)
         throw Erros.conflito('Indisponível no momento. Fale com a barbearia.');
+      if (!temRecurso(estado.plano, 'listaEspera'))
+        throw Erros.conflito('Esta barbearia não usa lista de espera. Tente outro dia.');
       await duracaoDosServicos(tx, d.servicoIds).catch(() => {
         throw Erros.naoEncontrado('Serviço não encontrado.');
       });

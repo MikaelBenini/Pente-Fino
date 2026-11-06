@@ -16,13 +16,14 @@ import {
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import { Auditada } from '../auditoria/auditoria.js';
-import { Papeis } from '../auth/decoradores.js';
+import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { GESTAO, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { ComissoesService } from './comissoes.service.js';
 
 @ApiTags('Comissões')
 @ApiBearerAuth()
+@ExigeRecurso('comissoes')
 @Controller('comissoes')
 export class ComissoesController {
   constructor(@Inject(ComissoesService) private readonly servico: ComissoesService) {}

@@ -34,6 +34,9 @@ export const Erros = {
     new ErroApp(HttpStatus.NOT_FOUND, 'nao_encontrado', mensagem),
   conflito: (mensagem: string) => new ErroApp(HttpStatus.CONFLICT, 'conflito', mensagem),
   /** Conta só para consulta (teste terminado, fatura vencida, suspensa): 402. */
+  /** Recurso de um plano maior que o da conta (o corpo traz o convite). */
+  recursoDoPlano: (mensagem: string) =>
+    new ErroApp(HttpStatus.FORBIDDEN, 'recurso_do_plano', mensagem),
   somenteLeitura: (mensagem: string) =>
     new ErroApp(HttpStatus.PAYMENT_REQUIRED, 'somente_leitura', mensagem),
   requisicaoInvalida: (codigo: string, mensagem: string) =>

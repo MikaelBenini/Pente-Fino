@@ -9,7 +9,7 @@ import {
   type AssinarEntrada,
   type AssinaturaDetalhe,
   type ContaEntrada,
-  type EstadoAssinatura,
+  type EstadoDaConta,
   type FaturaDetalhe,
 } from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
@@ -33,7 +33,7 @@ export class ContaController {
   @ApiOperation({
     summary: 'Situação da assinatura (teste, em dia, atrasada, só consulta) para o aviso do painel',
   })
-  situacao(): Promise<EstadoAssinatura> {
+  situacao(): Promise<EstadoDaConta> {
     return this.banco.daConta((tx) => estadoAssinatura(tx));
   }
 

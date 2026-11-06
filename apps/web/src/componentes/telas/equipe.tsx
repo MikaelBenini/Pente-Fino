@@ -41,6 +41,7 @@ import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 import { RankingEquipe } from './equipe-desempenho';
+import { SoNoPlano } from '../convite-plano';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? e.message : 'Não foi possível concluir. Tente de novo.';
@@ -64,7 +65,15 @@ export function TelaEquipe() {
         atual={aba}
         onTrocar={setAba}
         abas={[
-          { id: 'desempenho', rotulo: 'Desempenho', conteudo: <RankingEquipe /> },
+          {
+            id: 'desempenho',
+            rotulo: 'Desempenho',
+            conteudo: (
+              <SoNoPlano recurso="fichaProfissional">
+                <RankingEquipe />
+              </SoNoPlano>
+            ),
+          },
           { id: 'profissionais', rotulo: 'Profissionais', conteudo: <Profissionais /> },
           { id: 'acessos', rotulo: 'Acessos ao sistema', conteudo: <Acessos /> },
         ]}

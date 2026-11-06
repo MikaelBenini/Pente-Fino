@@ -52,6 +52,7 @@ import { chaveBot, useAcao, useBot, useConexaoBot } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { Automacoes } from './automacoes';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
+import { ConviteSeFaltar, SoNoPlano } from '../convite-plano';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? e.message : 'Não foi possível concluir. Tente de novo.';
@@ -71,6 +72,7 @@ export function TelaBot() {
         titulo="Bot do WhatsApp"
         pergunta="O que o bot responde, e quando? Sem inteligência artificial: só o que você escrever."
       />
+      <ConviteSeFaltar recurso="bot" />
       <Estado consulta={bot}>
         {() => {
           const e = bot.data!;
@@ -98,7 +100,11 @@ export function TelaBot() {
                 {
                   id: 'automacoes',
                   rotulo: 'Automações',
-                  conteudo: <Automacoes podeEditar={e.podeEditar} />,
+                  conteudo: (
+                    <SoNoPlano recurso="automacoes">
+                      <Automacoes podeEditar={e.podeEditar} />
+                    </SoNoPlano>
+                  ),
                 },
                 { id: 'testar', rotulo: 'Testar', conteudo: <Simulador e={e} /> },
                 { id: 'conexao', rotulo: 'Conexão', conteudo: <Conexao e={e} /> },

@@ -2,7 +2,7 @@ import { Controller, Get, Inject, Param, ParseUUIDPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FichaProfissional, LinhaRankingEquipe } from '@pente-fino/shared';
 import { z } from 'zod';
-import { Papeis } from '../auth/decoradores.js';
+import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { Erros } from '../comum/erros.js';
 import { GESTAO } from '../comum/escopo.js';
 import { Consulta } from '../comum/validacao.js';
@@ -25,6 +25,7 @@ function conferir({ de, ate }: Periodo) {
 
 @ApiTags('Desempenho da equipe')
 @ApiBearerAuth()
+@ExigeRecurso('fichaProfissional')
 @Controller('profissionais')
 export class DesempenhoController {
   constructor(@Inject(DesempenhoService) private readonly servico: DesempenhoService) {}
