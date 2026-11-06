@@ -60,3 +60,25 @@ test('caixa com diferença: o gestor recebe o aviso e abre o caixa pelo link', a
     .first();
   await expect(lido).not.toContainText('não lido');
 });
+
+test('Perfil → Avisos: a recepção escolhe o que vai para o celular e a escolha fica', async ({
+  page,
+}) => {
+  await entrar(page, 'recepcao.jardins@demo.pentefino.dev');
+  await page.goto('/perfil');
+  const secao = page.getByRole('region', { name: 'Avisos' });
+  const pendentes = secao.getByLabel('Comandas esperando confirmação do barbeiro');
+  await expect(pendentes).toBeVisible();
+  // Recepção não tem resumo do dia nem caixa com diferença.
+  await expect(secao.getByLabel('Resumo do dia da unidade')).toHaveCount(0);
+  await expect(secao.getByLabel('Receber o resumo do dia também por e-mail')).toHaveCount(0);
+  const antes = await pendentes.isChecked();
+  await pendentes.setChecked(!antes);
+  await expect(secao.getByRole('status')).toHaveText('Preferências salvas.');
+  await page.reload();
+  await expect(
+    page
+      .getByRole('region', { name: 'Avisos' })
+      .getByLabel('Comandas esperando confirmação do barbeiro'),
+  ).toBeChecked({ checked: !antes });
+});

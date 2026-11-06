@@ -391,6 +391,21 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
     );
     await gestor.post('/avisos/lidos', {}).expect(204);
     expect(((await gestor.get('/avisos').expect(200)).body as Caixa).naoLidos).toBe(0);
+    // Preferências: cada um vê os tipos do seu papel e salva só as suas.
+    expect((await recepcao.get('/avisos/preferencias').expect(200)).body).toEqual({
+      celular: {},
+      resumoPorEmail: false,
+      tipos: ['comandas_pendentes'],
+    });
+    await gestor
+      .put('/avisos/preferencias', { celular: { resumo_dia: false }, resumoPorEmail: true })
+      .expect(204);
+    await gestor.put('/avisos/preferencias', { celular: { inventado: true } }).expect(400);
+    expect((await gestor.get('/avisos/preferencias').expect(200)).body).toMatchObject({
+      celular: { resumo_dia: false },
+      resumoPorEmail: true,
+    });
+    expect((await dono.get('/avisos/preferencias').expect(200)).body.resumoPorEmail).toBe(false);
     await gestor
       .post(`/comandas/${comanda}/reabrir`, { motivo: 'Tentar depois do caixa' })
       .expect(409);

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { AssistenteEquipe } from '@/componentes/assistente-equipe';
 import { NotificacoesAparelho } from '@/componentes/notificacoes-aparelho';
+import { PreferenciasDeAvisos } from '@/componentes/preferencias-avisos';
 import { Aviso } from '@/componentes/aviso';
 import { useApp } from '@/componentes/contexto-app';
 import { api } from '@/lib/api';
@@ -82,6 +83,8 @@ export default function Perfil() {
       </section>
 
       <NotificacoesAparelho />
+
+      <PreferenciasDeAvisos />
 
       <AssistenteEquipe />
 

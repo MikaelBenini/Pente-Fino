@@ -386,15 +386,17 @@ model CalendarioUnidade {
 
 /// E-mail único no sistema todo: o login acha a conta pelo e-mail.
 model Usuario {
-  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
-  nome         String
-  email        String   @unique
-  telefone     String?
-  senhaHash    String?  @map("senha_hash")
-  ativo        Boolean  @default(true)
-  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId            String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  nome               String
+  email              String   @unique
+  telefone           String?
+  senhaHash          String?  @map("senha_hash")
+  /// Quais avisos vão para o celular e se o resumo do dia vai por e-mail (packages/shared/src/avisos.ts).
+  preferenciasAvisos Json     @default("{}") @map("preferencias_avisos")
+  ativo              Boolean  @default(true)
+  criadoEm           DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm       DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   conta                 Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
   papeis                PapelUsuario[]

@@ -14,7 +14,7 @@ import {
   oferecerVaga,
   remarcacaoPorAtraso,
   contasParaAvisos,
-  rotinaComandasPendentes,
+  rotinaDosAvisos,
   avisoHorarioMudou,
   contasComAutomacoes,
   rodarAutomacoes,
@@ -36,6 +36,8 @@ import {
   ESPERA_ATENDENTE_MAX_MIN,
   HORA_DAS_AUTOMACOES,
   INTERVALO_PENDENTES_MIN,
+  FILA_EMAILS,
+  type TrabalhoEmail,
   NOTA_BAIXA_ESPERA_MIN,
   proximoEnvio,
   type TrabalhoNotificacao,
@@ -121,6 +123,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
   private filaSaida?: Queue<TrabalhoWhatsappSaida>;
   private filaEntrada?: Queue<TrabalhoWhatsappEntrada>;
   private filaNotificacoes?: Queue<TrabalhoNotificacao>;
+  private filaEmails?: Queue<TrabalhoEmail>;
   private redis?: Redis;
 
   constructor(
@@ -159,6 +162,17 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
       },
     });
     this.filaNotificacoes = filaNotificacoes;
+    // Resumo do dia por e-mail (quem escolheu no Perfil).
+    const filaEmails = new Queue<TrabalhoEmail>(FILA_EMAILS, {
+      connection,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 10_000 },
+        removeOnComplete: { count: 1_000 },
+        removeOnFail: { count: 5_000 },
+      },
+    });
+    this.filaEmails = filaEmails;
     // Automações do pós-atendimento: todo dia às 10 h (São Paulo).
     void filaEntrada
       .upsertJobScheduler(
@@ -276,10 +290,17 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           let total = 0;
           for (const contaId of await contasParaAvisos(this.banco.prisma)) {
             try {
-              for (const n of await rotinaComandasPendentes(this.banco.prisma, contaId)) {
+              const r = await rotinaDosAvisos(
+                this.banco.prisma,
+                contaId,
+                new Date(),
+                this.config.APP_URL,
+              );
+              for (const n of r.notificacoes) {
                 await filaNotificacoes.add('push', n);
                 total++;
               }
+              for (const e of r.emails) await filaEmails.add('resumo_dia', e);
             } catch (e) {
               this.logger.error(`Avisos da conta ${contaId}: ${(e as Error).message}`);
             }
@@ -430,6 +451,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
     await this.filaSaida?.close();
     await this.filaEntrada?.close();
     await this.filaNotificacoes?.close();
+    await this.filaEmails?.close();
     this.redis?.disconnect();
   }
 }
