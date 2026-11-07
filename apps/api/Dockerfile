@@ -4,7 +4,7 @@
 #   docker build -f apps/api/Dockerfile --target migracoes -t pente-fino-migracoes .
 # A imagem final roda sem root e leva só as dependências de produção da API.
 
-FROM node:25-alpine AS base
+FROM node:24-alpine AS base
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 TURBO_TELEMETRY_DISABLED=1
 RUN corepack enable
 WORKDIR /repo
@@ -32,7 +32,7 @@ FROM build AS producao
 RUN find . -name node_modules -type d -prune -exec rm -rf {} + \
  && pnpm install --frozen-lockfile --prod --ignore-scripts
 
-FROM node:25-alpine AS final
+FROM node:24-alpine AS final
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=producao --chown=node:node /repo /app
