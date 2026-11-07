@@ -18,7 +18,7 @@ x-imagem: &imagem
 x-ambiente-app: &ambiente-app
   NODE_ENV: production
   TZ: UTC
-  APP_URL: https://app.${DOMINIO:?defina DOMINIO no .env}
+  APP_URL: https://${DOMINIO:?defina DOMINIO no .env}
   API_URL: https://api.${DOMINIO}
   DATABASE_URL: postgresql://${DB_APP_USER}:${DB_APP_PASSWORD}@postgres:5432/${DB_NAME}
   DATABASE_PLATAFORMA_URL: postgresql://${DB_PLATAFORMA_USER}:${DB_PLATAFORMA_PASSWORD}@postgres:5432/${DB_NAME}
@@ -175,7 +175,7 @@ services:
       api: { condition: service_healthy }
     environment:
       NODE_ENV: production
-      APP_URL: https://app.${DOMINIO}
+      APP_URL: https://${DOMINIO}
       API_URL: http://api:3001
     healthcheck:
       test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1']

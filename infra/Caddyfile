@@ -14,8 +14,8 @@
 	encode zstd gzip
 }
 
-# Painel, app do barbeiro, TV e link público de agendamento.
-app.{$DOMINIO} {
+# Site, painel, app do barbeiro, TV e link público de agendamento, no domínio principal.
+{$DOMINIO} {
 	import seguranca
 	reverse_proxy web:3000
 }
@@ -35,7 +35,7 @@ wa.{$DOMINIO} {
 	reverse_proxy evolution:8080
 }
 
-# Domínio principal e www levam ao painel (o site e o cadastro ficam em app.).
-{$DOMINIO}, www.{$DOMINIO} {
-	redir https://app.{$DOMINIO}{uri} permanent
+# www e o antigo app. levam ao domínio principal, mantendo o caminho.
+www.{$DOMINIO}, app.{$DOMINIO} {
+	redir https://{$DOMINIO}{uri} permanent
 }

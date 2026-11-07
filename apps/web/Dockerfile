@@ -19,6 +19,9 @@ COPY --from=poda /repo/out/full/ .
 # Configuração do TypeScript da raiz (o prune não leva).
 COPY --from=poda /repo/tsconfig.base.json ./
 ENV NEXT_STANDALONE=1
+# Endereço público do site: o sitemap, o robots e a prévia de link saem prontos do build.
+ARG APP_URL=http://localhost:3000
+ENV APP_URL=$APP_URL
 RUN pnpm turbo run build --filter=@pente-fino/web
 
 FROM node:24-alpine AS final
