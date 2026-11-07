@@ -4,6 +4,7 @@ import {
   formatarDataHora,
   type ConfiguracaoPublica,
   type SaudeDoSistema,
+  type SmtpNaTela,
 } from '@pente-fino/shared';
 import { Botao, Campo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -61,7 +62,12 @@ export function ConfiguracoesAdmin() {
     queryKey: ['admin', 'configuracoes'],
     queryFn: () => adminApi<ConfiguracaoPublica>('configuracoes'),
   });
-  return <Estado consulta={config}>{() => <Formularios c={config.data!} />}</Estado>;
+  return (
+    <div className="flex flex-col gap-6">
+      <Estado consulta={config}>{() => <Formularios c={config.data!} />}</Estado>
+      <SmtpAdmin />
+    </div>
+  );
 }
 
 function Formularios({ c }: { c: ConfiguracaoPublica }) {
@@ -284,5 +290,132 @@ export function SaudeAdmin() {
         );
       }}
     </Estado>
+  );
+}
+
+/** SMTP da administração: a senha vai cifrada e nunca volta; sem configuração, vale o .env. */
+export function SmtpAdmin() {
+  const q = useQuery({
+    queryKey: ['admin', 'smtp'],
+    queryFn: () => adminApi<{ smtp: SmtpNaTela | null }>('configuracoes/smtp'),
+  });
+  return <Estado consulta={q}>{() => <FormSmtp atual={q.data!.smtp} />}</Estado>;
+}
+
+function FormSmtp({ atual }: { atual: SmtpNaTela | null }) {
+  const cliente = useQueryClient();
+  const [host, setHost] = useState(atual?.host ?? '');
+  const [porta, setPorta] = useState(String(atual?.porta ?? 587));
+  const [seguro, setSeguro] = useState(atual?.seguro ?? false);
+  const [usuario, setUsuario] = useState(atual?.usuario ?? '');
+  const [senha, setSenha] = useState('');
+  const [remetente, setRemetente] = useState(
+    atual?.remetente ?? 'Pente Fino <nao-responda@pentefino.com.br>',
+  );
+  const [teste, setTeste] = useState<string | null>(null);
+  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'smtp'] });
+  return (
+    <section
+      aria-labelledby="titulo-smtp"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4 lg:col-span-2"
+    >
+      <h2 id="titulo-smtp" className="text-lg font-semibold">
+        E-mail (SMTP)
+      </h2>
+      <p className="text-sm text-tinta-suave">
+        {atual
+          ? `Enviando por ${atual.host}.`
+          : 'Sem configuração aqui: os e-mails saem pelo SMTP do .env do servidor.'}{' '}
+        A senha fica cifrada e não aparece de novo.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Campo
+          id="smtp-host"
+          rotulo="Servidor"
+          value={host}
+          onChange={(e) => setHost(e.target.value)}
+        />
+        <Campo
+          id="smtp-porta"
+          rotulo="Porta"
+          inputMode="numeric"
+          value={porta}
+          onChange={(e) => setPorta(e.target.value.replace(/\D/g, ''))}
+        />
+        <label className="flex min-h-11 items-center gap-2 self-end">
+          <input
+            type="checkbox"
+            checked={seguro}
+            onChange={(e) => setSeguro(e.target.checked)}
+            className="size-5 accent-[var(--modulo)]"
+          />
+          TLS desde o início (porta 465)
+        </label>
+        <Campo
+          id="smtp-usuario"
+          rotulo="Usuário"
+          value={usuario}
+          onChange={(e) => setUsuario(e.target.value)}
+        />
+        <Campo
+          id="smtp-senha"
+          rotulo="Senha"
+          type="password"
+          autoComplete="new-password"
+          dica={atual?.temSenha ? 'Em branco: mantém a senha guardada.' : undefined}
+          value={senha}
+          onChange={(e) => setSenha(e.target.value)}
+        />
+        <Campo
+          id="smtp-remetente"
+          rotulo="Remetente"
+          value={remetente}
+          onChange={(e) => setRemetente(e.target.value)}
+        />
+      </div>
+      {teste && (
+        <p role="status" className="text-sm text-acao-texto">
+          {teste}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-3">
+        <Salvar
+          rotulo="Salvar SMTP"
+          enviar={async () => {
+            await adminApi('configuracoes/smtp', {
+              metodo: 'PUT',
+              corpo: {
+                host,
+                porta: Number(porta) || 0,
+                seguro,
+                usuario,
+                remetente,
+                senha: senha === '' ? (atual?.temSenha ? null : '') : senha,
+              },
+            });
+            setSenha('');
+            await atualizar();
+          }}
+        />
+        <Salvar
+          rotulo="Mandar e-mail de teste"
+          enviar={async () => {
+            const r = await adminApi<{ para: string; via: string }>('configuracoes/smtp/teste', {
+              corpo: {},
+            });
+            setTeste(`E-mail de teste a caminho de ${r.para}. Confira a caixa de entrada.`);
+          }}
+        />
+        {atual && (
+          <Salvar
+            rotulo="Voltar ao SMTP do .env"
+            enviar={async () => {
+              await adminApi('configuracoes/smtp', { metodo: 'DELETE' });
+              await atualizar();
+            }}
+          />
+        )}
+      </div>
+    </section>
   );
 }

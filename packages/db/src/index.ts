@@ -64,3 +64,4 @@ export * from './mover.js';
 export * from './central-avisos.js';
 export * from './plataforma.js';
 export * from './cobranca-manual.js';
+export * from './cifra.js';

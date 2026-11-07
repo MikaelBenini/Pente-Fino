@@ -67,3 +67,40 @@ export interface SaudeDoSistema {
   /** Trabalhos que falharam nas últimas 24 h (sem o conteúdo, só o motivo). */
   errosRecentes: { fila: string; tipo: string; motivo: string; quando: string }[];
 }
+
+// ─── E-mail (SMTP) ────────────────────────────────────────────────────────
+
+const smtpBase = {
+  host: z.string().trim().min(3, { error: 'Informe o servidor.' }).max(200),
+  porta: z.number().int().min(1).max(65535),
+  /** TLS desde o início (porta 465); false = STARTTLS quando o servidor oferece (587). */
+  seguro: z.boolean(),
+  usuario: z.string().trim().max(200).default(''),
+  remetente: z.string().trim().min(3, { error: 'Informe o remetente.' }).max(200),
+};
+
+/** O que a tela manda: senha null = manter a que está guardada; '' = sem senha. */
+export const smtpEntradaSchema = z.object({
+  ...smtpBase,
+  senha: z.string().max(500).nullable().default(null),
+});
+export type SmtpEntrada = z.infer<typeof smtpEntradaSchema>;
+
+/** Como fica guardado (a senha só cifrada). */
+export const smtpGuardadoSchema = z.object({
+  ...smtpBase,
+  senhaCifrada: z.string().nullable(),
+});
+export type SmtpGuardado = z.infer<typeof smtpGuardadoSchema>;
+
+/** O que a tela vê: nunca a senha, só se há uma guardada. */
+export interface SmtpNaTela extends Omit<SmtpGuardado, 'senhaCifrada'> {
+  temSenha: boolean;
+}
+
+export function smtpParaTela(json: unknown): SmtpNaTela | null {
+  const r = smtpGuardadoSchema.safeParse(json);
+  if (!r.success) return null;
+  const { senhaCifrada, ...resto } = r.data;
+  return { ...resto, temSenha: !!senhaCifrada };
+}

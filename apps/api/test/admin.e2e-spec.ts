@@ -494,3 +494,81 @@ describe('configurações e saúde do sistema', () => {
     expect(Array.isArray(s.errosRecentes)).toBe(true);
   });
 });
+
+describe('SMTP configurável', () => {
+  const quem = { email: `smtp-${sufixo}@pentefino.dev`, senha: 'senha-do-smtp-1234' };
+  let token = '';
+  const req = (metodo: 'get' | 'put' | 'post' | 'delete', url: string, corpo?: object) => {
+    const r = http()[metodo](url).set('authorization', `Bearer ${token}`);
+    return corpo ? r.send(corpo) : r;
+  };
+  const smtp = {
+    host: 'smtp.exemplo.com',
+    porta: 587,
+    seguro: false,
+    usuario: 'apikey',
+    remetente: 'Pente Fino <nao-responda@pentefino.com.br>',
+  };
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.create({
+      data: {
+        email: quem.email,
+        nome: 'Sílvio SMTP',
+        papel: 'admin',
+        senhaHash: await hash(quem.senha),
+      },
+    });
+    token = (await entrarComSegundoFator(quem)).token;
+  });
+  afterAll(async () => {
+    await req('delete', '/admin/configuracoes/smtp');
+    await plataforma.usuarioPlataforma.update({
+      where: { email: quem.email },
+      data: { ativo: false },
+    });
+  });
+
+  it('senha só cifrada, nunca na tela nem na auditoria; teste vai para quem pediu; volta ao .env', async () => {
+    await req('delete', '/admin/configuracoes/smtp').expect(204);
+    expect((await req('get', '/admin/configuracoes/smtp').expect(200)).body).toEqual({
+      smtp: null,
+    });
+    await req('put', '/admin/configuracoes/smtp', { ...smtp, porta: 0, senha: 'x' }).expect(400);
+    await req('put', '/admin/configuracoes/smtp', { ...smtp, senha: 'senha-super-secreta' }).expect(
+      204,
+    );
+    const tela = (await req('get', '/admin/configuracoes/smtp').expect(200)).body;
+    expect(tela).toEqual({ smtp: { ...smtp, temSenha: true } });
+    const guardado = await plataforma.configuracaoPlataforma.findUniqueOrThrow({
+      where: { chave: 'smtp' },
+    });
+    expect(JSON.stringify(guardado.valor)).not.toContain('senha-super-secreta');
+    // Senha em branco na tela (null) mantém a guardada.
+    await req('put', '/admin/configuracoes/smtp', {
+      ...smtp,
+      host: 'smtp2.exemplo.com',
+      senha: null,
+    }).expect(204);
+    expect((await req('get', '/admin/configuracoes/smtp').expect(200)).body.smtp).toMatchObject({
+      host: 'smtp2.exemplo.com',
+      temSenha: true,
+    });
+    const auditoria = await plataforma.auditoriaPlataforma.findMany({
+      where: { acao: 'configurar_smtp', usuario: { email: quem.email } },
+    });
+    expect(JSON.stringify(auditoria)).not.toContain('senha-super-secreta');
+    expect(JSON.stringify(auditoria)).not.toContain(
+      (guardado.valor as { senhaCifrada: string }).senhaCifrada,
+    );
+
+    const teste = await req('post', '/admin/configuracoes/smtp/teste').expect(202);
+    expect(teste.body).toEqual({ para: quem.email, via: 'administracao' });
+    expect((await ultimoEmail(quem.email))?.assunto).toBe('E-mail de teste do Pente Fino');
+
+    await req('delete', '/admin/configuracoes/smtp').expect(204);
+    expect((await req('get', '/admin/configuracoes/smtp').expect(200)).body).toEqual({
+      smtp: null,
+    });
+  });
+});

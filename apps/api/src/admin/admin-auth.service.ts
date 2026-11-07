@@ -10,7 +10,8 @@ import { gerarTokenOpaco, hashToken } from '../auth/tokens.js';
 import { Erros } from '../comum/erros.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { BancoPlataforma } from './banco-plataforma.js';
-import { cifrar, conferirCodigo, decifrar, enderecoOtpauth, novoSegredo } from './totp.js';
+import { cifrar, decifrar } from '@pente-fino/db';
+import { conferirCodigo, enderecoOtpauth, novoSegredo } from './totp.js';
 
 export interface AdminAutenticado extends UsuarioPlataformaSessao {
   sessaoId: string;
