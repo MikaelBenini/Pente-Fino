@@ -1,0 +1,192 @@
+# Produção na VPS (Etapa 17). Fica em /opt/barbearia junto com o Caddyfile, a pasta postgres/
+# e o .env (criado por instalar.sh, permissão 600). Use sempre pelos scripts:
+#   ./atualizar.sh            baixa as imagens da tag e reinicia (as migrações rodam antes da API)
+#   ./atualizar.sh <sha>      volta ou avança para uma versão específica (rollback)
+#
+# Só o Caddy publica porta (80 e 443). Banco, Redis e Evolution API ficam na rede interna:
+# o Docker ignora o UFW para portas publicadas.
+
+name: pente-fino
+
+x-imagem: &imagem
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: '5' }
+
+# Variáveis comuns à API e ao worker. As senhas vêm do .env; as conexões são montadas aqui.
+x-ambiente-app: &ambiente-app
+  NODE_ENV: production
+  TZ: UTC
+  APP_URL: https://app.${DOMINIO:?defina DOMINIO no .env}
+  API_URL: https://api.${DOMINIO}
+  DATABASE_URL: postgresql://${DB_APP_USER}:${DB_APP_PASSWORD}@postgres:5432/${DB_NAME}
+  DATABASE_PLATAFORMA_URL: postgresql://${DB_PLATAFORMA_USER}:${DB_PLATAFORMA_PASSWORD}@postgres:5432/${DB_NAME}
+  REDIS_URL: redis://redis:6379/0
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?defina JWT_ACCESS_SECRET}
+  PLATAFORMA_CHAVE: ${PLATAFORMA_CHAVE:?defina PLATAFORMA_CHAVE}
+  EVOLUTION_API_URL: http://evolution:8080
+  EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:?defina EVOLUTION_API_KEY}
+  WHATSAPP_WEBHOOK_SEGREDO: ${WHATSAPP_WEBHOOK_SEGREDO:?defina WHATSAPP_WEBHOOK_SEGREDO}
+  WHATSAPP_WEBHOOK_URL: http://api:3001/webhooks/whatsapp
+  WHATSAPP_PROVEDOR: ${WHATSAPP_PROVEDOR:-evolution}
+  SMTP_HOST: ${SMTP_HOST:?defina SMTP_HOST}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_SECURE: ${SMTP_SECURE:-false}
+  EMAIL_FROM: ${EMAIL_FROM:?defina EMAIL_FROM}
+  COBRANCA_PROVEDOR: ${COBRANCA_PROVEDOR:-asaas}
+  ASAAS_API_URL: ${ASAAS_API_URL:-https://api.asaas.com/v3}
+  ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+  ASAAS_WEBHOOK_TOKEN: ${ASAAS_WEBHOOK_TOKEN:-}
+  VAPID_CHAVE_PUBLICA: ${VAPID_CHAVE_PUBLICA:-}
+  VAPID_CHAVE_PRIVADA: ${VAPID_CHAVE_PRIVADA:-}
+  VAPID_CONTATO: ${VAPID_CONTATO:-mailto:suporte@pentefino.dev}
+  TRUST_PROXY: 'true'
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+services:
+  caddy:
+    <<: *imagem
+    image: caddy:2.10-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      DOMINIO: ${DOMINIO}
+      ACME_EMAIL: ${ACME_EMAIL:?defina ACME_EMAIL}
+      WA_USUARIO: ${WA_USUARIO:-admin}
+      WA_SENHA_HASH: ${WA_SENHA_HASH:?rode instalar.sh}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_dados:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_started
+
+  postgres:
+    <<: *imagem
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      DB_NAME: ${DB_NAME:-pente_fino}
+      DB_OWNER_USER: ${DB_OWNER_USER:-pente_fino_owner}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?defina DB_OWNER_PASSWORD}
+      DB_APP_USER: ${DB_APP_USER:-pente_fino_app}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?defina DB_APP_PASSWORD}
+      DB_PLATAFORMA_USER: ${DB_PLATAFORMA_USER:-pente_fino_admin}
+      DB_PLATAFORMA_PASSWORD: ${DB_PLATAFORMA_PASSWORD:?defina DB_PLATAFORMA_PASSWORD}
+      EVOLUTION_DB_USER: ${EVOLUTION_DB_USER:-evolution}
+      EVOLUTION_DB_PASSWORD: ${EVOLUTION_DB_PASSWORD:?defina EVOLUTION_DB_PASSWORD}
+    volumes:
+      - postgres_dados:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${DB_NAME}"']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redis:
+    <<: *imagem
+    image: redis:8.8-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis_dados:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  evolution:
+    <<: *imagem
+    image: evoapicloud/evolution-api:v2.3.7
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: https://wa.${DOMINIO}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: 'false'
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://${EVOLUTION_DB_USER:-evolution}:${EVOLUTION_DB_PASSWORD}@postgres:5432/evolution?schema=evolution_api
+      DATABASE_CONNECTION_CLIENT_NAME: pente_fino
+      CACHE_REDIS_ENABLED: 'true'
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: 'false'
+      CACHE_LOCAL_ENABLED: 'false'
+      CONFIG_SESSION_PHONE_CLIENT: Pente Fino
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      DEL_INSTANCE: 'false'
+      TELEMETRY_ENABLED: 'false'
+      LOG_LEVEL: ERROR,WARN
+    volumes:
+      - evolution_instancias:/evolution/instances
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1']
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  # Roda as migrações e sai. A API só sobe depois que ela termina bem.
+  migracoes:
+    image: ghcr.io/mikaelbenini/pente-fino-migracoes:${TAG:-latest}
+    restart: 'no'
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_MIGRATION_URL: postgresql://${DB_OWNER_USER:-pente_fino_owner}:${DB_OWNER_PASSWORD}@postgres:5432/${DB_NAME:-pente_fino}
+      DATABASE_PLATAFORMA_URL: postgresql://${DB_PLATAFORMA_USER:-pente_fino_admin}:${DB_PLATAFORMA_PASSWORD}@postgres:5432/${DB_NAME:-pente_fino}
+
+  api:
+    <<: *imagem
+    image: ghcr.io/mikaelbenini/pente-fino-api:${TAG:-latest}
+    depends_on:
+      migracoes: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    environment:
+      <<: *ambiente-app
+      API_PORT: 3001
+      API_DOCS: ${API_DOCS:-false}
+
+  worker:
+    <<: *imagem
+    image: ghcr.io/mikaelbenini/pente-fino-worker:${TAG:-latest}
+    depends_on:
+      migracoes: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    environment: *ambiente-app
+
+  web:
+    <<: *imagem
+    image: ghcr.io/mikaelbenini/pente-fino-web:${TAG:-latest}
+    depends_on:
+      api: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      APP_URL: https://app.${DOMINIO}
+      API_URL: http://api:3001
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  postgres_dados:
+  redis_dados:
+  evolution_instancias:
+  caddy_dados:
+  caddy_config:

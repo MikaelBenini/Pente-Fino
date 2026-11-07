@@ -452,17 +452,17 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 
 Um servidor Ubuntu 24.04 LTS seguro antes de receber qualquer dado.
 
-- [ ] Criar a VPS com a chave SSH da Etapa 0
+- [x] Criar a VPS com a chave SSH da Etapa 0
 - [ ] DNS: registros A de `app`, `api`, `wa`, `status` e `homolog` apontando para o IP da VPS
-- [ ] Usuário de trabalho, sem entrar como root:
+- [x] Usuário de trabalho, sem entrar como root:
 
 ```bash
 adduser deploy && usermod -aG sudo deploy
 rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy
 ```
 
-- [ ] Em `/etc/ssh/sshd_config`: `PermitRootLogin no` e `PasswordAuthentication no`; depois `sudo systemctl restart ssh`
-- [ ] Atualizar e instalar proteções:
+- [x] Em `/etc/ssh/sshd_config`: `PermitRootLogin no` e `PasswordAuthentication no`; depois `sudo systemctl restart ssh`
+- [x] Atualizar e instalar proteções:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -471,25 +471,25 @@ sudo ufw allow OpenSSH && sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw en
 sudo timedatectl set-timezone America/Sao_Paulo
 ```
 
-- [ ] Atualizações de segurança automáticas (`sudo dpkg-reconfigure unattended-upgrades`)
-- [ ] Arquivo de swap de 2 GB
-- [ ] Docker Engine e plugin Compose; usuário `deploy` no grupo `docker`
-- [ ] Rotação de logs do Docker em `/etc/docker/daemon.json` (tamanho máximo por arquivo)
-- [ ] Atenção: o Docker ignora o UFW para portas publicadas. Banco, Redis e Evolution API **nunca** publicam porta; ficam só na rede interna do Compose
-- [ ] **Pronto quando:** login só por chave, root bloqueado, só portas 22, 80 e 443 abertas por fora
+- [x] Atualizações de segurança automáticas (`sudo dpkg-reconfigure unattended-upgrades`)
+- [x] Arquivo de swap de 2 GB
+- [x] Docker Engine e plugin Compose; usuário `deploy` no grupo `docker`
+- [x] Rotação de logs do Docker em `/etc/docker/daemon.json` (tamanho máximo por arquivo)
+- [x] Atenção: o Docker ignora o UFW para portas publicadas. Banco, Redis e Evolution API **nunca** publicam porta; ficam só na rede interna do Compose
+- [x] **Pronto quando:** login só por chave, root bloqueado, só portas 22, 80 e 443 abertas por fora
 
 ## Etapa 17 · Publicação com HTTPS
 
 Tudo roda em containers na VPS, atrás do Caddy, que emite e renova o certificado HTTPS sozinho.
 
-- [ ] `infra/docker-compose.prod.yml` com: Caddy, web, api, worker, PostgreSQL, Redis e Evolution API, cada um com reinício automático e checagem de saúde
-- [ ] `infra/Caddyfile`: `app.` para o web, `api.` para a API, `wa.` para a Evolution API com acesso restrito (senha ou IP), cabeçalhos de segurança
+- [x] `infra/docker-compose.prod.yml` com: Caddy, web, api, worker, PostgreSQL, Redis e Evolution API, cada um com reinício automático e checagem de saúde
+- [x] `infra/Caddyfile`: `app.` para o web, `api.` para a API, `wa.` para a Evolution API com acesso restrito (senha ou IP), cabeçalhos de segurança
 - [ ] `.env` de produção criado direto na VPS, com permissão `600`, senhas longas e diferentes das de desenvolvimento
-- [ ] Pasta `/opt/barbearia` com o compose, o Caddyfile e o `.env`
+- [x] Pasta `/opt/barbearia` com o compose, o Caddyfile e o `.env`
 - [ ] Primeira subida: `docker compose pull`, migrações do banco, `docker compose up -d`
 - [ ] Conectar o WhatsApp da unidade-piloto pelo QR Code
 - [ ] Deploy automático: ao gerar as imagens, o GitHub Actions entra por SSH, baixa a nova tag, roda as migrações e reinicia os serviços
-- [ ] Rollback: voltar para a tag anterior com um comando documentado em `docs/`
+- [x] Rollback: voltar para a tag anterior com um comando documentado em `docs/`
 - [ ] Ambiente de homologação no mesmo servidor (`homolog.`), com banco separado, para testar antes de produção
 - [ ] **Pronto quando:** `https://app.seudominio` abre com cadeado, o login funciona e um merge na `main` chega ao ar sozinho
 

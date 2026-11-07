@@ -1,0 +1,36 @@
+# HTTPS automático (Let's Encrypt) para os endereços do Pente Fino. DOMINIO e companhia vêm do
+# .env pelo docker-compose.prod.yml. Os registros A de app., api. e wa. apontam para a VPS.
+{
+	email {$ACME_EMAIL}
+}
+
+(seguranca) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	encode zstd gzip
+}
+
+# Painel, app do barbeiro, TV e link público de agendamento.
+app.{$DOMINIO} {
+	import seguranca
+	reverse_proxy web:3000
+}
+
+# API: o painel fala com ela por dentro (web → api); aqui ficam os webhooks (Asaas).
+api.{$DOMINIO} {
+	import seguranca
+	reverse_proxy api:3001
+}
+
+# Painel da Evolution API, só com usuário e senha (WA_SENHA_HASH gerado pelo instalar.sh).
+wa.{$DOMINIO} {
+	import seguranca
+	basic_auth {
+		{$WA_USUARIO} {$WA_SENHA_HASH}
+	}
+	reverse_proxy evolution:8080
+}
