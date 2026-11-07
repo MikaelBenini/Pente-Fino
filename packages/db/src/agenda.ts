@@ -216,10 +216,14 @@ export async function validarHorario(
   inicio: Date,
   fim: Date,
   ignorar?: string,
+  /** false: não reconfere o expediente (devolver um horário que já estava marcado). */
+  { conferirExpediente = true }: { conferirExpediente?: boolean } = {},
 ): Promise<void> {
   const dia = dataLocal(inicio);
-  const turnos = await expedienteDoProfissional(tx, profissionalId, unidadeId, dia);
-  if (!turnos.some((t) => t.inicio <= inicio && fim <= t.fim))
+  const turnos = conferirExpediente
+    ? await expedienteDoProfissional(tx, profissionalId, unidadeId, dia)
+    : [];
+  if (conferirExpediente && !turnos.some((t) => t.inicio <= inicio && fim <= t.fim))
     throw new ErroAgenda(
       'conflito',
       'Fora do expediente do profissional (ou a unidade não abre nesse dia).',
