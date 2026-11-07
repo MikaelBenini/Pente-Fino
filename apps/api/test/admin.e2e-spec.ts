@@ -816,3 +816,123 @@ describe('cupons', () => {
     expect(lista.find((c) => c.codigo === codigo)?.usados).toBe(1);
   });
 });
+
+describe('pronto quando (etapa 15.1)', () => {
+  const vendedor = { email: `rua-${sufixo}@pentefino.dev`, senha: 'senha-do-vendedor-rua' };
+  const chefe = { email: `chefe-rua-${sufixo}@pentefino.dev`, senha: 'senha-do-chefe-rua-1' };
+  const donoEmail = `dono-rua-${sufixo}@e2e.pentefino.dev`;
+  const clienteSecreto = `Cliente Secreto ${sufixo}`;
+  let contaId = '';
+  const com = (t: string) => ({
+    get: (url: string) => http().get(url).set('authorization', `Bearer ${t}`),
+    post: (url: string, corpo: object) =>
+      http().post(url).set('authorization', `Bearer ${t}`).send(corpo),
+    put: (url: string, corpo: object) =>
+      http().put(url).set('authorization', `Bearer ${t}`).send(corpo),
+  });
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.createMany({
+      data: [
+        {
+          email: vendedor.email,
+          nome: 'Rui da Rua',
+          papel: 'vendedor',
+          senhaHash: await hash(vendedor.senha),
+        },
+        {
+          email: chefe.email,
+          nome: 'Clara Chefe',
+          papel: 'admin',
+          senhaHash: await hash(chefe.senha),
+        },
+      ],
+    });
+  });
+  afterAll(async () => {
+    await plataforma.usuarioPlataforma.updateMany({
+      where: { email: { in: [vendedor.email, chefe.email] } },
+      data: { ativo: false },
+    });
+    if (contaId) {
+      const app2 = criarPrisma();
+      await naConta(app2, contaId, (tx) => tx.conta.deleteMany({ where: { id: contaId } }));
+      await app2.$disconnect();
+    }
+  });
+
+  it('vende na rua, registra o Pix, o dono entra; o admin vê, muda o plano com motivo e tudo fica na auditoria, sem dado de cliente', async () => {
+    // 1. O vendedor cria a conta na rua e registra o Pix na hora.
+    const v = com((await entrarComSegundoFator(vendedor)).token);
+    const venda = (
+      await v
+        .post('/admin/contas', {
+          barbearia: `Barbearia da Esquina ${sufixo}`,
+          dono: { nome: 'Edu Esquina', email: donoEmail, telefone: '11955554444' },
+          plano: 'basico',
+          ciclo: 'mensal',
+          diasTeste: 0,
+        })
+        .expect(201)
+    ).body as VendaCriada;
+    contaId = venda.contaId;
+    expect((await ultimoEmail(donoEmail))?.assunto).toContain('está pronta');
+    const hoje = dataLocal(new Date());
+    await v
+      .post(`/admin/contas/${contaId}/pagamentos`, {
+        valor: 7990,
+        forma: 'pix',
+        pagoEm: hoje,
+        periodoInicio: hoje,
+      })
+      .expect(201);
+
+    // 2. O dono recebe o convite, entra e usa (cadastra um cliente).
+    expect((await ultimoEmail(donoEmail))?.assunto).toContain('Recebemos o pagamento');
+    await http()
+      .post('/auth/convite')
+      .send({ token: tokenDoLink(venda.linkConvite), senha: 'senha-do-edu-123' })
+      .expect(200);
+    const dono = await como(app, donoEmail, 'senha-do-edu-123');
+    expect((await dono.get('/conta/situacao').expect(200)).body).toMatchObject({
+      situacao: 'ativa',
+      somenteLeitura: false,
+    });
+    await dono.post('/clientes', { nome: clienteSecreto, telefone: '11944443333' }).expect(201);
+
+    // 3. O admin vê a conta nova nas métricas e na lista, e muda o plano com motivo.
+    const adm = com((await entrarComSegundoFator(chefe)).token);
+    const metricas = (await adm.get('/admin/metricas').expect(200)).body as MetricasDaPlataforma;
+    expect(metricas.novas.hoje).toBeGreaterThan(0);
+    expect(metricas.receita.pagantes).toBeGreaterThan(0);
+    const lista = (await adm.get('/admin/contas').expect(200)).body as ContaNaPlataforma[];
+    expect(lista.find((c) => c.id === contaId)).toMatchObject({
+      plano: 'basico',
+      status: 'ativa',
+      donoAtivou: true,
+    });
+    await adm
+      .put(`/admin/contas/${contaId}/plano`, {
+        plano: 'pro',
+        ciclo: 'mensal',
+        motivo: 'Pediu mais barbeiros',
+      })
+      .expect(200);
+    expect((await dono.get('/conta/situacao').expect(200)).body.plano).toBe('pro');
+
+    // 4. Tudo na auditoria da plataforma, com quem fez e o motivo.
+    const ficha = (await adm.get(`/admin/contas/${contaId}`).expect(200))
+      .body as FichaContaPlataforma;
+    expect(ficha.historico.map((h) => [h.acao, h.quem])).toEqual([
+      ['mudar_plano', 'Clara Chefe'],
+      ['registrar_pagamento', 'Rui da Rua'],
+      ['vender', 'Rui da Rua'],
+    ]);
+    expect(ficha.historico[0]?.motivo).toBe('Pediu mais barbeiros');
+
+    // 5. Nenhuma resposta da administração traz dado de cliente da barbearia.
+    const respostas = JSON.stringify([metricas, lista, ficha]);
+    expect(respostas).not.toContain(clienteSecreto);
+    expect(respostas).not.toContain('11944443333');
+  });
+});
