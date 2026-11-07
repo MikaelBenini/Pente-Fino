@@ -415,10 +415,10 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 
 **Acesso e segurança**
 
-- [ ] Papéis da plataforma, fora das contas: `admin` (tudo) e `vendedor` (cria conta, registra pagamento, vê só as contas dele). Tabela `usuario_plataforma` sem `conta_id`; nunca reaproveita o login da barbearia
-- [ ] Endereço próprio (`/admin`), login com segundo fator obrigatório (código no aplicativo autenticador), sessão curta e IP registrado
-- [ ] Leitura entre contas sem furar o RLS: funções `SECURITY DEFINER` só para o que o painel precisa (contagens, plano, status, datas), com um usuário de banco próprio; o admin **não** abre comanda, cliente nem conversa de barbearia
-- [ ] Toda ação do admin e do vendedor fica numa auditoria da plataforma (quem, quando, conta, antes e depois)
+- [ ] Papéis da plataforma, fora das contas: `admin` (tudo) e `vendedor` (cria conta, registra pagamento, vê só as contas dele). Tabela `usuario_plataforma` sem `conta_id`; nunca reaproveita o login da barbearia (em parte: tabela `usuario_plataforma` com os papéis, login próprio e `pnpm admin:criar` para o primeiro admin (e `--redefinir` para quem perdeu o celular); a lista de contas é só do admin. Falta o vendedor ver as contas dele, que vem com a venda presencial)
+- [x] Endereço próprio (`/admin`), login com segundo fator obrigatório (código no aplicativo autenticador), sessão curta e IP registrado (feito: `/admin` com ponte própria (`/admin-api`, cookie httpOnly `pf_admin` só desse caminho, SameSite=Strict); a ponte das barbearias recusa `admin/...`; TOTP da RFC 6238 configurado no 1º acesso pelo QR code, o mesmo código não entra duas vezes e o segredo fica cifrado (AES-256-GCM, `PLATAFORMA_CHAVE`); sessão de 2 h (`PLATAFORMA_SESSAO_EXPIRA_EM`) com IP e navegador; recusa sem dizer se errou e-mail, senha ou código)
+- [x] Leitura entre contas sem furar o RLS: funções `SECURITY DEFINER` só para o que o painel precisa (contagens, plano, status, datas), com um usuário de banco próprio; o admin **não** abre comanda, cliente nem conversa de barbearia (feito: usuário de banco `DB_PLATAFORMA_USER` (papel `pente_fino_plataforma`, `infra/postgres/init/02-plataforma.sh`) só com as tabelas da plataforma e o EXECUTE de `plataforma_contas()`; as políticas `plataforma_leitura` valem só para o dono das tabelas, ou seja, só dentro das funções; o usuário da aplicação não executa a função nem lê as tabelas da plataforma (teste `plataforma.db.test.ts`))
+- [x] Toda ação do admin e do vendedor fica numa auditoria da plataforma (quem, quando, conta, antes e depois) (feito: `auditoria_plataforma` imutável (mesmo gatilho da auditoria das barbearias), com IP; já registra entrar, configurar o segundo fator, recusas, sair e o que o comando do servidor faz; as próximas ações usam o mesmo `auditar`)
 
 **Métricas do negócio**
 

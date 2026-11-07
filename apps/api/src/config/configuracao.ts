@@ -27,6 +27,16 @@ const esquema = z
     /** Push do PWA: só a pública vai para o navegador; sem ela, o Perfil diz que está desligado. */
     VAPID_CHAVE_PUBLICA: z.string().default(''),
     DATABASE_URL: z.string().startsWith('postgresql://'),
+    /** Usuário de banco da administração (/admin); sem ele, as rotas /admin respondem 503. */
+    DATABASE_PLATAFORMA_URL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().startsWith('postgresql://').optional(),
+    ),
+    /** Cifra o segredo do autenticador de quem administra: 32 bytes em base64. */
+    PLATAFORMA_CHAVE: z.string().refine((v) => Buffer.from(v, 'base64').length === 32, {
+      error: 'precisa de 32 bytes em base64 (openssl rand -base64 32)',
+    }),
+    PLATAFORMA_SESSAO_EXPIRA_EM: duracao.default('2h'),
     REDIS_URL: z.string().startsWith('redis://'),
     JWT_ACCESS_SECRET: z.string().min(16),
     JWT_ACCESS_EXPIRES_IN: duracao.default('15m'),
@@ -62,6 +72,12 @@ const esquema = z
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
+    if (env.PLATAFORMA_CHAVE === CHAVE_PLATAFORMA_DE_EXEMPLO)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PLATAFORMA_CHAVE'],
+        message: 'em produção gere uma chave própria (openssl rand -base64 32)',
+      });
     if (env.JWT_ACCESS_SECRET.length < 32 || env.JWT_ACCESS_SECRET.includes('troque')) {
       ctx.addIssue({
         code: 'custom',
@@ -102,12 +118,21 @@ const esquema = z
     }
   });
 
+/** A do .env.example: pública, então recusada em produção. */
+const CHAVE_PLATAFORMA_DE_EXEMPLO = 'iQCcGhpmGkYa2RWAdGEPm08acvABzIt/ps7lgJBlbXo=';
+
 export interface Configuracao {
   ambiente: 'development' | 'test' | 'production';
   porta: number;
   appUrl: string;
   apiUrl: string;
   databaseUrl: string;
+  plataforma: {
+    /** Conexão do usuário de banco da administração; null = /admin desligado. */
+    databaseUrl: string | null;
+    chave: Buffer;
+    sessaoExpiraEmMs: number;
+  };
   redisUrl: string;
   jwtSegredo: string;
   /** Validade do token de acesso, em segundos. */
@@ -157,6 +182,11 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
     appUrl: e.APP_URL.replace(/\/$/, ''),
     apiUrl: e.API_URL.replace(/\/$/, ''),
     databaseUrl: e.DATABASE_URL,
+    plataforma: {
+      databaseUrl: e.DATABASE_PLATAFORMA_URL ?? null,
+      chave: Buffer.from(e.PLATAFORMA_CHAVE, 'base64'),
+      sessaoExpiraEmMs: duracaoEmMs(e.PLATAFORMA_SESSAO_EXPIRA_EM),
+    },
     redisUrl: e.REDIS_URL,
     jwtSegredo: e.JWT_ACCESS_SECRET,
     acessoExpiraEmS: duracaoEmMs(e.JWT_ACCESS_EXPIRES_IN) / 1000,
