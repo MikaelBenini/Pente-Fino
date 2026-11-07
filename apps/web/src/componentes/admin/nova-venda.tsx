@@ -16,6 +16,7 @@ import { ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { Estado, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { useTabelasAdmin } from './precos-admin';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível criar a conta.';
@@ -43,6 +44,7 @@ export function NovaVenda({
   const [dias, setDias] = useState('14');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const tabelaHoje = useTabelasAdmin().vigente();
   const [venda, setVenda] = useState<VendaCriada | null>(null);
 
   function fechar() {
@@ -161,7 +163,7 @@ export function NovaVenda({
               onChange={(e) => setPlano(e.target.value as typeof plano)}
               opcoes={PLANOS.map((p) => ({
                 valor: p,
-                rotulo: `${NOME_PLANO[p]} · ${formatarMoeda(precoPorMes(p, ciclo))}/mês`,
+                rotulo: `${NOME_PLANO[p]} · ${formatarMoeda(precoPorMes(p, ciclo, 1, tabelaHoje))}/mês`,
               }))}
             />
             <Selecao

@@ -21,6 +21,7 @@ import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import { api } from '@/lib/api';
+import { useTabelaPrecos } from '@/lib/consultas';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
 import { Aviso } from '../aviso';
@@ -37,6 +38,7 @@ function daUrl<T extends string>(valor: string | null, aceitos: readonly T[], pa
 }
 
 export function FormularioCadastro() {
+  const tabela = useTabelaPrecos();
   const router = useRouter();
   const params = useSearchParams();
   const hidratado = useHidratado();
@@ -153,7 +155,7 @@ export function FormularioCadastro() {
                 <span className="font-semibold">
                   {NOME_PLANO[p]} ·{' '}
                   <span className="font-denso tabular-nums">
-                    {formatarMoeda(precoPorMes(p, ciclo))}/mês
+                    {formatarMoeda(precoPorMes(p, ciclo, 1, tabela))}/mês
                   </span>
                 </span>
                 <span className="text-sm text-tinta-suave">{limitePlano(p)}</span>

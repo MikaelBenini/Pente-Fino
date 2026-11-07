@@ -74,17 +74,73 @@ export const PRECOS_PLANO: Readonly<Record<PlanoConta, PrecoPlano>> = {
 /** Unidade além da primeira, só no Premium. */
 export const PRECO_UNIDADE_EXTRA: PrecoPlano = { mensal: 9990, anualPorMes: 8290 };
 
+// ─── Tabelas de preço com vigência (Etapa 15.1) ───────────────────────────
+
+/** Uma tabela de preços que vale a partir de uma data (a administração cadastra novas). */
+export interface TabelaPrecosPlanos {
+  desde: string;
+  planos: Record<PlanoConta, PrecoPlano>;
+  unidadeExtra: PrecoPlano;
+}
+
+/** A tabela do lançamento: vale para quem assinou antes de qualquer outra. */
+export const TABELA_PADRAO: TabelaPrecosPlanos = {
+  desde: '2026-01-01',
+  planos: { ...PRECOS_PLANO },
+  unidadeExtra: { ...PRECO_UNIDADE_EXTRA },
+};
+
+const precoPlanoSchema = z.object({
+  mensal: z.number().int().min(100, { error: 'Preço inválido.' }),
+  anualPorMes: z.number().int().min(100, { error: 'Preço inválido.' }),
+});
+export const tabelaPrecosPlanosSchema = z.object({
+  desde: z.iso.date({ error: 'Data inválida.' }),
+  planos: z.object({ basico: precoPlanoSchema, pro: precoPlanoSchema, premium: precoPlanoSchema }),
+  unidadeExtra: precoPlanoSchema,
+});
+
+/** Tabelas guardadas, em ordem de vigência, sempre com a do lançamento como base. */
+export function lerTabelasPreco(json: unknown): TabelaPrecosPlanos[] {
+  const lista = Array.isArray(json) ? json : [];
+  const validas = lista
+    .map((t) => tabelaPrecosPlanosSchema.safeParse(t))
+    .filter((r) => r.success)
+    .map((r) => r.data)
+    .filter((t) => t.desde > TABELA_PADRAO.desde);
+  const porData = new Map(validas.map((t) => [t.desde, t]));
+  return [TABELA_PADRAO, ...[...porData.values()].sort((x, y) => x.desde.localeCompare(y.desde))];
+}
+
+/** A tabela que vale numa data (a mais recente que começou até ela). */
+export function tabelaVigente(
+  tabelas: readonly TabelaPrecosPlanos[],
+  data: string | null,
+): TabelaPrecosPlanos {
+  const dia = data ?? TABELA_PADRAO.desde;
+  return [...tabelas].reverse().find((t) => t.desde <= dia) ?? TABELA_PADRAO;
+}
+
 /** Quanto a rede paga por mês no ciclo escolhido (Premium cobra a partir da 2ª unidade). */
-export function precoPorMes(plano: PlanoConta, ciclo: Ciclo, unidades = 1): number {
+export function precoPorMes(
+  plano: PlanoConta,
+  ciclo: Ciclo,
+  unidades = 1,
+  tabela: TabelaPrecosPlanos = TABELA_PADRAO,
+): number {
   const chave = ciclo === 'mensal' ? 'mensal' : 'anualPorMes';
   const extras = plano === 'premium' ? Math.max(0, unidades - 1) : 0;
-  return PRECOS_PLANO[plano][chave] + extras * PRECO_UNIDADE_EXTRA[chave];
+  return tabela.planos[plano][chave] + extras * tabela.unidadeExtra[chave];
 }
 
 /** Total cobrado no anual e quanto se economiza contra 12 mensalidades. */
-export function resumoAnual(plano: PlanoConta, unidades = 1): { total: number; economia: number } {
-  const total = precoPorMes(plano, 'anual', unidades) * 12;
-  return { total, economia: precoPorMes(plano, 'mensal', unidades) * 12 - total };
+export function resumoAnual(
+  plano: PlanoConta,
+  unidades = 1,
+  tabela: TabelaPrecosPlanos = TABELA_PADRAO,
+): { total: number; economia: number } {
+  const total = precoPorMes(plano, 'anual', unidades, tabela) * 12;
+  return { total, economia: precoPorMes(plano, 'mensal', unidades, tabela) * 12 - total };
 }
 
 // ─── Recursos por plano (aplicados na API e na tela) ──────────────────────
@@ -207,6 +263,9 @@ export function conferirTrocaDePlano(d: {
   para: PlanoConta;
   ciclo: Ciclo;
   uso: UsoDaConta;
+  /** Tabela que a conta contratou (valor de hoje) e a do dia (valor novo: troca é contrato novo). */
+  tabelaAtual?: TabelaPrecosPlanos;
+  tabelaNova?: TabelaPrecosPlanos;
 }): PreviaTrocaPlano {
   const { de, para, uso } = d;
   const limite = LIMITES_PLANO[para];
@@ -237,8 +296,8 @@ export function conferirTrocaDePlano(d: {
     de,
     para,
     sobe: ORDEM[para] > ORDEM[de],
-    valorAtual: precoPorMes(de, d.ciclo, uso.unidades),
-    valorNovo: precoPorMes(para, d.ciclo, uso.unidades),
+    valorAtual: precoPorMes(de, d.ciclo, uso.unidades, d.tabelaAtual),
+    valorNovo: precoPorMes(para, d.ciclo, uso.unidades, d.tabelaNova),
     bloqueios,
     perdas,
   };

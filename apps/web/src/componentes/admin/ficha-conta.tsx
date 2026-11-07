@@ -23,6 +23,7 @@ import { ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { useTabelasAdmin } from './precos-admin';
 
 const NOME_ACAO: Record<string, string> = {
   mudar_plano: 'Mudou o plano',
@@ -181,7 +182,9 @@ function Conteudo({
   );
   const [motivoSituacao, setMotivoSituacao] = useState('');
   const unidades = Math.max(1, f.unidades.filter((u) => u.ativa).length);
-  const sugerido = precoPorMes(f.plano, f.ciclo, unidades) * (f.ciclo === 'anual' ? 12 : 1);
+  const tabelaConta = useTabelasAdmin().vigente(f.precosDesde);
+  const sugerido =
+    precoPorMes(f.plano, f.ciclo, unidades, tabelaConta) * (f.ciclo === 'anual' ? 12 : 1);
   const [valor, setValor] = useState((sugerido / 100).toFixed(2).replace('.', ','));
   const [forma, setForma] = useState<(typeof FORMAS_PAGAMENTO_MANUAL)[number]>('pix');
   const [pagoEm, setPagoEm] = useState(hoje);

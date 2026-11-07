@@ -65,6 +65,7 @@ export class AdminVendasService {
             status: 'teste',
             testeAte: new Date(agora.getTime() + d.diasTeste * 86_400_000),
             vendedorId: quem.id,
+            precosDesde: new Date(`${dataLocal(agora)}T00:00:00Z`),
           },
         });
         const unidade = await tx.unidade.create({

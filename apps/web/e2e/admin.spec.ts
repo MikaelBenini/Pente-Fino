@@ -112,6 +112,9 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(smtp).toContainText('SMTP do .env');
   await smtp.getByRole('button', { name: 'Mandar e-mail de teste' }).click();
   await expect(smtp.getByText(/E-mail de teste a caminho de/)).toBeVisible();
+  const precos = page.getByRole('region', { name: 'Planos e preços' });
+  await expect(precos.getByRole('table', { name: 'Tabelas de preço' })).toContainText('Em vigor');
+  await expect(precos.getByRole('form', { name: 'Nova tabela de preços' })).toBeVisible();
   const modelos = page.getByRole('region', { name: 'Modelos de e-mail' });
   await modelos.getByLabel('E-mail', { exact: true }).selectOption('pagamento_recebido');
   await modelos.getByLabel('Assunto').fill('Pagamento da {{conta}} recebido');

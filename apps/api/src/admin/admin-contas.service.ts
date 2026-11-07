@@ -7,6 +7,7 @@ import {
   registrarPagamentoManual,
 } from '@pente-fino/db';
 import {
+  dataLocal,
   fimDoPeriodo,
   formatarData,
   formatarMoeda,
@@ -24,6 +25,7 @@ import { PlanoGuard } from '../assinatura/plano.guard.js';
 import { PROVEDOR_COBRANCA, type ProvedorCobranca } from '../cobranca/provedor.js';
 import { Erros } from '../comum/erros.js';
 import { EmailsService } from '../emails/emails.service.js';
+import { PrecosService } from '../comum/precos.service.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { BancoPlataforma } from './banco-plataforma.js';
 
@@ -51,6 +53,7 @@ export class AdminContasService {
     @Inject(PlanoGuard) private readonly planos: PlanoGuard,
     @Inject(PROVEDOR_COBRANCA) private readonly provedor: ProvedorCobranca,
     @Inject(EmailsService) private readonly emails: EmailsService,
+    @Inject(PrecosService) private readonly precos: PrecosService,
   ) {}
 
   private valeNaHora(contaId: string) {
@@ -94,7 +97,12 @@ export class AdminContasService {
     if (antes.asaasAssinaturaId) {
       try {
         await this.provedor.atualizarAssinatura(antes.asaasAssinaturaId, {
-          valor: valorDaCobranca(d.plano, d.ciclo, Number(antes.unidades) || 1),
+          valor: valorDaCobranca(
+            d.plano,
+            d.ciclo,
+            Number(antes.unidades) || 1,
+            await this.precos.vigente(dataLocal(new Date())),
+          ),
           descricao: `Pente Fino ${NOME_PLANO[d.plano]} (${d.ciclo})`,
         });
         asaas = 'atualizado';

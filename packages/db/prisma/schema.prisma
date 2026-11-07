@@ -266,6 +266,8 @@ model Conta {
   /// Quem da plataforma vendeu (venda presencial); sem chave estrangeira: a tabela da plataforma
   /// fica fora do alcance da aplicação.
   vendedorId              String?       @map("vendedor_id") @db.Uuid
+  /// Data da tabela de preços contratada (assinatura ou última troca de plano); null = a do lançamento.
+  precosDesde             DateTime?     @map("precos_desde") @db.Date
   canceladaEm             DateTime?     @map("cancelada_em") @db.Timestamptz(3)
   motivoCancelamento      String?       @map("motivo_cancelamento")
   criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)

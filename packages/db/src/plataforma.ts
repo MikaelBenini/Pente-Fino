@@ -15,6 +15,7 @@ export interface LinhaContaPlataforma {
   cancelada_em: Date | null;
   motivo_cancelamento: string | null;
   vendedor_id: string | null;
+  precos_desde: Date | null;
   dono_ativou: boolean;
   unidades: number;
   profissionais: number;

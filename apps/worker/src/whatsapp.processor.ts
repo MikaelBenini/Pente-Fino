@@ -301,7 +301,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
         if (job.data.tipo === 'cobranca_manual') {
           let total = 0;
           // Textos personalizados na administração (os demais usam o padrão).
-          const { modelosEmail } = lerConfiguracaoPublica(
+          const { modelosEmail, tabelasPreco } = lerConfiguracaoPublica(
             await configuracaoDoSistema(this.banco.prisma),
           );
           for (const contaId of await contasParaAvisosDaAssinatura(this.banco.prisma)) {
@@ -309,6 +309,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
               for (const e of await rotinaAvisosDaAssinatura(this.banco.prisma, contaId, {
                 appUrl: this.config.APP_URL,
                 modelos: modelosEmail,
+                tabelas: tabelasPreco,
               })) {
                 await filaEmails.add('cobranca_manual', e);
                 total++;

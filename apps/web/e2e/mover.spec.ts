@@ -51,10 +51,18 @@ test('a recepção arrasta o horário para outro barbeiro e 30 min depois, e des
   await expect(bloco).toBeVisible();
   const origem = page.locator('[data-profissional]', { has: bloco }).filter({ visible: true });
   const idOrigem = await origem.getAttribute('data-profissional');
-  const destino = page
-    .locator(`[data-profissional]:not([data-profissional="${idOrigem}"])`)
-    .filter({ visible: true })
-    .first();
+  // A coluna vizinha (a da esquerda, ou a da direita se for a primeira): com muitos barbeiros
+  // a agenda rola na horizontal, e as duas precisam estar na tela.
+  const colunas = page.locator('[data-profissional]').filter({ visible: true });
+  const ids = await colunas.evaluateAll((els) =>
+    els.map((e) => e.getAttribute('data-profissional')),
+  );
+  const i = ids.indexOf(idOrigem);
+  const idDestino = ids[i > 0 ? i - 1 : i + 1]!;
+  const destino = page.locator(`[data-profissional="${idDestino}"]`).filter({ visible: true });
+  await bloco.scrollIntoViewIfNeeded();
+  await destino.scrollIntoViewIfNeeded();
+  await bloco.scrollIntoViewIfNeeded();
   const b = (await bloco.boundingBox())!;
   const d = (await destino.boundingBox())!;
   // Segura, arrasta para a coluna do lado e 30 min para baixo (1,4 px por minuto).

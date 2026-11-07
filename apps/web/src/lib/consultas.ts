@@ -46,7 +46,12 @@ import type {
   HorarioLivre,
   ProdutoDetalhe,
 } from '@pente-fino/shared';
-import { temRecurso, type Recurso } from '@pente-fino/shared';
+import {
+  TABELA_PADRAO,
+  temRecurso,
+  type Recurso,
+  type TabelaPrecosPlanos,
+} from '@pente-fino/shared';
 
 export interface ContaResumo {
   id: string;
@@ -438,3 +443,12 @@ export const useAvisos = () =>
     queryFn: () => api<CaixaDeAvisos>('avisos'),
     refetchInterval: 60_000,
   });
+
+/** Preços dos planos que valem hoje (site e cadastro); até carregar, a tabela do lançamento. */
+export const useTabelaPrecos = () =>
+  useQuery({
+    queryKey: ['publico', 'precos'],
+    queryFn: () => api<TabelaPrecosPlanos>('publico/precos'),
+    placeholderData: TABELA_PADRAO,
+    staleTime: 5 * 60_000,
+  }).data ?? TABELA_PADRAO;
