@@ -19,7 +19,7 @@
     "@pente-fino/db": "workspace:*",
     "@pente-fino/shared": "workspace:*",
     "@pente-fino/whatsapp": "workspace:*",
-    "bullmq": "6.6.0",
+    "bullmq": "6.7.0",
     "ioredis": "6.0.0",
     "nodemailer": "10.3.1",
     "reflect-metadata": "^0.2.2",
