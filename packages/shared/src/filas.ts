@@ -146,6 +146,11 @@ export interface RotinaDosAvisos {
   tipo: 'avisos';
 }
 
+/** Rotina diária da cobrança manual: próxima cobrança em aberto e aviso ao dono. */
+export interface RotinaCobrancaManual {
+  tipo: 'cobranca_manual';
+}
+
 export type TrabalhoWhatsappEntrada =
   | EventoWhatsapp
   | EnvioDoPainel
@@ -159,7 +164,8 @@ export type TrabalhoWhatsappEntrada =
   | VagaLiberada
   | RemarcacaoPorAtraso
   | HorarioMudou
-  | RotinaDosAvisos;
+  | RotinaDosAvisos
+  | RotinaCobrancaManual;
 
 /** Uma mensagem já gravada (tabela mensagem) esperando a vez de sair. */
 export interface TrabalhoWhatsappSaida {

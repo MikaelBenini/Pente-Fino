@@ -15,6 +15,8 @@ import {
   remarcacaoPorAtraso,
   contasParaAvisos,
   rotinaDosAvisos,
+  contasComCobrancaManual,
+  rotinaCobrancaManual,
   avisoHorarioMudou,
   contasComAutomacoes,
   rodarAutomacoes,
@@ -189,6 +191,14 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
         { name: 'avisos', data: { tipo: 'avisos' } },
       )
       .catch((e: Error) => this.logger.error(`Agendar os avisos: ${e.message}`));
+    // Cobrança manual (venda presencial): todo dia às 9 h, próxima cobrança e aviso ao dono.
+    void filaEntrada
+      .upsertJobScheduler(
+        'cobranca-manual-diaria',
+        { pattern: '0 9 * * *', tz: 'America/Sao_Paulo' },
+        { name: 'cobranca_manual', data: { tipo: 'cobranca_manual' } },
+      )
+      .catch((e: Error) => this.logger.error(`Agendar a cobrança manual: ${e.message}`));
     const redis = new Redis(this.config.REDIS_URL, { maxRetriesPerRequest: 3 });
     this.redis = redis;
     const chave = (instancia: string) => `whatsapp:proximo-envio:${instancia}`;
@@ -286,6 +296,20 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
           return 'atendente: bot voltou';
         }
         // Rotina diária: retorno e aniversário em cada conta que ligou as automações.
+        if (job.data.tipo === 'cobranca_manual') {
+          let total = 0;
+          for (const contaId of await contasComCobrancaManual(this.banco.prisma)) {
+            try {
+              for (const e of await rotinaCobrancaManual(this.banco.prisma, contaId)) {
+                await filaEmails.add('cobranca_manual', e);
+                total++;
+              }
+            } catch (e) {
+              this.logger.error(`Cobrança manual da conta ${contaId}: ${(e as Error).message}`);
+            }
+          }
+          return `cobranca_manual: ${total} avisos`;
+        }
         if (job.data.tipo === 'avisos') {
           let total = 0;
           for (const contaId of await contasParaAvisos(this.banco.prisma)) {
