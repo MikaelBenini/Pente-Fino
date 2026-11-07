@@ -58,6 +58,10 @@ jobs:
           file: ${{ matrix.dockerfile }}
           target: ${{ matrix.alvo }}
           push: true
+          # Endereço público do site (sitemap, robots e prévia de link são montados no build).
+          # Variável do repositório APP_URL; sem ela, o domínio de produção.
+          build-args: |
+            APP_URL=${{ vars.APP_URL || 'https://seupentefino.com.br' }}
           tags: |
             ${{ steps.nome.outputs.imagem }}:${{ github.sha }}
             ${{ steps.nome.outputs.imagem }}:latest

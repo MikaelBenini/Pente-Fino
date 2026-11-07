@@ -32,7 +32,7 @@ export function explicarErroSmtp(e: unknown, d: Pick<DadosSmtp, 'host' | 'porta'
   const codigo = erro.code ?? '';
   const texto = (erro.message ?? String(e)).slice(0, 300);
   if (codigo === 'EAUTH' || erro.responseCode === 535)
-    return 'O servidor recusou o usuário ou a senha. No Brevo, use o login SMTP e a chave SMTP (xsmtpsib-), não a chave de API.';
+    return 'O servidor recusou o login. Confira usuário e senha; no Brevo, use o login SMTP e a chave SMTP (xsmtpsib-), e a conta precisa estar com o envio por SMTP ativado.';
   if (codigo === 'EDNS' || /ENOTFOUND|EAI_AGAIN/.test(texto))
     return `Servidor "${d.host}" não encontrado. Confira o endereço.`;
   if (/ECONNREFUSED/.test(texto) || codigo === 'ECONNREFUSED')
@@ -53,6 +53,12 @@ export function explicarErroSmtp(e: unknown, d: Pick<DadosSmtp, 'host' | 'porta'
   return `Falhou: ${texto}`;
 }
 
+/** O que o servidor respondeu na falha (ex.: "535 5.7.8 Authentication failed"), sem senha. */
+export function respostaDoErro(e: unknown): string | undefined {
+  const r = (e as { response?: unknown } | null)?.response;
+  return typeof r === 'string' && r.trim() ? r.trim().slice(0, 200) : undefined;
+}
+
 /** Conecta, faz o TLS e autentica. Não manda e-mail. */
 export async function testarConexaoSmtp(d: DadosSmtp): Promise<ResultadoTesteSmtp> {
   const inicio = Date.now();
@@ -65,7 +71,13 @@ export async function testarConexaoSmtp(d: DadosSmtp): Promise<ResultadoTesteSmt
       ms: Date.now() - inicio,
     };
   } catch (e) {
-    return { ok: false, mensagem: explicarErroSmtp(e, d), ms: Date.now() - inicio };
+    const resposta = respostaDoErro(e);
+    return {
+      ok: false,
+      mensagem: explicarErroSmtp(e, d),
+      ...(resposta ? { resposta } : {}),
+      ms: Date.now() - inicio,
+    };
   } finally {
     t.close();
   }
@@ -89,7 +101,13 @@ export async function enviarTesteSmtp(
       ms: Date.now() - inicio,
     };
   } catch (e) {
-    return { ok: false, mensagem: explicarErroSmtp(e, d), ms: Date.now() - inicio };
+    const resposta = respostaDoErro(e);
+    return {
+      ok: false,
+      mensagem: explicarErroSmtp(e, d),
+      ...(resposta ? { resposta } : {}),
+      ms: Date.now() - inicio,
+    };
   } finally {
     t.close();
   }

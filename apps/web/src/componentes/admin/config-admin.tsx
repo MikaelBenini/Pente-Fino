@@ -364,7 +364,16 @@ function FormSmtp({ atual }: { atual: SmtpNaTela | null }) {
     const r = await adminApi<ResultadoTesteSmtp>('configuracoes/smtp/conexao', {
       corpo: dados(),
     });
-    return { ok: r.ok, texto: r.mensagem, detalhe: `${(r.ms / 1000).toFixed(1)} s` };
+    return {
+      ok: r.ok,
+      texto: r.mensagem,
+      detalhe: [
+        r.resposta && `Resposta do servidor: ${r.resposta}`,
+        `${(r.ms / 1000).toFixed(1)} s`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    };
   };
   const mandarTeste = async (): Promise<Resultado> => {
     const r = await adminApi<ResultadoTesteSmtp>('configuracoes/smtp/teste', { corpo: {} });
