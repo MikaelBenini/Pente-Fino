@@ -111,7 +111,13 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   const smtp = page.getByRole('region', { name: 'E-mail (SMTP)' });
   await expect(smtp).toContainText('SMTP do .env');
   await smtp.getByRole('button', { name: 'Mandar e-mail de teste' }).click();
-  await expect(smtp.getByText(/E-mail de teste a caminho de/)).toBeVisible();
+  await expect(smtp.getByText(/O servidor aceitou o e-mail/)).toBeVisible({ timeout: 15_000 });
+  await expect(smtp.getByText(/Resposta do servidor: 250/)).toBeVisible();
+  // Testar conexão usa o que está nos campos, antes de salvar.
+  await smtp.getByLabel('Servidor').fill('127.0.0.1');
+  await smtp.getByLabel('Porta').fill('1');
+  await smtp.getByRole('button', { name: 'Testar conexão' }).click();
+  await expect(smtp.getByRole('alert')).toContainText('porta 1', { timeout: 15_000 });
   const precos = page.getByRole('region', { name: 'Planos e preços' });
   await expect(precos.getByRole('table', { name: 'Tabelas de preço' })).toContainText('Em vigor');
   await expect(precos.getByRole('form', { name: 'Nova tabela de preços' })).toBeVisible();
