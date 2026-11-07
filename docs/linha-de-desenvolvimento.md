@@ -422,10 +422,10 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 
 **Métricas do negócio**
 
-- [ ] Contas novas por dia, semana e mês; em teste, ativas, em atraso, bloqueadas e canceladas
-- [ ] Receita recorrente do mês (MRR), por plano e por forma de cobrança; ticket médio; previsão do próximo mês
-- [ ] Conversão do teste em assinatura, cancelamentos do mês (churn) e motivo informado; recorrência (contas que renovaram)
-- [ ] Uso por conta, para ver quem está em risco: comandas fechadas nos últimos 7 dias, último acesso, WhatsApp conectado ou não
+- [x] Contas novas por dia, semana e mês; em teste, ativas, em atraso, bloqueadas e canceladas (feito: "Números do negócio" em `/admin`: novas hoje, em 7 dias e no mês, gráfico dos últimos 30 dias e contas por situação, calculada pela mesma regra da assinatura (`situacaoAssinatura`))
+- [x] Receita recorrente do mês (MRR), por plano e por forma de cobrança; ticket médio; previsão do próximo mês (feito: MRR das contas que pagam (anual dividido por 12, com as unidades extras), por plano e automática × manual, ticket médio e a previsão: MRR + testes que terminam em 30 dias × conversão; `metricasDaPlataforma` em `packages/shared`, com teste)
+- [x] Conversão do teste em assinatura, cancelamentos do mês (churn) e motivo informado; recorrência (contas que renovaram) (feito: conversão entre as contas cujo teste acabou; cancelamentos do mês ÷ pagantes no começo do mês, com os motivos (`conta.cancelada_em` e `motivo_cancelamento`, preenchidos pelo cancelamento da administração); contas com duas ou mais faturas pagas)
+- [x] Uso por conta, para ver quem está em risco: comandas fechadas nos últimos 7 dias, último acesso, WhatsApp conectado ou não (feito: na lista de contas, com `plataforma_contas()`; o último acesso é a última renovação de sessão de alguém da conta)
 - [ ] Vendas por vendedor (contas criadas, ativadas e pagas)
 
 **Contas e cobrança**

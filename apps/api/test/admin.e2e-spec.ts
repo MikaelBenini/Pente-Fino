@@ -3,7 +3,11 @@
 import type { INestApplication } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
 import { criarPrisma, type PrismaClient } from '@pente-fino/db';
-import type { ContaNaPlataforma, RespostaEntrarAdmin } from '@pente-fino/shared';
+import type {
+  ContaNaPlataforma,
+  MetricasDaPlataforma,
+  RespostaEntrarAdmin,
+} from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -117,12 +121,20 @@ describe('administração do sistema', () => {
     const { token } = await entrarComSegundoFator(vendedor);
     await http().get('/admin/eu').set('authorization', `Bearer ${token}`).expect(200);
     await http().get('/admin/contas').set('authorization', `Bearer ${token}`).expect(403);
+    await http().get('/admin/metricas').set('authorization', `Bearer ${token}`).expect(403);
   });
 
   it('login de barbearia não abre a administração, e o token da administração não abre o painel', async () => {
     const dono = await como(app, a.emails.dono);
     await dono.get('/admin/eu').expect(401);
     const { token } = await entrarComSegundoFator(outro);
+    // Números do negócio: o cenário (Premium, ativa, sem fatura paga) conta como em dia.
+    const m = (
+      await http().get('/admin/metricas').set('authorization', `Bearer ${token}`).expect(200)
+    ).body as MetricasDaPlataforma;
+    expect(m.contas.total).toBeGreaterThan(0);
+    expect(m.novas.porDia).toHaveLength(30);
+    expect(m.receita.mrr).toBeGreaterThanOrEqual(0);
     await http().get('/clientes').set('authorization', `Bearer ${token}`).expect(401);
   });
 });
