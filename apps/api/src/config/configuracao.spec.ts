@@ -10,6 +10,7 @@ const valido = {
   EVOLUTION_API_KEY: 'chave-da-evolution',
   ASAAS_API_KEY: '$aact_hmlg_chave_de_teste',
   ASAAS_WEBHOOK_TOKEN: 't'.repeat(32),
+  PLATAFORMA_CHAVE: Buffer.alloc(32, 7).toString('base64'),
 };
 
 describe('carregarConfiguracao', () => {
@@ -93,5 +94,23 @@ describe('carregarConfiguracao', () => {
       carregarConfiguracao({ ...prod, COBRANCA_PROVEDOR: 'falso', ASAAS_API_KEY: '' }).cobranca
         .provedor,
     ).toBe('falso');
+  });
+
+  it('chave da administração: 32 bytes; a do modelo não vale em produção', () => {
+    expect(() => carregarConfiguracao({ ...valido, PLATAFORMA_CHAVE: 'curta' })).toThrow(
+      /PLATAFORMA_CHAVE/,
+    );
+    const c = carregarConfiguracao(valido);
+    expect(c.plataforma.chave).toHaveLength(32);
+    expect(c.plataforma.sessaoExpiraEmMs).toBe(2 * 3_600_000);
+    expect(c.plataforma.databaseUrl).toBeNull();
+    expect(() =>
+      carregarConfiguracao({
+        ...valido,
+        NODE_ENV: 'production',
+        JWT_ACCESS_SECRET: 'x'.repeat(48),
+        PLATAFORMA_CHAVE: 'iQCcGhpmGkYa2RWAdGEPm08acvABzIt/ps7lgJBlbXo=',
+      }),
+    ).toThrow(/PLATAFORMA_CHAVE/);
   });
 });

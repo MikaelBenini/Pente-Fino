@@ -1460,3 +1460,78 @@ model Aviso {
   @@index([usuarioId, criadoEm])
   @@map("aviso")
 }
+
+// ─── Administração do sistema (Etapa 15.1) ────────────────────────────────
+// Fora das contas: sem conta_id e sem RLS. Só o usuário de banco da plataforma lê e grava estas
+// tabelas; o da aplicação não tem acesso (migração "plataforma").
+
+enum PapelPlataforma {
+  /// Tudo na administração.
+  admin
+  /// Cria conta, registra pagamento e vê só as contas dele.
+  vendedor
+
+  @@map("papel_plataforma")
+}
+
+/// Quem opera o Pente Fino. Nunca reaproveita o login de uma barbearia.
+model UsuarioPlataforma {
+  id               String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  nome             String
+  email            String          @unique
+  senhaHash        String          @map("senha_hash")
+  papel            PapelPlataforma
+  /// Segredo do aplicativo autenticador, cifrado (AES-256-GCM com PLATAFORMA_CHAVE).
+  totpSegredo      String?         @map("totp_segredo")
+  /// Segundo fator confirmado com um código válido; sem isto, o login só serve para configurar.
+  totpConfirmadoEm DateTime?       @map("totp_confirmado_em") @db.Timestamptz(3)
+  /// Último código aceito (passo de 30 s): o mesmo código não entra duas vezes.
+  totpUltimoPasso  BigInt?         @map("totp_ultimo_passo")
+  ativo            Boolean         @default(true)
+  ultimoAcessoEm   DateTime?       @map("ultimo_acesso_em") @db.Timestamptz(3)
+  criadoEm         DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm     DateTime        @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  sessoes    SessaoPlataforma[]
+  auditorias AuditoriaPlataforma[]
+
+  @@map("usuario_plataforma")
+}
+
+/// Sessão curta de quem administra: só o hash do token; IP e navegador registrados.
+model SessaoPlataforma {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  usuarioId   String    @map("usuario_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  ip          String?
+  navegador   String?
+  criadoEm    DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  expiraEm    DateTime  @map("expira_em") @db.Timestamptz(3)
+  encerradaEm DateTime? @map("encerrada_em") @db.Timestamptz(3)
+
+  usuario UsuarioPlataforma @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("sessao_plataforma")
+}
+
+/// Toda ação de admin e vendedor: quem, quando, em que conta, antes e depois. Imutável.
+model AuditoriaPlataforma {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  usuarioId      String?  @map("usuario_id") @db.Uuid
+  acao           String
+  /// Conta da barbearia afetada (sem chave estrangeira: o histórico fica mesmo se a conta sair).
+  /// Não se chama conta_id: a tabela não pertence a uma conta (fica fora do RLS das barbearias).
+  contaAfetadaId String?  @map("conta_afetada_id") @db.Uuid
+  antes          Json?
+  depois         Json?
+  motivo         String?
+  ip             String?
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  usuario UsuarioPlataforma? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([contaAfetadaId])
+  @@index([criadoEm])
+  @@map("auditoria_plataforma")
+}

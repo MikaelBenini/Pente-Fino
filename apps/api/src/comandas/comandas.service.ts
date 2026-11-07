@@ -314,11 +314,13 @@ export class ComandasService {
         Date.now() - comanda.canceladaEm.getTime() > DESFAZER_NAO_VEIO_MIN * 60_000
       )
         throw Erros.conflito('Passou o tempo para desfazer. Marque um horário novo.');
-      await validarHorario(tx, ag.profissionalId, ag.unidadeId, ag.inicio, ag.fim, ag.id).catch(
-        (e: Error) => {
-          throw Erros.conflito(`O horário não está mais livre: ${e.message}`);
-        },
-      );
+      // O horário já era do cliente: só confere se ninguém ocupou a vaga nesses minutos (o
+      // expediente pode ter acabado, e isso não impede desfazer).
+      await validarHorario(tx, ag.profissionalId, ag.unidadeId, ag.inicio, ag.fim, ag.id, {
+        conferirExpediente: false,
+      }).catch((e: Error) => {
+        throw Erros.conflito(`O horário não está mais livre: ${e.message}`);
+      });
       await tx.agendamento.update({
         where: { id: ag.id },
         data: { status: 'agendado', atrasou: false },

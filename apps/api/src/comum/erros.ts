@@ -26,6 +26,8 @@ export class ErroApp extends HttpException {
 export const Erros = {
   validacao: (campos: CampoInvalido[]) =>
     new ErroApp(HttpStatus.BAD_REQUEST, 'validacao', 'Confira os campos destacados.', campos),
+  indisponivel: (mensagem: string) =>
+    new ErroApp(HttpStatus.SERVICE_UNAVAILABLE, 'indisponivel', mensagem),
   naoAutenticado: (mensagem = 'Faça login para continuar.') =>
     new ErroApp(HttpStatus.UNAUTHORIZED, 'nao_autenticado', mensagem),
   semPermissao: (mensagem = 'Você não tem permissão para isso.') =>

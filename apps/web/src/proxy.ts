@@ -13,6 +13,8 @@ const PUBLICAS = [
   '/planos',
   '/termos',
   '/privacidade',
+  // Administração do sistema: login próprio (não usa a sessão da barbearia).
+  '/admin',
 ];
 const SO_SEM_SESSAO = ['/entrar', '/esqueci-senha', '/cadastro'];
 /** Página inicial do site: quem já tem sessão vai direto para o app. */
@@ -51,6 +53,6 @@ export function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icones|robots.txt|sitemap.xml|opengraph-image|icon.svg|.*\\.png$).*)',
+    '/((?!api|admin-api|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icones|robots.txt|sitemap.xml|opengraph-image|icon.svg|.*\\.png$).*)',
   ],
 };

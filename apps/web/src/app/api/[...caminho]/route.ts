@@ -49,7 +49,8 @@ async function encaminhar(
 ): Promise<Response> {
   const segmentos = (await ctx.params).caminho;
   const caminho = segmentos.join('/');
-  if (!caminhoValido(segmentos) || BLOQUEADAS.has(caminho)) {
+  // A administração tem a própria ponte (/admin-api) e o próprio login.
+  if (!caminhoValido(segmentos) || BLOQUEADAS.has(caminho) || segmentos[0] === 'admin') {
     return NextResponse.json(
       { erro: { codigo: 'nao_encontrado', mensagem: 'Não encontrado.' } },
       { status: 404 },
