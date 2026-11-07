@@ -47,6 +47,7 @@ import { AdminConfigController, SaudeService } from './admin/admin-config.contro
 import { AdminAuthService } from './admin/admin-auth.service.js';
 import { AdminContasService } from './admin/admin-contas.service.js';
 import { AdminVendasService } from './admin/admin-vendas.service.js';
+import { PrecosService } from './comum/precos.service.js';
 import { AdminGuard } from './admin/admin.guard.js';
 import { BancoPlataforma } from './admin/banco-plataforma.js';
 import { AvisosController } from './avisos/avisos.controller.js';
@@ -185,6 +186,7 @@ export class ComumModule {}
     AdminAuthService,
     AdminContasService,
     AdminVendasService,
+    PrecosService,
     SaudeService,
     AdminGuard,
     BotService,

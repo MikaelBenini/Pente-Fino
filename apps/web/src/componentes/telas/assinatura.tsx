@@ -13,6 +13,7 @@ import {
   type FaturaDetalhe,
   type PlanoConta,
   type PreviaTrocaPlano,
+  type TabelaPrecosPlanos,
   type SituacaoAssinatura,
 } from '@pente-fino/shared';
 import { Botao, Campo, cn, EstadoVazio, ModalConfirmacao, Selecao } from '@pente-fino/ui';
@@ -162,7 +163,12 @@ export function Assinatura() {
               <AcaoPagar f={pendente} rotulo={`Pagar ${formatarMoeda(pendente.valor)}`} />
             )}
             {!d.cobrancaAutomatica && estado.situacao !== 'ativa' && (
-              <Assinar planoAtual={d.plano} cicloAtual={d.ciclo} unidades={d.unidades} />
+              <Assinar
+                planoAtual={d.plano}
+                cicloAtual={d.ciclo}
+                unidades={d.unidades}
+                tabela={d.tabelaPrecos}
+              />
             )}
             {d.cobrancaAutomatica && pendente && <ConferirPagamento />}
 
@@ -272,10 +278,12 @@ function Assinar({
   planoAtual,
   cicloAtual,
   unidades,
+  tabela,
 }: {
   planoAtual: FaturaDetalhe['plano'];
   cicloAtual: FaturaDetalhe['ciclo'];
   unidades: number;
+  tabela: TabelaPrecosPlanos;
 }) {
   const [plano, setPlano] = useState(planoAtual);
   const [ciclo, setCiclo] = useState(cicloAtual);
@@ -287,7 +295,7 @@ function Assinar({
     [chaveAssinatura],
   );
   const docOk = documentoValido(documento);
-  const valor = valorDaCobranca(plano, ciclo, unidades);
+  const valor = valorDaCobranca(plano, ciclo, unidades, tabela);
   return (
     <section
       aria-labelledby="titulo-assinar"

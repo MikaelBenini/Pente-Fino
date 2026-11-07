@@ -171,6 +171,8 @@ export interface FichaContaPlataforma {
   documento: string | null;
   canceladaEm: string | null;
   motivoCancelamento: string | null;
+  /** Data da tabela de preços contratada (null = a do lançamento). */
+  precosDesde: string | null;
   donos: { nome: string; email: string; telefone: string | null }[];
   unidades: { nome: string; ativa: boolean }[];
   profissionais: number;

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  lerTabelasPreco,
+  TABELA_PADRAO,
+  tabelaVigente,
   diasRestantesTeste,
   incluiRecurso,
   precoPorMes,
@@ -146,5 +149,37 @@ describe('troca de plano', () => {
       'Lucro real e margem por serviço e produto',
       'Automações do bot: retorno, aniversário e aviso do clube',
     ]);
+  });
+});
+
+describe('tabelas de preço com vigência', () => {
+  const nova = {
+    desde: '2027-01-01',
+    planos: {
+      basico: { mensal: 8990, anualPorMes: 7490 },
+      pro: { mensal: 15990, anualPorMes: 13290 },
+      premium: { mensal: 26990, anualPorMes: 22490 },
+    },
+    unidadeExtra: { mensal: 10990, anualPorMes: 9190 },
+  };
+
+  it('a tabela do lançamento é sempre a base; lixo e datas repetidas não entram', () => {
+    expect(lerTabelasPreco(null)).toEqual([TABELA_PADRAO]);
+    expect(lerTabelasPreco([nova, { desde: 'x' }, { ...nova }]).map((t) => t.desde)).toEqual([
+      TABELA_PADRAO.desde,
+      '2027-01-01',
+    ]);
+  });
+
+  it('cada conta paga pela tabela da data em que contratou', () => {
+    const tabelas = lerTabelasPreco([nova]);
+    expect(precoPorMes('pro', 'mensal', 1, tabelaVigente(tabelas, '2026-12-31'))).toBe(14990);
+    expect(precoPorMes('pro', 'mensal', 1, tabelaVigente(tabelas, '2027-01-01'))).toBe(15990);
+    expect(precoPorMes('premium', 'anual', 3, tabelaVigente(tabelas, '2027-02-10'))).toBe(
+      22490 + 2 * 9190,
+    );
+    // Conta antiga, sem data: a do lançamento.
+    expect(tabelaVigente(tabelas, null)).toBe(TABELA_PADRAO);
+    expect(resumoAnual('basico', 1, tabelaVigente(tabelas, '2027-06-01')).total).toBe(7490 * 12);
   });
 });

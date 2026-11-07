@@ -9,6 +9,9 @@ import {
   EXEMPLO_VARIAVEIS,
   type ChaveModeloEmail,
   type ModeloEmailNaTela,
+  formatarData,
+  lerMoeda,
+  type TabelaPrecosPlanos,
 } from '@pente-fino/shared';
 import { Botao, Campo, CampoTexto, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +20,7 @@ import { ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { useTabelasAdmin } from './precos-admin';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível salvar.';
@@ -70,6 +74,7 @@ export function ConfiguracoesAdmin() {
     <div className="flex flex-col gap-6">
       <Estado consulta={config}>{() => <Formularios c={config.data!} />}</Estado>
       <SmtpAdmin />
+      <PrecosAdmin />
       <ModelosEmailAdmin />
     </div>
   );
@@ -556,5 +561,176 @@ function EditorModelo({ m }: { m: ModeloEmailNaTela }) {
         )}
       </figure>
     </div>
+  );
+}
+
+const NOMES_PLANOS: Record<'basico' | 'pro' | 'premium', string> = {
+  basico: 'Básico',
+  pro: 'Pro',
+  premium: 'Premium',
+};
+const reais = (centavos: number) => (centavos / 100).toFixed(2).replace('.', ',');
+
+/** Planos e preços: tabelas com vigência; quem já assinou segue na tabela que contratou. */
+export function PrecosAdmin() {
+  const cliente = useQueryClient();
+  const { consulta, vigente } = useTabelasAdmin();
+  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'precos'] });
+  return (
+    <section
+      aria-labelledby="titulo-precos"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 id="titulo-precos" className="text-lg font-semibold">
+        Planos e preços
+      </h2>
+      <p className="text-sm text-tinta-suave">
+        Uma tabela nova vale a partir da data escolhida para quem assina ou troca de plano. Quem já
+        assinou continua pagando a tabela que contratou.
+      </p>
+      <Estado consulta={consulta}>
+        {() => {
+          const { tabelas, hoje } = consulta.data!;
+          const atual = vigente()!;
+          return (
+            <>
+              <Tabela rotulo="Tabelas de preço">
+                <thead>
+                  <tr className="border-b border-borda">
+                    {['Vale desde', 'Básico', 'Pro', 'Premium', 'Unidade extra', ''].map((c) => (
+                      <th key={c} scope="col" className={th}>
+                        {c}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tabelas.map((t) => (
+                    <tr key={t.desde} className="border-b border-borda">
+                      <th scope="row" className={`${td} font-semibold tabular-nums`}>
+                        {formatarData(`${t.desde}T12:00:00Z`)}
+                        {t.desde === atual.desde && (
+                          <span className="ml-2">
+                            <Ficha tom="acao">Em vigor</Ficha>
+                          </span>
+                        )}
+                        {t.desde > hoje && (
+                          <span className="ml-2">
+                            <Ficha tom="aviso">Futura</Ficha>
+                          </span>
+                        )}
+                      </th>
+                      {(['basico', 'pro', 'premium'] as const).map((p) => (
+                        <td key={p} className={`${td} tabular-nums`}>
+                          R$ {reais(t.planos[p].mensal)} · anual {reais(t.planos[p].anualPorMes)}
+                        </td>
+                      ))}
+                      <td className={`${td} tabular-nums`}>
+                        R$ {reais(t.unidadeExtra.mensal)} · anual{' '}
+                        {reais(t.unidadeExtra.anualPorMes)}
+                      </td>
+                      <td className={td}>
+                        {t.desde > hoje && (
+                          <Botao
+                            variante="fantasma"
+                            onClick={async () => {
+                              await adminApi(`configuracoes/precos/${t.desde}`, {
+                                metodo: 'DELETE',
+                              });
+                              await atualizar();
+                            }}
+                          >
+                            Desistir
+                          </Botao>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Tabela>
+              <NovaTabela base={atual} hoje={hoje} onSalvo={atualizar} />
+            </>
+          );
+        }}
+      </Estado>
+    </section>
+  );
+}
+
+function NovaTabela({
+  base,
+  hoje,
+  onSalvo,
+}: {
+  base: TabelaPrecosPlanos;
+  hoje: string;
+  onSalvo: () => Promise<void>;
+}) {
+  const [desde, setDesde] = useState(hoje);
+  const [valores, setValores] = useState(() => {
+    const v: Record<string, string> = {};
+    for (const p of ['basico', 'pro', 'premium'] as const) {
+      v[`${p}.mensal`] = reais(base.planos[p].mensal);
+      v[`${p}.anualPorMes`] = reais(base.planos[p].anualPorMes);
+    }
+    v['extra.mensal'] = reais(base.unidadeExtra.mensal);
+    v['extra.anualPorMes'] = reais(base.unidadeExtra.anualPorMes);
+    return v;
+  });
+  const ler = (k: string) => lerMoeda(valores[k] ?? '') ?? 0;
+  const campo = (k: string, rotulo: string) => (
+    <Campo
+      key={k}
+      id={`preco-${k.replace('.', '-')}`}
+      rotulo={rotulo}
+      inputMode="decimal"
+      value={valores[k] ?? ''}
+      onChange={(e) => setValores((v) => ({ ...v, [k]: e.target.value }))}
+    />
+  );
+  return (
+    <form
+      aria-label="Nova tabela de preços"
+      className="flex flex-col gap-3 border-t border-borda pt-3"
+      onSubmit={(e) => e.preventDefault()}
+    >
+      <h3 className="font-semibold">Nova tabela</h3>
+      <div className="w-48">
+        <Campo
+          id="preco-desde"
+          rotulo="Vale a partir de"
+          type="date"
+          min={hoje}
+          value={desde}
+          onChange={(e) => setDesde(e.target.value)}
+        />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-4">
+        {(['basico', 'pro', 'premium'] as const).flatMap((p) => [
+          campo(`${p}.mensal`, `${NOMES_PLANOS[p]} mensal (R$)`),
+          campo(`${p}.anualPorMes`, `${NOMES_PLANOS[p]} anual, por mês (R$)`),
+        ])}
+        {campo('extra.mensal', 'Unidade extra mensal (R$)')}
+        {campo('extra.anualPorMes', 'Unidade extra anual, por mês (R$)')}
+      </div>
+      <Salvar
+        rotulo="Salvar tabela"
+        enviar={async () => {
+          const plano = (p: string) => ({
+            mensal: ler(`${p}.mensal`),
+            anualPorMes: ler(`${p}.anualPorMes`),
+          });
+          await adminApi('configuracoes/precos', {
+            metodo: 'PUT',
+            corpo: {
+              desde,
+              planos: { basico: plano('basico'), pro: plano('pro'), premium: plano('premium') },
+              unidadeExtra: plano('extra'),
+            },
+          });
+          await onSalvo();
+        }}
+      />
+    </form>
   );
 }

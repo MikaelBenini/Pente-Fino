@@ -23,6 +23,7 @@ import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { EmailsService } from '../emails/emails.service.js';
+import { PrecosService } from '../comum/precos.service.js';
 import {
   cobrancaDoAsaas,
   ErroCobranca,
@@ -75,6 +76,7 @@ export class CobrancaService {
     @Inject(PROVEDOR_COBRANCA) private readonly provedor: ProvedorCobranca,
     @Inject(AssinaturaGuard) private readonly trava: AssinaturaGuard,
     @Inject(EmailsService) private readonly emails: EmailsService,
+    @Inject(PrecosService) private readonly precos: PrecosService,
     @Inject(PlanoGuard) private readonly planos: PlanoGuard,
   ) {}
 
@@ -129,10 +131,11 @@ export class CobrancaService {
         data: { asaasClienteId: clienteId, documento: d.documento },
       }),
     );
+    const tabelaHoje = await this.precos.vigente(dataLocal(new Date()));
     const assinatura = await this.externo(() =>
       this.provedor.criarAssinatura({
         cliente: clienteId,
-        valor: valorDaCobranca(d.plano, d.ciclo, unidades),
+        valor: valorDaCobranca(d.plano, d.ciclo, unidades, tabelaHoje),
         ciclo: d.ciclo,
         vencimento: dataLocal(new Date()),
         descricao: `Pente Fino ${NOME_PLANO[d.plano]} (${d.ciclo})`,
@@ -142,7 +145,13 @@ export class CobrancaService {
     await this.banco.daConta(async (tx) => {
       await tx.conta.update({
         where: { id: conta.id },
-        data: { asaasAssinaturaId: assinatura.id, plano: d.plano, ciclo: d.ciclo },
+        data: {
+          asaasAssinaturaId: assinatura.id,
+          plano: d.plano,
+          ciclo: d.ciclo,
+          // Assinar é contrato: vale a tabela de hoje.
+          precosDesde: this.precos.hoje(),
+        },
       });
       await auditar(tx, {
         entidade: 'conta',
@@ -176,7 +185,14 @@ export class CobrancaService {
           where: { status: 'aguardando', dia: { gte: new Date(`${hoje}T00:00:00Z`) } },
         }),
       };
-      return conferirTrocaDePlano({ de: conta.plano, para, ciclo: conta.ciclo ?? 'mensal', uso });
+      return conferirTrocaDePlano({
+        de: conta.plano,
+        para,
+        ciclo: conta.ciclo ?? 'mensal',
+        uso,
+        tabelaAtual: await this.precos.vigente(conta.precosDesde),
+        tabelaNova: await this.precos.vigente(dataLocal(new Date())),
+      });
     });
   }
 
@@ -195,15 +211,20 @@ export class CobrancaService {
       const unidades = await this.banco.daConta((tx) =>
         tx.unidade.count({ where: { ativa: true } }),
       );
+      const tabelaHoje = await this.precos.vigente(dataLocal(new Date()));
       await this.externo(() =>
         this.provedor.atualizarAssinatura(conta.asaasAssinaturaId!, {
-          valor: valorDaCobranca(para, ciclo, unidades),
+          valor: valorDaCobranca(para, ciclo, unidades, tabelaHoje),
           descricao: `Pente Fino ${NOME_PLANO[para]} (${ciclo})`,
         }),
       );
     }
     await this.banco.daConta(async (tx) => {
-      await tx.conta.update({ where: { id: conta.id }, data: { plano: para } });
+      await tx.conta.update({
+        where: { id: conta.id },
+        // Trocar de plano é contrato novo: vale a tabela de hoje.
+        data: { plano: para, precosDesde: this.precos.hoje() },
+      });
       await auditar(tx, {
         entidade: 'conta',
         entidadeId: conta.id,

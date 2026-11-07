@@ -7,7 +7,15 @@ import {
   type SituacaoAssinatura,
 } from './assinatura.js';
 import { dataLocal } from './datas.js';
-import { DIAS_TESTE, precoPorMes, type Ciclo, type PlanoConta } from './planos.js';
+import {
+  DIAS_TESTE,
+  precoPorMes,
+  TABELA_PADRAO,
+  tabelaVigente,
+  type Ciclo,
+  type PlanoConta,
+  type TabelaPrecosPlanos,
+} from './planos.js';
 
 export interface ContaParaMetricas {
   id: string;
@@ -20,6 +28,8 @@ export interface ContaParaMetricas {
   canceladaEm: Date | null;
   motivoCancelamento: string | null;
   unidades: number;
+  /** Data da tabela contratada (null = a do lançamento). */
+  precosDesde?: string | null;
 }
 
 export interface FaturaParaMetricas extends FaturaParaSituacao {
@@ -75,7 +85,17 @@ export function metricasDaPlataforma(d: {
   contas: readonly ContaParaMetricas[];
   faturas: readonly FaturaParaMetricas[];
   agora: Date;
+  /** Tabelas de preço: cada conta entra no MRR pelo que contratou. */
+  tabelas?: readonly TabelaPrecosPlanos[];
 }): MetricasDaPlataforma {
+  const tabelas = d.tabelas ?? [TABELA_PADRAO];
+  const preco = (c: ContaParaMetricas) =>
+    precoPorMes(
+      c.plano,
+      c.ciclo,
+      Math.max(1, c.unidades),
+      tabelaVigente(tabelas, c.precosDesde ?? null),
+    );
   const hoje = dataLocal(d.agora);
   const mes = hoje.slice(0, 7);
   const porConta = new Map<string, FaturaParaMetricas[]>();
@@ -97,7 +117,7 @@ export function metricasDaPlataforma(d: {
     porSituacao[situacao] += 1;
     // Paga quem está em dia ou com atraso curto e já pagou alguma fatura.
     if ((situacao === 'ativa' || situacao === 'em_atraso') && pagas(c.id) > 0) {
-      const valor = precoPorMes(c.plano, c.ciclo, Math.max(1, c.unidades));
+      const valor = preco(c);
       receita.mrr += valor;
       receita.porPlano[c.plano] += valor;
       receita.porForma[c.cobrancaAutomatica ? 'automatica' : 'manual'] += valor;
@@ -117,7 +137,7 @@ export function metricasDaPlataforma(d: {
     .filter(
       (c) => c.status === 'teste' && c.testeAte && c.testeAte >= d.agora && c.testeAte <= em30,
     )
-    .reduce((s, c) => s + precoPorMes(c.plano, c.ciclo, Math.max(1, c.unidades)), 0);
+    .reduce((s, c) => s + preco(c), 0);
 
   // Cancelamentos do mês e a base de pagantes no começo dele (pagaram antes do dia 1).
   const inicioDoMes = new Date(`${mes}-01T00:00:00-03:00`);

@@ -5,6 +5,7 @@ import {
   assinarSchema,
   contaSchema,
   LIMITES_PLANO,
+  dataLocal,
   precoPorMes,
   type AssinarEntrada,
   type AssinaturaDetalhe,
@@ -18,6 +19,7 @@ import {
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { LivreSemAssinatura, Papeis } from '../auth/decoradores.js';
 import { CobrancaService } from '../cobranca/cobranca.service.js';
+import { PrecosService } from '../comum/precos.service.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
@@ -30,6 +32,7 @@ export class ContaController {
   constructor(
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(CobrancaService) private readonly cobranca: CobrancaService,
+    @Inject(PrecosService) private readonly precos: PrecosService,
   ) {}
 
   @Get('situacao')
@@ -75,7 +78,14 @@ export class ContaController {
         plano: conta.plano,
         ciclo: conta.ciclo,
         testeAte: conta.testeAte?.toISOString() ?? null,
-        precoPorMes: precoPorMes(conta.plano, conta.ciclo, Math.max(1, unidades)),
+        precoPorMes: precoPorMes(
+          conta.plano,
+          conta.ciclo,
+          Math.max(1, unidades),
+          await this.precos.vigente(conta.precosDesde),
+        ),
+        // Para assinar agora: a tabela de hoje.
+        tabelaPrecos: await this.precos.vigente(dataLocal(new Date())),
         unidades,
         pendente,
         faturas: lista,

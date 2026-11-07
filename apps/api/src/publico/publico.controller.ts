@@ -41,6 +41,7 @@ import {
   type Sessao,
   type UnidadePublica,
   lerConfiguracaoPublica,
+  type TabelaPrecosPlanos,
   temRecurso,
 } from '@pente-fino/shared';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -51,6 +52,7 @@ import { AuthService } from '../auth/auth.service.js';
 import { LimiteAutenticacao, Publico } from '../auth/decoradores.js';
 import { gerarHashSenha } from '../auth/senhas.js';
 import { BancoService } from '../comum/banco.service.js';
+import { PrecosService } from '../comum/precos.service.js';
 import { Erros } from '../comum/erros.js';
 import { EventosService } from '../filas/filas.module.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
@@ -113,9 +115,17 @@ export class PublicoController {
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(AgendaService) private readonly agenda: AgendaService,
     @Inject(EventosService) private readonly eventos: EventosService,
+    @Inject(PrecosService) private readonly precosServico: PrecosService,
   ) {}
 
   // ─── Cadastro de conta ──────────────────────────────────────────────────
+
+  @Get('precos')
+  @Publico()
+  @ApiOperation({ summary: 'Preços dos planos que valem hoje (site e cadastro)' })
+  async precos(): Promise<TabelaPrecosPlanos> {
+    return this.precosServico.vigente(dataLocal(new Date()));
+  }
 
   @Post('contas')
   @Publico()
@@ -142,6 +152,7 @@ export class PublicoController {
             ciclo: d.ciclo,
             status: 'teste',
             testeAte: new Date(Date.now() + teste.dias * 86_400_000),
+            precosDesde: new Date(`${dataLocal(new Date())}T00:00:00Z`),
           },
         });
         const unidade = await tx.unidade.create({

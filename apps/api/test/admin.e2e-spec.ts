@@ -3,7 +3,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
-import { DIAS_TESTE, VERSAO_TERMOS } from '@pente-fino/shared';
+import { dataLocal, DIAS_TESTE, VERSAO_TERMOS } from '@pente-fino/shared';
 import type {
   ContaNaPlataforma,
   SaudeDoSistema,
@@ -628,5 +628,107 @@ describe('modelos de e-mail', () => {
     await req('delete', '/admin/configuracoes/modelos-email/redefinir_senha').expect(204);
     await http().post('/auth/esqueci-senha').send({ email: a.emails.gestor }).expect(202);
     expect((await ultimoEmail(a.emails.gestor))?.assunto).toBe('Redefinir sua senha');
+  });
+});
+
+describe('tabelas de preço com vigência', () => {
+  const quem = { email: `precos-${sufixo}@pentefino.dev`, senha: 'senha-dos-precos-1' };
+  let token = '';
+  let precosAntes: unknown = undefined;
+  const contasCriadas: string[] = [];
+  const req = (metodo: 'get' | 'put' | 'delete', url: string, corpo?: object) => {
+    const r = http()[metodo](url).set('authorization', `Bearer ${token}`);
+    return corpo ? r.send(corpo) : r;
+  };
+  const hoje = dataLocal(new Date());
+  const tabela = (desde: string) => ({
+    desde,
+    planos: {
+      basico: { mensal: 9990, anualPorMes: 8290 },
+      pro: { mensal: 19990, anualPorMes: 16590 },
+      premium: { mensal: 29990, anualPorMes: 24890 },
+    },
+    unidadeExtra: { mensal: 11990, anualPorMes: 9990 },
+  });
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.create({
+      data: {
+        email: quem.email,
+        nome: 'Paulo Preços',
+        papel: 'admin',
+        senhaHash: await hash(quem.senha),
+      },
+    });
+    token = (await entrarComSegundoFator(quem)).token;
+    precosAntes = (
+      await plataforma.configuracaoPlataforma.findUnique({ where: { chave: 'precos' } })
+    )?.valor;
+  });
+  afterAll(async () => {
+    // A tabela de hoje já vale (a API não deixa desistir): volta como estava, direto no banco.
+    await plataforma.configuracaoPlataforma.upsert({
+      where: { chave: 'precos' },
+      create: { chave: 'precos', valor: (precosAntes ?? []) as object },
+      update: { valor: (precosAntes ?? []) as object },
+    });
+    await plataforma.usuarioPlataforma.update({
+      where: { email: quem.email },
+      data: { ativo: false },
+    });
+    const app2 = criarPrisma();
+    for (const id of contasCriadas)
+      await naConta(app2, id, (tx) => tx.conta.deleteMany({ where: { id } }));
+    await app2.$disconnect();
+  });
+
+  it('a tabela nova vale para o site e para quem contrata agora; quem já assinou não muda', async () => {
+    await req('put', '/admin/configuracoes/precos', tabela('2020-01-01')).expect(400);
+    await req('put', '/admin/configuracoes/precos', tabela(hoje)).expect(204);
+    expect((await http().get('/publico/precos').expect(200)).body.planos.pro.mensal).toBe(19990);
+
+    // A conta do cenário contratou antes (sem data): segue na tabela do lançamento.
+    // (outro teste trocou o plano dela, o que é contrato novo; aqui ela volta a ser antiga)
+    const app2 = criarPrisma();
+    await naConta(app2, a.contaId, (tx) =>
+      tx.conta.update({ where: { id: a.contaId }, data: { precosDesde: null } }),
+    );
+    await app2.$disconnect();
+    const dono = await como(app, a.emails.dono);
+    expect((await dono.get('/conta/assinatura').expect(200)).body).toMatchObject({
+      precoPorMes: 24990 + 9990,
+      tabelaPrecos: { desde: hoje },
+    });
+
+    // Quem se cadastra hoje paga a tabela nova.
+    const email = `preco-novo-${sufixo}@e2e.pentefino.dev`;
+    await http()
+      .post('/publico/contas')
+      .send({
+        barbearia: 'Barbearia Nova',
+        nome: 'Nina Nova',
+        email,
+        senha: 'senha-da-nina-123',
+        plano: 'pro',
+        aceite: true,
+      })
+      .expect(201);
+    const nina = await como(app, email, 'senha-da-nina-123');
+    contasCriadas.push((await nina.get('/auth/eu').expect(200)).body.contaId);
+    expect((await nina.get('/conta/assinatura').expect(200)).body.precoPorMes).toBe(19990);
+    // Trocar de plano é contrato novo: o valor novo vem da tabela de hoje.
+    const previa = (await nina.get('/conta/plano/previa?plano=premium').expect(200)).body;
+    expect(previa).toMatchObject({ valorAtual: 19990, valorNovo: 29990 });
+
+    // Tabela futura dá para desistir; a que já vale, não.
+    const amanha = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+    await req('put', '/admin/configuracoes/precos', tabela(amanha)).expect(204);
+    expect(
+      (await req('get', '/admin/configuracoes/precos').expect(200)).body.tabelas.map(
+        (t: { desde: string }) => t.desde,
+      ),
+    ).toContain(amanha);
+    await req('delete', `/admin/configuracoes/precos/${amanha}`).expect(204);
+    await req('delete', `/admin/configuracoes/precos/${hoje}`).expect(409);
   });
 });

@@ -2,7 +2,7 @@
 // o que não valer vira o padrão (o sistema nunca para por uma configuração quebrada).
 import { z } from 'zod';
 import { lerModelosEmail, type ChaveModeloEmail, type TextoModeloEmail } from './modelos-email.js';
-import { DIAS_TESTE, VERSAO_TERMOS } from './planos.js';
+import { DIAS_TESTE, lerTabelasPreco, VERSAO_TERMOS, type TabelaPrecosPlanos } from './planos.js';
 
 export const avisoGeralSchema = z
   .object({
@@ -31,16 +31,24 @@ export interface ConfiguracaoPublica {
   teste: ConfigTeste;
   /** Modelos de e-mail personalizados (os demais usam o texto padrão). */
   modelosEmail: Partial<Record<ChaveModeloEmail, TextoModeloEmail>>;
+  /** Tabelas de preço em ordem de vigência (a primeira é a do lançamento). */
+  tabelasPreco: TabelaPrecosPlanos[];
 }
 
 export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
-  const o = (json ?? {}) as { aviso_geral?: unknown; teste?: unknown; modelos_email?: unknown };
+  const o = (json ?? {}) as {
+    aviso_geral?: unknown;
+    teste?: unknown;
+    modelos_email?: unknown;
+    precos?: unknown;
+  };
   const aviso = avisoGeralSchema.safeParse(o.aviso_geral);
   const teste = configTesteSchema.safeParse(o.teste ?? {});
   return {
     avisoGeral: aviso.success ? aviso.data : null,
     teste: teste.success ? teste.data : { dias: DIAS_TESTE, versaoTermos: VERSAO_TERMOS },
     modelosEmail: lerModelosEmail(o.modelos_email),
+    tabelasPreco: lerTabelasPreco(o.precos),
   };
 }
 

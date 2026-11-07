@@ -27,6 +27,10 @@ import {
   configTesteSchema,
   FILA_WHATSAPP_SAIDA,
   CHAVES_MODELO_EMAIL,
+  dataLocal,
+  lerTabelasPreco,
+  tabelaPrecosPlanosSchema,
+  type TabelaPrecosPlanos,
   lerConfiguracaoPublica,
   lerModelosEmail,
   MODELOS_EMAIL,
@@ -49,6 +53,7 @@ import { Erros } from '../comum/erros.js';
 import { Corpo } from '../comum/validacao.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { EmailsService } from '../emails/emails.service.js';
+import { PrecosService } from '../comum/precos.service.js';
 import { Filas } from '../filas/filas.module.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
@@ -139,6 +144,7 @@ export class AdminConfigController {
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
     @Inject(Filas) private readonly filas: Filas,
     @Inject(EmailsService) private readonly emails: EmailsService,
+    @Inject(PrecosService) private readonly precos: PrecosService,
   ) {}
 
   private async gravar(
@@ -310,6 +316,55 @@ export class AdminConfigController {
       (await this.banco.prisma.configuracaoPlataforma.findUnique({ where: { chave } }))?.valor ??
       null
     );
+  }
+
+  @Get('configuracoes/precos')
+  @ApiOperation({ summary: 'Tabelas de preço dos planos, em ordem de vigência' })
+  async tabelasPreco(): Promise<{ tabelas: TabelaPrecosPlanos[]; hoje: string }> {
+    return { tabelas: await this.precos.tabelas(), hoje: dataLocal(new Date()) };
+  }
+
+  @Put('configuracoes/precos')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary:
+      'Cadastrar uma tabela que vale a partir de hoje ou de uma data futura (quem já assinou não muda)',
+  })
+  async salvarTabela(
+    @Corpo(tabelaPrecosPlanosSchema) t: TabelaPrecosPlanos,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    const hoje = dataLocal(new Date());
+    if (t.desde < hoje)
+      throw Erros.validacao([
+        { campo: 'desde', mensagem: 'A tabela vale a partir de hoje ou de uma data futura.' },
+      ]);
+    const guardadas = lerTabelasPreco(await this.valor('precos')).slice(1);
+    const vigentes = guardadas.filter((x) => x.desde < hoje && x.desde !== t.desde);
+    const futuras = guardadas.filter((x) => x.desde >= hoje && x.desde !== t.desde);
+    await this.gravar('precos', [...vigentes, ...futuras, t], a, ip);
+    this.precos.esquecer();
+  }
+
+  @Delete('configuracoes/precos/:desde')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Desistir de uma tabela que ainda não começou a valer' })
+  async removerTabela(
+    @Param('desde') desde: string,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    if (!(desde > dataLocal(new Date())))
+      throw Erros.conflito('Só dá para desistir de uma tabela que ainda não começou a valer.');
+    const guardadas = lerTabelasPreco(await this.valor('precos')).slice(1);
+    await this.gravar(
+      'precos',
+      guardadas.filter((x) => x.desde !== desde),
+      a,
+      ip,
+    );
+    this.precos.esquecer();
   }
 
   @Get('saude')

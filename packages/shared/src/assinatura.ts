@@ -2,7 +2,13 @@
 // está e se o sistema fica só para consulta. Bloqueio suave: nunca apaga dado.
 import { dataLocal } from './datas.js';
 import { z } from 'zod';
-import { diasRestantesTeste, precoPorMes, type Ciclo, type PlanoConta } from './planos.js';
+import {
+  diasRestantesTeste,
+  precoPorMes,
+  type Ciclo,
+  type PlanoConta,
+  type TabelaPrecosPlanos,
+} from './planos.js';
 import type { DataISO } from './vigencia.js';
 
 /** Dias depois do vencimento em que a conta segue normal, só com aviso. */
@@ -141,6 +147,8 @@ export interface AssinaturaDetalhe {
   testeAte: string | null;
   /** Preço por mês do plano no ciclo, com as unidades ativas (centavos). */
   precoPorMes: number;
+  /** Tabela de preços de hoje (para assinar agora). */
+  tabelaPrecos: TabelaPrecosPlanos;
   unidades: number;
   /** A fatura em aberto (ou recusada) mais antiga: a que precisa de atenção. */
   pendente: FaturaDetalhe | null;
@@ -198,8 +206,13 @@ export const assinarSchema = z.object({
 export type AssinarEntrada = z.infer<typeof assinarSchema>;
 
 /** Valor de cada cobrança: o mês no mensal; os 12 meses de uma vez no anual. */
-export function valorDaCobranca(plano: PlanoConta, ciclo: Ciclo, unidades: number): number {
-  const porMes = precoPorMes(plano, ciclo, Math.max(1, unidades));
+export function valorDaCobranca(
+  plano: PlanoConta,
+  ciclo: Ciclo,
+  unidades: number,
+  tabela?: TabelaPrecosPlanos,
+): number {
+  const porMes = precoPorMes(plano, ciclo, Math.max(1, unidades), tabela);
   return ciclo === 'anual' ? porMes * 12 : porMes;
 }
 

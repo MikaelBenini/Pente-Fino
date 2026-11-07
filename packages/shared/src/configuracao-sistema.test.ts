@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { avisoGeralSchema, avisoVigente, lerConfiguracaoPublica } from './configuracao-sistema.js';
-import { DIAS_TESTE, VERSAO_TERMOS } from './planos.js';
+import { DIAS_TESTE, TABELA_PADRAO, VERSAO_TERMOS } from './planos.js';
 
 describe('configurações do sistema', () => {
   const aviso = {
@@ -15,6 +15,7 @@ describe('configurações do sistema', () => {
       avisoGeral: null,
       teste: { dias: DIAS_TESTE, versaoTermos: VERSAO_TERMOS },
       modelosEmail: {},
+      tabelasPreco: [TABELA_PADRAO],
     });
     expect(lerConfiguracaoPublica({ teste: { dias: 999 } }).teste.dias).toBe(DIAS_TESTE);
   });

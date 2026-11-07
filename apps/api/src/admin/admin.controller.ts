@@ -42,6 +42,7 @@ import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
 import { AdminContasService } from './admin-contas.service.js';
 import { AdminVendasService } from './admin-vendas.service.js';
+import { PrecosService } from '../comum/precos.service.js';
 import { BancoPlataforma } from './banco-plataforma.js';
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
@@ -78,6 +79,7 @@ export class AdminController {
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
     @Inject(AdminContasService) private readonly contasServico: AdminContasService,
     @Inject(AdminVendasService) private readonly vendasServico: AdminVendasService,
+    @Inject(PrecosService) private readonly precos: PrecosService,
   ) {}
 
   @Get('eu')
@@ -116,7 +118,9 @@ export class AdminController {
         canceladaEm: c.cancelada_em,
         motivoCancelamento: c.motivo_cancelamento,
         unidades: c.unidades,
+        precosDesde: c.precos_desde?.toISOString().slice(0, 10) ?? null,
       })),
+      tabelas: await this.precos.tabelas(),
       faturas: faturas.map((f) => ({
         contaId: f.conta_id,
         status: f.status,

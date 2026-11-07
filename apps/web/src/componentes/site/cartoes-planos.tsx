@@ -8,13 +8,13 @@ import {
   NOME_PLANO,
   PLANOS,
   type PlanoConta,
-  PRECO_UNIDADE_EXTRA,
   precoPorMes,
   resumoAnual,
 } from '@pente-fino/shared';
 import { cn } from '@pente-fino/ui';
 import { Check, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useTabelaPrecos } from '@/lib/consultas';
 import { LinkBotao } from './link-botao';
 
 const CHAMADA: Record<PlanoConta, string> = {
@@ -58,9 +58,10 @@ function limiteTexto(p: PlanoConta) {
 
 /** Os três planos com a escolha mensal/anual e a conta das unidades do Premium. */
 export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
+  const tabela = useTabelaPrecos();
   const [ciclo, setCiclo] = useState<Ciclo>('anual');
   const [unidades, setUnidades] = useState(2);
-  const economiaPro = resumoAnual('pro').economia;
+  const economiaPro = resumoAnual('pro', 1, tabela).economia;
 
   return (
     <div className="flex flex-col gap-8">
@@ -92,8 +93,8 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
 
       <ul className="animar-escalonado grid gap-4 md:grid-cols-3">
         {PLANOS.map((p) => {
-          const preco = precoPorMes(p, ciclo);
-          const anual = resumoAnual(p);
+          const preco = precoPorMes(p, ciclo, 1, tabela);
+          const anual = resumoAnual(p, 1, tabela);
           const destaque = p === 'pro';
           return (
             <li
@@ -134,7 +135,7 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
                   <p className="text-sm text-tinta-suave">
                     +{' '}
                     {formatarMoeda(
-                      PRECO_UNIDADE_EXTRA[ciclo === 'mensal' ? 'mensal' : 'anualPorMes'],
+                      tabela.unidadeExtra[ciclo === 'mensal' ? 'mensal' : 'anualPorMes'],
                     )}{' '}
                     por unidade a partir da 2ª
                   </p>
@@ -175,7 +176,7 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
             </h3>
             <p className="text-tinta-suave">
               Cada unidade a partir da 2ª custa{' '}
-              {formatarMoeda(PRECO_UNIDADE_EXTRA[ciclo === 'mensal' ? 'mensal' : 'anualPorMes'])}{' '}
+              {formatarMoeda(tabela.unidadeExtra[ciclo === 'mensal' ? 'mensal' : 'anualPorMes'])}{' '}
               por mês.
             </p>
           </div>
@@ -209,12 +210,12 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
             </div>
             <p aria-live="polite" className="flex flex-col">
               <span className="font-denso text-3xl font-bold tabular-nums">
-                {formatarMoeda(precoPorMes('premium', ciclo, unidades))}
+                {formatarMoeda(precoPorMes('premium', ciclo, unidades, tabela))}
                 <span className="font-sans text-base font-normal text-tinta-suave">/mês</span>
               </span>
               {ciclo === 'anual' && (
                 <span className="text-sm text-tinta-suave">
-                  {formatarMoeda(resumoAnual('premium', unidades).total)} por ano
+                  {formatarMoeda(resumoAnual('premium', unidades, tabela).total)} por ano
                 </span>
               )}
             </p>

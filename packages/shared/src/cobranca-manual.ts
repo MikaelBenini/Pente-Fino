@@ -2,7 +2,7 @@
 // antes do fim do período pago nasce a próxima cobrança em aberto e o dono é avisado; vencida,
 // a conta segue o mesmo bloqueio suave da cobrança automática (situacaoAssinatura).
 import { valorDaCobranca } from './assinatura.js';
-import type { Ciclo, PlanoConta } from './planos.js';
+import type { Ciclo, PlanoConta, TabelaPrecosPlanos } from './planos.js';
 import { fimDoPeriodo } from './plataforma.js';
 
 /** Quantos dias antes do vencimento a cobrança manual nasce (e o dono recebe o aviso). */
@@ -31,6 +31,8 @@ export function proximaCobrancaManual(d: {
   plano: PlanoConta;
   ciclo: Ciclo;
   unidades: number;
+  /** Tabela que a conta contratou (o preço novo da administração não muda quem já assina). */
+  tabela?: TabelaPrecosPlanos;
 }): CobrancaManualNova | null {
   if (d.faturas.some((f) => f.status === 'aberta' || f.status === 'recusada')) return null;
   const pagas = d.faturas
@@ -45,6 +47,6 @@ export function proximaCobrancaManual(d: {
     vencimento,
     periodoInicio: vencimento,
     periodoFim: fimDoPeriodo(vencimento, d.ciclo),
-    valor: valorDaCobranca(d.plano, d.ciclo, Math.max(1, d.unidades)),
+    valor: valorDaCobranca(d.plano, d.ciclo, Math.max(1, d.unidades), d.tabela),
   };
 }

@@ -8,6 +8,9 @@ import {
   formatarData,
   formatarMoeda,
   proximaCobrancaManual,
+  TABELA_PADRAO,
+  tabelaVigente,
+  type TabelaPrecosPlanos,
   type ChaveModeloEmail,
   type TextoModeloEmail,
   type TrabalhoEmail,
@@ -46,6 +49,8 @@ export async function rotinaAvisosDaAssinatura(
     agora?: Date;
     appUrl?: string;
     modelos?: Partial<Record<ChaveModeloEmail, TextoModeloEmail>>;
+    /** Tabelas de preço (a conta paga pela que contratou). */
+    tabelas?: readonly TabelaPrecosPlanos[];
   } = {},
 ): Promise<TrabalhoEmail[]> {
   const agora = opcoes.agora ?? new Date();
@@ -108,6 +113,10 @@ export async function rotinaAvisosDaAssinatura(
         plano: conta.plano,
         ciclo: conta.ciclo,
         unidades: await tx.unidade.count({ where: { ativa: true } }),
+        tabela: tabelaVigente(
+          opcoes.tabelas ?? [TABELA_PADRAO],
+          conta.precosDesde ? dia(conta.precosDesde) : null,
+        ),
       });
       if (nova) {
         await tx.faturaAssinatura.create({
