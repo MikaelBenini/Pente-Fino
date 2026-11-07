@@ -27,10 +27,8 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image' },
   appleWebApp: { capable: true, title: 'Pente Fino', statusBarStyle: 'black-translucent' },
   icons: {
-    icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
-    ],
+    // O favicon.ico de app/ o Next publica sozinho; o SVG precisa vir aqui junto do da Apple.
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     apple: '/icones/apple-touch-icon.png',
   },
 };
