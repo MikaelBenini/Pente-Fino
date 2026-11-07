@@ -442,9 +442,9 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 - [ ] E-mail: remetente, servidor de envio (SMTP) e um botão "mandar e-mail de teste"; a senha do SMTP fica cifrada e nunca volta para a tela (hoje vem do `.env`; o `.env` continua valendo como reserva)
 - [ ] Modelos de e-mail editáveis com variáveis e pré-visualização: boas-vindas e ativação da conta, convite da equipe, recuperação de senha, aviso de fim do teste, cobrança vencida, pagamento recebido
 - [ ] Planos e preços (Básico, Pro, Premium, mensal e anual, unidade extra) e cupons (como o do plano fundador), com vigência: mudar preço não altera quem já assinou
-- [ ] Duração do teste grátis e textos do cadastro (termos, política de privacidade em vigor)
-- [ ] Aviso geral para todas as contas (manutenção programada, novidade), com data de início e fim
-- [ ] Saúde do sistema: filas (e-mail, WhatsApp), conexões do WhatsApp caídas por conta, erros recentes
+- [x] Duração do teste grátis e textos do cadastro (termos, política de privacidade em vigor) (feito: `/admin` → Configurações → "Teste grátis e termos": dias de teste do cadastro pelo site e a versão dos termos cujo aceite o cadastro grava; tabela `configuracao_plataforma`, só a plataforma grava e a aplicação lê pela função `configuracao_do_sistema()`, que libera só as chaves públicas. Os textos dos termos e da política continuam nas páginas do site)
+- [x] Aviso geral para todas as contas (manutenção programada, novidade), com data de início e fim (feito: "Aviso geral" em Configurações, com tipo, início e fim; faixa no topo do painel de todas as barbearias só enquanto vale (`GET /sistema/aviso`, `avisoVigente`); tirar o aviso é imediato)
+- [x] Saúde do sistema: filas (e-mail, WhatsApp), conexões do WhatsApp caídas por conta, erros recentes (feito: aba "Saúde do sistema" em `/admin`: banco, as cinco filas (esperando, agendados, rodando, falhas), WhatsApp que caiu sem o dono pedir por conta e unidade (`plataforma_conexoes_caidas()`) e os trabalhos que falharam nas últimas 24 h, com o motivo; atualiza a cada 30 s)
 
 - [ ] **Pronto quando:** um vendedor cria uma conta na rua, registra o Pix na hora, o dono recebe o convite e entra; o admin vê a conta nova nas métricas, muda o plano com motivo e tudo fica na auditoria, sem nunca ver um dado de cliente da barbearia
 

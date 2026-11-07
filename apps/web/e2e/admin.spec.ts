@@ -6,6 +6,7 @@ import { codigoDoPasso, passoDe } from '../../api/src/admin/totp';
 // Etapa 15.1: login da administração com segundo fator e a lista de contas.
 test('administração: 1º acesso configura o autenticador, entra e vê as contas', async ({
   page,
+  browser,
 }, info) => {
   test.skip(info.project.name === 'celular', 'administração no computador');
   const email = `admin-${Date.now().toString(36)}@pentefino.dev`;
@@ -87,6 +88,29 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   );
   await fichaVenda.getByRole('button', { name: 'Fechar' }).click();
   await expect(page.getByRole('table', { name: 'Vendas por vendedor' })).toContainText('Ana Teste');
+
+  // Configurações: aviso geral (vale 15 min) aparece para a barbearia; saúde do sistema.
+  await page.getByRole('tab', { name: 'Configurações' }).click();
+  const avisoGeral = page.getByRole('region', { name: 'Aviso geral' });
+  const local = (ms: number) => new Date(ms - 3 * 3_600_000).toISOString().slice(0, 16);
+  await avisoGeral.getByLabel('Texto').fill(`Novidade do teste ${sufixoVenda}`);
+  await avisoGeral.getByLabel('De').fill(local(Date.now() - 60_000));
+  await avisoGeral.getByLabel('Até').fill(local(Date.now() + 15 * 60_000));
+  await avisoGeral.getByRole('button', { name: 'Publicar aviso' }).click();
+  await expect(avisoGeral.getByRole('status')).toHaveText('Salvo.');
+  const outroNavegador = await browser.newContext();
+  const barbearia = await outroNavegador.newPage();
+  await barbearia.goto('/entrar');
+  await barbearia.getByLabel('E-mail').fill('gestor@demo.pentefino.dev');
+  await barbearia.getByLabel('Senha').fill('pentefino123');
+  await barbearia.getByRole('button', { name: 'Entrar' }).click();
+  await expect(barbearia.getByText(`Novidade do teste ${sufixoVenda}`)).toBeVisible();
+  await outroNavegador.close();
+  await avisoGeral.getByRole('button', { name: 'Tirar o aviso' }).click();
+  await expect(avisoGeral.getByRole('button', { name: 'Tirar o aviso' })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
+  await expect(page.getByRole('table', { name: 'Filas' })).toContainText('E-mails');
+  await page.getByRole('tab', { name: 'Painel' }).click();
 
   // A sessão da barbearia não existe aqui, e a da administração não abre o painel.
   await page.goto('/app');

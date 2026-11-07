@@ -2,6 +2,7 @@ import { Controller, Get, HttpCode, HttpStatus, Inject, Param, Post } from '@nes
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   aplicarModelosIniciais,
+  configuracaoDoSistema,
   clienteDoToken,
   criarLinkDoHorario,
   duracaoDosServicos,
@@ -39,8 +40,7 @@ import {
   type HorarioLivre,
   type Sessao,
   type UnidadePublica,
-  DIAS_TESTE,
-  VERSAO_TERMOS,
+  lerConfiguracaoPublica,
   temRecurso,
 } from '@pente-fino/shared';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -130,6 +130,8 @@ export class PublicoController {
       throw Erros.conflito('Este e-mail já tem conta. Entre com ele ou use "Esqueci minha senha".');
     const senhaHash = await gerarHashSenha(d.senha);
     const contaId = randomUUID();
+    // Dias de teste e versão dos termos vêm da administração (com padrão do sistema).
+    const { teste } = lerConfiguracaoPublica(await configuracaoDoSistema(this.banco.prisma));
     try {
       return await this.banco.naConta(contaId, async (tx) => {
         await tx.conta.create({
@@ -139,7 +141,7 @@ export class PublicoController {
             plano: d.plano,
             ciclo: d.ciclo,
             status: 'teste',
-            testeAte: new Date(Date.now() + DIAS_TESTE * 86_400_000),
+            testeAte: new Date(Date.now() + teste.dias * 86_400_000),
           },
         });
         const unidade = await tx.unidade.create({
@@ -169,7 +171,7 @@ export class PublicoController {
               nome: d.barbearia,
               plano: d.plano,
               ciclo: d.ciclo,
-              aceiteTermos: VERSAO_TERMOS,
+              aceiteTermos: teste.versaoTermos,
             },
           },
           dono.id,

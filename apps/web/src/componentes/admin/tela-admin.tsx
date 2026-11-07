@@ -11,7 +11,7 @@ import {
   type UsuarioPlataformaSessao,
   type VendasDoVendedor,
 } from '@pente-fino/shared';
-import { Botao, Campo, Selecao } from '@pente-fino/ui';
+import { Abas, Botao, Campo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -22,6 +22,7 @@ import { Marca } from '../marca';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
 import { FichaConta } from './ficha-conta';
+import { ConfiguracoesAdmin, SaudeAdmin } from './config-admin';
 import { MetricasAdmin } from './metricas-admin';
 import { NovaVenda, VendasPorVendedor } from './nova-venda';
 
@@ -206,7 +207,25 @@ function Entrar() {
   );
 }
 
+/** Admin: abas do painel, configurações e saúde; vendedor: só as contas dele. */
 function Painel({ u }: { u: UsuarioPlataformaSessao }) {
+  const [aba, setAba] = useState('painel');
+  if (u.papel !== 'admin') return <PainelContas u={u} />;
+  return (
+    <Abas
+      rotulo="Administração"
+      atual={aba}
+      onTrocar={setAba}
+      abas={[
+        { id: 'painel', rotulo: 'Painel', conteudo: <PainelContas u={u} /> },
+        { id: 'configuracoes', rotulo: 'Configurações', conteudo: <ConfiguracoesAdmin /> },
+        { id: 'saude', rotulo: 'Saúde do sistema', conteudo: <SaudeAdmin /> },
+      ]}
+    />
+  );
+}
+
+function PainelContas({ u }: { u: UsuarioPlataformaSessao }) {
   const contas = useQuery({
     queryKey: ['admin', 'contas'],
     queryFn: () => adminApi<ContaNaPlataforma[]>('contas'),
