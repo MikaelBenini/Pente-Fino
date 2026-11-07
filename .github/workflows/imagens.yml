@@ -36,7 +36,7 @@ jobs:
             dockerfile: apps/web/Dockerfile
             alvo: final
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Nome da imagem (o registro exige minúsculas)
         id: nome
