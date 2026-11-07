@@ -102,6 +102,7 @@ export class AdminContasService {
             d.ciclo,
             Number(antes.unidades) || 1,
             await this.precos.vigente(dataLocal(new Date())),
+            Number((await fichaDaContaPlataforma(this.banco.prisma, contaId))?.descontoBp ?? 0),
           ),
           descricao: `Pente Fino ${NOME_PLANO[d.plano]} (${d.ciclo})`,
         });

@@ -33,6 +33,7 @@ export function proximaCobrancaManual(d: {
   unidades: number;
   /** Tabela que a conta contratou (o preço novo da administração não muda quem já assina). */
   tabela?: TabelaPrecosPlanos;
+  descontoBp?: number;
 }): CobrancaManualNova | null {
   if (d.faturas.some((f) => f.status === 'aberta' || f.status === 'recusada')) return null;
   const pagas = d.faturas
@@ -47,6 +48,6 @@ export function proximaCobrancaManual(d: {
     vencimento,
     periodoInicio: vencimento,
     periodoFim: fimDoPeriodo(vencimento, d.ciclo),
-    valor: valorDaCobranca(d.plano, d.ciclo, Math.max(1, d.unidades), d.tabela),
+    valor: valorDaCobranca(d.plano, d.ciclo, Math.max(1, d.unidades), d.tabela, d.descontoBp),
   };
 }

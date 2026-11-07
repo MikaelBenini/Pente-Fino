@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aplicarDesconto,
+  avaliarCupom,
+  cupomSchema,
+  lerCupons,
   lerTabelasPreco,
   TABELA_PADRAO,
   tabelaVigente,
@@ -181,5 +185,37 @@ describe('tabelas de preço com vigência', () => {
     // Conta antiga, sem data: a do lançamento.
     expect(tabelaVigente(tabelas, null)).toBe(TABELA_PADRAO);
     expect(resumoAnual('basico', 1, tabelaVigente(tabelas, '2027-06-01')).total).toBe(7490 * 12);
+  });
+});
+
+describe('cupons', () => {
+  const fundador = cupomSchema.parse({ codigo: ' fundador ', descontoBp: 3000, vagas: 20 });
+
+  it('código em maiúsculas; desconto aplicado no centavo', () => {
+    expect(fundador).toMatchObject({ codigo: 'FUNDADOR', validoAte: null, ativo: true });
+    expect(aplicarDesconto(14990, 3000)).toBe(10493);
+    expect(aplicarDesconto(14990)).toBe(14990);
+    expect(cupomSchema.safeParse({ codigo: 'a', descontoBp: 10 }).success).toBe(false);
+  });
+
+  it('aceita até acabarem as vagas ou o prazo; inativo não existe', () => {
+    expect(avaliarCupom(fundador, { hoje: '2026-11-10', usados: 19 })).toEqual({
+      ok: true,
+      descontoBp: 3000,
+      codigo: 'FUNDADOR',
+    });
+    expect(avaliarCupom(fundador, { hoje: '2026-11-10', usados: 20 })).toEqual({
+      ok: false,
+      motivo: 'As vagas deste cupom acabaram.',
+    });
+    expect(
+      avaliarCupom({ ...fundador, validoAte: '2026-11-09' }, { hoje: '2026-11-10', usados: 0 }),
+    ).toMatchObject({ ok: false, motivo: 'Este cupom já expirou.' });
+    expect(avaliarCupom({ ...fundador, ativo: false }, { hoje: '2026-11-10', usados: 0 }).ok).toBe(
+      false,
+    );
+    expect(lerCupons([fundador, { codigo: 'x' }, fundador]).map((c) => c.codigo)).toEqual([
+      'FUNDADOR',
+    ]);
   });
 });

@@ -18,6 +18,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   cifrar,
   conexoesCaidasPlataforma,
+  contasDaPlataforma,
   configuracaoDoSistema,
   configuracaoSmtp,
   decifrar,
@@ -27,6 +28,10 @@ import {
   configTesteSchema,
   FILA_WHATSAPP_SAIDA,
   CHAVES_MODELO_EMAIL,
+  cupomSchema,
+  lerCupons,
+  type Cupom,
+  type CupomNaTela,
   dataLocal,
   lerTabelasPreco,
   tabelaPrecosPlanosSchema,
@@ -365,6 +370,30 @@ export class AdminConfigController {
       ip,
     );
     this.precos.esquecer();
+  }
+
+  @Get('configuracoes/cupons')
+  @ApiOperation({ summary: 'Cupons de desconto, com quantas contas já usaram' })
+  async cupons(): Promise<CupomNaTela[]> {
+    const contas = await contasDaPlataforma(this.banco.prisma);
+    return lerCupons(await this.valor('cupons')).map((c) => ({
+      ...c,
+      usados: contas.filter((x) => x.cupom?.toUpperCase() === c.codigo).length,
+    }));
+  }
+
+  @Put('configuracoes/cupons')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Criar ou mudar um cupom (pelo código); desativar não tira de quem já usa',
+  })
+  async salvarCupom(
+    @Corpo(cupomSchema) c: Cupom,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    const outros = lerCupons(await this.valor('cupons')).filter((x) => x.codigo !== c.codigo);
+    await this.gravar('cupons', [...outros, c], a, ip);
   }
 
   @Get('saude')

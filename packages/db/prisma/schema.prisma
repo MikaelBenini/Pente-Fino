@@ -268,6 +268,9 @@ model Conta {
   vendedorId              String?       @map("vendedor_id") @db.Uuid
   /// Data da tabela de preços contratada (assinatura ou última troca de plano); null = a do lançamento.
   precosDesde             DateTime?     @map("precos_desde") @db.Date
+  /// Cupom usado ao contratar e o desconto dele (pontos-base), enquanto a assinatura existir.
+  cupom                   String?
+  descontoBp              Int           @default(0) @map("desconto_bp")
   canceladaEm             DateTime?     @map("cancelada_em") @db.Timestamptz(3)
   motivoCancelamento      String?       @map("motivo_cancelamento")
   criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)

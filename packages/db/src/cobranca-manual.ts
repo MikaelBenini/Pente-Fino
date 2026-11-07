@@ -117,6 +117,7 @@ export async function rotinaAvisosDaAssinatura(
           opcoes.tabelas ?? [TABELA_PADRAO],
           conta.precosDesde ? dia(conta.precosDesde) : null,
         ),
+        descontoBp: conta.descontoBp,
       });
       if (nova) {
         await tx.faturaAssinatura.create({

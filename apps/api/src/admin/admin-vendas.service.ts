@@ -21,6 +21,7 @@ import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { EmailsService } from '../emails/emails.service.js';
+import { PrecosService } from '../comum/precos.service.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { BancoPlataforma } from './banco-plataforma.js';
 
@@ -38,6 +39,7 @@ export class AdminVendasService {
     @Inject(AdminAuthService) private readonly auth: AdminAuthService,
     @Inject(EmailsService) private readonly emails: EmailsService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(PrecosService) private readonly precos: PrecosService,
   ) {}
 
   async vender(
@@ -50,6 +52,7 @@ export class AdminVendasService {
     );
     if (existente)
       throw Erros.conflito('Este e-mail já tem conta no Pente Fino. Use outro e-mail para o dono.');
+    const desconto = await this.precos.cupomValido(d.cupom);
     const contaId = randomUUID();
     const token = gerarTokenOpaco();
     const agora = new Date();
@@ -66,6 +69,8 @@ export class AdminVendasService {
             testeAte: new Date(agora.getTime() + d.diasTeste * 86_400_000),
             vendedorId: quem.id,
             precosDesde: new Date(`${dataLocal(agora)}T00:00:00Z`),
+            cupom: desconto.cupom,
+            descontoBp: desconto.descontoBp,
           },
         });
         const unidade = await tx.unidade.create({
@@ -109,6 +114,7 @@ export class AdminVendasService {
       acao: 'vender',
       contaId,
       depois: {
+        cupom: desconto.cupom,
         barbearia: d.barbearia,
         dono: d.dono.email,
         plano: d.plano,

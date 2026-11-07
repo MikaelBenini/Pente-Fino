@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { configuracaoDoSistema } from '@pente-fino/db';
+import { configuracaoDoSistema, cupomParaCadastro } from '@pente-fino/db';
 import {
+  conferirCupom,
   dataLocal,
   lerConfiguracaoPublica,
   TABELA_PADRAO,
@@ -8,6 +9,7 @@ import {
   type TabelaPrecosPlanos,
 } from '@pente-fino/shared';
 import { BancoService } from './banco.service.js';
+import { Erros } from './erros.js';
 
 const RELER_MS = 60_000;
 
@@ -39,6 +41,19 @@ export class PrecosService {
   /** Hoje em São Paulo, como data do banco (para gravar em conta.precos_desde). */
   hoje(): Date {
     return new Date(`${dataLocal(new Date())}T00:00:00Z`);
+  }
+
+  /** Confere um cupom para uma conta nova: 400 com o motivo se não vale. */
+  async cupomValido(
+    codigo: string | undefined,
+  ): Promise<{ cupom: string | null; descontoBp: number }> {
+    if (!codigo?.trim()) return { cupom: null, descontoBp: 0 };
+    const r = conferirCupom(
+      await cupomParaCadastro(this.banco.prisma, codigo.trim()),
+      dataLocal(new Date()),
+    );
+    if (!r.ok) throw Erros.validacao([{ campo: 'cupom', mensagem: r.motivo }]);
+    return { cupom: r.codigo, descontoBp: r.descontoBp };
   }
 
   /** A administração mudou as tabelas: vale na hora. */

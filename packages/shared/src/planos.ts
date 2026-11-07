@@ -266,6 +266,8 @@ export function conferirTrocaDePlano(d: {
   /** Tabela que a conta contratou (valor de hoje) e a do dia (valor novo: troca é contrato novo). */
   tabelaAtual?: TabelaPrecosPlanos;
   tabelaNova?: TabelaPrecosPlanos;
+  /** Desconto do cupom da conta (vale também no plano novo). */
+  descontoBp?: number;
 }): PreviaTrocaPlano {
   const { de, para, uso } = d;
   const limite = LIMITES_PLANO[para];
@@ -296,8 +298,14 @@ export function conferirTrocaDePlano(d: {
     de,
     para,
     sobe: ORDEM[para] > ORDEM[de],
-    valorAtual: precoPorMes(de, d.ciclo, uso.unidades, d.tabelaAtual),
-    valorNovo: precoPorMes(para, d.ciclo, uso.unidades, d.tabelaNova),
+    valorAtual: aplicarDesconto(
+      precoPorMes(de, d.ciclo, uso.unidades, d.tabelaAtual),
+      d.descontoBp,
+    ),
+    valorNovo: aplicarDesconto(
+      precoPorMes(para, d.ciclo, uso.unidades, d.tabelaNova),
+      d.descontoBp,
+    ),
     bloqueios,
     perdas,
   };
@@ -307,3 +315,65 @@ export const trocarPlanoSchema = z.object({
   plano: z.enum(PLANOS, { error: 'Escolha o plano.' }),
 });
 export type TrocarPlanoEntrada = z.infer<typeof trocarPlanoSchema>;
+
+// ─── Cupons (Etapa 15.1) ──────────────────────────────────────────────────
+
+export const cupomSchema = z.object({
+  codigo: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .pipe(
+      z
+        .string()
+        .regex(/^[A-Z0-9][A-Z0-9_-]{2,29}$/, { error: 'Código de 3 a 30 letras ou números.' }),
+    ),
+  descricao: z.string().trim().max(120).default(''),
+  /** Desconto em pontos-base (3000 = 30%), enquanto a assinatura existir. */
+  descontoBp: z.number().int().min(1, { error: 'Informe o desconto.' }).max(10000),
+  /** Último dia em que o cupom aceita cadastro (null = sem prazo). */
+  validoAte: z.iso.date().nullable().default(null),
+  /** Quantas contas podem usar (null = sem limite). */
+  vagas: z.number().int().min(1).nullable().default(null),
+  ativo: z.boolean().default(true),
+});
+export type Cupom = z.infer<typeof cupomSchema>;
+
+export function lerCupons(json: unknown): Cupom[] {
+  const lista = Array.isArray(json) ? json : [];
+  const porCodigo = new Map<string, Cupom>();
+  for (const c of lista) {
+    const r = cupomSchema.safeParse(c);
+    if (r.success) porCodigo.set(r.data.codigo, r.data);
+  }
+  return [...porCodigo.values()].sort((a, b) => a.codigo.localeCompare(b.codigo));
+}
+
+export type ResultadoCupom =
+  { ok: true; descontoBp: number; codigo: string } | { ok: false; motivo: string };
+
+/** O cupom aceita uma conta nova hoje? (ativo, no prazo, com vaga) */
+export function avaliarCupom(
+  cupom: Cupom | null | undefined,
+  d: { hoje: string; usados: number },
+): ResultadoCupom {
+  if (!cupom || !cupom.ativo) return { ok: false, motivo: 'Cupom não encontrado.' };
+  if (cupom.validoAte && d.hoje > cupom.validoAte)
+    return { ok: false, motivo: 'Este cupom já expirou.' };
+  if (cupom.vagas !== null && d.usados >= cupom.vagas)
+    return { ok: false, motivo: 'As vagas deste cupom acabaram.' };
+  return { ok: true, descontoBp: cupom.descontoBp, codigo: cupom.codigo };
+}
+
+/** Valor com o desconto do cupom (arredondado para o centavo). */
+export const aplicarDesconto = (valor: number, descontoBp = 0) =>
+  Math.round((valor * (10000 - Math.min(10000, Math.max(0, descontoBp)))) / 10000);
+
+/** Confere um código de cupom com o que o banco devolve (cupom cru e quantas contas usaram). */
+export function conferirCupom(r: { cupom: unknown; usados: number }, hoje: string): ResultadoCupom {
+  return avaliarCupom(lerCupons(r.cupom ? [r.cupom] : [])[0], { hoje, usados: r.usados });
+}
+
+export interface CupomNaTela extends Cupom {
+  usados: number;
+}

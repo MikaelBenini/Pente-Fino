@@ -16,6 +16,8 @@ export interface LinhaContaPlataforma {
   motivo_cancelamento: string | null;
   vendedor_id: string | null;
   precos_desde: Date | null;
+  cupom: string | null;
+  desconto_bp: number;
   dono_ativou: boolean;
   unidades: number;
   profissionais: number;
@@ -131,4 +133,14 @@ export function conexoesCaidasPlataforma(prisma: PrismaClient) {
 export async function configuracaoSmtp(prisma: PrismaClient): Promise<unknown> {
   const [r] = await prisma.$queryRaw<{ c: unknown }[]>`SELECT configuracao_smtp() AS c`;
   return r?.c ?? null;
+}
+
+/** O cupom com esse código (cru, a aplicação valida) e quantas contas já usaram. */
+export async function cupomParaCadastro(
+  prisma: PrismaClient,
+  codigo: string,
+): Promise<{ cupom: unknown; usados: number }> {
+  const [r] = await prisma.$queryRaw<{ r: { cupom: unknown; usados: number } }[]>`
+    SELECT cupom_para_cadastro(${codigo}) AS r`;
+  return { cupom: r?.r.cupom ?? null, usados: Number(r?.r.usados ?? 0) };
 }

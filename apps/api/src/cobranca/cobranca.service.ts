@@ -135,7 +135,7 @@ export class CobrancaService {
     const assinatura = await this.externo(() =>
       this.provedor.criarAssinatura({
         cliente: clienteId,
-        valor: valorDaCobranca(d.plano, d.ciclo, unidades, tabelaHoje),
+        valor: valorDaCobranca(d.plano, d.ciclo, unidades, tabelaHoje, conta.descontoBp),
         ciclo: d.ciclo,
         vencimento: dataLocal(new Date()),
         descricao: `Pente Fino ${NOME_PLANO[d.plano]} (${d.ciclo})`,
@@ -192,6 +192,7 @@ export class CobrancaService {
         uso,
         tabelaAtual: await this.precos.vigente(conta.precosDesde),
         tabelaNova: await this.precos.vigente(dataLocal(new Date())),
+        descontoBp: conta.descontoBp,
       });
     });
   }
@@ -214,7 +215,7 @@ export class CobrancaService {
       const tabelaHoje = await this.precos.vigente(dataLocal(new Date()));
       await this.externo(() =>
         this.provedor.atualizarAssinatura(conta.asaasAssinaturaId!, {
-          valor: valorDaCobranca(para, ciclo, unidades, tabelaHoje),
+          valor: valorDaCobranca(para, ciclo, unidades, tabelaHoje, conta.descontoBp),
           descricao: `Pente Fino ${NOME_PLANO[para]} (${ciclo})`,
         }),
       );
