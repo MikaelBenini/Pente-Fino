@@ -110,6 +110,15 @@ export interface SmtpNaTela extends Omit<SmtpGuardado, 'senhaCifrada'> {
   temSenha: boolean;
 }
 
+/** Resposta dos botões "Testar conexão" e "Mandar e-mail de teste". */
+export interface ResultadoTesteSmtp {
+  ok: boolean;
+  mensagem: string;
+  /** O que o servidor respondeu ao aceitar o e-mail (ex.: "250 OK"). */
+  resposta?: string;
+  ms: number;
+}
+
 export function smtpParaTela(json: unknown): SmtpNaTela | null {
   const r = smtpGuardadoSchema.safeParse(json);
   if (!r.success) return null;

@@ -26,7 +26,13 @@ export const metadata: Metadata = {
   openGraph: { type: 'website', locale: 'pt_BR', siteName: 'Pente Fino' },
   twitter: { card: 'summary_large_image' },
   appleWebApp: { capable: true, title: 'Pente Fino', statusBarStyle: 'black-translucent' },
-  icons: { apple: '/icones/apple-touch-icon.png' },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '16x16 32x32 48x48' },
+    ],
+    apple: '/icones/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {

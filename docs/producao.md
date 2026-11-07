@@ -13,7 +13,7 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
 
 ## Primeira instalação
 
-1. DNS: registros A de `app`, `api` e `wa` apontando para o IP da VPS.
+1. DNS: registros A de `@`, `www`, `app`, `api` e `wa` apontando para o IP da VPS (`@` e `www` redirecionam para `app.`).
 2. `cd /opt/barbearia && ./instalar.sh seudominio.com.br voce@email.com` — cria o `.env` com as
    senhas sorteadas no próprio servidor.
 3. `./atualizar.sh` — baixa as imagens, roda as migrações e sobe tudo; o Caddy emite o HTTPS.

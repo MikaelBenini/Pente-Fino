@@ -4,6 +4,7 @@ import {
   formatarDataHora,
   type ConfiguracaoPublica,
   type SaudeDoSistema,
+  type ResultadoTesteSmtp,
   type SmtpNaTela,
   emailDoModelo,
   EXEMPLO_VARIAVEIS,
@@ -36,12 +37,6 @@ function Salvar({ rotulo, enviar }: { rotulo: string; enviar: () => Promise<void
   const [enviando, setEnviando] = useState(false);
   return (
     <div className="flex flex-col gap-2">
-      {erro && <Aviso tom="erro">{erro}</Aviso>}
-      {ok && (
-        <p role="status" className="text-sm text-acao-texto">
-          Salvo.
-        </p>
-      )}
       <Botao
         className="self-start"
         carregando={enviando}
@@ -61,6 +56,12 @@ function Salvar({ rotulo, enviar }: { rotulo: string; enviar: () => Promise<void
       >
         {rotulo}
       </Botao>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {ok && (
+        <p role="status" className="text-sm text-acao-texto">
+          Salvo.
+        </p>
+      )}
     </div>
   );
 }
@@ -314,6 +315,12 @@ export function SmtpAdmin() {
   return <Estado consulta={q}>{() => <FormSmtp atual={q.data!.smtp} />}</Estado>;
 }
 
+interface Resultado {
+  ok: boolean;
+  texto: string;
+  detalhe?: string | undefined;
+}
+
 function FormSmtp({ atual }: { atual: SmtpNaTela | null }) {
   const cliente = useQueryClient();
   const [host, setHost] = useState(atual?.host ?? '');
@@ -324,8 +331,54 @@ function FormSmtp({ atual }: { atual: SmtpNaTela | null }) {
   const [remetente, setRemetente] = useState(
     atual?.remetente ?? 'Pente Fino <nao-responda@pentefino.com.br>',
   );
-  const [teste, setTeste] = useState<string | null>(null);
+  const [acao, setAcao] = useState<'salvar' | 'conexao' | 'email' | 'env' | null>(null);
+  const [resultado, setResultado] = useState<Resultado | null>(null);
   const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'smtp'] });
+  const dados = () => ({
+    host,
+    porta: Number(porta) || 0,
+    seguro,
+    usuario,
+    remetente,
+    senha: senha === '' ? (atual?.temSenha ? null : '') : senha,
+  });
+
+  async function executar(qual: NonNullable<typeof acao>, f: () => Promise<Resultado>) {
+    setAcao(qual);
+    setResultado(null);
+    try {
+      setResultado(await f());
+    } catch (e) {
+      setResultado({ ok: false, texto: mensagemDe(e) });
+    } finally {
+      setAcao(null);
+    }
+  }
+  const salvar = async (): Promise<Resultado> => {
+    await adminApi('configuracoes/smtp', { metodo: 'PUT', corpo: dados() });
+    setSenha('');
+    await atualizar();
+    return { ok: true, texto: 'SMTP salvo. Os próximos e-mails já saem por ele.' };
+  };
+  const testarConexao = async (): Promise<Resultado> => {
+    const r = await adminApi<ResultadoTesteSmtp>('configuracoes/smtp/conexao', {
+      corpo: dados(),
+    });
+    return { ok: r.ok, texto: r.mensagem, detalhe: `${(r.ms / 1000).toFixed(1)} s` };
+  };
+  const mandarTeste = async (): Promise<Resultado> => {
+    const r = await adminApi<ResultadoTesteSmtp>('configuracoes/smtp/teste', { corpo: {} });
+    return {
+      ok: r.ok,
+      texto: atual || r.ok ? r.mensagem : `${r.mensagem} (usando o SMTP do .env)`,
+      detalhe: r.resposta ? `Resposta do servidor: ${r.resposta}` : undefined,
+    };
+  };
+  const voltarAoEnv = async (): Promise<Resultado> => {
+    await adminApi('configuracoes/smtp', { metodo: 'DELETE' });
+    await atualizar();
+    return { ok: true, texto: 'Voltou a usar o SMTP do .env do servidor.' };
+  };
   return (
     <section
       aria-labelledby="titulo-smtp"
@@ -385,47 +438,55 @@ function FormSmtp({ atual }: { atual: SmtpNaTela | null }) {
           onChange={(e) => setRemetente(e.target.value)}
         />
       </div>
-      {teste && (
-        <p role="status" className="text-sm text-acao-texto">
-          {teste}
-        </p>
-      )}
       <div className="flex flex-wrap gap-3">
-        <Salvar
-          rotulo="Salvar SMTP"
-          enviar={async () => {
-            await adminApi('configuracoes/smtp', {
-              metodo: 'PUT',
-              corpo: {
-                host,
-                porta: Number(porta) || 0,
-                seguro,
-                usuario,
-                remetente,
-                senha: senha === '' ? (atual?.temSenha ? null : '') : senha,
-              },
-            });
-            setSenha('');
-            await atualizar();
-          }}
-        />
-        <Salvar
-          rotulo="Mandar e-mail de teste"
-          enviar={async () => {
-            const r = await adminApi<{ para: string; via: string }>('configuracoes/smtp/teste', {
-              corpo: {},
-            });
-            setTeste(`E-mail de teste a caminho de ${r.para}. Confira a caixa de entrada.`);
-          }}
-        />
+        <Botao
+          carregando={acao === 'salvar'}
+          disabled={!!acao}
+          onClick={() => executar('salvar', salvar)}
+        >
+          Salvar SMTP
+        </Botao>
+        <Botao
+          variante="secundario"
+          carregando={acao === 'conexao'}
+          disabled={!!acao}
+          onClick={() => executar('conexao', testarConexao)}
+        >
+          Testar conexão
+        </Botao>
+        <Botao
+          variante="secundario"
+          carregando={acao === 'email'}
+          disabled={!!acao}
+          onClick={() => executar('email', mandarTeste)}
+        >
+          Mandar e-mail de teste
+        </Botao>
         {atual && (
-          <Salvar
-            rotulo="Voltar ao SMTP do .env"
-            enviar={async () => {
-              await adminApi('configuracoes/smtp', { metodo: 'DELETE' });
-              await atualizar();
-            }}
-          />
+          <Botao
+            variante="secundario"
+            carregando={acao === 'env'}
+            disabled={!!acao}
+            onClick={() => executar('env', voltarAoEnv)}
+          >
+            Voltar ao SMTP do .env
+          </Botao>
+        )}
+      </div>
+      <div aria-live="polite">
+        {acao === 'conexao' && (
+          <p className="text-sm text-tinta-suave">Conectando ao servidor (até 10 segundos)…</p>
+        )}
+        {acao === 'email' && <p className="text-sm text-tinta-suave">Enviando…</p>}
+        {!acao && resultado && (
+          <Aviso tom={resultado.ok ? 'sucesso' : 'erro'}>
+            <span className="flex flex-col gap-1">
+              <span>{resultado.texto}</span>
+              {resultado.detalhe && (
+                <span className="font-mono text-xs text-tinta-suave">{resultado.detalhe}</span>
+              )}
+            </span>
+          </Aviso>
         )}
       </div>
     </section>
