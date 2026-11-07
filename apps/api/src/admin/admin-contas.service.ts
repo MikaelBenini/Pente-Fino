@@ -8,6 +8,8 @@ import {
 } from '@pente-fino/db';
 import {
   fimDoPeriodo,
+  formatarData,
+  formatarMoeda,
   NOME_PLANO,
   STATUS_DA_ACAO,
   valorDaCobranca,
@@ -21,6 +23,7 @@ import { AssinaturaGuard } from '../assinatura/assinatura.guard.js';
 import { PlanoGuard } from '../assinatura/plano.guard.js';
 import { PROVEDOR_COBRANCA, type ProvedorCobranca } from '../cobranca/provedor.js';
 import { Erros } from '../comum/erros.js';
+import { EmailsService } from '../emails/emails.service.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { BancoPlataforma } from './banco-plataforma.js';
 
@@ -47,6 +50,7 @@ export class AdminContasService {
     @Inject(AssinaturaGuard) private readonly trava: AssinaturaGuard,
     @Inject(PlanoGuard) private readonly planos: PlanoGuard,
     @Inject(PROVEDOR_COBRANCA) private readonly provedor: ProvedorCobranca,
+    @Inject(EmailsService) private readonly emails: EmailsService,
   ) {}
 
   private valeNaHora(contaId: string) {
@@ -189,6 +193,17 @@ export class AdminContasService {
       ip,
     });
     this.valeNaHora(contaId);
+    // "Pagamento recebido" aos donos (falha de fila não desfaz o registro).
+    for (const dono of (ficha.donos as { nome: string; email: string }[]) ?? [])
+      await this.emails
+        .pagamentoRecebido({
+          para: dono.email,
+          nome: dono.nome.split(' ')[0] ?? dono.nome,
+          conta: String(ficha.nome),
+          valor: formatarMoeda(d.valor),
+          periodo: `${formatarData(`${d.periodoInicio}T12:00:00Z`)} a ${formatarData(`${fim}T12:00:00Z`)}`,
+        })
+        .catch((e: Error) => this.logger.error(`Aviso de pagamento: ${e.message}`));
     return { periodoFim: fim };
   }
 }

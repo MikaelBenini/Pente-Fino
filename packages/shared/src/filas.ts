@@ -146,7 +146,7 @@ export interface RotinaDosAvisos {
   tipo: 'avisos';
 }
 
-/** Rotina diária da cobrança manual: próxima cobrança em aberto e aviso ao dono. */
+/** Rotina diária dos avisos da assinatura: fim do teste, vencimento da conta manual e cobrança vencida. */
 export interface RotinaCobrancaManual {
   tipo: 'cobranca_manual';
 }

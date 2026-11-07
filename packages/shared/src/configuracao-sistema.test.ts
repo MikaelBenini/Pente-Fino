@@ -14,6 +14,7 @@ describe('configurações do sistema', () => {
     expect(lerConfiguracaoPublica(null)).toEqual({
       avisoGeral: null,
       teste: { dias: DIAS_TESTE, versaoTermos: VERSAO_TERMOS },
+      modelosEmail: {},
     });
     expect(lerConfiguracaoPublica({ teste: { dias: 999 } }).teste.dias).toBe(DIAS_TESTE);
   });

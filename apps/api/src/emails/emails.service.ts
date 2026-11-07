@@ -1,10 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { FUSO_EXIBICAO, type TrabalhoEmail } from '@pente-fino/shared';
+import { configuracaoDoSistema } from '@pente-fino/db';
+import {
+  emailPronto,
+  FUSO_EXIBICAO,
+  lerConfiguracaoPublica,
+  montarEmail as montar,
+  type ChaveModeloEmail,
+  type TextoModeloEmail,
+  type TrabalhoEmail,
+} from '@pente-fino/shared';
+import { BancoService } from '../comum/banco.service.js';
 import { Filas } from '../filas/filas.module.js';
-
-function escapar(texto: string): string {
-  return texto.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-}
 
 function dataHora(d: Date): string {
   return d.toLocaleString('pt-BR', {
@@ -14,31 +20,42 @@ function dataHora(d: Date): string {
   });
 }
 
-/** Monta o e-mail com texto puro e HTML simples (cliente de e-mail não lê CSS externo). */
-function montar(
-  para: string,
-  assunto: string,
-  paragrafos: string[],
-  botao?: { texto: string; link: string },
-): TrabalhoEmail {
-  const texto = [
-    ...paragrafos,
-    ...(botao ? [`${botao.texto}: ${botao.link}`] : []),
-    '',
-    '— Pente Fino',
-  ].join('\n\n');
-  const html = `<!doctype html><html lang="pt-BR"><body style="margin:0;padding:24px;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;color:#18181b">
-<div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:8px;padding:32px">
-${paragrafos.map((p) => `<p style="font-size:16px;line-height:1.5;margin:0 0 16px">${escapar(p)}</p>`).join('\n')}
-${botao ? `<p style="margin:24px 0"><a href="${escapar(botao.link)}" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold">${escapar(botao.texto)}</a></p><p style="font-size:13px;color:#52525b;word-break:break-all">Se o botão não abrir, copie este endereço: ${escapar(botao.link)}</p>` : ''}
-<p style="font-size:13px;color:#71717a;margin-top:32px">Pente Fino</p></div></body></html>`;
-  return { para, assunto, texto, html };
-}
+/** Os modelos personalizados são relidos depois disto (a administração pode ter mudado). */
+const RELER_MS = 60_000;
 
 /** Textos dos e-mails do sistema. O envio é do worker (fila "emails"). */
 @Injectable()
 export class EmailsService {
-  constructor(@Inject(Filas) private readonly filas: Filas) {}
+  private modelos?: { ate: number; valor: Partial<Record<ChaveModeloEmail, TextoModeloEmail>> };
+
+  constructor(
+    @Inject(Filas) private readonly filas: Filas,
+    @Inject(BancoService) private readonly banco: BancoService,
+  ) {}
+
+  /** A administração mudou um modelo: vale no próximo e-mail. */
+  esquecerModelos(): void {
+    this.modelos = undefined;
+  }
+
+  /** Textos personalizados na administração (sem conseguir ler, vale o padrão). */
+  private async personalizados() {
+    if (this.modelos && this.modelos.ate > Date.now()) return this.modelos.valor;
+    const valor = await configuracaoDoSistema(this.banco.prisma)
+      .then((c) => lerConfiguracaoPublica(c).modelosEmail)
+      .catch(() => ({}));
+    this.modelos = { ate: Date.now() + RELER_MS, valor };
+    return valor;
+  }
+
+  private async doModelo(
+    para: string,
+    chave: ChaveModeloEmail,
+    vars: Record<string, string>,
+    link?: string,
+  ): Promise<void> {
+    await this.enfileirar(emailPronto(para, chave, await this.personalizados(), vars, link));
+  }
 
   private async enfileirar(email: TrabalhoEmail): Promise<void> {
     await this.filas.emails.add('enviar', email);
@@ -52,17 +69,16 @@ export class EmailsService {
     link: string;
     expiraEm: Date;
   }) {
-    return this.enfileirar(
-      montar(
-        d.para,
-        `Convite para a equipe da ${d.conta}`,
-        [
-          `Olá, ${d.nome}!`,
-          `${d.convidadoPor} convidou você para usar o Pente Fino na ${d.conta}.`,
-          `Crie sua senha pelo botão abaixo. O convite vale até ${dataHora(d.expiraEm)}.`,
-        ],
-        { texto: 'Aceitar convite', link: d.link },
-      ),
+    return this.doModelo(
+      d.para,
+      'convite_equipe',
+      {
+        nome: d.nome,
+        conta: d.conta,
+        convidadoPor: d.convidadoPor,
+        validade: dataHora(d.expiraEm),
+      },
+      d.link,
     );
   }
 
@@ -75,33 +91,32 @@ export class EmailsService {
     link: string;
     expiraEm: Date;
   }) {
-    return this.enfileirar(
-      montar(
-        d.para,
-        `Sua conta da ${d.conta} no Pente Fino está pronta`,
-        [
-          `Olá, ${d.nome}!`,
-          `${d.vendedor} deixou a conta da ${d.conta} pronta no Pente Fino.`,
-          `Crie sua senha pelo botão abaixo; em seguida, a configuração guiada leva poucos minutos. O link vale até ${dataHora(d.expiraEm)}.`,
-        ],
-        { texto: 'Criar minha senha', link: d.link },
-      ),
+    return this.doModelo(
+      d.para,
+      'ativacao_conta',
+      { nome: d.nome, conta: d.conta, vendedor: d.vendedor, validade: dataHora(d.expiraEm) },
+      d.link,
     );
   }
 
   redefinirSenha(d: { para: string; nome: string; link: string }) {
-    return this.enfileirar(
-      montar(
-        d.para,
-        'Redefinir sua senha',
-        [
-          `Olá, ${d.nome}!`,
-          'Recebemos um pedido para redefinir sua senha. O link vale por 1 hora e só pode ser usado uma vez.',
-          'Se não foi você, ignore este e-mail: sua senha continua a mesma.',
-        ],
-        { texto: 'Criar nova senha', link: d.link },
-      ),
-    );
+    return this.doModelo(d.para, 'redefinir_senha', { nome: d.nome }, d.link);
+  }
+
+  /** Mensalidade paga (Asaas ou registrada pela administração). */
+  pagamentoRecebido(d: {
+    para: string;
+    nome: string;
+    conta: string;
+    valor: string;
+    periodo: string;
+  }) {
+    return this.doModelo(d.para, 'pagamento_recebido', {
+      nome: d.nome,
+      conta: d.conta,
+      valor: d.valor,
+      periodo: d.periodo,
+    });
   }
 
   senhaAlterada(d: { para: string; nome: string }) {

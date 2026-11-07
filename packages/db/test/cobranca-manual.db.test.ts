@@ -4,11 +4,11 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-  contasComCobrancaManual,
+  contasParaAvisosDaAssinatura,
   criarPrisma,
   naConta,
   registrarPagamentoManual,
-  rotinaCobrancaManual,
+  rotinaAvisosDaAssinatura,
   type PrismaClient,
 } from '../src/index.js';
 
@@ -69,21 +69,21 @@ afterAll(async () => {
 });
 
 describe('cobrança manual', () => {
-  it('a rotina enxerga só as contas manuais ativas', async () => {
-    const contas = await contasComCobrancaManual(app);
+  it('a rotina enxerga as contas em teste ou ativas', async () => {
+    const contas = await contasParaAvisosDaAssinatura(app);
     expect(contas).toContain(conta);
-    expect(contas).not.toContain(contaAsaas);
+    expect(contas).toContain(contaAsaas);
   });
 
   it('7 dias antes cria a cobrança e avisa o dono; não repete', async () => {
-    const avisos = await rotinaCobrancaManual(app, conta, agora);
+    const avisos = await rotinaAvisosDaAssinatura(app, conta, { agora, modelos: {} });
     expect(avisos).toEqual([
       expect.objectContaining({
         para: `dora-${conta.slice(0, 8)}@teste.dev`,
-        assunto: 'Mensalidade do Pente Fino vence em 05/12',
+        assunto: 'Mensalidade do Pente Fino vence em 05/12/2026',
       }),
     ]);
-    expect(await rotinaCobrancaManual(app, conta, agora)).toEqual([]);
+    expect(await rotinaAvisosDaAssinatura(app, conta, { agora, modelos: {} })).toEqual([]);
     const abertas = await naConta(app, conta, (tx) =>
       tx.faturaAssinatura.findMany({ where: { status: 'aberta' } }),
     );
@@ -108,5 +108,79 @@ describe('cobrança manual', () => {
     );
     expect(faturas.map((f) => f.status)).toEqual(['paga', 'paga']);
     expect(faturas[1]).toMatchObject({ forma: 'dinheiro', comprovante: 'Recibo 12' });
+  });
+});
+
+describe('avisos da assinatura', () => {
+  const emTeste = randomUUID();
+  afterAll(async () => {
+    await naConta(app, emTeste, (tx) => tx.conta.deleteMany({ where: { id: emTeste } }));
+  });
+
+  it('fim do teste: só no dia em que faltam 3 dias, com o texto personalizado', async () => {
+    await naConta(app, emTeste, async (tx) => {
+      await tx.conta.create({
+        data: {
+          id: emTeste,
+          nome: 'Barbearia Testando',
+          status: 'teste',
+          testeAte: new Date('2026-12-04T15:00:00Z'),
+        },
+      });
+      const dono = await tx.usuario.create({
+        data: { nome: 'Teo Teste', email: `teo-${emTeste.slice(0, 8)}@teste.dev` },
+      });
+      await tx.papelUsuario.create({ data: { usuarioId: dono.id, papel: 'dono' } });
+    });
+    const modelos = {
+      fim_teste: {
+        assunto: 'Faltam {{dias}} dias, {{nome}}',
+        corpo: 'O teste da {{conta}} acaba em {{data}}.',
+        botao: 'Ver planos',
+      },
+    };
+    expect(
+      await rotinaAvisosDaAssinatura(app, emTeste, {
+        agora: new Date('2026-11-30T12:00:00Z'),
+        modelos,
+      }),
+    ).toEqual([]);
+    const [aviso] = await rotinaAvisosDaAssinatura(app, emTeste, {
+      agora: new Date('2026-12-01T12:00:00Z'),
+      appUrl: 'https://app',
+      modelos,
+    });
+    expect(aviso).toMatchObject({ assunto: 'Faltam 3 dias, Teo' });
+    expect(aviso!.texto).toContain('O teste da Barbearia Testando acaba em 04/12/2026.');
+    expect(aviso!.texto).toContain('Ver planos: https://app/configuracoes?aba=assinatura');
+  });
+
+  it('cobrança vencida: no dia seguinte ao vencimento, para a conta automática também', async () => {
+    await naConta(app, contaAsaas, async (tx) => {
+      const dono = await tx.usuario.create({
+        data: { nome: 'Ana Asaas', email: `ana-${contaAsaas.slice(0, 8)}@teste.dev` },
+      });
+      await tx.papelUsuario.create({ data: { usuarioId: dono.id, papel: 'dono' } });
+      await tx.faturaAssinatura.create({
+        data: {
+          plano: 'pro',
+          ciclo: 'mensal',
+          valor: 14990,
+          vencimento: d('2026-12-10'),
+          periodoInicio: d('2026-12-10'),
+          periodoFim: d('2027-01-09'),
+          status: 'aberta',
+        },
+      });
+    });
+    expect(
+      await rotinaAvisosDaAssinatura(app, contaAsaas, { agora: new Date('2026-12-10T15:00:00Z') }),
+    ).toEqual([]);
+    const avisos = await rotinaAvisosDaAssinatura(app, contaAsaas, {
+      agora: new Date('2026-12-11T15:00:00Z'),
+    });
+    expect(avisos.map((a) => a.assunto)).toEqual([
+      'A mensalidade do Pente Fino venceu em 10/12/2026',
+    ]);
   });
 });
