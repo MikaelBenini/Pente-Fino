@@ -114,8 +114,8 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(smtp.getByText(/O servidor aceitou o e-mail/)).toBeVisible({ timeout: 15_000 });
   await expect(smtp.getByText(/Resposta do servidor: 250/)).toBeVisible();
   // Testar conexão usa o que está nos campos, antes de salvar.
-  await smtp.getByLabel('Servidor').fill('127.0.0.1');
-  await smtp.getByLabel('Porta').fill('1');
+  await smtp.getByLabel('Servidor', { exact: true }).fill('127.0.0.1');
+  await smtp.getByLabel('Porta', { exact: true }).fill('1');
   await smtp.getByRole('button', { name: 'Testar conexão' }).click();
   await expect(smtp.getByRole('alert')).toContainText('porta 1', { timeout: 15_000 });
   const precos = page.getByRole('region', { name: 'Planos e preços' });
