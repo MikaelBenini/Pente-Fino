@@ -9,6 +9,7 @@ import {
   type ContaNaPlataforma,
   type RespostaEntrarAdmin,
   type UsuarioPlataformaSessao,
+  type VendasDoVendedor,
 } from '@pente-fino/shared';
 import { Botao, Campo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +23,7 @@ import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
 import { FichaConta } from './ficha-conta';
 import { MetricasAdmin } from './metricas-admin';
+import { NovaVenda, VendasPorVendedor } from './nova-venda';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
 const NOME_STATUS: Record<ContaNaPlataforma['status'], string> = {
@@ -208,21 +210,28 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
   const contas = useQuery({
     queryKey: ['admin', 'contas'],
     queryFn: () => adminApi<ContaNaPlataforma[]>('contas'),
-    enabled: u.papel === 'admin',
   });
+  const [vender, setVender] = useState(false);
   const [aberta, setAberta] = useState<string | null>(null);
   const [busca, setBusca] = useState('');
   const [plano, setPlano] = useState('');
   const [situacao, setSituacao] = useState('');
-  if (u.papel !== 'admin')
-    return (
-      <p className="text-tinta-suave">
-        As contas que você vender aparecem aqui quando a venda presencial estiver pronta.
-      </p>
-    );
+  const [vendedor, setVendedor] = useState('');
+  const vendas = useQuery({
+    queryKey: ['admin', 'vendas'],
+    queryFn: () => adminApi<VendasDoVendedor[]>('vendas'),
+    enabled: u.papel === 'admin',
+  });
   return (
     <main className="flex flex-col gap-10">
-      <MetricasAdmin />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold">
+          {u.papel === 'admin' ? 'Administração' : 'Minhas vendas'}
+        </h1>
+        <Botao onClick={() => setVender(true)}>Nova venda</Botao>
+      </div>
+      {u.papel === 'admin' && <MetricasAdmin />}
+      {u.papel === 'admin' && <VendasPorVendedor />}
       <section aria-labelledby="titulo-contas" className="flex flex-col gap-4">
         <h2 id="titulo-contas" className="text-2xl font-semibold">
           Contas
@@ -263,6 +272,19 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
               })),
             ]}
           />
+          {u.papel === 'admin' && (
+            <Selecao
+              id="filtro-vendedor"
+              rotulo="Vendedor"
+              value={vendedor}
+              onChange={(e) => setVendedor(e.target.value)}
+              opcoes={[
+                { valor: '', rotulo: 'Todos' },
+                { valor: 'site', rotulo: 'Cadastro pelo site' },
+                ...(vendas.data ?? []).map((v) => ({ valor: v.vendedorId, rotulo: v.nome })),
+              ]}
+            />
+          )}
         </div>
         <Estado consulta={contas}>
           {() => (
@@ -294,7 +316,9 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
                       (!busca.trim() ||
                         c.nome.toLowerCase().includes(busca.trim().toLowerCase())) &&
                       (!plano || c.plano === plano) &&
-                      (!situacao || c.status === situacao),
+                      (!situacao || c.status === situacao) &&
+                      (!vendedor ||
+                        (vendedor === 'site' ? c.vendedorId === null : c.vendedorId === vendedor)),
                   )
                   .map((c) => (
                     <tr key={c.id} className="border-b border-borda">
@@ -336,7 +360,8 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
           )}
         </Estado>
       </section>
-      <FichaConta id={aberta} onFechar={() => setAberta(null)} />
+      <FichaConta id={aberta} onFechar={() => setAberta(null)} papel={u.papel} />
+      <NovaVenda aberto={vender} onFechar={() => setVender(false)} onAbrirConta={setAberta} />
     </main>
   );
 }

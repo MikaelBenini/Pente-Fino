@@ -41,6 +41,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await page.getByRole('button', { name: 'Confirmar código' }).click();
 
   await expect(page.getByRole('heading', { name: 'Números do negócio' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vendas por vendedor' })).toBeVisible();
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Contas por situação' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Contas', exact: true })).toBeVisible();
@@ -62,6 +63,31 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
     'Cortesia do teste de navegador',
   );
   await ficha.getByRole('button', { name: 'Fechar' }).click();
+  // Venda presencial: cria a conta, abre a ficha e registra o Pix na hora.
+  const sufixoVenda = Date.now().toString(36);
+  await page.getByRole('button', { name: 'Nova venda' }).click();
+  const venda = page.getByRole('dialog', { name: 'Nova venda' });
+  await venda.getByLabel('Nome da barbearia').fill(`Barbearia da Feira ${sufixoVenda}`);
+  await venda.getByLabel('Nome do dono').fill('Fábio Feira');
+  await venda.getByLabel('E-mail do dono').fill(`feira-${sufixoVenda}@e2e.pentefino.dev`);
+  await venda.getByLabel('WhatsApp do dono').fill('11966665555');
+  await venda.getByLabel('Dias de teste').fill('0');
+  await venda.getByRole('button', { name: 'Criar conta e mandar convite' }).click();
+  await expect(venda.getByRole('link', { name: 'Mandar convite pelo WhatsApp' })).toHaveAttribute(
+    'href',
+    /^https:\/\/wa\.me\/5511966665555/,
+  );
+  await venda.getByRole('button', { name: 'Registrar pagamento agora' }).click();
+  const fichaVenda = page.getByRole('dialog', { name: `Barbearia da Feira ${sufixoVenda}` });
+  const pagar = fichaVenda.getByRole('form', { name: 'Registrar pagamento' });
+  await pagar.getByRole('button', { name: 'Registrar pagamento' }).click();
+  await expect(pagar.getByRole('status')).toHaveText('Feito. Ficou registrado no histórico.');
+  await expect(fichaVenda.getByRole('table', { name: 'Cobranças da conta' })).toContainText(
+    'Manual',
+  );
+  await fichaVenda.getByRole('button', { name: 'Fechar' }).click();
+  await expect(page.getByRole('table', { name: 'Vendas por vendedor' })).toContainText('Ana Teste');
+
   // A sessão da barbearia não existe aqui, e a da administração não abre o painel.
   await page.goto('/app');
   await expect(page).toHaveURL(/\/entrar/);

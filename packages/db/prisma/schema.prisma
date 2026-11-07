@@ -263,6 +263,9 @@ model Conta {
   asaasClienteId          String?       @unique @map("asaas_cliente_id")
   asaasAssinaturaId       String?       @unique @map("asaas_assinatura_id")
   /// Cancelamento (pela administração ou pelo dono): quando e o motivo informado (cancelamentos do mês).
+  /// Quem da plataforma vendeu (venda presencial); sem chave estrangeira: a tabela da plataforma
+  /// fica fora do alcance da aplicação.
+  vendedorId              String?       @map("vendedor_id") @db.Uuid
   canceladaEm             DateTime?     @map("cancelada_em") @db.Timestamptz(3)
   motivoCancelamento      String?       @map("motivo_cancelamento")
   criadoEm                DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)

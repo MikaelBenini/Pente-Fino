@@ -14,6 +14,8 @@ export interface LinhaContaPlataforma {
   cobranca_automatica: boolean;
   cancelada_em: Date | null;
   motivo_cancelamento: string | null;
+  vendedor_id: string | null;
+  dono_ativou: boolean;
   unidades: number;
   profissionais: number;
   whatsapp_conectado: boolean;
