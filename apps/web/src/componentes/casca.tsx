@@ -1,8 +1,14 @@
 'use client';
 
-import { itemDaRota, menuEmGrupos, menuPara, type ItemMenu } from '@pente-fino/shared';
+import {
+  itemDaRota,
+  menuEmGrupos,
+  menuPara,
+  type AvisoGeral as AvisoGeralTipo,
+  type ItemMenu,
+} from '@pente-fino/shared';
 import { Botao, Carregando, cn, EstadoVazio } from '@pente-fino/ui';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronsUpDown,
   Bell,
@@ -14,6 +20,7 @@ import {
   MessageCircleOff,
   MessagesSquare,
   Lock,
+  Megaphone,
   Moon,
   SunMedium,
   X,
@@ -121,6 +128,7 @@ export function Casca({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-col">
           <BarraTopo />
           <AvisoConexao />
+          <AvisoGeral />
           <AvisoAssinatura />
           <AvisoWhatsapp />
           <AvisoConversas />
@@ -599,6 +607,34 @@ function FolhaMais({
  * Assinatura pedindo atenção: teste nos últimos 3 dias, terminado, fatura atrasada ou conta
  * só para consulta. O dono vai direto para a aba Assinatura; a equipe é orientada a falar com ele.
  */
+/** Aviso da administração do sistema para todas as barbearias (manutenção, novidade). */
+function AvisoGeral() {
+  const aviso = useQuery({
+    queryKey: ['sistema', 'aviso'],
+    queryFn: () => api<{ aviso: AvisoGeralTipo | null }>('sistema/aviso'),
+    refetchInterval: 5 * 60_000,
+    staleTime: 60_000,
+  }).data?.aviso;
+  if (!aviso) return null;
+  return (
+    <div
+      role="status"
+      className="border-b border-borda bg-superficie-2 px-[max(1rem,env(safe-area-inset-left))] py-2 text-sm sm:px-8"
+    >
+      <p className="flex items-center gap-2">
+        <Megaphone
+          aria-hidden
+          className={cn(
+            'size-4 shrink-0',
+            aviso.tom === 'manutencao' ? 'text-aviso-texto' : 'text-acao-texto',
+          )}
+        />
+        <span>{aviso.texto}</span>
+      </p>
+    </div>
+  );
+}
+
 function AvisoAssinatura() {
   const { papeis } = useApp();
   const pathname = usePathname();

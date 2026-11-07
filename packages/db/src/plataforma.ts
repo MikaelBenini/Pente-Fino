@@ -111,3 +111,17 @@ export async function registrarPagamentoManual(
     ) AS r`;
   return r!.r;
 }
+
+// ─── Configurações do sistema ─────────────────────────────────────────────
+
+/** Chaves públicas (aviso geral, teste) como JSON cru; a aplicação valida com o esquema. */
+export async function configuracaoDoSistema(prisma: PrismaClient): Promise<unknown> {
+  const [r] = await prisma.$queryRaw<{ c: unknown }[]>`SELECT configuracao_do_sistema() AS c`;
+  return r?.c ?? {};
+}
+
+export function conexoesCaidasPlataforma(prisma: PrismaClient) {
+  return prisma.$queryRaw<
+    { conta_id: string; conta: string; unidade: string; numero: string | null; caiu_em: Date }[]
+  >`SELECT * FROM plataforma_conexoes_caidas()`;
+}

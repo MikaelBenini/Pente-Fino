@@ -1544,3 +1544,16 @@ model AuditoriaPlataforma {
   @@index([criadoEm])
   @@map("auditoria_plataforma")
 }
+
+/// Configurações do sistema, editadas na administração (chave → valor JSON validado em
+/// packages/shared/src/configuracao-sistema.ts). Fora das contas: a aplicação só lê o que
+/// a função configuracao_do_sistema() libera (nunca segredos).
+model ConfiguracaoPlataforma {
+  chave           String   @id
+  valor           Json
+  atualizadoEm    DateTime @default(now()) @map("atualizado_em") @db.Timestamptz(3)
+  /// Quem da plataforma mudou por último (sem chave estrangeira).
+  atualizadoPorId String?  @map("atualizado_por_id") @db.Uuid
+
+  @@map("configuracao_plataforma")
+}

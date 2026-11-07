@@ -41,7 +41,9 @@ import { ComissoesService } from './comissoes/comissoes.service.js';
 import { DesempenhoController } from './desempenho/desempenho.controller.js';
 import { OcupacaoController } from './desempenho/ocupacao.controller.js';
 import { RedeController } from './desempenho/rede.controller.js';
+import { SistemaController } from './conta/sistema.controller.js';
 import { AdminAuthController, AdminController } from './admin/admin.controller.js';
+import { AdminConfigController, SaudeService } from './admin/admin-config.controller.js';
 import { AdminAuthService } from './admin/admin-auth.service.js';
 import { AdminContasService } from './admin/admin-contas.service.js';
 import { AdminVendasService } from './admin/admin-vendas.service.js';
@@ -146,8 +148,10 @@ export class ComumModule {}
     DesempenhoController,
     OcupacaoController,
     RedeController,
+    SistemaController,
     AdminAuthController,
     AdminController,
+    AdminConfigController,
     AvisosController,
     ResumoController,
     BotController,
@@ -181,6 +185,7 @@ export class ComumModule {}
     AdminAuthService,
     AdminContasService,
     AdminVendasService,
+    SaudeService,
     AdminGuard,
     BotService,
     ConversasService,

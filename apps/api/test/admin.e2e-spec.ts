@@ -3,8 +3,10 @@
 import type { INestApplication } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
+import { DIAS_TESTE, VERSAO_TERMOS } from '@pente-fino/shared';
 import type {
   ContaNaPlataforma,
+  SaudeDoSistema,
   FichaContaPlataforma,
   MetricasDaPlataforma,
   RespostaEntrarAdmin,
@@ -388,5 +390,107 @@ describe('venda presencial', () => {
       pagas: 1,
     });
     await v.get('/admin/vendas').expect(403);
+  });
+});
+
+describe('configurações e saúde do sistema', () => {
+  const quem = { email: `config-${sufixo}@pentefino.dev`, senha: 'senha-do-config-123' };
+  let token = '';
+  const contasCriadas: string[] = [];
+  const adm = () => ({
+    get: (url: string) => http().get(url).set('authorization', `Bearer ${token}`),
+    put: (url: string, corpo: object) =>
+      http().put(url).set('authorization', `Bearer ${token}`).send(corpo),
+  });
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.create({
+      data: {
+        email: quem.email,
+        nome: 'Cora Config',
+        papel: 'admin',
+        senhaHash: await hash(quem.senha),
+      },
+    });
+    token = (await entrarComSegundoFator(quem)).token;
+  });
+  afterAll(async () => {
+    // Volta ao padrão para não mexer no resto da suíte.
+    await adm().put('/admin/configuracoes/teste', {
+      dias: DIAS_TESTE,
+      versaoTermos: VERSAO_TERMOS,
+    });
+    await adm().put('/admin/configuracoes/aviso-geral', { aviso: null });
+    await plataforma.usuarioPlataforma.update({
+      where: { email: quem.email },
+      data: { ativo: false },
+    });
+    const app2 = criarPrisma();
+    for (const id of contasCriadas)
+      await naConta(app2, id, (tx) => tx.conta.deleteMany({ where: { id } }));
+    await app2.$disconnect();
+  });
+
+  it('dias de teste e versão dos termos valem no cadastro pelo site', async () => {
+    expect((await adm().get('/admin/configuracoes').expect(200)).body).toMatchObject({
+      teste: { dias: DIAS_TESTE },
+    });
+    await adm()
+      .put('/admin/configuracoes/teste', { dias: 0, versaoTermos: '2026-11-10' })
+      .expect(400);
+    await adm()
+      .put('/admin/configuracoes/teste', { dias: 7, versaoTermos: '2026-11-10' })
+      .expect(204);
+    const email = `site-${sufixo}@e2e.pentefino.dev`;
+    await http()
+      .post('/publico/contas')
+      .send({
+        barbearia: 'Barbearia do Site',
+        nome: 'Sara Site',
+        email,
+        senha: 'senha-do-site-123',
+        aceite: true,
+      })
+      .expect(201);
+    const dono = await como(app, email, 'senha-do-site-123');
+    const situacao = (await dono.get('/conta/situacao').expect(200)).body;
+    contasCriadas.push((await dono.get('/auth/eu').expect(200)).body.contaId);
+    expect(situacao).toMatchObject({ situacao: 'teste', diasRestantesTeste: 7 });
+  });
+
+  it('aviso geral aparece para as barbearias só enquanto vale', async () => {
+    const dono = await como(app, a.emails.dono);
+    expect((await dono.get('/sistema/aviso').expect(200)).body).toEqual({ aviso: null });
+    const agora = Date.now();
+    await adm()
+      .put('/admin/configuracoes/aviso-geral', {
+        aviso: {
+          texto: 'Manutenção programada hoje à noite.',
+          tom: 'manutencao',
+          inicio: new Date(agora - 3_600_000).toISOString(),
+          fim: new Date(agora + 3_600_000).toISOString(),
+        },
+      })
+      .expect(204);
+    expect((await dono.get('/sistema/aviso').expect(200)).body.aviso).toMatchObject({
+      texto: 'Manutenção programada hoje à noite.',
+      tom: 'manutencao',
+    });
+    await adm().put('/admin/configuracoes/aviso-geral', { aviso: null }).expect(204);
+    expect((await dono.get('/sistema/aviso').expect(200)).body).toEqual({ aviso: null });
+  });
+
+  it('saúde: banco, filas, conexões caídas e erros recentes', async () => {
+    const s = (await adm().get('/admin/saude').expect(200)).body as SaudeDoSistema;
+    expect(s.banco).toBe('ok');
+    expect(s.filas.map((f) => f.fila)).toEqual([
+      'E-mails',
+      'WhatsApp (entrada e rotinas)',
+      'WhatsApp (envio)',
+      'Notificações no celular',
+      'Eventos',
+    ]);
+    expect(Array.isArray(s.conexoesCaidas)).toBe(true);
+    expect(Array.isArray(s.errosRecentes)).toBe(true);
   });
 });
