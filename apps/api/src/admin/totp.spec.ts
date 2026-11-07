@@ -1,10 +1,9 @@
 import { randomBytes } from 'node:crypto';
+import { cifrar, decifrar } from '@pente-fino/db';
 import {
   base32,
-  cifrar,
   codigoDoPasso,
   conferirCodigo,
-  decifrar,
   deBase32,
   enderecoOtpauth,
   novoSegredo,

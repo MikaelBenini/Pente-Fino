@@ -27,3 +27,30 @@ describe('configurações do sistema', () => {
     expect(avisoGeralSchema.safeParse({ ...aviso, fim: aviso.inicio }).success).toBe(false);
   });
 });
+
+describe('SMTP configurável', () => {
+  it('a tela nunca vê a senha; lixo guardado vira "usar o .env"', async () => {
+    const { smtpParaTela, smtpEntradaSchema } = await import('./configuracao-sistema.js');
+    expect(
+      smtpParaTela({
+        host: 'smtp.exemplo.com',
+        porta: 587,
+        seguro: false,
+        usuario: 'apikey',
+        remetente: 'Pente Fino <nao-responda@pentefino.com.br>',
+        senhaCifrada: 'abc',
+      }),
+    ).toEqual({
+      host: 'smtp.exemplo.com',
+      porta: 587,
+      seguro: false,
+      usuario: 'apikey',
+      remetente: 'Pente Fino <nao-responda@pentefino.com.br>',
+      temSenha: true,
+    });
+    expect(smtpParaTela({ host: 'x' })).toBeNull();
+    expect(
+      smtpEntradaSchema.parse({ host: 'smtp.x.com', porta: 465, seguro: true, remetente: 'a@b.c' }),
+    ).toMatchObject({ senha: null, usuario: '' });
+  });
+});

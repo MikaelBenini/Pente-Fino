@@ -13,6 +13,13 @@ const esquema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   EMAIL_FROM: z.string().min(3),
+  /** Decifra a senha do SMTP configurado na administração; sem ela, só vale o SMTP do .env. */
+  PLATAFORMA_CHAVE: z
+    .string()
+    .default('')
+    .refine((v) => v === '' || Buffer.from(v, 'base64').length === 32, {
+      error: 'precisa de 32 bytes em base64',
+    }),
   DATABASE_URL: z.string().startsWith('postgresql://'),
   /** Endereço do painel, para o link de agendamento nas respostas do bot. */
   APP_URL: z.url().transform((u) => u.replace(/\/$/, '')),

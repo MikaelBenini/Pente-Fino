@@ -108,6 +108,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await outroNavegador.close();
   await avisoGeral.getByRole('button', { name: 'Tirar o aviso' }).click();
   await expect(avisoGeral.getByRole('button', { name: 'Tirar o aviso' })).toHaveCount(0);
+  const smtp = page.getByRole('region', { name: 'E-mail (SMTP)' });
+  await expect(smtp).toContainText('SMTP do .env');
+  await smtp.getByRole('button', { name: 'Mandar e-mail de teste' }).click();
+  await expect(smtp.getByText(/E-mail de teste a caminho de/)).toBeVisible();
   await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
   await expect(page.getByRole('table', { name: 'Filas' })).toContainText('E-mails');
   await page.getByRole('tab', { name: 'Painel' }).click();

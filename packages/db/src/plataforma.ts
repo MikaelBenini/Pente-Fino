@@ -125,3 +125,9 @@ export function conexoesCaidasPlataforma(prisma: PrismaClient) {
     { conta_id: string; conta: string; unidade: string; numero: string | null; caiu_em: Date }[]
   >`SELECT * FROM plataforma_conexoes_caidas()`;
 }
+
+/** Configuração do SMTP guardada pela administração (senha cifrada); null = usar o .env. */
+export async function configuracaoSmtp(prisma: PrismaClient): Promise<unknown> {
+  const [r] = await prisma.$queryRaw<{ c: unknown }[]>`SELECT configuracao_smtp() AS c`;
+  return r?.c ?? null;
+}

@@ -1,12 +1,6 @@
 // Segundo fator de quem administra: código de 6 dígitos do aplicativo autenticador (TOTP,
 // RFC 6238: HMAC-SHA1, passo de 30 s). O segredo fica cifrado no banco (AES-256-GCM).
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHmac,
-  randomBytes,
-  timingSafeEqual,
-} from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 const PASSO_S = 30;
 const DIGITOS = 6;
@@ -87,19 +81,4 @@ export function conferirCodigo(
 export function enderecoOtpauth(email: string, segredo: string): string {
   const rotulo = encodeURIComponent(`Pente Fino Admin:${email}`);
   return `otpauth://totp/${rotulo}?secret=${segredo}&issuer=${encodeURIComponent('Pente Fino Admin')}&digits=${DIGITOS}&period=${PASSO_S}`;
-}
-
-/** AES-256-GCM: iv(12) + tag(16) + texto, em base64. */
-export function cifrar(texto: string, chave: Buffer): string {
-  const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', chave, iv);
-  const corpo = Buffer.concat([c.update(texto, 'utf8'), c.final()]);
-  return Buffer.concat([iv, c.getAuthTag(), corpo]).toString('base64');
-}
-
-export function decifrar(cifrado: string, chave: Buffer): string {
-  const b = Buffer.from(cifrado, 'base64');
-  const d = createDecipheriv('aes-256-gcm', chave, b.subarray(0, 12));
-  d.setAuthTag(b.subarray(12, 28));
-  return Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8');
 }
