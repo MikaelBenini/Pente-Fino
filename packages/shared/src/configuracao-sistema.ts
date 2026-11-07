@@ -1,6 +1,7 @@
 // Configurações do sistema (Etapa 15.1), editadas na administração. Cada chave tem um esquema;
 // o que não valer vira o padrão (o sistema nunca para por uma configuração quebrada).
 import { z } from 'zod';
+import { lerModelosEmail, type ChaveModeloEmail, type TextoModeloEmail } from './modelos-email.js';
 import { DIAS_TESTE, VERSAO_TERMOS } from './planos.js';
 
 export const avisoGeralSchema = z
@@ -28,15 +29,18 @@ export type ConfigTeste = z.infer<typeof configTesteSchema>;
 export interface ConfiguracaoPublica {
   avisoGeral: AvisoGeral | null;
   teste: ConfigTeste;
+  /** Modelos de e-mail personalizados (os demais usam o texto padrão). */
+  modelosEmail: Partial<Record<ChaveModeloEmail, TextoModeloEmail>>;
 }
 
 export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
-  const o = (json ?? {}) as { aviso_geral?: unknown; teste?: unknown };
+  const o = (json ?? {}) as { aviso_geral?: unknown; teste?: unknown; modelos_email?: unknown };
   const aviso = avisoGeralSchema.safeParse(o.aviso_geral);
   const teste = configTesteSchema.safeParse(o.teste ?? {});
   return {
     avisoGeral: aviso.success ? aviso.data : null,
     teste: teste.success ? teste.data : { dias: DIAS_TESTE, versaoTermos: VERSAO_TERMOS },
+    modelosEmail: lerModelosEmail(o.modelos_email),
   };
 }
 

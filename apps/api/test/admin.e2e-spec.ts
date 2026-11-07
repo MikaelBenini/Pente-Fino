@@ -572,3 +572,61 @@ describe('SMTP configurável', () => {
     });
   });
 });
+
+describe('modelos de e-mail', () => {
+  const quem = { email: `modelos-${sufixo}@pentefino.dev`, senha: 'senha-dos-modelos-1' };
+  let token = '';
+  const req = (metodo: 'get' | 'put' | 'delete', url: string, corpo?: object) => {
+    const r = http()[metodo](url).set('authorization', `Bearer ${token}`);
+    return corpo ? r.send(corpo) : r;
+  };
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.create({
+      data: {
+        email: quem.email,
+        nome: 'Mel Modelos',
+        papel: 'admin',
+        senhaHash: await hash(quem.senha),
+      },
+    });
+    token = (await entrarComSegundoFator(quem)).token;
+  });
+  afterAll(async () => {
+    await req('delete', '/admin/configuracoes/modelos-email/redefinir_senha');
+    await plataforma.usuarioPlataforma.update({
+      where: { email: quem.email },
+      data: { ativo: false },
+    });
+  });
+
+  it('personaliza com as variáveis do modelo, vale no próximo e-mail e volta ao padrão', async () => {
+    const lista = (await req('get', '/admin/configuracoes/modelos-email').expect(200)).body as {
+      chave: string;
+      personalizado: unknown;
+    }[];
+    expect(lista).toHaveLength(7);
+    await req('put', '/admin/configuracoes/modelos-email/inventado', {}).expect(400);
+    const recusa = await req('put', '/admin/configuracoes/modelos-email/redefinir_senha', {
+      assunto: 'Senha nova, {{nome}}',
+      corpo: 'Seu plano {{plano}} pede senha nova.',
+      botao: 'Trocar senha',
+    }).expect(400);
+    expect(recusa.body.erro.campos[0].mensagem).toBe(
+      'Variável que este e-mail não tem: {{plano}}.',
+    );
+    await req('put', '/admin/configuracoes/modelos-email/redefinir_senha', {
+      assunto: 'Senha nova, {{nome}}',
+      corpo: 'Oi {{nome}}, crie uma senha nova pelo botão.',
+      botao: 'Trocar senha',
+    }).expect(204);
+    await http().post('/auth/esqueci-senha').send({ email: a.emails.gestor }).expect(202);
+    const e = await ultimoEmail(a.emails.gestor);
+    expect(e?.assunto).toBe('Senha nova, Gestor Teste');
+    expect(e?.texto).toContain('Trocar senha: ');
+
+    await req('delete', '/admin/configuracoes/modelos-email/redefinir_senha').expect(204);
+    await http().post('/auth/esqueci-senha').send({ email: a.emails.gestor }).expect(202);
+    expect((await ultimoEmail(a.emails.gestor))?.assunto).toBe('Redefinir sua senha');
+  });
+});

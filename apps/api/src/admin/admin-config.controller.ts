@@ -1,10 +1,13 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
   HttpCode,
   HttpStatus,
   Inject,
+  Param,
+  ParseEnumPipe,
   Injectable,
   Post,
   type OnModuleDestroy,
@@ -23,7 +26,13 @@ import {
   avisoGeralSchema,
   configTesteSchema,
   FILA_WHATSAPP_SAIDA,
+  CHAVES_MODELO_EMAIL,
   lerConfiguracaoPublica,
+  lerModelosEmail,
+  MODELOS_EMAIL,
+  modeloPersonalizadoSchema,
+  type ChaveModeloEmail,
+  type ModeloEmailNaTela,
   smtpEntradaSchema,
   smtpGuardadoSchema,
   smtpParaTela,
@@ -39,6 +48,7 @@ import { Publico } from '../auth/decoradores.js';
 import { Erros } from '../comum/erros.js';
 import { Corpo } from '../comum/validacao.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { EmailsService } from '../emails/emails.service.js';
 import { Filas } from '../filas/filas.module.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
@@ -128,6 +138,7 @@ export class AdminConfigController {
     @Inject(SaudeService) private readonly saudeServico: SaudeService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
     @Inject(Filas) private readonly filas: Filas,
+    @Inject(EmailsService) private readonly emails: EmailsService,
   ) {}
 
   private async gravar(
@@ -147,6 +158,7 @@ export class AdminConfigController {
       create: { chave, valor: json, atualizadoPorId: a.id },
       update: { valor: json, atualizadoEm: new Date(), atualizadoPorId: a.id },
     });
+    if (chave === 'modelos_email') this.emails.esquecerModelos();
     await this.auth.auditar({
       usuarioId: a.id,
       acao: `configurar_${chave}`,
@@ -248,6 +260,56 @@ export class AdminConfigController {
       texto: `Oi, ${a.nome}. Se este e-mail chegou, o envio está funcionando (${g.success ? `SMTP ${g.data.host}` : 'SMTP do .env'}).`,
     });
     return { para: a.email, via: g.success ? 'administracao' : 'env' };
+  }
+
+  @Get('configuracoes/modelos-email')
+  @ApiOperation({ summary: 'Modelos de e-mail: variáveis, texto padrão e o personalizado' })
+  async modelos(): Promise<ModeloEmailNaTela[]> {
+    const guardados = lerModelosEmail(await this.valor('modelos_email'));
+    return CHAVES_MODELO_EMAIL.map((chave) => ({
+      chave,
+      ...MODELOS_EMAIL[chave],
+      personalizado: guardados[chave] ?? null,
+    }));
+  }
+
+  @Put('configuracoes/modelos-email/:chave')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Personalizar um modelo (só as variáveis que ele tem)' })
+  async salvarModelo(
+    @Param('chave', new ParseEnumPipe(CHAVES_MODELO_EMAIL)) chave: ChaveModeloEmail,
+    @Body() corpo: unknown,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    const r = modeloPersonalizadoSchema(chave).safeParse(corpo);
+    if (!r.success)
+      throw Erros.validacao(
+        r.error.issues.map((i) => ({ campo: i.path.join('.') || 'corpo', mensagem: i.message })),
+      );
+    const guardados = lerModelosEmail(await this.valor('modelos_email'));
+    await this.gravar('modelos_email', { ...guardados, [chave]: r.data }, a, ip);
+  }
+
+  @Delete('configuracoes/modelos-email/:chave')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Voltar o modelo ao texto padrão' })
+  async padraoModelo(
+    @Param('chave', new ParseEnumPipe(CHAVES_MODELO_EMAIL)) chave: ChaveModeloEmail,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    const guardados = lerModelosEmail(await this.valor('modelos_email'));
+    delete guardados[chave];
+    await this.gravar('modelos_email', guardados, a, ip);
+  }
+
+  /** Valor guardado de uma chave (cru). */
+  private async valor(chave: string): Promise<unknown> {
+    return (
+      (await this.banco.prisma.configuracaoPlataforma.findUnique({ where: { chave } }))?.valor ??
+      null
+    );
   }
 
   @Get('saude')

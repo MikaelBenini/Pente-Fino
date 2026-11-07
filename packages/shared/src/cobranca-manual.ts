@@ -1,7 +1,6 @@
 // Cobrança manual (venda presencial, Etapa 15.1): sem Asaas, a conta também vence. Sete dias
 // antes do fim do período pago nasce a próxima cobrança em aberto e o dono é avisado; vencida,
 // a conta segue o mesmo bloqueio suave da cobrança automática (situacaoAssinatura).
-import { formatarMoeda } from './formatacao.js';
 import { valorDaCobranca } from './assinatura.js';
 import type { Ciclo, PlanoConta } from './planos.js';
 import { fimDoPeriodo } from './plataforma.js';
@@ -47,25 +46,5 @@ export function proximaCobrancaManual(d: {
     periodoInicio: vencimento,
     periodoFim: fimDoPeriodo(vencimento, d.ciclo),
     valor: valorDaCobranca(d.plano, d.ciclo, Math.max(1, d.unidades)),
-  };
-}
-
-/** E-mail ao dono quando a cobrança manual nasce. */
-export function emailCobrancaManual(d: {
-  nome: string;
-  conta: string;
-  cobranca: CobrancaManualNova;
-}): { assunto: string; texto: string } {
-  const primeiro = d.nome.trim().split(/\s+/)[0] ?? d.nome;
-  const ddmm = `${d.cobranca.vencimento.slice(8, 10)}/${d.cobranca.vencimento.slice(5, 7)}`;
-  return {
-    assunto: `Mensalidade do Pente Fino vence em ${ddmm}`,
-    texto: [
-      `Oi, ${primeiro}.`,
-      '',
-      `A próxima mensalidade da ${d.conta} no Pente Fino vence em ${ddmm}: ${formatarMoeda(d.cobranca.valor)}.`,
-      'Pague com quem fez a sua venda (Pix, dinheiro ou maquininha) ou responda este e-mail.',
-      'Depois de 5 dias de atraso, o sistema fica só para consulta até o pagamento. Seus dados continuam guardados.',
-    ].join('\n'),
   };
 }

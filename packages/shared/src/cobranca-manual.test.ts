@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emailCobrancaManual, proximaCobrancaManual } from './cobranca-manual.js';
+import { proximaCobrancaManual } from './cobranca-manual.js';
 
 const base = { plano: 'pro' as const, ciclo: 'mensal' as const, unidades: 1 };
 
@@ -29,7 +29,7 @@ describe('cobrança manual', () => {
     expect(proximaCobrancaManual({ ...base, hoje: '2026-12-01', faturas: [] })).toBeNull();
   });
 
-  it('anual: período de um ano; o e-mail diz quando e quanto', () => {
+  it('anual: período de um ano, com as unidades extras', () => {
     const c = proximaCobrancaManual({
       plano: 'premium',
       ciclo: 'anual',
@@ -38,8 +38,5 @@ describe('cobrança manual', () => {
       faturas: [{ status: 'paga', periodoFim: '2027-11-04' }],
     })!;
     expect(c).toMatchObject({ periodoFim: '2028-11-04', valor: (20790 + 8290) * 12 });
-    const e = emailCobrancaManual({ nome: 'Rui Rua', conta: 'Barbearia da Rua', cobranca: c });
-    expect(e.assunto).toBe('Mensalidade do Pente Fino vence em 05/11');
-    expect(e.texto).toMatch(/^Oi, Rui\./);
   });
 });

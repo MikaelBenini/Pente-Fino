@@ -15,8 +15,9 @@ import {
   remarcacaoPorAtraso,
   contasParaAvisos,
   rotinaDosAvisos,
-  contasComCobrancaManual,
-  rotinaCobrancaManual,
+  contasParaAvisosDaAssinatura,
+  rotinaAvisosDaAssinatura,
+  configuracaoDoSistema,
   avisoHorarioMudou,
   contasComAutomacoes,
   rodarAutomacoes,
@@ -38,6 +39,7 @@ import {
   ESPERA_ATENDENTE_MAX_MIN,
   HORA_DAS_AUTOMACOES,
   INTERVALO_PENDENTES_MIN,
+  lerConfiguracaoPublica,
   FILA_EMAILS,
   type TrabalhoEmail,
   NOTA_BAIXA_ESPERA_MIN,
@@ -191,7 +193,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
         { name: 'avisos', data: { tipo: 'avisos' } },
       )
       .catch((e: Error) => this.logger.error(`Agendar os avisos: ${e.message}`));
-    // Cobrança manual (venda presencial): todo dia às 9 h, próxima cobrança e aviso ao dono.
+    // Avisos da assinatura (fim do teste, vencimento da conta manual, cobrança vencida): 9 h.
     void filaEntrada
       .upsertJobScheduler(
         'cobranca-manual-diaria',
@@ -298,14 +300,23 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
         // Rotina diária: retorno e aniversário em cada conta que ligou as automações.
         if (job.data.tipo === 'cobranca_manual') {
           let total = 0;
-          for (const contaId of await contasComCobrancaManual(this.banco.prisma)) {
+          // Textos personalizados na administração (os demais usam o padrão).
+          const { modelosEmail } = lerConfiguracaoPublica(
+            await configuracaoDoSistema(this.banco.prisma),
+          );
+          for (const contaId of await contasParaAvisosDaAssinatura(this.banco.prisma)) {
             try {
-              for (const e of await rotinaCobrancaManual(this.banco.prisma, contaId)) {
+              for (const e of await rotinaAvisosDaAssinatura(this.banco.prisma, contaId, {
+                appUrl: this.config.APP_URL,
+                modelos: modelosEmail,
+              })) {
                 await filaEmails.add('cobranca_manual', e);
                 total++;
               }
             } catch (e) {
-              this.logger.error(`Cobrança manual da conta ${contaId}: ${(e as Error).message}`);
+              this.logger.error(
+                `Avisos da assinatura da conta ${contaId}: ${(e as Error).message}`,
+              );
             }
           }
           return `cobranca_manual: ${total} avisos`;

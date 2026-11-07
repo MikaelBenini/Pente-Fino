@@ -1,6 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Transacao } from '@pente-fino/db';
 import {
+  formatarData,
+  formatarMoeda,
   dataLocal,
   EVENTOS_RECUSA,
   faturaDaCobranca,
@@ -20,6 +22,7 @@ import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
+import { EmailsService } from '../emails/emails.service.js';
 import {
   cobrancaDoAsaas,
   ErroCobranca,
@@ -56,6 +59,13 @@ export interface PagamentoWebhook {
  * Assinatura do Pente Fino pela barbearia: assina no Asaas, traz as cobranças para a tabela
  * de faturas (pelo webhook ou pelo "conferir") e libera a conta assim que o dinheiro entra.
  */
+interface PagamentoParaAvisar {
+  conta: string;
+  donos: { nome: string; email: string }[];
+  valor: string;
+  periodo: string;
+}
+
 @Injectable()
 export class CobrancaService {
   private readonly log = new Logger('Cobrança');
@@ -64,6 +74,7 @@ export class CobrancaService {
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(PROVEDOR_COBRANCA) private readonly provedor: ProvedorCobranca,
     @Inject(AssinaturaGuard) private readonly trava: AssinaturaGuard,
+    @Inject(EmailsService) private readonly emails: EmailsService,
     @Inject(PlanoGuard) private readonly planos: PlanoGuard,
   ) {}
 
@@ -212,9 +223,14 @@ export class CobrancaService {
     const cobrancas = await this.externo(() =>
       this.provedor.cobrancasDaAssinatura(conta.asaasAssinaturaId!),
     );
+    const pagos: PagamentoParaAvisar[] = [];
     await this.banco.daConta(async (tx) => {
-      for (const c of cobrancas) await this.aplicar(tx, c);
+      for (const c of cobrancas) {
+        const p = await this.aplicar(tx, c);
+        if (p) pagos.push(p);
+      }
     });
+    for (const p of pagos) await this.avisarPagamento(p);
     this.trava.esquecer(conta.id);
   }
 
@@ -227,15 +243,35 @@ export class CobrancaService {
       tx.conta.findFirst({ select: { id: true, asaasAssinaturaId: true } }),
     );
     if (!conta || !p.subscription || p.subscription !== conta.asaasAssinaturaId) return 'ignorado';
-    await this.banco.naConta(conta.id, (tx) =>
+    const pago = await this.banco.naConta(conta.id, (tx) =>
       this.aplicar(tx, cobrancaDoAsaas(p), EVENTOS_RECUSA[evento]),
     );
+    if (pago) await this.avisarPagamento(pago);
     this.trava.esquecer(conta.id);
     return 'aplicado';
   }
 
   /** Cria ou atualiza a fatura da cobrança; paga tira a conta do teste. */
-  private async aplicar(tx: Transacao, c: CobrancaExterna, recusa?: string): Promise<void> {
+  /** E-mail "pagamento recebido" aos donos (falha de fila não desfaz o pagamento). */
+  private async avisarPagamento(p: PagamentoParaAvisar): Promise<void> {
+    for (const d of p.donos)
+      await this.emails
+        .pagamentoRecebido({
+          para: d.email,
+          nome: d.nome.split(' ')[0] ?? d.nome,
+          conta: p.conta,
+          valor: p.valor,
+          periodo: p.periodo,
+        })
+        .catch((e: Error) => this.log.error(`Aviso de pagamento: ${e.message}`));
+  }
+
+  /** Aplica a cobrança do Asaas; devolve o aviso de pagamento quando ela acabou de ser paga. */
+  private async aplicar(
+    tx: Transacao,
+    c: CobrancaExterna,
+    recusa?: string,
+  ): Promise<PagamentoParaAvisar | null> {
     const conta = await tx.conta.findFirstOrThrow();
     const f = faturaDaCobranca(c);
     const atual = await tx.faturaAssinatura.findUnique({
@@ -243,7 +279,7 @@ export class CobrancaService {
     });
     // Paga não volta atrás por aviso atrasado ou repetido ("criada", "recusada" depois do
     // "paga"); só estorno ou exclusão (cancelada) tira a fatura de paga.
-    if (atual?.status === 'paga' && f.status !== 'cancelada') return;
+    if (atual?.status === 'paga' && f.status !== 'cancelada') return null;
     // Recusa vale até pagar: a cobrança segue "pendente" no Asaas depois do cartão recusado.
     const status = recusa
       ? 'recusada'
@@ -261,9 +297,11 @@ export class CobrancaService {
       motivoRecusa,
       linkPagamento: c.link,
     };
+    const fim = atual
+      ? atual.periodoFim.toISOString().slice(0, 10)
+      : menosUmDia(somarMeses(c.vencimento, conta.ciclo === 'anual' ? 12 : 1));
     if (atual) await tx.faturaAssinatura.update({ where: { id: atual.id }, data: dados });
     else {
-      const fim = menosUmDia(somarMeses(c.vencimento, conta.ciclo === 'anual' ? 12 : 1));
       await tx.faturaAssinatura.create({
         data: {
           ...dados,
@@ -278,5 +316,17 @@ export class CobrancaService {
     }
     if (status === 'paga' && conta.status === 'teste')
       await tx.conta.update({ where: { id: conta.id }, data: { status: 'ativa', testeAte: null } });
+    if (status !== 'paga') return null;
+    const donos = await tx.usuario.findMany({
+      where: { ativo: true, papeis: { some: { papel: 'dono' } } },
+      select: { nome: true, email: true },
+    });
+    const inicio = atual ? atual.periodoInicio.toISOString().slice(0, 10) : c.vencimento;
+    return {
+      conta: conta.nome,
+      donos,
+      valor: formatarMoeda(c.valor),
+      periodo: `${formatarData(`${inicio}T12:00:00Z`)} a ${formatarData(`${fim}T12:00:00Z`)}`,
+    };
   }
 }

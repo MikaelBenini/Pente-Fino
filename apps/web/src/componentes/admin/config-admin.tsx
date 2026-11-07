@@ -5,8 +5,12 @@ import {
   type ConfiguracaoPublica,
   type SaudeDoSistema,
   type SmtpNaTela,
+  emailDoModelo,
+  EXEMPLO_VARIAVEIS,
+  type ChaveModeloEmail,
+  type ModeloEmailNaTela,
 } from '@pente-fino/shared';
-import { Botao, Campo, Selecao } from '@pente-fino/ui';
+import { Botao, Campo, CampoTexto, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ErroApi } from '@/lib/api';
@@ -66,6 +70,7 @@ export function ConfiguracoesAdmin() {
     <div className="flex flex-col gap-6">
       <Estado consulta={config}>{() => <Formularios c={config.data!} />}</Estado>
       <SmtpAdmin />
+      <ModelosEmailAdmin />
     </div>
   );
 }
@@ -417,5 +422,139 @@ function FormSmtp({ atual }: { atual: SmtpNaTela | null }) {
         )}
       </div>
     </section>
+  );
+}
+
+/** Modelos de e-mail: texto com variáveis, pré-visualização ao vivo e volta ao padrão. */
+export function ModelosEmailAdmin() {
+  const q = useQuery({
+    queryKey: ['admin', 'modelos-email'],
+    queryFn: () => adminApi<ModeloEmailNaTela[]>('configuracoes/modelos-email'),
+  });
+  const [chave, setChave] = useState<ChaveModeloEmail>('ativacao_conta');
+  return (
+    <section
+      aria-labelledby="titulo-modelos-email"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 id="titulo-modelos-email" className="text-lg font-semibold">
+        Modelos de e-mail
+      </h2>
+      <Estado consulta={q}>
+        {() => {
+          const m = q.data!.find((x) => x.chave === chave)!;
+          return (
+            <>
+              <Selecao
+                id="modelo-email"
+                rotulo="E-mail"
+                value={chave}
+                onChange={(e) => setChave(e.target.value as ChaveModeloEmail)}
+                opcoes={q.data!.map((x) => ({
+                  valor: x.chave,
+                  rotulo: `${x.nome}${x.personalizado ? ' (personalizado)' : ''}`,
+                }))}
+              />
+              <EditorModelo key={`${chave}-${m.personalizado ? 'p' : 'd'}`} m={m} />
+            </>
+          );
+        }}
+      </Estado>
+    </section>
+  );
+}
+
+function EditorModelo({ m }: { m: ModeloEmailNaTela }) {
+  const cliente = useQueryClient();
+  const base = m.personalizado ?? m.padrao;
+  const [assunto, setAssunto] = useState(base.assunto);
+  const [corpo, setCorpo] = useState(base.corpo);
+  const [botao, setBotao] = useState(base.botao ?? '');
+  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'modelos-email'] });
+  const previa = emailDoModelo(
+    m.chave,
+    { assunto, corpo, botao: m.padrao.botao === null ? null : botao || m.padrao.botao },
+    EXEMPLO_VARIAVEIS,
+  );
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-tinta-suave">{m.quando}</p>
+        <p className="text-sm">
+          Variáveis:{' '}
+          {m.variaveis.map((v) => (
+            <code key={v} className="mr-2 rounded-sm bg-superficie-2 px-1.5 py-0.5 font-denso">
+              {`{{${v}}}`}
+            </code>
+          ))}
+        </p>
+        <Campo
+          id="modelo-assunto"
+          rotulo="Assunto"
+          value={assunto}
+          onChange={(e) => setAssunto(e.target.value)}
+        />
+        <CampoTexto
+          id="modelo-corpo"
+          rotulo="Texto"
+          dica="Uma linha em branco separa os parágrafos."
+          rows={8}
+          value={corpo}
+          onChange={(e) => setCorpo(e.target.value)}
+        />
+        {m.padrao.botao !== null && (
+          <Campo
+            id="modelo-botao"
+            rotulo="Texto do botão"
+            value={botao}
+            onChange={(e) => setBotao(e.target.value)}
+          />
+        )}
+        <div className="flex flex-wrap gap-3">
+          <Salvar
+            rotulo="Salvar modelo"
+            enviar={async () => {
+              await adminApi(`configuracoes/modelos-email/${m.chave}`, {
+                metodo: 'PUT',
+                corpo: {
+                  assunto,
+                  corpo,
+                  botao: m.padrao.botao === null ? null : botao || m.padrao.botao,
+                },
+              });
+              await atualizar();
+            }}
+          />
+          {m.personalizado && (
+            <Salvar
+              rotulo="Voltar ao padrão"
+              enviar={async () => {
+                await adminApi(`configuracoes/modelos-email/${m.chave}`, { metodo: 'DELETE' });
+                await atualizar();
+              }}
+            />
+          )}
+        </div>
+      </div>
+      <figure
+        aria-label="Pré-visualização"
+        className="flex flex-col gap-2 rounded-md bg-white p-5 text-[#18181b]"
+      >
+        <figcaption className="text-xs font-semibold uppercase tracking-wider text-[#52525b]">
+          Pré-visualização (com dados de exemplo)
+        </figcaption>
+        <p className="font-semibold">{previa.assunto}</p>
+        {previa.paragrafos.map((p, i) => (
+          <p key={i} className="leading-relaxed">
+            {p}
+          </p>
+        ))}
+        {previa.botao && (
+          <span className="self-start rounded-md bg-[#18181b] px-4 py-2 font-semibold text-white">
+            {previa.botao}
+          </span>
+        )}
+      </figure>
+    </div>
   );
 }
