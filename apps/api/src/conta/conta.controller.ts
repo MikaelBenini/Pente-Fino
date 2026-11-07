@@ -5,6 +5,7 @@ import {
   assinarSchema,
   contaSchema,
   LIMITES_PLANO,
+  aplicarDesconto,
   dataLocal,
   precoPorMes,
   type AssinarEntrada,
@@ -78,12 +79,17 @@ export class ContaController {
         plano: conta.plano,
         ciclo: conta.ciclo,
         testeAte: conta.testeAte?.toISOString() ?? null,
-        precoPorMes: precoPorMes(
-          conta.plano,
-          conta.ciclo,
-          Math.max(1, unidades),
-          await this.precos.vigente(conta.precosDesde),
+        precoPorMes: aplicarDesconto(
+          precoPorMes(
+            conta.plano,
+            conta.ciclo,
+            Math.max(1, unidades),
+            await this.precos.vigente(conta.precosDesde),
+          ),
+          conta.descontoBp,
         ),
+        descontoBp: conta.descontoBp,
+        cupom: conta.cupom,
         // Para assinar agora: a tabela de hoje.
         tabelaPrecos: await this.precos.vigente(dataLocal(new Date())),
         unidades,

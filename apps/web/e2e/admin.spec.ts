@@ -115,6 +115,28 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   const precos = page.getByRole('region', { name: 'Planos e preços' });
   await expect(precos.getByRole('table', { name: 'Tabelas de preço' })).toContainText('Em vigor');
   await expect(precos.getByRole('form', { name: 'Nova tabela de preços' })).toBeVisible();
+  // Cupom: cria, vê o desconto no cadastro do site e desativa.
+  const cupons = page.getByRole('region', { name: 'Cupons' });
+  const codigoCupom = `PW${sufixoVenda.toUpperCase()}`.slice(0, 20);
+  const novoCupom = cupons.getByRole('form', { name: 'Novo cupom' });
+  await novoCupom.getByLabel('Código').fill(codigoCupom);
+  await novoCupom.getByLabel('Desconto (%)').fill('25');
+  await novoCupom.getByRole('button', { name: 'Salvar cupom' }).click();
+  await expect(cupons.getByRole('table', { name: 'Cupons' })).toContainText(codigoCupom);
+  const site = await browser.newContext();
+  const cadastro = await site.newPage();
+  await cadastro.goto(`/cadastro?cupom=${codigoCupom.toLowerCase()}`);
+  await cadastro.getByLabel('Cupom de desconto (opcional)').focus();
+  await cadastro.getByLabel('Cupom de desconto (opcional)').blur();
+  await expect(cadastro.getByText('25% de desconto enquanto a assinatura existir.')).toBeVisible();
+  await site.close();
+  await cupons
+    .getByRole('row', { name: new RegExp(codigoCupom) })
+    .getByRole('button', { name: 'Desativar' })
+    .click();
+  await expect(cupons.getByRole('row', { name: new RegExp(codigoCupom) })).toContainText(
+    'Desativado',
+  );
   const modelos = page.getByRole('region', { name: 'Modelos de e-mail' });
   await modelos.getByLabel('E-mail', { exact: true }).selectOption('pagamento_recebido');
   await modelos.getByLabel('Assunto').fill('Pagamento da {{conta}} recebido');

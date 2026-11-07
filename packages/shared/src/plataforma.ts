@@ -173,6 +173,8 @@ export interface FichaContaPlataforma {
   motivoCancelamento: string | null;
   /** Data da tabela de preços contratada (null = a do lançamento). */
   precosDesde: string | null;
+  cupom: string | null;
+  descontoBp: number;
   donos: { nome: string; email: string; telefone: string | null }[];
   unidades: { nome: string; ativa: boolean }[];
   profissionais: number;
@@ -204,6 +206,8 @@ export const venderContaSchema = z.object({
   ciclo: z.enum(['mensal', 'anual']),
   /** Dias de uso antes de pagar (0 = paga hoje; o vendedor registra o pagamento em seguida). */
   diasTeste: z.number().int().min(0).max(60).default(14),
+  /** Cupom de desconto (opcional). */
+  cupom: z.string().trim().max(30).optional(),
 });
 export type VenderContaEntrada = z.infer<typeof venderContaSchema>;
 

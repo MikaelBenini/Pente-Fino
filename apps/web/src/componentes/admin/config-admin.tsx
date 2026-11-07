@@ -12,6 +12,7 @@ import {
   formatarData,
   lerMoeda,
   type TabelaPrecosPlanos,
+  type CupomNaTela,
 } from '@pente-fino/shared';
 import { Botao, Campo, CampoTexto, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -75,6 +76,7 @@ export function ConfiguracoesAdmin() {
       <Estado consulta={config}>{() => <Formularios c={config.data!} />}</Estado>
       <SmtpAdmin />
       <PrecosAdmin />
+      <CuponsAdmin />
       <ModelosEmailAdmin />
     </div>
   );
@@ -732,5 +734,143 @@ function NovaTabela({
         }}
       />
     </form>
+  );
+}
+
+/** Cupons de desconto: código, desconto, prazo e vagas; o desconto vale enquanto a assinatura existir. */
+export function CuponsAdmin() {
+  const cliente = useQueryClient();
+  const q = useQuery({
+    queryKey: ['admin', 'cupons'],
+    queryFn: () => adminApi<CupomNaTela[]>('configuracoes/cupons'),
+  });
+  const [codigo, setCodigo] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [desconto, setDesconto] = useState('30');
+  const [validoAte, setValidoAte] = useState('');
+  const [vagas, setVagas] = useState('');
+  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'cupons'] });
+  const salvar = (c: Partial<CupomNaTela> & { codigo: string }) =>
+    adminApi('configuracoes/cupons', { metodo: 'PUT', corpo: c }).then(atualizar);
+  return (
+    <section
+      aria-labelledby="titulo-cupons"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 id="titulo-cupons" className="text-lg font-semibold">
+        Cupons
+      </h2>
+      <p className="text-sm text-tinta-suave">
+        Valem no cadastro pelo site (campo ou link com <code>?cupom=</code>) e na venda presencial.
+        Desativar não tira o desconto de quem já usa.
+      </p>
+      <Estado consulta={q}>
+        {() =>
+          q.data!.length === 0 ? (
+            <p className="text-sm text-tinta-suave">Nenhum cupom.</p>
+          ) : (
+            <Tabela rotulo="Cupons">
+              <thead>
+                <tr className="border-b border-borda">
+                  {['Código', 'Desconto', 'Usados', 'Vale até', 'Situação', ''].map((c) => (
+                    <th key={c} scope="col" className={th}>
+                      {c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {q.data!.map((c) => (
+                  <tr key={c.codigo} className="border-b border-borda">
+                    <th scope="row" className={`${td} font-semibold`}>
+                      {c.codigo}
+                      {c.descricao && (
+                        <span className="block text-xs font-normal text-tinta-suave">
+                          {c.descricao}
+                        </span>
+                      )}
+                    </th>
+                    <td className={`${td} tabular-nums`}>{c.descontoBp / 100}%</td>
+                    <td className={`${td} tabular-nums`}>
+                      {c.usados}
+                      {c.vagas !== null ? ` de ${c.vagas}` : ''}
+                    </td>
+                    <td className={`${td} tabular-nums`}>
+                      {c.validoAte ? formatarData(`${c.validoAte}T12:00:00Z`) : 'Sem prazo'}
+                    </td>
+                    <td className={td}>
+                      <Ficha tom={c.ativo ? 'acao' : 'neutro'}>
+                        {c.ativo ? 'Ativo' : 'Desativado'}
+                      </Ficha>
+                    </td>
+                    <td className={td}>
+                      <Botao variante="fantasma" onClick={() => salvar({ ...c, ativo: !c.ativo })}>
+                        {c.ativo ? 'Desativar' : 'Ativar'}
+                      </Botao>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Tabela>
+          )
+        }
+      </Estado>
+      <form
+        aria-label="Novo cupom"
+        className="flex flex-col gap-3 border-t border-borda pt-3"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <h3 className="font-semibold">Novo cupom (ou mudar pelo mesmo código)</h3>
+        <div className="grid gap-3 sm:grid-cols-5">
+          <Campo
+            id="cupom-codigo"
+            rotulo="Código"
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+          />
+          <Campo
+            id="cupom-descricao"
+            rotulo="Descrição"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+          />
+          <Campo
+            id="cupom-desconto"
+            rotulo="Desconto (%)"
+            inputMode="numeric"
+            value={desconto}
+            onChange={(e) => setDesconto(e.target.value.replace(/\D/g, ''))}
+          />
+          <Campo
+            id="cupom-ate"
+            rotulo="Vale até (opcional)"
+            type="date"
+            value={validoAte}
+            onChange={(e) => setValidoAte(e.target.value)}
+          />
+          <Campo
+            id="cupom-vagas"
+            rotulo="Vagas (opcional)"
+            inputMode="numeric"
+            value={vagas}
+            onChange={(e) => setVagas(e.target.value.replace(/\D/g, ''))}
+          />
+        </div>
+        <Salvar
+          rotulo="Salvar cupom"
+          enviar={async () => {
+            await salvar({
+              codigo,
+              descricao,
+              descontoBp: Math.round(Number(desconto || 0) * 100),
+              validoAte: validoAte || null,
+              vagas: vagas ? Number(vagas) : null,
+              ativo: true,
+            });
+            setCodigo('');
+          }}
+        />
+      </form>
+    </section>
   );
 }

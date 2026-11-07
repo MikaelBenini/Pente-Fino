@@ -8,6 +8,7 @@ import {
 } from './assinatura.js';
 import { dataLocal } from './datas.js';
 import {
+  aplicarDesconto,
   DIAS_TESTE,
   precoPorMes,
   TABELA_PADRAO,
@@ -30,6 +31,8 @@ export interface ContaParaMetricas {
   unidades: number;
   /** Data da tabela contratada (null = a do lançamento). */
   precosDesde?: string | null;
+  /** Desconto do cupom (pontos-base). */
+  descontoBp?: number;
 }
 
 export interface FaturaParaMetricas extends FaturaParaSituacao {
@@ -90,11 +93,14 @@ export function metricasDaPlataforma(d: {
 }): MetricasDaPlataforma {
   const tabelas = d.tabelas ?? [TABELA_PADRAO];
   const preco = (c: ContaParaMetricas) =>
-    precoPorMes(
-      c.plano,
-      c.ciclo,
-      Math.max(1, c.unidades),
-      tabelaVigente(tabelas, c.precosDesde ?? null),
+    aplicarDesconto(
+      precoPorMes(
+        c.plano,
+        c.ciclo,
+        Math.max(1, c.unidades),
+        tabelaVigente(tabelas, c.precosDesde ?? null),
+      ),
+      c.descontoBp,
     );
   const hoje = dataLocal(d.agora);
   const mes = hoje.slice(0, 7);

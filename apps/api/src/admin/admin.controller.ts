@@ -119,6 +119,7 @@ export class AdminController {
         motivoCancelamento: c.motivo_cancelamento,
         unidades: c.unidades,
         precosDesde: c.precos_desde?.toISOString().slice(0, 10) ?? null,
+        descontoBp: c.desconto_bp,
       })),
       tabelas: await this.precos.tabelas(),
       faturas: faturas.map((f) => ({

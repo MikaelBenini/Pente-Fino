@@ -3,6 +3,7 @@
 import { dataLocal } from './datas.js';
 import { z } from 'zod';
 import {
+  aplicarDesconto,
   diasRestantesTeste,
   precoPorMes,
   type Ciclo,
@@ -149,6 +150,9 @@ export interface AssinaturaDetalhe {
   precoPorMes: number;
   /** Tabela de preços de hoje (para assinar agora). */
   tabelaPrecos: TabelaPrecosPlanos;
+  /** Desconto do cupom da conta (pontos-base) e o código. */
+  descontoBp: number;
+  cupom: string | null;
   unidades: number;
   /** A fatura em aberto (ou recusada) mais antiga: a que precisa de atenção. */
   pendente: FaturaDetalhe | null;
@@ -211,8 +215,13 @@ export function valorDaCobranca(
   ciclo: Ciclo,
   unidades: number,
   tabela?: TabelaPrecosPlanos,
+  /** Desconto do cupom da conta (pontos-base). */
+  descontoBp = 0,
 ): number {
-  const porMes = precoPorMes(plano, ciclo, Math.max(1, unidades), tabela);
+  const porMes = aplicarDesconto(
+    precoPorMes(plano, ciclo, Math.max(1, unidades), tabela),
+    descontoBp,
+  );
   return ciclo === 'anual' ? porMes * 12 : porMes;
 }
 

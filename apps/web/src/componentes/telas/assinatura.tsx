@@ -4,6 +4,7 @@ import {
   dataLocal,
   formatarData,
   formatarMoeda,
+  formatarPercentualBp,
   NOME_PLANO,
   NOME_SITUACAO_ASSINATURA,
   NOME_STATUS_FATURA,
@@ -85,6 +86,11 @@ export function Assinatura() {
                   {formatarMoeda(d.precoPorMes)} por mês
                   {d.unidades > 1 && ` · ${d.unidades} unidades`}
                 </p>
+                {d.cupom && (
+                  <p className="text-sm text-acao-texto">
+                    Cupom {d.cupom}: {formatarPercentualBp(d.descontoBp)} de desconto
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-start gap-1">
                 <p className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
@@ -168,6 +174,7 @@ export function Assinatura() {
                 cicloAtual={d.ciclo}
                 unidades={d.unidades}
                 tabela={d.tabelaPrecos}
+                descontoBp={d.descontoBp}
               />
             )}
             {d.cobrancaAutomatica && pendente && <ConferirPagamento />}
@@ -279,11 +286,13 @@ function Assinar({
   cicloAtual,
   unidades,
   tabela,
+  descontoBp,
 }: {
   planoAtual: FaturaDetalhe['plano'];
   cicloAtual: FaturaDetalhe['ciclo'];
   unidades: number;
   tabela: TabelaPrecosPlanos;
+  descontoBp: number;
 }) {
   const [plano, setPlano] = useState(planoAtual);
   const [ciclo, setCiclo] = useState(cicloAtual);
@@ -295,7 +304,7 @@ function Assinar({
     [chaveAssinatura],
   );
   const docOk = documentoValido(documento);
-  const valor = valorDaCobranca(plano, ciclo, unidades, tabela);
+  const valor = valorDaCobranca(plano, ciclo, unidades, tabela, descontoBp);
   return (
     <section
       aria-labelledby="titulo-assinar"

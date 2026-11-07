@@ -11,6 +11,7 @@ import {
   NOME_FORMA_MANUAL,
   NOME_PLANO,
   PLANOS,
+  aplicarDesconto,
   precoPorMes,
   type AcaoSituacao,
   type FichaContaPlataforma,
@@ -184,7 +185,8 @@ function Conteudo({
   const unidades = Math.max(1, f.unidades.filter((u) => u.ativa).length);
   const tabelaConta = useTabelasAdmin().vigente(f.precosDesde);
   const sugerido =
-    precoPorMes(f.plano, f.ciclo, unidades, tabelaConta) * (f.ciclo === 'anual' ? 12 : 1);
+    aplicarDesconto(precoPorMes(f.plano, f.ciclo, unidades, tabelaConta), f.descontoBp) *
+    (f.ciclo === 'anual' ? 12 : 1);
   const [valor, setValor] = useState((sugerido / 100).toFixed(2).replace('.', ','));
   const [forma, setForma] = useState<(typeof FORMAS_PAGAMENTO_MANUAL)[number]>('pix');
   const [pagoEm, setPagoEm] = useState(hoje);
@@ -238,6 +240,11 @@ function Conteudo({
                 ))}
             {f.documento && (
               <span className="block text-sm text-tinta-suave">CPF/CNPJ {f.documento}</span>
+            )}
+            {f.cupom && (
+              <span className="block text-sm text-tinta-suave">
+                Cupom {f.cupom} ({f.descontoBp / 100}% de desconto)
+              </span>
             )}
           </dd>
         </div>

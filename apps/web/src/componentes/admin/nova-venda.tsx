@@ -42,6 +42,7 @@ export function NovaVenda({
   const [plano, setPlano] = useState<(typeof PLANOS)[number]>('pro');
   const [ciclo, setCiclo] = useState<'mensal' | 'anual'>('mensal');
   const [dias, setDias] = useState('14');
+  const [cupom, setCupom] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const tabelaHoje = useTabelasAdmin().vigente();
@@ -114,6 +115,7 @@ export function NovaVenda({
                   plano,
                   ciclo,
                   diasTeste: Number(dias) || 0,
+                  ...(cupom.trim() ? { cupom: cupom.trim() } : {}),
                 },
               });
               setVenda(r);
@@ -183,6 +185,14 @@ export function NovaVenda({
               dica="0 = já paga hoje."
               value={dias}
               onChange={(e) => setDias(e.target.value.replace(/\D/g, ''))}
+            />
+          </div>
+          <div className="w-full max-w-xs">
+            <Campo
+              id="venda-cupom"
+              rotulo="Cupom (opcional)"
+              value={cupom}
+              onChange={(e) => setCupom(e.target.value)}
             />
           </div>
           <Botao type="submit" className="self-start" carregando={enviando}>

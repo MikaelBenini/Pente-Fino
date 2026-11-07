@@ -11,6 +11,8 @@ export const cadastroContaSchema = z.object({
   plano: z.enum(PLANOS).default('basico'),
   ciclo: z.enum(CICLOS).default('mensal'),
   aceite: z.literal(true, { error: 'É preciso aceitar os termos de uso.' }),
+  /** Cupom de desconto (opcional). */
+  cupom: z.string().trim().max(30).optional(),
 });
 export type CadastroContaEntrada = z.infer<typeof cadastroContaSchema>;
 

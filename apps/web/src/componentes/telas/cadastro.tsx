@@ -11,6 +11,8 @@ import {
   NOME_PLANO,
   PLANOS,
   type PlanoConta,
+  aplicarDesconto,
+  formatarPercentualBp,
   precoPorMes,
   type CadastroContaEntrada,
 } from '@pente-fino/shared';
@@ -20,7 +22,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
-import { api } from '@/lib/api';
+import { api, ErroApi } from '@/lib/api';
 import { useTabelaPrecos } from '@/lib/consultas';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
@@ -39,6 +41,26 @@ function daUrl<T extends string>(valor: string | null, aceitos: readonly T[], pa
 
 export function FormularioCadastro() {
   const tabela = useTabelaPrecos();
+  const [cupom, setCupom] = useState<{ codigo: string; descontoBp: number } | null>(null);
+  const [erroCupom, setErroCupom] = useState<string | null>(null);
+  async function conferirCupom(codigo: string) {
+    setErroCupom(null);
+    setCupom(null);
+    if (!codigo.trim()) return;
+    try {
+      setCupom(
+        await api<{ codigo: string; descontoBp: number }>(
+          `publico/cupom/${encodeURIComponent(codigo.trim())}`,
+        ),
+      );
+    } catch (e) {
+      setErroCupom(
+        e instanceof ErroApi
+          ? (e.campos[0]?.mensagem ?? e.message)
+          : 'Não deu para conferir o cupom.',
+      );
+    }
+  }
   const router = useRouter();
   const params = useSearchParams();
   const hidratado = useHidratado();
@@ -52,6 +74,7 @@ export function FormularioCadastro() {
     defaultValues: {
       plano: daUrl(params.get('plano'), PLANOS, 'pro'),
       ciclo: daUrl(params.get('ciclo'), CICLOS, 'mensal'),
+      cupom: params.get('cupom')?.slice(0, 30) ?? '',
     },
   });
   const plano = useWatch({ control, name: 'plano' });
@@ -155,7 +178,10 @@ export function FormularioCadastro() {
                 <span className="font-semibold">
                   {NOME_PLANO[p]} ·{' '}
                   <span className="font-denso tabular-nums">
-                    {formatarMoeda(precoPorMes(p, ciclo, 1, tabela))}/mês
+                    {formatarMoeda(
+                      aplicarDesconto(precoPorMes(p, ciclo, 1, tabela), cupom?.descontoBp),
+                    )}
+                    /mês
                   </span>
                 </span>
                 <span className="text-sm text-tinta-suave">{limitePlano(p)}</span>
@@ -164,6 +190,18 @@ export function FormularioCadastro() {
           ))}
         </div>
       </fieldset>
+      <Campo
+        id="cadastro-cupom"
+        rotulo="Cupom de desconto (opcional)"
+        autoComplete="off"
+        dica={
+          cupom
+            ? `${formatarPercentualBp(cupom.descontoBp)} de desconto enquanto a assinatura existir.`
+            : undefined
+        }
+        erro={formState.errors.cupom?.message ?? erroCupom ?? undefined}
+        {...register('cupom', { onBlur: (e) => conferirCupom(e.target.value) })}
+      />
       <label className="flex min-h-11 items-start gap-3">
         <input
           type="checkbox"

@@ -732,3 +732,87 @@ describe('tabelas de preço com vigência', () => {
     await req('delete', `/admin/configuracoes/precos/${hoje}`).expect(409);
   });
 });
+
+describe('cupons', () => {
+  const quem = { email: `cupons-${sufixo}@pentefino.dev`, senha: 'senha-dos-cupons-1' };
+  const codigo = `TESTE${sufixo.replace(/-/g, '').toUpperCase()}`.slice(0, 20);
+  let token = '';
+  const contasCriadas: string[] = [];
+  const req = (metodo: 'get' | 'put', url: string, corpo?: object) => {
+    const r = http()[metodo](url).set('authorization', `Bearer ${token}`);
+    return corpo ? r.send(corpo) : r;
+  };
+  const cadastro = (email: string, cupom?: string) =>
+    http()
+      .post('/publico/contas')
+      .send({
+        barbearia: 'Barbearia do Cupom',
+        nome: 'Caio Cupom',
+        email,
+        senha: 'senha-do-cupom-123',
+        aceite: true,
+        ...(cupom ? { cupom } : {}),
+      });
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.create({
+      data: {
+        email: quem.email,
+        nome: 'Cida Cupons',
+        papel: 'admin',
+        senhaHash: await hash(quem.senha),
+      },
+    });
+    token = (await entrarComSegundoFator(quem)).token;
+  });
+  afterAll(async () => {
+    await req('put', '/admin/configuracoes/cupons', {
+      codigo,
+      descontoBp: 3000,
+      vagas: 1,
+      ativo: false,
+    });
+    await plataforma.usuarioPlataforma.update({
+      where: { email: quem.email },
+      data: { ativo: false },
+    });
+    const app2 = criarPrisma();
+    for (const id of contasCriadas)
+      await naConta(app2, id, (tx) => tx.conta.deleteMany({ where: { id } }));
+    await app2.$disconnect();
+  });
+
+  it('cupom com 1 vaga: confere no site, dá o desconto na assinatura e recusa quando acaba', async () => {
+    await req('put', '/admin/configuracoes/cupons', { codigo: 'x', descontoBp: 100 }).expect(400);
+    await req('put', '/admin/configuracoes/cupons', {
+      codigo: codigo.toLowerCase(),
+      descricao: 'Teste',
+      descontoBp: 3000,
+      vagas: 1,
+    }).expect(204);
+    expect((await http().get(`/publico/cupom/${codigo.toLowerCase()}`).expect(200)).body).toEqual({
+      codigo,
+      descontoBp: 3000,
+    });
+    const nao = await http().get('/publico/cupom/NAOEXISTE').expect(400);
+    expect(nao.body.erro.campos[0]).toEqual({ campo: 'cupom', mensagem: 'Cupom não encontrado.' });
+
+    const email = `cupom-${sufixo}@e2e.pentefino.dev`;
+    await cadastro(email, codigo).expect(201);
+    const dono = await como(app, email, 'senha-do-cupom-123');
+    contasCriadas.push((await dono.get('/auth/eu').expect(200)).body.contaId);
+    expect((await dono.get('/conta/assinatura').expect(200)).body).toMatchObject({
+      cupom: codigo,
+      descontoBp: 3000,
+      precoPorMes: Math.round(7990 * 0.7),
+    });
+
+    const recusa = await cadastro(`cupom2-${sufixo}@e2e.pentefino.dev`, codigo).expect(400);
+    expect(recusa.body.erro.campos[0].mensagem).toBe('As vagas deste cupom acabaram.');
+    const lista = (await req('get', '/admin/configuracoes/cupons').expect(200)).body as {
+      codigo: string;
+      usados: number;
+    }[];
+    expect(lista.find((c) => c.codigo === codigo)?.usados).toBe(1);
+  });
+});

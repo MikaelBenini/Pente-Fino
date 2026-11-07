@@ -127,6 +127,15 @@ export class PublicoController {
     return this.precosServico.vigente(dataLocal(new Date()));
   }
 
+  @Get('cupom/:codigo')
+  @Publico()
+  @LimiteAutenticacao()
+  @ApiOperation({ summary: 'Conferir um cupom antes de se cadastrar (desconto ou o motivo)' })
+  async cupom(@Param('codigo') codigo: string): Promise<{ codigo: string; descontoBp: number }> {
+    const r = await this.precosServico.cupomValido(codigo.slice(0, 30));
+    return { codigo: r.cupom!, descontoBp: r.descontoBp };
+  }
+
   @Post('contas')
   @Publico()
   @LimiteAutenticacao()
@@ -142,6 +151,7 @@ export class PublicoController {
     const contaId = randomUUID();
     // Dias de teste e versão dos termos vêm da administração (com padrão do sistema).
     const { teste } = lerConfiguracaoPublica(await configuracaoDoSistema(this.banco.prisma));
+    const desconto = await this.precosServico.cupomValido(d.cupom);
     try {
       return await this.banco.naConta(contaId, async (tx) => {
         await tx.conta.create({
@@ -153,6 +163,8 @@ export class PublicoController {
             status: 'teste',
             testeAte: new Date(Date.now() + teste.dias * 86_400_000),
             precosDesde: new Date(`${dataLocal(new Date())}T00:00:00Z`),
+            cupom: desconto.cupom,
+            descontoBp: desconto.descontoBp,
           },
         });
         const unidade = await tx.unidade.create({
