@@ -10,7 +10,11 @@ export const NOME_PAPEL_PLATAFORMA: Readonly<Record<PapelPlataforma, string>> = 
 };
 
 export const entrarAdminSchema = z.object({
-  email: z.email({ error: 'E-mail inválido.' }).transform((e) => e.trim().toLowerCase()),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .pipe(z.email({ error: 'E-mail inválido.' })),
   senha: z.string().min(1, { error: 'Informe a senha.' }).max(200),
   /** Código de 6 dígitos do aplicativo autenticador (obrigatório depois de configurar). */
   codigo: z
@@ -47,6 +51,10 @@ export interface ContaNaPlataforma {
   cobrancaAutomatica: boolean;
   canceladaEm: string | null;
   motivoCancelamento: string | null;
+  /** Quem da plataforma vendeu (venda presencial); null = cadastro pelo site. */
+  vendedorId: string | null;
+  /** O dono já criou a senha. */
+  donoAtivou: boolean;
   unidades: number;
   profissionais: number;
   whatsappConectado: boolean;
@@ -168,4 +176,69 @@ export interface FichaContaPlataforma {
   profissionais: number;
   faturas: FaturaNaPlataforma[];
   historico: EventoDaConta[];
+}
+
+// ─── Venda presencial ─────────────────────────────────────────────────────
+
+export const venderContaSchema = z.object({
+  barbearia: z.string().trim().min(2, { error: 'Informe o nome da barbearia.' }).max(80),
+  dono: z.object({
+    nome: z.string().trim().min(2, { error: 'Informe o nome do dono.' }).max(80),
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .pipe(z.email({ error: 'E-mail inválido.' })),
+    /** Só dígitos com DDD; vira 55 + número para o link do WhatsApp. */
+    telefone: z
+      .string()
+      .transform((t) => t.replace(/\D/g, ''))
+      .transform((d) => (d.length === 10 || d.length === 11 ? `55${d}` : d))
+      .pipe(z.string().regex(/^\d{12,13}$/, { error: 'Informe o WhatsApp com DDD.' }))
+      .nullable()
+      .default(null),
+  }),
+  plano: z.enum(['basico', 'pro', 'premium']),
+  ciclo: z.enum(['mensal', 'anual']),
+  /** Dias de uso antes de pagar (0 = paga hoje; o vendedor registra o pagamento em seguida). */
+  diasTeste: z.number().int().min(0).max(60).default(14),
+});
+export type VenderContaEntrada = z.infer<typeof venderContaSchema>;
+
+export interface VendaCriada {
+  contaId: string;
+  linkConvite: string;
+  /** Mensagem pronta para o vendedor mandar do próprio WhatsApp (quando há telefone). */
+  linkWhatsapp: string | null;
+  expiraEm: string;
+}
+
+export interface VendasDoVendedor {
+  vendedorId: string;
+  nome: string;
+  criadas: number;
+  /** O dono criou a senha. */
+  ativadas: number;
+  /** Com ao menos uma fatura paga. */
+  pagas: number;
+}
+
+/** Contas vendidas por vendedor: criadas, ativadas pelo dono e pagas (ordem: mais pagas). */
+export function vendasPorVendedor(d: {
+  vendedores: readonly { id: string; nome: string }[];
+  contas: readonly { id: string; vendedorId: string | null; donoAtivou: boolean }[];
+  contasPagas: ReadonlySet<string>;
+}): VendasDoVendedor[] {
+  return d.vendedores
+    .map((v) => {
+      const dele = d.contas.filter((c) => c.vendedorId === v.id);
+      return {
+        vendedorId: v.id,
+        nome: v.nome,
+        criadas: dele.length,
+        ativadas: dele.filter((c) => c.donoAtivou).length,
+        pagas: dele.filter((c) => d.contasPagas.has(c.id)).length,
+      };
+    })
+    .sort((a, b) => b.pagas - a.pagas || b.criadas - a.criadas || a.nome.localeCompare(b.nome));
 }

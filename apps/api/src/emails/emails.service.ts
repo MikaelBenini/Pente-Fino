@@ -66,6 +66,29 @@ export class EmailsService {
     );
   }
 
+  /** Venda presencial: a conta já existe; o dono cria a senha e cai na configuração guiada. */
+  ativacaoConta(d: {
+    para: string;
+    nome: string;
+    conta: string;
+    vendedor: string;
+    link: string;
+    expiraEm: Date;
+  }) {
+    return this.enfileirar(
+      montar(
+        d.para,
+        `Sua conta da ${d.conta} no Pente Fino está pronta`,
+        [
+          `Olá, ${d.nome}!`,
+          `${d.vendedor} deixou a conta da ${d.conta} pronta no Pente Fino.`,
+          `Crie sua senha pelo botão abaixo; em seguida, a configuração guiada leva poucos minutos. O link vale até ${dataHora(d.expiraEm)}.`,
+        ],
+        { texto: 'Criar minha senha', link: d.link },
+      ),
+    );
+  }
+
   redefinirSenha(d: { para: string; nome: string; link: string }) {
     return this.enfileirar(
       montar(

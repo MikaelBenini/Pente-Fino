@@ -14,6 +14,7 @@ import {
   precoPorMes,
   type AcaoSituacao,
   type FichaContaPlataforma,
+  type PapelPlataforma,
 } from '@pente-fino/shared';
 import { Botao, Campo, Dialogo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -116,7 +117,15 @@ function CampoMotivo({
 }
 
 /** Ficha da conta na administração: dados de quem paga, estrutura, cobrança, ações e histórico. */
-export function FichaConta({ id, onFechar }: { id: string | null; onFechar: () => void }) {
+export function FichaConta({
+  id,
+  onFechar,
+  papel,
+}: {
+  id: string | null;
+  onFechar: () => void;
+  papel: PapelPlataforma;
+}) {
   const cliente = useQueryClient();
   const chave = ['admin', 'conta', id] as const;
   const ficha = useQuery({
@@ -134,7 +143,9 @@ export function FichaConta({ id, onFechar }: { id: string | null; onFechar: () =
       largura="larga"
     >
       <Estado consulta={ficha}>
-        {() => <Conteudo f={ficha.data!} contaId={id!} atualizar={atualizar} />}
+        {() => (
+          <Conteudo f={ficha.data!} contaId={id!} atualizar={atualizar} admin={papel === 'admin'} />
+        )}
       </Estado>
     </Dialogo>
   );
@@ -144,10 +155,13 @@ function Conteudo({
   f,
   contaId,
   atualizar,
+  admin,
 }: {
   f: FichaContaPlataforma;
   contaId: string;
   atualizar: () => Promise<void>;
+  /** Vendedor só registra pagamento; o resto é do admin. */
+  admin: boolean;
 }) {
   const hoje = dataLocal(new Date());
   const [plano, setPlano] = useState(f.plano);
@@ -296,98 +310,107 @@ function Conteudo({
           />
         </Acao>
 
-        <Acao
-          titulo="Mudar plano"
-          textoBotao="Mudar plano"
-          podeEnviar={motivoOk(motivoPlano) && (plano !== f.plano || ciclo !== f.ciclo)}
-          enviar={async () => {
-            await adminApi(`${base}/plano`, {
-              metodo: 'PUT',
-              corpo: { plano, ciclo, motivo: motivoPlano },
-            });
-            setMotivoPlano('');
-            await atualizar();
-          }}
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Selecao
-              id="conta-plano"
-              rotulo="Plano"
-              value={plano}
-              onChange={(e) => setPlano(e.target.value as typeof plano)}
-              opcoes={PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] }))}
+        {admin && (
+          <Acao
+            titulo="Mudar plano"
+            textoBotao="Mudar plano"
+            podeEnviar={motivoOk(motivoPlano) && (plano !== f.plano || ciclo !== f.ciclo)}
+            enviar={async () => {
+              await adminApi(`${base}/plano`, {
+                metodo: 'PUT',
+                corpo: { plano, ciclo, motivo: motivoPlano },
+              });
+              setMotivoPlano('');
+              await atualizar();
+            }}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Selecao
+                id="conta-plano"
+                rotulo="Plano"
+                value={plano}
+                onChange={(e) => setPlano(e.target.value as typeof plano)}
+                opcoes={PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] }))}
+              />
+              <Selecao
+                id="conta-ciclo"
+                rotulo="Ciclo"
+                value={ciclo}
+                onChange={(e) => setCiclo(e.target.value as typeof ciclo)}
+                opcoes={[
+                  { valor: 'mensal', rotulo: 'Mensal' },
+                  { valor: 'anual', rotulo: 'Anual' },
+                ]}
+              />
+            </div>
+            <CampoMotivo id="motivo-plano" valor={motivoPlano} onMudar={setMotivoPlano} />
+          </Acao>
+        )}
+
+        {admin && (
+          <Acao
+            titulo="Estender teste ou dar cortesia"
+            textoBotao="Salvar data"
+            podeEnviar={motivoOk(motivoTeste)}
+            enviar={async () => {
+              await adminApi(`${base}/teste`, {
+                metodo: 'PUT',
+                corpo: { ate, motivo: motivoTeste },
+              });
+              setMotivoTeste('');
+              await atualizar();
+            }}
+          >
+            <Campo
+              id="teste-ate"
+              rotulo="Usa sem pagar até"
+              type="date"
+              value={ate}
+              onChange={(e) => setAte(e.target.value)}
             />
+            <CampoMotivo id="motivo-teste" valor={motivoTeste} onMudar={setMotivoTeste} />
+          </Acao>
+        )}
+
+        {admin && (
+          <Acao
+            titulo="Bloquear, desbloquear ou cancelar"
+            textoBotao={
+              acao === 'cancelar'
+                ? 'Cancelar a conta'
+                : acao === 'bloquear'
+                  ? 'Bloquear'
+                  : 'Desbloquear'
+            }
+            tom={acao === 'desbloquear' ? 'acao' : 'perigo'}
+            podeEnviar={motivoOk(motivoSituacao)}
+            enviar={async () => {
+              await adminApi(`${base}/situacao`, {
+                metodo: 'PUT',
+                corpo: { acao, motivo: motivoSituacao },
+              });
+              setMotivoSituacao('');
+              await atualizar();
+            }}
+          >
             <Selecao
-              id="conta-ciclo"
-              rotulo="Ciclo"
-              value={ciclo}
-              onChange={(e) => setCiclo(e.target.value as typeof ciclo)}
+              id="conta-acao"
+              rotulo="O que fazer"
+              value={acao}
+              onChange={(e) => setAcao(e.target.value as AcaoSituacao)}
               opcoes={[
-                { valor: 'mensal', rotulo: 'Mensal' },
-                { valor: 'anual', rotulo: 'Anual' },
+                { valor: 'bloquear', rotulo: 'Bloquear (só consulta)' },
+                { valor: 'desbloquear', rotulo: 'Desbloquear (volta a usar)' },
+                { valor: 'cancelar', rotulo: 'Cancelar (só consulta; nada se apaga)' },
               ]}
             />
-          </div>
-          <CampoMotivo id="motivo-plano" valor={motivoPlano} onMudar={setMotivoPlano} />
-        </Acao>
-
-        <Acao
-          titulo="Estender teste ou dar cortesia"
-          textoBotao="Salvar data"
-          podeEnviar={motivoOk(motivoTeste)}
-          enviar={async () => {
-            await adminApi(`${base}/teste`, { metodo: 'PUT', corpo: { ate, motivo: motivoTeste } });
-            setMotivoTeste('');
-            await atualizar();
-          }}
-        >
-          <Campo
-            id="teste-ate"
-            rotulo="Usa sem pagar até"
-            type="date"
-            value={ate}
-            onChange={(e) => setAte(e.target.value)}
-          />
-          <CampoMotivo id="motivo-teste" valor={motivoTeste} onMudar={setMotivoTeste} />
-        </Acao>
-
-        <Acao
-          titulo="Bloquear, desbloquear ou cancelar"
-          textoBotao={
-            acao === 'cancelar'
-              ? 'Cancelar a conta'
-              : acao === 'bloquear'
-                ? 'Bloquear'
-                : 'Desbloquear'
-          }
-          tom={acao === 'desbloquear' ? 'acao' : 'perigo'}
-          podeEnviar={motivoOk(motivoSituacao)}
-          enviar={async () => {
-            await adminApi(`${base}/situacao`, {
-              metodo: 'PUT',
-              corpo: { acao, motivo: motivoSituacao },
-            });
-            setMotivoSituacao('');
-            await atualizar();
-          }}
-        >
-          <Selecao
-            id="conta-acao"
-            rotulo="O que fazer"
-            value={acao}
-            onChange={(e) => setAcao(e.target.value as AcaoSituacao)}
-            opcoes={[
-              { valor: 'bloquear', rotulo: 'Bloquear (só consulta)' },
-              { valor: 'desbloquear', rotulo: 'Desbloquear (volta a usar)' },
-              { valor: 'cancelar', rotulo: 'Cancelar (só consulta; nada se apaga)' },
-            ]}
-          />
-          <CampoMotivo id="motivo-situacao" valor={motivoSituacao} onMudar={setMotivoSituacao} />
-          <p className="text-sm text-tinta-suave">
-            Bloqueada ou cancelada, a barbearia continua lendo tudo e exportando os dados; só não
-            grava.
-          </p>
-        </Acao>
+            <CampoMotivo id="motivo-situacao" valor={motivoSituacao} onMudar={setMotivoSituacao} />
+            <p className="text-sm text-tinta-suave">
+              Bloqueada ou cancelada, a barbearia continua lendo tudo e exportando os dados; só não
+              grava.
+            </p>
+          </Acao>
+        )}
       </div>
 
       <section aria-labelledby="titulo-faturas-conta" className="flex flex-col gap-2">

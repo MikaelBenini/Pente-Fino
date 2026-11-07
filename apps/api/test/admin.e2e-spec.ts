@@ -2,18 +2,27 @@
 // sem dado de cliente. O login de uma barbearia não abre a administração, nem o contrário.
 import type { INestApplication } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
-import { criarPrisma, type PrismaClient } from '@pente-fino/db';
+import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
 import type {
   ContaNaPlataforma,
   FichaContaPlataforma,
   MetricasDaPlataforma,
   RespostaEntrarAdmin,
+  VendaCriada,
+  VendasDoVendedor,
 } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { codigoDoPasso, passoDe } from '../src/admin/totp.js';
-import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+import {
+  como,
+  criarApp,
+  criarCenario,
+  tokenDoLink,
+  ultimoEmail,
+  type Cenario,
+} from './ajudantes.js';
 
 let app: INestApplication<App>;
 let a: Cenario;
@@ -118,10 +127,13 @@ describe('administração do sistema', () => {
     ).toBe(2);
   });
 
-  it('vendedor não vê a lista de todas as contas', async () => {
+  it('vendedor não vê as contas dos outros nem os números do negócio', async () => {
     const { token } = await entrarComSegundoFator(vendedor);
     await http().get('/admin/eu').set('authorization', `Bearer ${token}`).expect(200);
-    await http().get('/admin/contas').set('authorization', `Bearer ${token}`).expect(403);
+    // Vendedor vê só as contas que vendeu (este ainda não vendeu nenhuma).
+    expect(
+      (await http().get('/admin/contas').set('authorization', `Bearer ${token}`).expect(200)).body,
+    ).toEqual([]);
     await http().get('/admin/metricas').set('authorization', `Bearer ${token}`).expect(403);
   });
 
@@ -262,5 +274,119 @@ describe('ações da administração numa conta', () => {
   it('conta que não existe: 404; sem sessão: 401', async () => {
     await comoAdmin().get(`/admin/contas/${randomUUID()}`).expect(404);
     await http().put(`/admin/contas/${a.contaId}/plano`).send({}).expect(401);
+  });
+});
+
+describe('venda presencial', () => {
+  const vend = { email: `vend3-${sufixo}@pentefino.dev`, senha: 'senha-do-vendedor-3' };
+  const chefe = { email: `chefe-${sufixo}@pentefino.dev`, senha: 'senha-do-chefe-123' };
+  const donoEmail = `dono-venda-${sufixo}@e2e.pentefino.dev`;
+  let tVend = '';
+  let tChefe = '';
+  let contaVendida = '';
+  const com = (t: string) => ({
+    get: (url: string) => http().get(url).set('authorization', `Bearer ${t}`),
+    post: (url: string, corpo: object) =>
+      http().post(url).set('authorization', `Bearer ${t}`).send(corpo),
+  });
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.createMany({
+      data: [
+        {
+          email: vend.email,
+          nome: 'Vera Vendas',
+          papel: 'vendedor',
+          senhaHash: await hash(vend.senha),
+        },
+        {
+          email: chefe.email,
+          nome: 'Chico Chefe',
+          papel: 'admin',
+          senhaHash: await hash(chefe.senha),
+        },
+      ],
+    });
+    tVend = (await entrarComSegundoFator(vend)).token;
+    tChefe = (await entrarComSegundoFator(chefe)).token;
+  });
+  afterAll(async () => {
+    await plataforma.usuarioPlataforma.updateMany({
+      where: { email: { in: [vend.email, chefe.email] } },
+      data: { ativo: false },
+    });
+    if (contaVendida) {
+      const app2 = criarPrisma();
+      await naConta(app2, contaVendida, (tx) =>
+        tx.conta.deleteMany({ where: { id: contaVendida } }),
+      );
+      await app2.$disconnect();
+    }
+  });
+
+  it('o vendedor cria a conta na rua, registra o Pix, o dono entra pelo convite e aparece nas vendas', async () => {
+    const v = com(tVend);
+    const venda = {
+      barbearia: `Barbearia da Rua ${sufixo}`,
+      dono: { nome: 'Rui Rua', email: donoEmail, telefone: '(11) 97777-6666' },
+      plano: 'pro',
+      ciclo: 'mensal',
+      diasTeste: 0,
+    };
+    const r = (await v.post('/admin/contas', venda).expect(201)).body as VendaCriada;
+    contaVendida = r.contaId;
+    expect(r.linkWhatsapp).toMatch(/^https:\/\/wa\.me\/5511977776666\?text=/);
+    expect(r.linkConvite).toMatch(/\/convite\?token=/);
+    const email = await ultimoEmail(donoEmail);
+    expect(email?.assunto).toContain('está pronta');
+    await v.post('/admin/contas', venda).expect(409);
+
+    // O vendedor vê só a conta dele e não abre as outras.
+    const minhas = (await v.get('/admin/contas').expect(200)).body as ContaNaPlataforma[];
+    expect(minhas.map((c) => c.id)).toEqual([r.contaId]);
+    expect(minhas[0]).toMatchObject({ plano: 'pro', donoAtivou: false });
+    await v.get(`/admin/contas/${a.contaId}`).expect(404);
+    await v
+      .post(`/admin/contas/${a.contaId}/pagamentos`, {
+        valor: 100,
+        forma: 'pix',
+        pagoEm: '2026-11-07',
+        periodoInicio: '2026-11-07',
+      })
+      .expect(404);
+
+    // Registra o Pix na hora: a conta fica ativa.
+    const hoje = new Date().toISOString().slice(0, 10);
+    await v
+      .post(`/admin/contas/${r.contaId}/pagamentos`, {
+        valor: 14990,
+        forma: 'pix',
+        pagoEm: hoje,
+        periodoInicio: hoje,
+      })
+      .expect(201);
+    expect(
+      ((await v.get(`/admin/contas/${r.contaId}`).expect(200)).body as FichaContaPlataforma).status,
+    ).toBe('ativa');
+
+    // O dono cria a senha pelo convite e entra.
+    await http()
+      .post('/auth/convite')
+      .send({ token: tokenDoLink(r.linkConvite), senha: 'senha-do-dono-da-rua' })
+      .expect(200);
+    const dono = await como(app, donoEmail, 'senha-do-dono-da-rua');
+    expect((await dono.get('/conta/situacao').expect(200)).body).toMatchObject({
+      plano: 'pro',
+      somenteLeitura: false,
+    });
+
+    // Admin: vendas por vendedor.
+    const vendas = (await com(tChefe).get('/admin/vendas').expect(200)).body as VendasDoVendedor[];
+    expect(vendas.find((x) => x.nome === 'Vera Vendas')).toMatchObject({
+      criadas: 1,
+      ativadas: 1,
+      pagas: 1,
+    });
+    await v.get('/admin/vendas').expect(403);
   });
 });

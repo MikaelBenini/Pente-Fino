@@ -19,6 +19,10 @@ import {
   mudarSituacaoContaSchema,
   mudarTesteContaSchema,
   registrarPagamentoSchema,
+  venderContaSchema,
+  type VendaCriada,
+  type VendasDoVendedor,
+  type VenderContaEntrada,
   type FichaContaPlataforma,
   type MudarPlanoContaEntrada,
   type MudarSituacaoContaEntrada,
@@ -37,6 +41,7 @@ import { Corpo } from '../comum/validacao.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
 import { AdminContasService } from './admin-contas.service.js';
+import { AdminVendasService } from './admin-vendas.service.js';
 import { BancoPlataforma } from './banco-plataforma.js';
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
@@ -72,6 +77,7 @@ export class AdminController {
     @Inject(AdminAuthService) private readonly auth: AdminAuthService,
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
     @Inject(AdminContasService) private readonly contasServico: AdminContasService,
+    @Inject(AdminVendasService) private readonly vendasServico: AdminVendasService,
   ) {}
 
   @Get('eu')
@@ -121,12 +127,14 @@ export class AdminController {
   }
 
   @Get('contas')
-  @PapeisPlataforma('admin')
   @ApiOperation({
     summary: 'Contas das barbearias: plano, situação, datas e uso (sem dado de cliente)',
   })
-  async contas(): Promise<ContaNaPlataforma[]> {
-    const linhas = await contasDaPlataforma(this.banco.prisma);
+  async contas(@AdminAtual() a: AdminAutenticado): Promise<ContaNaPlataforma[]> {
+    // Vendedor vê só as contas que vendeu.
+    const linhas = (await contasDaPlataforma(this.banco.prisma)).filter(
+      (c) => a.papel === 'admin' || c.vendedor_id === a.id,
+    );
     return linhas.map((c) => ({
       id: c.id,
       nome: c.nome,
@@ -139,6 +147,8 @@ export class AdminController {
       cobrancaAutomatica: c.cobranca_automatica,
       canceladaEm: iso(c.cancelada_em),
       motivoCancelamento: c.motivo_cancelamento,
+      vendedorId: c.vendedor_id,
+      donoAtivou: c.dono_ativou,
       unidades: c.unidades,
       profissionais: c.profissionais,
       whatsappConectado: c.whatsapp_conectado,
@@ -149,9 +159,12 @@ export class AdminController {
   }
 
   @Get('contas/:id')
-  @PapeisPlataforma('admin')
   @ApiOperation({ summary: 'Ficha da conta: donos, unidades, plano, datas, cobrança e histórico' })
-  ficha(@Param('id', ParseUUIDPipe) id: string): Promise<FichaContaPlataforma> {
+  async ficha(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AdminAtual() a: AdminAutenticado,
+  ): Promise<FichaContaPlataforma> {
+    await this.vendasServico.exigirAcesso(id, a);
     return this.contasServico.ficha(id);
   }
 
@@ -194,17 +207,37 @@ export class AdminController {
   }
 
   @Post('contas/:id/pagamentos')
-  @PapeisPlataforma('admin')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Registrar pagamento manual (Pix, dinheiro, maquininha, boleto, transferência)',
   })
-  registrarPagamento(
+  async registrarPagamento(
     @Param('id', ParseUUIDPipe) id: string,
     @Corpo(registrarPagamentoSchema) d: RegistrarPagamentoEntrada,
     @AdminAtual() a: AdminAutenticado,
     @IpDaRequisicao() ip: string | null,
   ) {
+    await this.vendasServico.exigirAcesso(id, a);
     return this.contasServico.registrarPagamento(id, d, a, ip);
+  }
+
+  @Post('contas')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Venda presencial: cria a conta e manda ao dono o convite para criar a senha',
+  })
+  vender(
+    @Corpo(venderContaSchema) d: VenderContaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<VendaCriada> {
+    return this.vendasServico.vender(d, a, ip);
+  }
+
+  @Get('vendas')
+  @PapeisPlataforma('admin')
+  @ApiOperation({ summary: 'Vendas por vendedor: contas criadas, ativadas pelo dono e pagas' })
+  vendas(): Promise<VendasDoVendedor[]> {
+    return this.vendasServico.vendas();
   }
 }
