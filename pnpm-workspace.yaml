@@ -4,7 +4,7 @@ packages:
 
 # Versões compartilhadas entre os pacotes: use "catalog:" no package.json.
 catalog:
-  '@types/node': ^24.0.0
+  '@types/node': ^26.6.6
   typescript: ^6.0.2
   vitest: ^5.1.0
   zod: ^4.0.0
