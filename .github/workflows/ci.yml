@@ -26,7 +26,21 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
+      - name: Cache do Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
+
       - run: pnpm install --frozen-lockfile
+
+      - name: Nenhum segredo no repositório (.env só o de exemplo)
+        run: |
+          if git ls-files | grep -E '(^|/)\.env(\..+)?$' | grep -v '\.env\.example$'; then
+            echo "Arquivo .env no repositório: segredos ficam nos Secrets do GitHub ou no servidor." >&2
+            exit 1
+          fi
 
       - run: pnpm format:check
       - run: pnpm lint
@@ -50,6 +64,13 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+
+      - name: Cache do Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
 
       - run: pnpm install --frozen-lockfile
 

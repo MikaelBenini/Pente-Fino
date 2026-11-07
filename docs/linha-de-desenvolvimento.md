@@ -191,11 +191,11 @@ O dinheiro tem que bater. As regras de cálculo são testadas com casos reais da
 Toda mudança passa por verificação automática antes de entrar na `main`, e toda versão vira uma imagem Docker pronta para publicar.
 
 - [x] GitHub Actions no pull request: instalar, lint, checagem de tipos, testes unitários, integração e ponta a ponta (`.github/workflows/ci.yml`, desde a Etapa 2)
-- [ ] Cache do pnpm e do Turborepo para o CI rodar rápido (o do pnpm já existe; falta o do Turborepo)
-- [ ] `Dockerfile` de várias etapas para `web`, `api` e `worker` (imagem final pequena, usuário sem root)
-- [ ] No merge na `main`: build das imagens e envio para o GitHub Container Registry com a tag do commit
-- [ ] Verificação de dependências vulneráveis (Dependabot)
-- [ ] Segredos só nos Secrets do GitHub, nunca no código
+- [x] Cache do pnpm e do Turborepo para o CI rodar rápido (feito: `actions/cache` da pasta `.turbo` por job, com a chave do commit e a do último commit como reserva)
+- [x] `Dockerfile` de várias etapas para `web`, `api` e `worker` (imagem final pequena, usuário sem root) (feito: `apps/*/Dockerfile` com `turbo prune`, build completo e imagem final só com as dependências de produção, rodando como `node`; web na saída `standalone` do Next (`NEXT_STANDALONE=1`); API com `HEALTHCHECK` e o alvo `migracoes` (CLI do Prisma, para `prisma migrate deploy` e `pnpm admin:criar` no servidor). Tamanhos: web 317 MB, worker 434 MB, API 512 MB; conferidas subindo em modo produção)
+- [x] No merge na `main`: build das imagens e envio para o GitHub Container Registry com a tag do commit (feito: `.github/workflows/imagens.yml` publica `ghcr.io/<dono>/pente-fino-{api,migracoes,worker,web}` com a tag do commit e `latest`, com cache do build; entra com o token do próprio workflow)
+- [x] Verificação de dependências vulneráveis (Dependabot) (feito: `.github/dependabot.yml` semanal para pacotes (agrupando produção e desenvolvimento), GitHub Actions e as imagens base)
+- [x] Segredos só nos Secrets do GitHub, nunca no código (feito: o CI falha se um `.env` real entrar no repositório; o envio das imagens usa o token do workflow, sem segredo guardado; os segredos de produção (chaves, `PLATAFORMA_CHAVE`, Asaas) ficam no servidor, Etapa 16)
 - [ ] **Pronto quando:** um pull request com teste quebrado é bloqueado e um merge gera as três imagens
 
 ## Etapas 9 a 15 · O produto completo antes do servidor

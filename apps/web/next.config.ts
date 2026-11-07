@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 // Em desenvolvimento o .env fica na raiz do monorepo (API_URL e companhia).
 const envDaRaiz = new URL('../../.env', import.meta.url);
@@ -14,6 +15,14 @@ const codespace =
     : [];
 
 const nextConfig: NextConfig = {
+  // Imagem Docker (NEXT_STANDALONE=1): só o servidor e o que ele importa, a partir da raiz do
+  // monorepo. Fora dela (dev e testes), o `next start` de sempre.
+  ...(process.env.NEXT_STANDALONE === '1'
+    ? {
+        output: 'standalone' as const,
+        outputFileTracingRoot: fileURLToPath(new URL('../..', import.meta.url)),
+      }
+    : {}),
   allowedDevOrigins: ['127.0.0.1', ...codespace],
   cacheComponents: true,
   experimental: {
