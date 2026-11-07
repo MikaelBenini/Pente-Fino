@@ -24,6 +24,10 @@ updates:
       timezone: America/Sao_Paulo
   - package-ecosystem: docker
     directories: [/apps/api, /apps/worker, /apps/web]
+    # Fica na versão LTS do Node (a mesma do .nvmrc); a troca de major é feita à mão.
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
     schedule:
       interval: weekly
       day: monday
