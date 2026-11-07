@@ -48,6 +48,20 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(
     tabela.getByRole('rowheader', { name: /Barbearia Pente Fino/ }).first(),
   ).toBeVisible();
+  // Ficha da conta: busca, abre e estende o teste com motivo (fica no histórico).
+  await page.getByLabel('Buscar barbearia').fill('Plano Básico');
+  await tabela.getByRole('button', { name: 'Barbearia Plano Básico' }).click();
+  const ficha = page.getByRole('dialog', { name: 'Barbearia Plano Básico' });
+  await expect(ficha).toContainText('basico@demo.pentefino.dev');
+  const estender = ficha.getByRole('form', { name: 'Estender teste ou dar cortesia' });
+  await expect(estender.getByRole('button', { name: 'Salvar data' })).toBeDisabled();
+  await estender.getByLabel('Motivo').fill('Cortesia do teste de navegador');
+  await estender.getByRole('button', { name: 'Salvar data' }).click();
+  await expect(estender.getByRole('status')).toHaveText('Feito. Ficou registrado no histórico.');
+  await expect(ficha.getByRole('list', { name: 'Histórico da conta' })).toContainText(
+    'Cortesia do teste de navegador',
+  );
+  await ficha.getByRole('button', { name: 'Fechar' }).click();
   // A sessão da barbearia não existe aqui, e a da administração não abre o painel.
   await page.goto('/app');
   await expect(page).toHaveURL(/\/entrar/);

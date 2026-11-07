@@ -7,6 +7,8 @@ import {
   contasDaPlataforma,
   criarPrisma,
   faturasDaPlataforma,
+  fichaDaContaPlataforma,
+  mudarPlanoDaConta,
   naConta,
   type PrismaClient,
 } from '../src/index.js';
@@ -68,6 +70,22 @@ describe('acesso da plataforma', () => {
     ]);
     const linha = (await contasDaPlataforma(plataforma)).find((c) => c.id === conta);
     expect(linha).toMatchObject({ cancelada_em: null, ultimo_acesso_em: null });
+  });
+
+  it('a ficha e as ações enxergam só a conta pedida (nada das outras)', async () => {
+    // O banco de teste tem outras contas com profissionais, unidades e faturas.
+    const ficha = (await fichaDaContaPlataforma(plataforma, conta)) as {
+      profissionais: number;
+      unidades: unknown[];
+      faturas: unknown[];
+      donos: unknown[];
+    };
+    expect(ficha).toMatchObject({ profissionais: 0, donos: [] });
+    expect(ficha.unidades).toHaveLength(1);
+    expect(ficha.faturas).toHaveLength(1);
+    const antes = await mudarPlanoDaConta(plataforma, conta, 'pro', 'mensal');
+    expect(Number(antes.unidades)).toBe(1);
+    expect((await fichaDaContaPlataforma(plataforma, conta))?.plano).toBe('pro');
   });
 
   it('o usuário da plataforma não lê tabela de barbearia direto', async () => {

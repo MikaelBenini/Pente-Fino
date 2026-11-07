@@ -4,7 +4,10 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Param,
+  ParseUUIDPipe,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -12,6 +15,15 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { contasDaPlataforma, faturasDaPlataforma } from '@pente-fino/db';
 import {
   entrarAdminSchema,
+  mudarPlanoContaSchema,
+  mudarSituacaoContaSchema,
+  mudarTesteContaSchema,
+  registrarPagamentoSchema,
+  type FichaContaPlataforma,
+  type MudarPlanoContaEntrada,
+  type MudarSituacaoContaEntrada,
+  type MudarTesteContaEntrada,
+  type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
   type MetricasDaPlataforma,
   type ContaNaPlataforma,
@@ -24,6 +36,7 @@ import { LimiteAutenticacao, Publico } from '../auth/decoradores.js';
 import { Corpo } from '../comum/validacao.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
+import { AdminContasService } from './admin-contas.service.js';
 import { BancoPlataforma } from './banco-plataforma.js';
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
@@ -58,6 +71,7 @@ export class AdminController {
   constructor(
     @Inject(AdminAuthService) private readonly auth: AdminAuthService,
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
+    @Inject(AdminContasService) private readonly contasServico: AdminContasService,
   ) {}
 
   @Get('eu')
@@ -132,5 +146,65 @@ export class AdminController {
       ultimaFechadaEm: iso(c.ultima_fechada_em),
       ultimoAcessoEm: iso(c.ultimo_acesso_em),
     }));
+  }
+
+  @Get('contas/:id')
+  @PapeisPlataforma('admin')
+  @ApiOperation({ summary: 'Ficha da conta: donos, unidades, plano, datas, cobrança e histórico' })
+  ficha(@Param('id', ParseUUIDPipe) id: string): Promise<FichaContaPlataforma> {
+    return this.contasServico.ficha(id);
+  }
+
+  @Put('contas/:id/plano')
+  @PapeisPlataforma('admin')
+  @ApiOperation({ summary: 'Mudar plano e ciclo (motivo obrigatório; o Asaas acompanha)' })
+  mudarPlano(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(mudarPlanoContaSchema) d: MudarPlanoContaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ) {
+    return this.contasServico.mudarPlano(id, d, a, ip);
+  }
+
+  @Put('contas/:id/teste')
+  @PapeisPlataforma('admin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Estender o teste ou dar cortesia até uma data (motivo obrigatório)' })
+  mudarTeste(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(mudarTesteContaSchema) d: MudarTesteContaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    return this.contasServico.mudarTeste(id, d, a, ip);
+  }
+
+  @Put('contas/:id/situacao')
+  @PapeisPlataforma('admin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Bloquear, desbloquear ou cancelar (só consulta, nada se apaga)' })
+  mudarSituacao(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(mudarSituacaoContaSchema) d: MudarSituacaoContaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    return this.contasServico.mudarSituacao(id, d, a, ip);
+  }
+
+  @Post('contas/:id/pagamentos')
+  @PapeisPlataforma('admin')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Registrar pagamento manual (Pix, dinheiro, maquininha, boleto, transferência)',
+  })
+  registrarPagamento(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(registrarPagamentoSchema) d: RegistrarPagamentoEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ) {
+    return this.contasServico.registrarPagamento(id, d, a, ip);
   }
 }
