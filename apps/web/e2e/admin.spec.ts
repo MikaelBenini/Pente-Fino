@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { codigoDoPasso, passoDe } from '../../api/src/admin/totp';
+import { codigoDoPasso, passoDe } from './totp';
 
 // Etapa 15.1: login da administração com segundo fator e a lista de contas.
 test('administração: 1º acesso configura o autenticador, entra e vê as contas', async ({

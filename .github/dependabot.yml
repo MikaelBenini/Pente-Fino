@@ -1,0 +1,30 @@
+# Dependências desatualizadas ou com falha de segurança viram pull request (que passa pelo CI).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      producao:
+        dependency-type: production
+        update-types: [minor, patch]
+      desenvolvimento:
+        dependency-type: development
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Sao_Paulo
+  - package-ecosystem: docker
+    directories: [/apps/api, /apps/worker, /apps/web]
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Sao_Paulo

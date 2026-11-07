@@ -10,3 +10,7 @@ next-env.d.ts
 docs
 packages/db/src/generated
 packages/db/prisma/migrations
+
+# Relatórios do Playwright (gerados ao rodar os testes)
+**/test-results
+**/playwright-report

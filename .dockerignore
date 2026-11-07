@@ -1,0 +1,16 @@
+# Só o código entra no contexto do build das imagens (o resto é refeito lá dentro).
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+.git
+.github
+.devcontainer
+.vscode
+.env
+.env.*
+!.env.example
+infra/backups
