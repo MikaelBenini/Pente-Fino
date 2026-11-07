@@ -5,11 +5,12 @@ import {
   formatarDataHora,
   NOME_PAPEL_PLATAFORMA,
   NOME_PLANO,
+  PLANOS,
   type ContaNaPlataforma,
   type RespostaEntrarAdmin,
   type UsuarioPlataformaSessao,
 } from '@pente-fino/shared';
-import { Botao, Campo } from '@pente-fino/ui';
+import { Botao, Campo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -19,6 +20,7 @@ import { Aviso } from '../aviso';
 import { Marca } from '../marca';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { FichaConta } from './ficha-conta';
 import { MetricasAdmin } from './metricas-admin';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
@@ -208,6 +210,10 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     queryFn: () => adminApi<ContaNaPlataforma[]>('contas'),
     enabled: u.papel === 'admin',
   });
+  const [aberta, setAberta] = useState<string | null>(null);
+  const [busca, setBusca] = useState('');
+  const [plano, setPlano] = useState('');
+  const [situacao, setSituacao] = useState('');
   if (u.papel !== 'admin')
     return (
       <p className="text-tinta-suave">
@@ -225,6 +231,39 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
           Plano, situação, datas e uso. Dados de clientes, comandas e conversas das barbearias não
           aparecem aqui.
         </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-full max-w-xs">
+            <Campo
+              id="busca-conta"
+              rotulo="Buscar barbearia"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+            />
+          </div>
+          <Selecao
+            id="filtro-plano"
+            rotulo="Plano"
+            value={plano}
+            onChange={(e) => setPlano(e.target.value)}
+            opcoes={[
+              { valor: '', rotulo: 'Todos' },
+              ...PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] })),
+            ]}
+          />
+          <Selecao
+            id="filtro-situacao"
+            rotulo="Situação"
+            value={situacao}
+            onChange={(e) => setSituacao(e.target.value)}
+            opcoes={[
+              { valor: '', rotulo: 'Todas' },
+              ...(Object.keys(NOME_STATUS) as ContaNaPlataforma['status'][]).map((s) => ({
+                valor: s,
+                rotulo: NOME_STATUS[s],
+              })),
+            ]}
+          />
+        </div>
         <Estado consulta={contas}>
           {() => (
             <Tabela rotulo="Contas das barbearias">
@@ -249,40 +288,55 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
                 </tr>
               </thead>
               <tbody>
-                {contas.data!.map((c) => (
-                  <tr key={c.id} className="border-b border-borda">
-                    <th scope="row" className={`${td} font-semibold`}>
-                      {c.nome}
-                    </th>
-                    <td className={td}>
-                      {NOME_PLANO[c.plano]} · {c.ciclo}
-                    </td>
-                    <td className={td}>
-                      <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>
-                      {c.status === 'teste' && c.testeAte && (
-                        <span className="block text-xs text-tinta-suave">
-                          até {formatarData(c.testeAte)}
-                        </span>
-                      )}
-                    </td>
-                    <td className={`${td} tabular-nums`}>{formatarData(c.criadaEm)}</td>
-                    <td className={`${td} tabular-nums`}>{c.unidades}</td>
-                    <td className={`${td} tabular-nums`}>{c.profissionais}</td>
-                    <td className={td}>{c.whatsappConectado ? 'Conectado' : 'Não'}</td>
-                    <td className={`${td} tabular-nums`}>{c.fechadas7Dias}</td>
-                    <td className={`${td} tabular-nums`}>
-                      {c.ultimaFechadaEm ? formatarDataHora(c.ultimaFechadaEm) : '—'}
-                    </td>
-                    <td className={`${td} tabular-nums`}>
-                      {c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '—'}
-                    </td>
-                  </tr>
-                ))}
+                {contas
+                  .data!.filter(
+                    (c) =>
+                      (!busca.trim() ||
+                        c.nome.toLowerCase().includes(busca.trim().toLowerCase())) &&
+                      (!plano || c.plano === plano) &&
+                      (!situacao || c.status === situacao),
+                  )
+                  .map((c) => (
+                    <tr key={c.id} className="border-b border-borda">
+                      <th scope="row" className={`${td} font-semibold`}>
+                        <button
+                          type="button"
+                          onClick={() => setAberta(c.id)}
+                          className="text-left underline decoration-borda-forte underline-offset-4 hover:decoration-modulo focus-visible:outline-2 focus-visible:outline-foco"
+                        >
+                          {c.nome}
+                        </button>
+                      </th>
+                      <td className={td}>
+                        {NOME_PLANO[c.plano]} · {c.ciclo}
+                      </td>
+                      <td className={td}>
+                        <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>
+                        {c.status === 'teste' && c.testeAte && (
+                          <span className="block text-xs text-tinta-suave">
+                            até {formatarData(c.testeAte)}
+                          </span>
+                        )}
+                      </td>
+                      <td className={`${td} tabular-nums`}>{formatarData(c.criadaEm)}</td>
+                      <td className={`${td} tabular-nums`}>{c.unidades}</td>
+                      <td className={`${td} tabular-nums`}>{c.profissionais}</td>
+                      <td className={td}>{c.whatsappConectado ? 'Conectado' : 'Não'}</td>
+                      <td className={`${td} tabular-nums`}>{c.fechadas7Dias}</td>
+                      <td className={`${td} tabular-nums`}>
+                        {c.ultimaFechadaEm ? formatarDataHora(c.ultimaFechadaEm) : '—'}
+                      </td>
+                      <td className={`${td} tabular-nums`}>
+                        {c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '—'}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </Tabela>
           )}
         </Estado>
       </section>
+      <FichaConta id={aberta} onFechar={() => setAberta(null)} />
     </main>
   );
 }

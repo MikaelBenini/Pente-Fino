@@ -1189,6 +1189,9 @@ model FaturaAssinatura {
   /// Página de pagamento (Pix, boleto ou cartão) do provedor.
   linkPagamento String?               @map("link_pagamento")
   idExterno     String?               @map("id_externo")
+  /// Pagamento manual: quem da plataforma recebeu (sem chave estrangeira) e o comprovante.
+  recebidoPorId String?               @map("recebido_por_id") @db.Uuid
+  comprovante   String?
   criadoEm      DateTime              @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm  DateTime              @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 

@@ -430,12 +430,12 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 
 **Contas e cobrança**
 
-- [ ] Lista de contas com busca e filtros (plano, status, vencimento, vendedor); ficha da conta com dono, unidades, profissionais, plano, datas e histórico de cobrança
-- [ ] Mudar plano, mensal ou anual, e a data de expiração (estender teste, dar cortesia), com motivo obrigatório; os limites do plano seguem valendo pela API
+- [ ] Lista de contas com busca e filtros (plano, status, vencimento, vendedor); ficha da conta com dono, unidades, profissionais, plano, datas e histórico de cobrança (em parte: busca por nome e filtros de plano e situação; a ficha (`plataforma_conta()`) traz quem paga, unidades, profissionais, plano, datas, cobranças e o histórico da administração. Falta o filtro por vendedor, que vem com a venda presencial)
+- [x] Mudar plano, mensal ou anual, e a data de expiração (estender teste, dar cortesia), com motivo obrigatório; os limites do plano seguem valendo pela API (feito: na ficha, "Mudar plano" (com a cobrança automática do Asaas acompanhando o valor) e "Estender teste ou dar cortesia" (padrão 7 dias depois do fim atual), sempre com motivo; vale na hora (as travas de assinatura e de plano esquecem o que guardaram))
 - [ ] Criar conta pela venda presencial: dados da barbearia e do dono, plano e período; o dono recebe o convite por e-mail e WhatsApp para criar a senha e entra direto na configuração guiada
-- [ ] Registrar pagamento manual: forma (Pix, dinheiro, cartão na maquininha, boleto, transferência), valor, data, período coberto, comprovante opcional e quem recebeu; o vencimento anda sozinho. Tabela `pagamento_assinatura` (manual ou Asaas, na mesma lista)
+- [x] Registrar pagamento manual: forma (Pix, dinheiro, cartão na maquininha, boleto, transferência), valor, data, período coberto, comprovante opcional e quem recebeu; o vencimento anda sozinho. Tabela `pagamento_assinatura` (manual ou Asaas, na mesma lista) (feito: na própria `fatura_assinatura` com `origem` manual, `recebido_por_id` e `comprovante`, na mesma lista das do Asaas; o período vai do início escolhido até um mês (ou um ano) depois (`fimDoPeriodo`) e a conta passa a ativa)
 - [ ] Como a conta é cobrada: Asaas automático ou manual pelo vendedor; a conta manual recebe aviso antes de vencer e entra no mesmo bloqueio suave
-- [ ] Bloquear, desbloquear e cancelar conta (só leitura, nunca apaga dado), com motivo; exportar os dados para quem cancela
+- [x] Bloquear, desbloquear e cancelar conta (só leitura, nunca apaga dado), com motivo; exportar os dados para quem cancela (feito: bloquear = suspensa, cancelar grava quando e o motivo (entra nos cancelamentos do mês); bloqueada ou cancelada, a barbearia lê tudo e o dono exporta os dados pela própria conta, porque ler continua livre)
 
 **Configurações do sistema**
 

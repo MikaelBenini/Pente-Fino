@@ -1,0 +1,462 @@
+'use client';
+
+import {
+  dataLocal,
+  fimDoPeriodo,
+  formatarData,
+  formatarDataHora,
+  formatarMoeda,
+  FORMAS_PAGAMENTO_MANUAL,
+  lerMoeda,
+  NOME_FORMA_MANUAL,
+  NOME_PLANO,
+  PLANOS,
+  precoPorMes,
+  type AcaoSituacao,
+  type FichaContaPlataforma,
+} from '@pente-fino/shared';
+import { Botao, Campo, Dialogo, Selecao } from '@pente-fino/ui';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, type ReactNode } from 'react';
+import { ErroApi } from '@/lib/api';
+import { Aviso } from '../aviso';
+import { Estado, Ficha, Tabela, td, th } from '../pagina';
+import { adminApi } from './admin-api';
+
+const NOME_ACAO: Record<string, string> = {
+  mudar_plano: 'Mudou o plano',
+  mudar_teste: 'Mudou o fim do teste',
+  bloquear: 'Bloqueou',
+  desbloquear: 'Desbloqueou',
+  cancelar: 'Cancelou',
+  registrar_pagamento: 'Registrou pagamento',
+};
+const mensagemDe = (e: unknown) =>
+  e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível salvar.';
+
+/** Bloco de ação com motivo: cada mudança fica na auditoria da plataforma com o motivo. */
+function Acao({
+  titulo,
+  children,
+  podeEnviar,
+  textoBotao,
+  tom = 'acao',
+  enviar,
+}: {
+  titulo: string;
+  children: ReactNode;
+  podeEnviar: boolean;
+  textoBotao: string;
+  tom?: 'acao' | 'perigo';
+  enviar: () => Promise<unknown>;
+}) {
+  const [erro, setErro] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  return (
+    <form
+      method="post"
+      noValidate
+      aria-label={titulo}
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setErro(null);
+        setOk(false);
+        setEnviando(true);
+        try {
+          await enviar();
+          setOk(true);
+        } catch (er) {
+          setErro(mensagemDe(er));
+        } finally {
+          setEnviando(false);
+        }
+      }}
+    >
+      <h3 className="font-semibold">{titulo}</h3>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {ok && (
+        <p role="status" className="text-sm text-acao-texto">
+          Feito. Ficou registrado no histórico.
+        </p>
+      )}
+      {children}
+      <Botao
+        type="submit"
+        className="self-start"
+        variante={tom === 'perigo' ? 'perigo' : 'acao'}
+        disabled={!podeEnviar}
+        carregando={enviando}
+      >
+        {textoBotao}
+      </Botao>
+    </form>
+  );
+}
+
+function CampoMotivo({
+  id,
+  valor,
+  onMudar,
+}: {
+  id: string;
+  valor: string;
+  onMudar: (v: string) => void;
+}) {
+  return (
+    <Campo
+      id={id}
+      rotulo="Motivo"
+      dica="Obrigatório: fica no histórico da conta."
+      value={valor}
+      onChange={(e) => onMudar(e.target.value)}
+    />
+  );
+}
+
+/** Ficha da conta na administração: dados de quem paga, estrutura, cobrança, ações e histórico. */
+export function FichaConta({ id, onFechar }: { id: string | null; onFechar: () => void }) {
+  const cliente = useQueryClient();
+  const chave = ['admin', 'conta', id] as const;
+  const ficha = useQuery({
+    queryKey: chave,
+    queryFn: () => adminApi<FichaContaPlataforma>(`contas/${id}`),
+    enabled: !!id,
+  });
+  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin'] });
+  return (
+    <Dialogo
+      aberto={!!id}
+      titulo={ficha.data?.nome ?? 'Conta'}
+      descricao="Assinatura, estrutura e cobrança. Sem dados de clientes da barbearia."
+      onFechar={onFechar}
+      largura="larga"
+    >
+      <Estado consulta={ficha}>
+        {() => <Conteudo f={ficha.data!} contaId={id!} atualizar={atualizar} />}
+      </Estado>
+    </Dialogo>
+  );
+}
+
+function Conteudo({
+  f,
+  contaId,
+  atualizar,
+}: {
+  f: FichaContaPlataforma;
+  contaId: string;
+  atualizar: () => Promise<void>;
+}) {
+  const hoje = dataLocal(new Date());
+  const [plano, setPlano] = useState(f.plano);
+  const [ciclo, setCiclo] = useState(f.ciclo);
+  const [motivoPlano, setMotivoPlano] = useState('');
+  // Padrão: 7 dias depois do fim do teste atual (ou de hoje, se já acabou); nunca encurta sem querer.
+  const baseTeste =
+    f.testeAte && dataLocal(new Date(f.testeAte)) > hoje ? dataLocal(new Date(f.testeAte)) : hoje;
+  const [ate, setAte] = useState(() => {
+    const d = new Date(`${baseTeste}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 7);
+    return d.toISOString().slice(0, 10);
+  });
+  const [motivoTeste, setMotivoTeste] = useState('');
+  const [acao, setAcao] = useState<AcaoSituacao>(
+    f.status === 'ativa' || f.status === 'teste' ? 'bloquear' : 'desbloquear',
+  );
+  const [motivoSituacao, setMotivoSituacao] = useState('');
+  const unidades = Math.max(1, f.unidades.filter((u) => u.ativa).length);
+  const sugerido = precoPorMes(f.plano, f.ciclo, unidades) * (f.ciclo === 'anual' ? 12 : 1);
+  const [valor, setValor] = useState((sugerido / 100).toFixed(2).replace('.', ','));
+  const [forma, setForma] = useState<(typeof FORMAS_PAGAMENTO_MANUAL)[number]>('pix');
+  const [pagoEm, setPagoEm] = useState(hoje);
+  const [inicio, setInicio] = useState(hoje);
+  const [comprovante, setComprovante] = useState('');
+  const motivoOk = (m: string) => m.trim().length >= 5;
+  const base = `contas/${contaId}`;
+
+  return (
+    <div className="flex flex-col gap-6">
+      <dl className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">Plano</dt>
+          <dd className="font-semibold">
+            {NOME_PLANO[f.plano]} · {f.ciclo} ·{' '}
+            {f.cobrancaAutomatica ? 'cobrança automática' : 'cobrança manual'}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+            Situação
+          </dt>
+          <dd>
+            <Ficha tom={f.status === 'ativa' ? 'acao' : f.status === 'teste' ? 'aviso' : 'perigo'}>
+              {f.status}
+            </Ficha>
+            {f.testeAte && f.status === 'teste' && (
+              <span className="ml-2 text-sm text-tinta-suave">até {formatarData(f.testeAte)}</span>
+            )}
+            {f.motivoCancelamento && (
+              <span className="block text-sm text-tinta-suave">Motivo: {f.motivoCancelamento}</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">Desde</dt>
+          <dd className="tabular-nums">{formatarData(f.criadaEm)}</dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+            Quem paga
+          </dt>
+          <dd>
+            {f.donos.length === 0
+              ? '—'
+              : f.donos.map((d) => (
+                  <span key={d.email} className="block">
+                    {d.nome} · {d.email}
+                    {d.telefone ? ` · ${d.telefone}` : ''}
+                  </span>
+                ))}
+            {f.documento && (
+              <span className="block text-sm text-tinta-suave">CPF/CNPJ {f.documento}</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+            Estrutura
+          </dt>
+          <dd>
+            {f.unidades.map((u) => u.nome + (u.ativa ? '' : ' (inativa)')).join(', ') || '—'} ·{' '}
+            {f.profissionais} {f.profissionais === 1 ? 'profissional' : 'profissionais'}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Acao
+          titulo="Registrar pagamento"
+          textoBotao="Registrar pagamento"
+          podeEnviar={(lerMoeda(valor) ?? 0) > 0}
+          enviar={async () => {
+            await adminApi(`${base}/pagamentos`, {
+              corpo: {
+                valor: lerMoeda(valor),
+                forma,
+                pagoEm,
+                periodoInicio: inicio,
+                comprovante: comprovante.trim() || null,
+              },
+            });
+            await atualizar();
+          }}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo
+              id="pag-valor"
+              rotulo="Valor (R$)"
+              inputMode="decimal"
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+            />
+            <Selecao
+              id="pag-forma"
+              rotulo="Forma"
+              value={forma}
+              onChange={(e) => setForma(e.target.value as typeof forma)}
+              opcoes={FORMAS_PAGAMENTO_MANUAL.map((x) => ({
+                valor: x,
+                rotulo: NOME_FORMA_MANUAL[x],
+              }))}
+            />
+            <Campo
+              id="pag-data"
+              rotulo="Pago em"
+              type="date"
+              value={pagoEm}
+              onChange={(e) => setPagoEm(e.target.value)}
+            />
+            <Campo
+              id="pag-inicio"
+              rotulo="Cobre a partir de"
+              type="date"
+              value={inicio}
+              onChange={(e) => setInicio(e.target.value)}
+              dica={`Até ${formatarData(`${fimDoPeriodo(inicio, f.ciclo)}T12:00:00Z`)} (${f.ciclo})`}
+            />
+          </div>
+          <Campo
+            id="pag-comprovante"
+            rotulo="Comprovante (opcional)"
+            dica="Código do Pix, número do recibo ou do boleto."
+            value={comprovante}
+            onChange={(e) => setComprovante(e.target.value)}
+          />
+        </Acao>
+
+        <Acao
+          titulo="Mudar plano"
+          textoBotao="Mudar plano"
+          podeEnviar={motivoOk(motivoPlano) && (plano !== f.plano || ciclo !== f.ciclo)}
+          enviar={async () => {
+            await adminApi(`${base}/plano`, {
+              metodo: 'PUT',
+              corpo: { plano, ciclo, motivo: motivoPlano },
+            });
+            setMotivoPlano('');
+            await atualizar();
+          }}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Selecao
+              id="conta-plano"
+              rotulo="Plano"
+              value={plano}
+              onChange={(e) => setPlano(e.target.value as typeof plano)}
+              opcoes={PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] }))}
+            />
+            <Selecao
+              id="conta-ciclo"
+              rotulo="Ciclo"
+              value={ciclo}
+              onChange={(e) => setCiclo(e.target.value as typeof ciclo)}
+              opcoes={[
+                { valor: 'mensal', rotulo: 'Mensal' },
+                { valor: 'anual', rotulo: 'Anual' },
+              ]}
+            />
+          </div>
+          <CampoMotivo id="motivo-plano" valor={motivoPlano} onMudar={setMotivoPlano} />
+        </Acao>
+
+        <Acao
+          titulo="Estender teste ou dar cortesia"
+          textoBotao="Salvar data"
+          podeEnviar={motivoOk(motivoTeste)}
+          enviar={async () => {
+            await adminApi(`${base}/teste`, { metodo: 'PUT', corpo: { ate, motivo: motivoTeste } });
+            setMotivoTeste('');
+            await atualizar();
+          }}
+        >
+          <Campo
+            id="teste-ate"
+            rotulo="Usa sem pagar até"
+            type="date"
+            value={ate}
+            onChange={(e) => setAte(e.target.value)}
+          />
+          <CampoMotivo id="motivo-teste" valor={motivoTeste} onMudar={setMotivoTeste} />
+        </Acao>
+
+        <Acao
+          titulo="Bloquear, desbloquear ou cancelar"
+          textoBotao={
+            acao === 'cancelar'
+              ? 'Cancelar a conta'
+              : acao === 'bloquear'
+                ? 'Bloquear'
+                : 'Desbloquear'
+          }
+          tom={acao === 'desbloquear' ? 'acao' : 'perigo'}
+          podeEnviar={motivoOk(motivoSituacao)}
+          enviar={async () => {
+            await adminApi(`${base}/situacao`, {
+              metodo: 'PUT',
+              corpo: { acao, motivo: motivoSituacao },
+            });
+            setMotivoSituacao('');
+            await atualizar();
+          }}
+        >
+          <Selecao
+            id="conta-acao"
+            rotulo="O que fazer"
+            value={acao}
+            onChange={(e) => setAcao(e.target.value as AcaoSituacao)}
+            opcoes={[
+              { valor: 'bloquear', rotulo: 'Bloquear (só consulta)' },
+              { valor: 'desbloquear', rotulo: 'Desbloquear (volta a usar)' },
+              { valor: 'cancelar', rotulo: 'Cancelar (só consulta; nada se apaga)' },
+            ]}
+          />
+          <CampoMotivo id="motivo-situacao" valor={motivoSituacao} onMudar={setMotivoSituacao} />
+          <p className="text-sm text-tinta-suave">
+            Bloqueada ou cancelada, a barbearia continua lendo tudo e exportando os dados; só não
+            grava.
+          </p>
+        </Acao>
+      </div>
+
+      <section aria-labelledby="titulo-faturas-conta" className="flex flex-col gap-2">
+        <h3 id="titulo-faturas-conta" className="font-semibold">
+          Cobranças
+        </h3>
+        {f.faturas.length === 0 ? (
+          <p className="text-sm text-tinta-suave">Nenhuma cobrança ainda.</p>
+        ) : (
+          <Tabela rotulo="Cobranças da conta">
+            <thead>
+              <tr className="border-b border-borda">
+                {['Período', 'Valor', 'Situação', 'Origem', 'Pago em'].map((c) => (
+                  <th key={c} scope="col" className={th}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {f.faturas.map((x, i) => (
+                <tr key={i} className="border-b border-borda">
+                  <td className={`${td} tabular-nums`}>
+                    {formatarData(`${x.periodoInicio}T12:00:00Z`)} a{' '}
+                    {formatarData(`${x.periodoFim}T12:00:00Z`)}
+                  </td>
+                  <td className={`${td} tabular-nums`}>{formatarMoeda(x.valor)}</td>
+                  <td className={td}>{x.status}</td>
+                  <td className={td}>
+                    {x.origem === 'manual' ? 'Manual' : 'Asaas'}
+                    {x.forma ? ` · ${x.forma}` : ''}
+                    {x.comprovante ? ` · ${x.comprovante}` : ''}
+                  </td>
+                  <td className={`${td} tabular-nums`}>
+                    {x.pagaEm ? formatarDataHora(x.pagaEm) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Tabela>
+        )}
+      </section>
+
+      <section aria-labelledby="titulo-historico-conta" className="flex flex-col gap-2">
+        <h3 id="titulo-historico-conta" className="font-semibold">
+          Histórico da administração
+        </h3>
+        {f.historico.length === 0 ? (
+          <p className="text-sm text-tinta-suave">Nenhuma ação ainda.</p>
+        ) : (
+          <ul className="flex flex-col gap-1 text-sm" aria-label="Histórico da conta">
+            {f.historico.map((h, i) => (
+              <li
+                key={i}
+                className="flex flex-wrap justify-between gap-x-3 border-b border-borda py-1"
+              >
+                <span>
+                  <strong>{NOME_ACAO[h.acao] ?? h.acao}</strong>
+                  {h.quem ? ` · ${h.quem}` : ''}
+                  {h.motivo ? ` · “${h.motivo}”` : ''}
+                </span>
+                <span className="tabular-nums text-tinta-suave">
+                  {formatarDataHora(h.criadoEm)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}

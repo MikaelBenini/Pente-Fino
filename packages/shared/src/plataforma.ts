@@ -54,3 +54,118 @@ export interface ContaNaPlataforma {
   ultimaFechadaEm: string | null;
   ultimoAcessoEm: string | null;
 }
+
+// ─── Ações numa conta (sempre com motivo, na auditoria da plataforma) ─────
+
+const motivo = z
+  .string()
+  .trim()
+  .min(5, { error: 'Explique o motivo (pelo menos 5 letras).' })
+  .max(300);
+const diaISO = z.iso.date({ error: 'Data inválida.' });
+
+export const mudarPlanoContaSchema = z.object({
+  plano: z.enum(['basico', 'pro', 'premium']),
+  ciclo: z.enum(['mensal', 'anual']),
+  motivo,
+});
+export type MudarPlanoContaEntrada = z.infer<typeof mudarPlanoContaSchema>;
+
+/** Estender o teste ou dar cortesia: o último dia em que a conta usa sem pagar. */
+export const mudarTesteContaSchema = z.object({ ate: diaISO, motivo });
+export type MudarTesteContaEntrada = z.infer<typeof mudarTesteContaSchema>;
+
+export const ACOES_SITUACAO = ['bloquear', 'desbloquear', 'cancelar'] as const;
+export type AcaoSituacao = (typeof ACOES_SITUACAO)[number];
+export const mudarSituacaoContaSchema = z.object({ acao: z.enum(ACOES_SITUACAO), motivo });
+export type MudarSituacaoContaEntrada = z.infer<typeof mudarSituacaoContaSchema>;
+/** Bloquear = suspensa (só consulta); desbloquear = ativa; cancelar = cancelada (nada se apaga). */
+export const STATUS_DA_ACAO: Readonly<Record<AcaoSituacao, 'suspensa' | 'ativa' | 'cancelada'>> = {
+  bloquear: 'suspensa',
+  desbloquear: 'ativa',
+  cancelar: 'cancelada',
+};
+
+export const FORMAS_PAGAMENTO_MANUAL = [
+  'pix',
+  'dinheiro',
+  'cartao',
+  'boleto',
+  'transferencia',
+] as const;
+export const NOME_FORMA_MANUAL: Readonly<Record<(typeof FORMAS_PAGAMENTO_MANUAL)[number], string>> =
+  {
+    pix: 'Pix',
+    dinheiro: 'Dinheiro',
+    cartao: 'Cartão na maquininha',
+    boleto: 'Boleto',
+    transferencia: 'Transferência',
+  };
+
+export const registrarPagamentoSchema = z.object({
+  /** Centavos. */
+  valor: z.number().int().positive({ error: 'Informe o valor.' }),
+  forma: z.enum(FORMAS_PAGAMENTO_MANUAL),
+  pagoEm: diaISO,
+  /** Primeiro dia que o pagamento cobre; o fim sai do ciclo da conta (mês ou ano). */
+  periodoInicio: diaISO,
+  comprovante: z.string().trim().max(300).nullable().default(null),
+});
+export type RegistrarPagamentoEntrada = z.infer<typeof registrarPagamentoSchema>;
+
+/** Último dia coberto: um mês (ou um ano) depois do início, menos um dia. */
+export function fimDoPeriodo(inicio: string, ciclo: 'mensal' | 'anual'): string {
+  const [a, m, d] = inicio.split('-').map(Number) as [number, number, number];
+  const meses = ciclo === 'anual' ? 12 : 1;
+  const alvo = new Date(Date.UTC(a, m - 1 + meses, 1));
+  const ultimoDoMes = new Date(
+    Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  alvo.setUTCDate(Math.min(d, ultimoDoMes));
+  alvo.setUTCDate(alvo.getUTCDate() - 1);
+  return alvo.toISOString().slice(0, 10);
+}
+
+export interface FaturaNaPlataforma {
+  plano: PlanoConta;
+  ciclo: Ciclo;
+  valor: number;
+  status: 'aberta' | 'paga' | 'recusada' | 'cancelada';
+  origem: 'asaas' | 'manual';
+  forma: string | null;
+  vencimento: string;
+  periodoInicio: string;
+  periodoFim: string;
+  pagaEm: string | null;
+  comprovante: string | null;
+}
+
+export interface EventoDaConta {
+  acao: string;
+  quem: string | null;
+  motivo: string | null;
+  antes: unknown;
+  depois: unknown;
+  criadoEm: string;
+}
+
+/** Ficha da conta na administração: quem paga, a estrutura e a cobrança (sem cliente). */
+export interface FichaContaPlataforma {
+  id: string;
+  nome: string;
+  plano: PlanoConta;
+  ciclo: Ciclo;
+  status: ContaNaPlataforma['status'];
+  criadaEm: string;
+  testeAte: string | null;
+  configuradaEm: string | null;
+  cobrancaAutomatica: boolean;
+  documento: string | null;
+  canceladaEm: string | null;
+  motivoCancelamento: string | null;
+  donos: { nome: string; email: string; telefone: string | null }[];
+  unidades: { nome: string; ativa: boolean }[];
+  profissionais: number;
+  faturas: FaturaNaPlataforma[];
+  historico: EventoDaConta[];
+}

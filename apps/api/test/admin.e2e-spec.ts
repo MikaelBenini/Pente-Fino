@@ -5,6 +5,7 @@ import { hash } from '@node-rs/argon2';
 import { criarPrisma, type PrismaClient } from '@pente-fino/db';
 import type {
   ContaNaPlataforma,
+  FichaContaPlataforma,
   MetricasDaPlataforma,
   RespostaEntrarAdmin,
 } from '@pente-fino/shared';
@@ -136,5 +137,130 @@ describe('administração do sistema', () => {
     expect(m.novas.porDia).toHaveLength(30);
     expect(m.receita.mrr).toBeGreaterThanOrEqual(0);
     await http().get('/clientes').set('authorization', `Bearer ${token}`).expect(401);
+  });
+});
+
+describe('ações da administração numa conta', () => {
+  const acoes = { email: `acoes-${sufixo}@pentefino.dev`, senha: 'senha-das-acoes-1' };
+  let token = '';
+  const comoAdmin = () => ({
+    get: (url: string) => http().get(url).set('authorization', `Bearer ${token}`),
+    put: (url: string, corpo: object) =>
+      http().put(url).set('authorization', `Bearer ${token}`).send(corpo),
+    post: (url: string, corpo: object) =>
+      http().post(url).set('authorization', `Bearer ${token}`).send(corpo),
+  });
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.create({
+      data: {
+        email: acoes.email,
+        nome: 'Ana Ações',
+        papel: 'admin',
+        senhaHash: await hash(acoes.senha),
+      },
+    });
+    token = (await entrarComSegundoFator(acoes)).token;
+  });
+  afterAll(async () => {
+    await plataforma.usuarioPlataforma.update({
+      where: { email: acoes.email },
+      data: { ativo: false },
+    });
+  });
+
+  it('ficha, plano, bloqueio, teste, pagamento manual e cancelamento: valem na hora e ficam na auditoria', async () => {
+    const adm = comoAdmin();
+    const dono = await como(app, a.emails.dono);
+    const url = `/admin/contas/${a.contaId}`;
+    const ficha = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+    expect(ficha).toMatchObject({ plano: 'premium', status: 'ativa', profissionais: 0 });
+    expect(ficha.donos.map((d) => d.email)).toEqual([a.emails.dono]);
+    expect(ficha.unidades).toHaveLength(2);
+
+    // Motivo é obrigatório.
+    await adm.put(`${url}/plano`, { plano: 'pro', ciclo: 'anual', motivo: 'ok' }).expect(400);
+    await adm
+      .put(`${url}/plano`, { plano: 'pro', ciclo: 'anual', motivo: 'Negociado na visita' })
+      .expect(200);
+    expect((await dono.get('/conta/situacao').expect(200)).body.plano).toBe('pro');
+
+    // Bloquear: a barbearia fica só para consulta; desbloquear volta.
+    await adm
+      .put(`${url}/situacao`, { acao: 'bloquear', motivo: 'Pix devolvido pelo banco' })
+      .expect(204);
+    await dono.post('/clientes', { nome: 'Não Grava' }).expect(402);
+    await dono.get('/clientes').expect(200);
+    await adm
+      .put(`${url}/situacao`, { acao: 'desbloquear', motivo: 'Pagou em dinheiro' })
+      .expect(204);
+    await dono.post('/clientes', { nome: 'Grava De Novo' }).expect(201);
+
+    // Cortesia: teste até uma data.
+    const ate = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+    await adm.put(`${url}/teste`, { ate, motivo: 'Cortesia da feira' }).expect(204);
+    expect(((await adm.get(url).expect(200)).body as FichaContaPlataforma).status).toBe('teste');
+
+    // Pagamento manual: fatura paga do período e a conta ativa.
+    const hoje = new Date().toISOString().slice(0, 10);
+    const pago = await adm
+      .post(`${url}/pagamentos`, {
+        valor: 12490 * 12,
+        forma: 'pix',
+        pagoEm: hoje,
+        periodoInicio: hoje,
+        comprovante: 'E123456',
+      })
+      .expect(201);
+    expect(pago.body.periodoFim > hoje).toBe(true);
+    const depois = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+    expect(depois.status).toBe('ativa');
+    expect(depois.faturas[0]).toMatchObject({
+      origem: 'manual',
+      status: 'paga',
+      valor: 12490 * 12,
+      forma: 'pix',
+      comprovante: 'E123456',
+    });
+
+    // Cancelar: nada se apaga, e não aceita mais pagamento.
+    await adm
+      .put(`${url}/situacao`, { acao: 'cancelar', motivo: 'Fechou a barbearia' })
+      .expect(204);
+    const cancelada = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+    expect(cancelada).toMatchObject({
+      status: 'cancelada',
+      motivoCancelamento: 'Fechou a barbearia',
+    });
+    await adm
+      .post(`${url}/pagamentos`, { valor: 100, forma: 'pix', pagoEm: hoje, periodoInicio: hoje })
+      .expect(409);
+    await dono.get('/clientes').expect(200);
+
+    expect(cancelada.historico.map((h) => h.acao)).toEqual([
+      'cancelar',
+      'registrar_pagamento',
+      'mudar_teste',
+      'desbloquear',
+      'bloquear',
+      'mudar_plano',
+    ]);
+    expect(cancelada.historico[0]).toMatchObject({
+      quem: 'Ana Ações',
+      motivo: 'Fechou a barbearia',
+    });
+
+    // Volta como estava para o resto do arquivo.
+    await adm
+      .put(`${url}/situacao`, { acao: 'desbloquear', motivo: 'Fim do teste e2e' })
+      .expect(204);
+    await adm
+      .put(`${url}/plano`, { plano: 'premium', ciclo: 'mensal', motivo: 'Fim do teste e2e' })
+      .expect(200);
+  });
+
+  it('conta que não existe: 404; sem sessão: 401', async () => {
+    await comoAdmin().get(`/admin/contas/${randomUUID()}`).expect(404);
+    await http().put(`/admin/contas/${a.contaId}/plano`).send({}).expect(401);
   });
 });

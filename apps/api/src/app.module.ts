@@ -43,6 +43,7 @@ import { OcupacaoController } from './desempenho/ocupacao.controller.js';
 import { RedeController } from './desempenho/rede.controller.js';
 import { AdminAuthController, AdminController } from './admin/admin.controller.js';
 import { AdminAuthService } from './admin/admin-auth.service.js';
+import { AdminContasService } from './admin/admin-contas.service.js';
 import { AdminGuard } from './admin/admin.guard.js';
 import { BancoPlataforma } from './admin/banco-plataforma.js';
 import { AvisosController } from './avisos/avisos.controller.js';
@@ -177,6 +178,7 @@ export class ComumModule {}
     ResumoService,
     BancoPlataforma,
     AdminAuthService,
+    AdminContasService,
     AdminGuard,
     BotService,
     ConversasService,
