@@ -1,5 +1,5 @@
 # HTTPS automático (Let's Encrypt) para os endereços do Pente Fino. DOMINIO e companhia vêm do
-# .env pelo docker-compose.prod.yml. Os registros A de app., api. e wa. apontam para a VPS.
+# .env pelo docker-compose.prod.yml. Os registros A de @, www, app, api e wa apontam para a VPS.
 {
 	email {$ACME_EMAIL}
 }
@@ -33,4 +33,9 @@ wa.{$DOMINIO} {
 		{$WA_USUARIO} {$WA_SENHA_HASH}
 	}
 	reverse_proxy evolution:8080
+}
+
+# Domínio principal e www levam ao painel (o site e o cadastro ficam em app.).
+{$DOMINIO}, www.{$DOMINIO} {
+	redir https://app.{$DOMINIO}{uri} permanent
 }

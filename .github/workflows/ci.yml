@@ -78,7 +78,7 @@ jobs:
         run: cp .env.example .env
 
       - name: Subir PostgreSQL e Redis
-        run: docker compose --env-file .env -f infra/docker-compose.dev.yml up -d --wait --wait-timeout 120 postgres redis
+        run: docker compose --env-file .env -f infra/docker-compose.dev.yml up -d --wait --wait-timeout 120 postgres redis mailpit
 
       - name: Compilar API, telas e pacotes
         run: pnpm turbo run build --filter=@pente-fino/api --filter=@pente-fino/web

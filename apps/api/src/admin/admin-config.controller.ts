@@ -45,7 +45,9 @@ import {
   smtpEntradaSchema,
   smtpGuardadoSchema,
   smtpParaTela,
+  type ResultadoTesteSmtp,
   type SmtpEntrada,
+  type SmtpGuardado,
   type SmtpNaTela,
   type ConfigTeste,
   type ConfiguracaoPublica,
@@ -63,6 +65,7 @@ import { Filas } from '../filas/filas.module.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
 import { BancoPlataforma } from './banco-plataforma.js';
+import { enviarTesteSmtp, testarConexaoSmtp } from './smtp-teste.js';
 
 const DIA_MS = 86_400_000;
 const avisoOuNada = z.object({ aviso: avisoGeralSchema.nullable() });
@@ -248,29 +251,56 @@ export class AdminConfigController {
     await this.gravar('smtp', null, a, ip, { voltarAoEnv: true });
   }
 
-  @Post('configuracoes/smtp/teste')
-  @HttpCode(HttpStatus.ACCEPTED)
-  @ApiOperation({ summary: 'Mandar um e-mail de teste para quem está na administração' })
-  async testarSmtp(
-    @AdminAtual() a: AdminAutenticado,
-  ): Promise<{ para: string; via: 'administracao' | 'env' }> {
-    const g = smtpGuardadoSchema.safeParse(await configuracaoSmtp(this.banco.prisma));
-    // Confere aqui se a senha guardada decifra: se não, o worker cairia no .env sem avisar.
-    if (g.success && g.data.senhaCifrada) {
-      try {
-        decifrar(g.data.senhaCifrada, this.config.plataforma.chave);
-      } catch {
-        throw Erros.conflito(
-          'A senha guardada não abre com a chave atual (PLATAFORMA_CHAVE mudou?). Salve a senha de novo.',
-        );
-      }
+  /** Senha guardada, decifrada; erro claro se a chave mudou. */
+  private senhaGuardada(g: SmtpGuardado): string {
+    if (!g.senhaCifrada) return '';
+    try {
+      return decifrar(g.senhaCifrada, this.config.plataforma.chave);
+    } catch {
+      throw Erros.conflito(
+        'A senha guardada não abre com a chave atual (PLATAFORMA_CHAVE mudou?). Salve a senha de novo.',
+      );
     }
-    await this.filas.emails.add('teste_smtp', {
+  }
+
+  @Post('configuracoes/smtp/conexao')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Testar a conexão com os dados da tela (antes de salvar); senha null = a guardada',
+  })
+  async testarConexao(@Corpo(smtpEntradaSchema) d: SmtpEntrada): Promise<ResultadoTesteSmtp> {
+    let senha = d.senha ?? '';
+    if (d.senha === null) {
+      const g = smtpGuardadoSchema.safeParse(await configuracaoSmtp(this.banco.prisma));
+      senha = g.success ? this.senhaGuardada(g.data) : '';
+    }
+    return testarConexaoSmtp({ ...d, senha });
+  }
+
+  @Post('configuracoes/smtp/teste')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Mandar agora um e-mail de teste para quem está na administração (SMTP salvo)',
+  })
+  async testarSmtp(@AdminAtual() a: AdminAutenticado): Promise<ResultadoTesteSmtp> {
+    const g = smtpGuardadoSchema.safeParse(await configuracaoSmtp(this.banco.prisma));
+    const env = process.env;
+    const dados = g.success
+      ? { ...g.data, senha: this.senhaGuardada(g.data) }
+      : {
+          host: env.SMTP_HOST ?? 'localhost',
+          porta: Number(env.SMTP_PORT) || 587,
+          seguro: env.SMTP_SECURE === 'true',
+          usuario: env.SMTP_USER ?? '',
+          senha: env.SMTP_PASSWORD ?? '',
+          remetente: env.EMAIL_FROM ?? 'Pente Fino <nao-responda@pentefino.dev>',
+        };
+    return enviarTesteSmtp(dados, {
+      de: dados.remetente,
       para: a.email,
       assunto: 'E-mail de teste do Pente Fino',
       texto: `Oi, ${a.nome}. Se este e-mail chegou, o envio está funcionando (${g.success ? `SMTP ${g.data.host}` : 'SMTP do .env'}).`,
     });
-    return { para: a.email, via: g.success ? 'administracao' : 'env' };
   }
 
   @Get('configuracoes/modelos-email')

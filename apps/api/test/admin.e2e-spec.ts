@@ -562,21 +562,38 @@ describe('SMTP configurável', () => {
       (guardado.valor as { senhaCifrada: string }).senhaCifrada,
     );
 
-    const teste = await req('post', '/admin/configuracoes/smtp/teste').expect(202);
-    expect(teste.body).toEqual({ para: quem.email, via: 'administracao' });
-    expect((await ultimoEmail(quem.email))?.assunto).toBe('E-mail de teste do Pente Fino');
+    // Testar conexão usa o que está na tela (antes de salvar), com o Mailpit do ambiente.
+    const mailpit = {
+      ...smtp,
+      host: process.env.SMTP_HOST ?? 'localhost',
+      porta: Number(process.env.SMTP_PORT ?? 1025),
+      usuario: '',
+      senha: '',
+    };
+    const conexao = await req('post', '/admin/configuracoes/smtp/conexao', mailpit).expect(200);
+    expect(conexao.body).toMatchObject({ ok: true });
+    const fechada = await req('post', '/admin/configuracoes/smtp/conexao', {
+      ...mailpit,
+      porta: 1,
+    }).expect(200);
+    expect(fechada.body.ok).toBe(false);
+    expect(fechada.body.mensagem).toMatch(/porta 1|Sem resposta/);
 
     await req('delete', '/admin/configuracoes/smtp').expect(204);
     expect((await req('get', '/admin/configuracoes/smtp').expect(200)).body).toEqual({
       smtp: null,
     });
+    // E-mail de teste sai na hora (SMTP do .env) e mostra a resposta do servidor.
+    const teste = await req('post', '/admin/configuracoes/smtp/teste').expect(200);
+    expect(teste.body).toMatchObject({ ok: true });
+    expect(teste.body.resposta).toMatch(/^250/);
   });
 });
 
 describe('modelos de e-mail', () => {
   const quem = { email: `modelos-${sufixo}@pentefino.dev`, senha: 'senha-dos-modelos-1' };
   let token = '';
-  const req = (metodo: 'get' | 'put' | 'delete', url: string, corpo?: object) => {
+  const req = (metodo: 'get' | 'put' | 'delete' | 'post', url: string, corpo?: object) => {
     const r = http()[metodo](url).set('authorization', `Bearer ${token}`);
     return corpo ? r.send(corpo) : r;
   };
