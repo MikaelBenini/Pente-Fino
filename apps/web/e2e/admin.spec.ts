@@ -40,7 +40,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await page.getByLabel('Código do autenticador').fill(codigoDoPasso(segredo, passoDe(new Date())));
   await page.getByRole('button', { name: 'Confirmar código' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Contas' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Números do negócio' })).toBeVisible();
+  await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Contas por situação' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Contas', exact: true })).toBeVisible();
   const tabela = page.getByRole('table', { name: 'Contas das barbearias' });
   await expect(
     tabela.getByRole('rowheader', { name: /Barbearia Pente Fino/ }).first(),

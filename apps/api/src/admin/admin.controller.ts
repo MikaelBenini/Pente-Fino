@@ -9,9 +9,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { contasDaPlataforma } from '@pente-fino/db';
+import { contasDaPlataforma, faturasDaPlataforma } from '@pente-fino/db';
 import {
   entrarAdminSchema,
+  metricasDaPlataforma,
+  type MetricasDaPlataforma,
   type ContaNaPlataforma,
   type EntrarAdminEntrada,
   type RespostaEntrarAdmin,
@@ -71,6 +73,39 @@ export class AdminController {
     return this.auth.sair(a, ip);
   }
 
+  @Get('metricas')
+  @PapeisPlataforma('admin')
+  @ApiOperation({
+    summary: 'Números do negócio: contas, MRR, conversão do teste, cancelamentos e renovações',
+  })
+  async metricas(): Promise<MetricasDaPlataforma> {
+    const [contas, faturas] = await Promise.all([
+      contasDaPlataforma(this.banco.prisma),
+      faturasDaPlataforma(this.banco.prisma),
+    ]);
+    return metricasDaPlataforma({
+      agora: new Date(),
+      contas: contas.map((c) => ({
+        id: c.id,
+        plano: c.plano,
+        ciclo: c.ciclo,
+        status: c.status,
+        criadaEm: c.criado_em,
+        testeAte: c.teste_ate,
+        cobrancaAutomatica: c.cobranca_automatica,
+        canceladaEm: c.cancelada_em,
+        motivoCancelamento: c.motivo_cancelamento,
+        unidades: c.unidades,
+      })),
+      faturas: faturas.map((f) => ({
+        contaId: f.conta_id,
+        status: f.status,
+        vencimento: f.vencimento.toISOString().slice(0, 10),
+        valor: f.valor,
+      })),
+    });
+  }
+
   @Get('contas')
   @PapeisPlataforma('admin')
   @ApiOperation({
@@ -88,11 +123,14 @@ export class AdminController {
       testeAte: iso(c.teste_ate),
       configuradaEm: iso(c.configurada_em),
       cobrancaAutomatica: c.cobranca_automatica,
+      canceladaEm: iso(c.cancelada_em),
+      motivoCancelamento: c.motivo_cancelamento,
       unidades: c.unidades,
       profissionais: c.profissionais,
       whatsappConectado: c.whatsapp_conectado,
       fechadas7Dias: c.fechadas_7_dias,
       ultimaFechadaEm: iso(c.ultima_fechada_em),
+      ultimoAcessoEm: iso(c.ultimo_acesso_em),
     }));
   }
 }

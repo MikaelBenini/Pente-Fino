@@ -45,9 +45,12 @@ export interface ContaNaPlataforma {
   testeAte: string | null;
   configuradaEm: string | null;
   cobrancaAutomatica: boolean;
+  canceladaEm: string | null;
+  motivoCancelamento: string | null;
   unidades: number;
   profissionais: number;
   whatsappConectado: boolean;
   fechadas7Dias: number;
   ultimaFechadaEm: string | null;
+  ultimoAcessoEm: string | null;
 }

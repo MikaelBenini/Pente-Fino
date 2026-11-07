@@ -19,6 +19,7 @@ import { Aviso } from '../aviso';
 import { Marca } from '../marca';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { MetricasAdmin } from './metricas-admin';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
 const NOME_STATUS: Record<ContaNaPlataforma['status'], string> = {
@@ -214,65 +215,74 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
       </p>
     );
   return (
-    <main className="flex flex-col gap-4">
-      <h1 className="text-3xl font-semibold">Contas</h1>
-      <p className="text-sm text-tinta-suave">
-        Plano, situação, datas e uso. Dados de clientes, comandas e conversas das barbearias não
-        aparecem aqui.
-      </p>
-      <Estado consulta={contas}>
-        {() => (
-          <Tabela rotulo="Contas das barbearias">
-            <thead>
-              <tr className="border-b border-borda">
-                {[
-                  'Barbearia',
-                  'Plano',
-                  'Situação',
-                  'Criada',
-                  'Unidades',
-                  'Profissionais',
-                  'WhatsApp',
-                  'Fechadas (7 dias)',
-                  'Última fechada',
-                ].map((c) => (
-                  <th key={c} scope="col" className={th}>
-                    {c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {contas.data!.map((c) => (
-                <tr key={c.id} className="border-b border-borda">
-                  <th scope="row" className={`${td} font-semibold`}>
-                    {c.nome}
-                  </th>
-                  <td className={td}>
-                    {NOME_PLANO[c.plano]} · {c.ciclo}
-                  </td>
-                  <td className={td}>
-                    <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>
-                    {c.status === 'teste' && c.testeAte && (
-                      <span className="block text-xs text-tinta-suave">
-                        até {formatarData(c.testeAte)}
-                      </span>
-                    )}
-                  </td>
-                  <td className={`${td} tabular-nums`}>{formatarData(c.criadaEm)}</td>
-                  <td className={`${td} tabular-nums`}>{c.unidades}</td>
-                  <td className={`${td} tabular-nums`}>{c.profissionais}</td>
-                  <td className={td}>{c.whatsappConectado ? 'Conectado' : 'Não'}</td>
-                  <td className={`${td} tabular-nums`}>{c.fechadas7Dias}</td>
-                  <td className={`${td} tabular-nums`}>
-                    {c.ultimaFechadaEm ? formatarDataHora(c.ultimaFechadaEm) : '—'}
-                  </td>
+    <main className="flex flex-col gap-10">
+      <MetricasAdmin />
+      <section aria-labelledby="titulo-contas" className="flex flex-col gap-4">
+        <h2 id="titulo-contas" className="text-2xl font-semibold">
+          Contas
+        </h2>
+        <p className="text-sm text-tinta-suave">
+          Plano, situação, datas e uso. Dados de clientes, comandas e conversas das barbearias não
+          aparecem aqui.
+        </p>
+        <Estado consulta={contas}>
+          {() => (
+            <Tabela rotulo="Contas das barbearias">
+              <thead>
+                <tr className="border-b border-borda">
+                  {[
+                    'Barbearia',
+                    'Plano',
+                    'Situação',
+                    'Criada',
+                    'Unidades',
+                    'Profissionais',
+                    'WhatsApp',
+                    'Fechadas (7 dias)',
+                    'Última fechada',
+                    'Último acesso',
+                  ].map((c) => (
+                    <th key={c} scope="col" className={th}>
+                      {c}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </Tabela>
-        )}
-      </Estado>
+              </thead>
+              <tbody>
+                {contas.data!.map((c) => (
+                  <tr key={c.id} className="border-b border-borda">
+                    <th scope="row" className={`${td} font-semibold`}>
+                      {c.nome}
+                    </th>
+                    <td className={td}>
+                      {NOME_PLANO[c.plano]} · {c.ciclo}
+                    </td>
+                    <td className={td}>
+                      <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>
+                      {c.status === 'teste' && c.testeAte && (
+                        <span className="block text-xs text-tinta-suave">
+                          até {formatarData(c.testeAte)}
+                        </span>
+                      )}
+                    </td>
+                    <td className={`${td} tabular-nums`}>{formatarData(c.criadaEm)}</td>
+                    <td className={`${td} tabular-nums`}>{c.unidades}</td>
+                    <td className={`${td} tabular-nums`}>{c.profissionais}</td>
+                    <td className={td}>{c.whatsappConectado ? 'Conectado' : 'Não'}</td>
+                    <td className={`${td} tabular-nums`}>{c.fechadas7Dias}</td>
+                    <td className={`${td} tabular-nums`}>
+                      {c.ultimaFechadaEm ? formatarDataHora(c.ultimaFechadaEm) : '—'}
+                    </td>
+                    <td className={`${td} tabular-nums`}>
+                      {c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Tabela>
+          )}
+        </Estado>
+      </section>
     </main>
   );
 }
