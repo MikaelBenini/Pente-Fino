@@ -5,7 +5,8 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", "!**/*.spec.ts", "!**/*.test.ts", "!test/**"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["APP_URL", "NEXT_STANDALONE"]
     },
     "dev": {
       "dependsOn": ["^build"],
