@@ -446,7 +446,7 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 - [x] Aviso geral para todas as contas (manutenção programada, novidade), com data de início e fim (feito: "Aviso geral" em Configurações, com tipo, início e fim; faixa no topo do painel de todas as barbearias só enquanto vale (`GET /sistema/aviso`, `avisoVigente`); tirar o aviso é imediato)
 - [x] Saúde do sistema: filas (e-mail, WhatsApp), conexões do WhatsApp caídas por conta, erros recentes (feito: aba "Saúde do sistema" em `/admin`: banco, as cinco filas (esperando, agendados, rodando, falhas), WhatsApp que caiu sem o dono pedir por conta e unidade (`plataforma_conexoes_caidas()`) e os trabalhos que falharam nas últimas 24 h, com o motivo; atualiza a cada 30 s)
 
-- [ ] **Pronto quando:** um vendedor cria uma conta na rua, registra o Pix na hora, o dono recebe o convite e entra; o admin vê a conta nova nas métricas, muda o plano com motivo e tudo fica na auditoria, sem nunca ver um dado de cliente da barbearia
+- [x] **Pronto quando:** um vendedor cria uma conta na rua, registra o Pix na hora, o dono recebe o convite e entra; o admin vê a conta nova nas métricas, muda o plano com motivo e tudo fica na auditoria, sem nunca ver um dado de cliente da barbearia (conferido no teste e2e `pronto quando (etapa 15.1)` em `apps/api/test/admin.e2e-spec.ts`: o vendedor vende e registra o Pix, o dono recebe o convite, entra e cadastra um cliente; o admin vê a conta nas métricas e na lista, muda o plano com motivo, o histórico mostra quem fez cada ação e nenhuma resposta da administração traz o cliente da barbearia)
 
 ## Etapa 16 · Preparação da VPS
 
