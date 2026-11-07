@@ -9,6 +9,10 @@ updates:
       time: '06:00'
       timezone: America/Sao_Paulo
     open-pull-requests-limit: 5
+    ignore:
+      # Os tipos seguem o Node da produção (24 LTS).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       producao:
         dependency-type: production
