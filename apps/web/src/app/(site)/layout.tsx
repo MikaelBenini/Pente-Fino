@@ -1,5 +1,6 @@
 import { CabecalhoSite } from '@/componentes/site/cabecalho-site';
 import { RodapeSite } from '@/componentes/site/rodape-site';
+import { AvisoCookies, TagGoogle } from '@/componentes/site/tag-google';
 
 export default function LayoutSite({ children }: LayoutProps<'/'>) {
   return (
@@ -15,6 +16,8 @@ export default function LayoutSite({ children }: LayoutProps<'/'>) {
         {children}
       </main>
       <RodapeSite />
+      <TagGoogle />
+      <AvisoCookies />
     </div>
   );
 }

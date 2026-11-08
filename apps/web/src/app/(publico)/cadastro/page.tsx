@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { AvisoCookies, TagGoogle } from '@/componentes/site/tag-google';
 import { FormularioCadastro } from '@/componentes/telas/cadastro';
 
 export const metadata: Metadata = {
@@ -10,8 +11,12 @@ export const metadata: Metadata = {
 
 export default function Pagina() {
   return (
-    <Suspense>
-      <FormularioCadastro />
-    </Suspense>
+    <>
+      <TagGoogle />
+      <Suspense>
+        <FormularioCadastro />
+      </Suspense>
+      <AvisoCookies />
+    </>
   );
 }
