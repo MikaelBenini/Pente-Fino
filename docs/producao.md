@@ -72,14 +72,22 @@ privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os va
 ## Monitoramento
 
 - Uptime Kuma em `https://status.seudominio` (registro A `status`). **Crie a conta de administrador
-  logo no primeiro acesso.** Monitores sugeridos:
-  - HTTP: `https://seudominio/entrar` e `https://api.seudominio/health` (palavra-chave `"ok"`), a cada 60 s;
-  - Push "Backup do dia" (intervalo 26 h): a URL vai em `BACKUP_AVISO_URL` no `.env`;
-  - Push "Disco e memória" (intervalo 10 min): a URL vai em `VIGIA_AVISO_URL` (`vigia.sh`, cron de 5 min,
-    acusa disco acima de 80% ou memória acima de 90%);
-  - HTTP "WhatsApp": `http://evolution:8080/instance/connectionState/<instância>` com o cabeçalho
-    `apikey` (`EVOLUTION_API_KEY` do `.env`) e palavra-chave `"open"`.
-- Notificação: em Configurações → Notificações, e-mail (SMTP do Brevo) ou Telegram.
+  logo no primeiro acesso.** Depois, na VPS:
+
+  ```bash
+  cd /opt/barbearia && ./status.sh
+  ```
+
+  O script pede o login do Kuma (não grava) e o e-mail que recebe os alertas, e então:
+  - cria os monitores "Site e painel", "API" (`/health` com a palavra `ok`), "Painel do WhatsApp"
+    (401 conta como no ar, porque tem senha), "Backup do dia" (push, 26 h) e "Disco e memória"
+    (push, 15 min);
+  - cria o alerta por e-mail com o SMTP do `.env` (Brevo), ligado em todos os monitores;
+  - monta a página pública `https://status.seudominio/status/pente-fino`, em dois grupos (Sistema e
+    Servidor);
+  - grava `BACKUP_AVISO_URL` e `VIGIA_AVISO_URL` no `.env` e já manda o primeiro aviso.
+
+  Pode rodar de novo: o que já existe não é duplicado. O painel interno continua com login.
 - Backup: ver docs/restaurar.md.
 
 ## Comandos úteis
