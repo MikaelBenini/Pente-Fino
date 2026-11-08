@@ -114,6 +114,8 @@ export const remarcarSchema = z.object({
 export const cancelarSchema = z.object({
   motivo: z.string().trim().min(3, { error: 'Diga o motivo.' }).max(200),
   falta: z.boolean().default(false),
+  /** Cancelado pela barbearia (não falta): manda o aviso ao cliente pelo WhatsApp. */
+  avisarCliente: z.boolean().default(false),
 });
 
 export const consultaAgendaSchema = z.object({

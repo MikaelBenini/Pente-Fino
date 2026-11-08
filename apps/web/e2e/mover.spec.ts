@@ -78,7 +78,9 @@ test('a recepção arrasta o horário para outro barbeiro e 30 min depois, e des
       `Mover o horário de Corte do Arrasta das \\d{2}:\\d{2} com Rafael para \\d{2}:\\d{2} com \\w+\\?`,
     ),
   );
-  await expect(confirmar).toContainText('O cliente recebe o aviso pelo WhatsApp');
+  await expect(
+    confirmar.getByRole('checkbox', { name: 'Avisar o cliente pelo WhatsApp do novo horário' }),
+  ).toBeChecked();
   await confirmar.getByRole('button', { name: 'Mover' }).click();
   await expect(page.getByRole('status').filter({ hasText: /Horário movido para/ })).toBeVisible();
   await expect(destino.getByRole('button', { name: new RegExp(cliente) })).toBeVisible();

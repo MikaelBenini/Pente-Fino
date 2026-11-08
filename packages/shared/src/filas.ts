@@ -141,6 +141,13 @@ export interface HorarioMudou {
   mudouHorario: boolean;
 }
 
+/** A barbearia cancelou o horário e pediu para avisar o cliente. */
+export interface HorarioCancelado {
+  tipo: 'horario_cancelado';
+  contaId: string;
+  agendamentoId: string;
+}
+
 /** Rotina dos avisos da equipe (a cada 15 min): comandas pendentes para a recepção. */
 export interface RotinaDosAvisos {
   tipo: 'avisos';
@@ -164,6 +171,7 @@ export type TrabalhoWhatsappEntrada =
   | VagaLiberada
   | RemarcacaoPorAtraso
   | HorarioMudou
+  | HorarioCancelado
   | RotinaDosAvisos
   | RotinaCobrancaManual;
 

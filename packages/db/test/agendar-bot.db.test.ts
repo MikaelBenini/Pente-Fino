@@ -77,6 +77,12 @@ async function comecarAgendar(telefone: string, quando = agora) {
   return r.includes('Como você prefere marcar?') ? fala(telefone, '1', quando) : r;
 }
 
+/** Escolhe um serviço e, na pergunta "quer adicionar mais algum?", segue para o horário. */
+async function escolherServico(telefone: string, n: string, quando = agora) {
+  const r = await fala(telefone, n, quando);
+  return r.includes('Quer adicionar mais algum serviço?') ? fala(telefone, '0', quando) : r;
+}
+
 beforeAll(async () => {
   prisma = criarPrisma();
   await naMinhaConta(async (tx) => {
@@ -171,11 +177,26 @@ describe('agendar pela conversa', () => {
     expect(ag!.comanda).toMatchObject({ status: 'prevista', totalLiquido: 8000 });
   });
 
+  it('depois de um serviço, pergunta se quer adicionar outro; somar segue para o dia', async () => {
+    const t3 = '5511977773333';
+    await fala(t3, 'oi');
+    await comecarAgendar(t3);
+    const mais = await fala(t3, '2'); // Corte
+    expect(mais).toContain('✅ Anotado: Corte');
+    expect(mais).toContain('Quer adicionar mais algum serviço?');
+    expect(mais).toMatch(/1\. Barba/);
+    expect(mais).toContain('0. Não, escolher o horário');
+    expect(await fala(t3, '9')).toContain('Responda o número de outro serviço');
+    const dias = await fala(t3, '1'); // + Barba: não sobra outro, vai para o dia
+    expect(dias).toContain('Qual dia fica melhor?');
+    await fala(t3, '0'); // volta ao menu sem marcar
+  });
+
   it('horário ocupado por outra pessoa no meio: avisa e mostra os que sobraram', async () => {
     const t2 = '5511977772222';
     await fala(t2, 'oi');
     await comecarAgendar(t2);
-    await fala(t2, '2'); // Corte
+    await escolherServico(t2, '2'); // Corte
     await fala(t2, '1'); // hoje
     await fala(t2, '1'); // 09:00 → resumo
     // Outra pessoa pega as 09:00 antes da confirmação.
@@ -427,7 +448,7 @@ describe('regras da unidade', () => {
     const tel = '5511955550001';
     await fala(tel, 'oi');
     await comecarAgendar(tel);
-    const dias = await fala(tel, '2'); // Corte → dias
+    const dias = await escolherServico(tel, '2'); // Corte → dias
     expect(dias).toContain('Qual dia fica melhor?');
     expect(dias).not.toContain('Hoje');
   });
@@ -437,7 +458,7 @@ describe('regras da unidade', () => {
     const tel = '5511955550003';
     await fala(tel, 'oi');
     await comecarAgendar(tel);
-    await fala(tel, '2');
+    await escolherServico(tel, '2');
     // Hoje não sobra horário com a folga; amanhã é a opção 1 (outro cliente das 09:00 às 09:30).
     const horarios = await fala(tel, '1');
     // Sem intervalo, o primeiro seria 09:30; com 30 min de folga, só a partir das 10:00.
@@ -492,7 +513,7 @@ describe('assistente da equipe', () => {
     const marcar = async () => {
       await fala(cli, 'oi', quando);
       await comecarAgendar(cli, quando);
-      await fala(cli, '2', quando); // Corte
+      await escolherServico(cli, '2', quando); // Corte
       await fala(cli, '2', quando); // amanhã
       await fala(cli, '1', quando);
       return fala(cli, '1', quando);
@@ -1304,7 +1325,7 @@ describe('lista de espera pela conversa e "avisar se vagar antes"', () => {
       await tx.cliente.update({ where: { id: c.id }, data: { consentimentoMsg: true } });
     });
     await comecarAgendar(tel, seg);
-    await fala(tel, '2', seg); // Corte
+    await escolherServico(tel, '2', seg); // Corte
     const horarios = await fala(tel, '2', seg); // amanhã (terça)
     expect(horarios).toMatch(/1\. 10:30/);
     expect(horarios).toContain('Nenhum serve: me avise se vagar neste dia');
@@ -1338,7 +1359,7 @@ describe('lista de espera pela conversa e "avisar se vagar antes"', () => {
     const tel = '5511944100002';
     await fala(tel, 'oi', seg);
     await comecarAgendar(tel, seg);
-    await fala(tel, '2', seg);
+    await escolherServico(tel, '2', seg);
     const horarios = await fala(tel, '2', seg);
     const n = /(\d+)\. Nenhum serve/.exec(horarios)![1]!;
     expect(await fala(tel, n, seg)).toContain('Se vagar um horário nesse dia, eu te aviso');

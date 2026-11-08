@@ -64,3 +64,18 @@ export function textoHorarioMudou(d: {
       : 'Se não der para você, é só responder esta mensagem.',
   ].join('\n');
 }
+
+/** Mensagem ao cliente quando a barbearia cancela o horário (com "Avisar o cliente" marcado). */
+export function textoHorarioCancelado(d: {
+  cliente: string | null;
+  diaRotulo: string;
+  inicio: string;
+  servicos: readonly string[];
+}): string {
+  const ola = d.cliente ? `Oi, ${primeiro(d.cliente)}!` : 'Oi!';
+  const oque = d.servicos.length ? ` (${d.servicos.join(' + ')})` : '';
+  return [
+    `${ola} Precisamos cancelar o seu horário de ${d.diaRotulo}, às ${formatarHora(d.inicio)}${oque}. Desculpe o transtorno.`,
+    'Quer marcar outro? Responda AGENDAR que eu te mostro os horários livres.',
+  ].join('\n');
+}

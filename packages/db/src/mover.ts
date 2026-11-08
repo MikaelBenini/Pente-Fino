@@ -4,8 +4,10 @@ import {
   caminhoDoHorario,
   dataLocal,
   rotuloDoDia,
+  textoHorarioCancelado,
   textoHorarioMudou,
   variantesTelefone,
+  type HorarioCancelado,
   type HorarioMudou,
 } from '@pente-fino/shared';
 import type { PrismaClient } from './generated/prisma/client.js';
@@ -56,6 +58,64 @@ export async function avisoHorarioMudou(
       profissional: ag.profissional.usuario.nome,
       mudouHorario: job.mudouHorario,
       link,
+    });
+    const m = await tx.mensagem.create({
+      data: {
+        unidadeId: ag.unidadeId,
+        telefone: falou.telefone,
+        clienteId: cliente.id,
+        direcao: 'saida',
+        texto,
+        status: 'pendente',
+      },
+      select: { id: true },
+    });
+    return { contaId: job.contaId, instancia: conexao.instancia, mensagemIds: [m.id] };
+  });
+}
+
+/**
+ * A barbearia cancelou o horário com "Avisar o cliente": manda o aviso se o horário ainda está
+ * cancelado (não virou falta nem foi reaberto), é futuro, o cliente aceita mensagens, já falou com
+ * a unidade e o WhatsApp está conectado. null = nada a mandar.
+ */
+export async function avisoHorarioCancelado(
+  prisma: PrismaClient,
+  job: Omit<HorarioCancelado, 'tipo'>,
+  agora = new Date(),
+): Promise<{ contaId: string; instancia: string; mensagemIds: string[] } | null> {
+  return naConta(prisma, job.contaId, async (tx) => {
+    const ag = await tx.agendamento.findUnique({
+      where: { id: job.agendamentoId },
+      include: {
+        cliente: true,
+        unidade: { include: { botConexao: true } },
+        comanda: { include: { itens: { include: { servico: { select: { nome: true } } } } } },
+      },
+    });
+    if (!ag || ag.status !== 'cancelado' || ag.inicio <= agora) return null;
+    const cliente = ag.cliente;
+    if (!cliente?.consentimentoMsg || !cliente.telefone) return null;
+    const conexao = ag.unidade.botConexao;
+    if (conexao?.status !== 'conectado') return null;
+    const falou = await tx.mensagem.findFirst({
+      where: {
+        unidadeId: ag.unidadeId,
+        telefone: { in: variantesTelefone(cliente.telefone) },
+        direcao: 'entrada',
+      },
+      orderBy: { criadoEm: 'desc' },
+      select: { telefone: true },
+    });
+    if (!falou) return null;
+    const servicos = (ag.comanda?.itens ?? [])
+      .filter((i) => i.tipo === 'servico' && i.servico)
+      .map((i) => i.servico!.nome);
+    const texto = textoHorarioCancelado({
+      cliente: cliente.nome,
+      diaRotulo: rotuloDoDia(dataLocal(ag.inicio), dataLocal(agora)),
+      inicio: ag.inicio.toISOString(),
+      servicos: [...new Set(servicos)],
     });
     const m = await tx.mensagem.create({
       data: {

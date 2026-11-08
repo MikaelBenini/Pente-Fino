@@ -186,6 +186,12 @@ test('cliente que não veio: a recepção marca falta e a comanda sai do faturam
   await recepcao.waitForURL(/\/comandas\?id=/);
   await recepcao.getByRole('button', { name: 'Cancelar ou marcar falta' }).click();
   const cancelar = recepcao.getByRole('dialog', { name: 'Cancelar comanda' });
+  // Horário ainda por vir: a barbearia desmarca avisando o cliente (já vem marcado).
+  await expect(
+    cancelar.getByLabel('Avisar o cliente pelo WhatsApp (com convite para marcar outro horário)'),
+  ).toBeChecked();
+  await cancelar.getByLabel('O cliente não veio (conta como falta)').check();
+  await expect(cancelar.getByLabel(/Avisar o cliente pelo WhatsApp/)).toHaveCount(0);
   await cancelar.getByLabel('Motivo').fill('Não compareceu');
   await cancelar.getByRole('button', { name: 'Cancelar comanda' }).click();
   await expect(
