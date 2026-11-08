@@ -399,7 +399,8 @@ describe('avisar o cliente (etapa 15.3)', () => {
   };
   const naFila = async (tipo: string, agendamentoId: string) =>
     (await fila.getJobs(['delayed', 'waiting', 'prioritized'])).filter(
-      (j) => j.data.tipo === tipo && j.data.agendamentoId === agendamentoId,
+      (j) =>
+        j.data.tipo === tipo && 'agendamentoId' in j.data && j.data.agendamentoId === agendamentoId,
     );
 
   it('mudar o horário com "avisar" desmarcado não põe aviso na fila', async () => {
