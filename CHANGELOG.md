@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (nota fiscal)
+
+- Nota fiscal de serviço (NFS-e) das mensalidades do Pente Fino, emitida pelo Asaas: configuração
+  em `/admin` → Configurações (serviço da prefeitura ou código, ISS, retenções, emitir no pagamento
+  ou no vencimento), conferência dos dados fiscais no Asaas e "Aplicar às assinaturas atuais". As
+  assinaturas novas já saem com a nota ligada.
+
 ### Adicionado (clube online)
 
 - Clube online: a barbearia ativa em Clube → "Receber online" uma conta no Asaas; cada plano ganha

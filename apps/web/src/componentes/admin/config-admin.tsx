@@ -23,6 +23,7 @@ import { ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { NotaFiscalAdmin } from './nota-fiscal-admin';
 import { useTabelasAdmin } from './precos-admin';
 
 const mensagemDe = (e: unknown) =>
@@ -76,6 +77,7 @@ export function ConfiguracoesAdmin() {
   return (
     <div className="flex flex-col gap-6">
       <Estado consulta={config}>{() => <Formularios c={config.data!} />}</Estado>
+      <Estado consulta={config}>{() => <NotaFiscalAdmin atual={config.data!.notaFiscal} />}</Estado>
       <SmtpAdmin />
       <PrecosAdmin />
       <CuponsAdmin />

@@ -29,6 +29,12 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
   `ASAAS_WEBHOOK_TOKEN`, eventos de cobrança. O mesmo webhook atende a assinatura do sistema e as
   mensalidades do clube online.
 - A taxa do clube online fica em `/admin` → Configurações → "Clube online".
+- Nota fiscal das mensalidades (NFS-e): primeiro, no painel do Asaas, Notas fiscais →
+  Configurações (inscrição municipal, regime, certificado ou senha da prefeitura). Depois, em
+  `/admin` → Configurações → "Nota fiscal das mensalidades": confira a linha "Dados fiscais no
+  Asaas", escolha o serviço (código e ISS conferidos com o contador), marque "Emitir nota fiscal",
+  salve e clique em "Aplicar às assinaturas atuais". As assinaturas novas já saem com a nota; o
+  Asaas manda a nota por e-mail para a barbearia.
 
 ## Atualizar e voltar versão (rollback)
 

@@ -115,6 +115,12 @@ export async function registrarPagamentoManual(
   return r!.r;
 }
 
+/** Assinaturas do sistema no Asaas (uma por conta), sem as do clube online. */
+export function assinaturasAsaasPlataforma(prisma: PrismaClient) {
+  return prisma.$queryRaw<{ conta_id: string; conta: string; asaas_assinatura_id: string }[]>`
+    SELECT * FROM plataforma_assinaturas_asaas()`;
+}
+
 // ─── Configurações do sistema ─────────────────────────────────────────────
 
 /** Chaves públicas (aviso geral, teste) como JSON cru; a aplicação valida com o esquema. */

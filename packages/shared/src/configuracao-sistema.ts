@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { lerModelosEmail, type ChaveModeloEmail, type TextoModeloEmail } from './modelos-email.js';
 import { DIAS_TESTE, lerTabelasPreco, VERSAO_TERMOS, type TabelaPrecosPlanos } from './planos.js';
 import { lerConfigClubeOnline, type ConfigClubeOnline } from './clube-online.js';
+import { lerConfigNotaFiscal, type ConfigNotaFiscal } from './nota-fiscal.js';
 
 export const avisoGeralSchema = z
   .object({
@@ -36,6 +37,8 @@ export interface ConfiguracaoPublica {
   tabelasPreco: TabelaPrecosPlanos[];
   /** Clube online: taxa da plataforma sobre as mensalidades pagas pelo link. */
   clubeOnline: ConfigClubeOnline;
+  /** Nota fiscal das mensalidades do Pente Fino (emitida pelo Asaas). */
+  notaFiscal: ConfigNotaFiscal;
 }
 
 export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
@@ -45,6 +48,7 @@ export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
     modelos_email?: unknown;
     precos?: unknown;
     clube_online?: unknown;
+    nota_fiscal?: unknown;
   };
   const aviso = avisoGeralSchema.safeParse(o.aviso_geral);
   const teste = configTesteSchema.safeParse(o.teste ?? {});
@@ -54,6 +58,7 @@ export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
     modelosEmail: lerModelosEmail(o.modelos_email),
     tabelasPreco: lerTabelasPreco(o.precos),
     clubeOnline: lerConfigClubeOnline(o.clube_online),
+    notaFiscal: lerConfigNotaFiscal(o.nota_fiscal),
   };
 }
 
