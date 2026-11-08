@@ -146,6 +146,7 @@ describe('preferências de avisos', () => {
       'caixa_divergente',
       'caixa_sem_fechar',
       'resumo_dia',
+      'clube_online',
     ]);
   });
 });

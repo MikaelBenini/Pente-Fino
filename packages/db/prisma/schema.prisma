@@ -317,6 +317,8 @@ model Conta {
   servicosClube        ItemClubeServico[]
   adesoesClube         AdesaoClube[]
   pagamentosClube      PagamentoClube[]
+  recebimentoOnline    RecebimentoOnline?
+  assinaturasClube     AssinaturaClubeOnline[]
   listaEspera          ListaEspera[]
   bloqueiosRecorrentes BloqueioRecorrente[]
   avisos               Aviso[]
@@ -681,7 +683,8 @@ model Cliente {
   avaliacoes        Avaliacao[]
   tokenAgendamentos TokenAgendamento[]
 
-  adesoesClube AdesaoClube[]
+  adesoesClube           AdesaoClube[]
+  assinaturasClubeOnline AssinaturaClubeOnline[]
 
   listaEspera ListaEspera[]
 
@@ -1316,10 +1319,11 @@ model ItemClube {
   criadoEm     DateTime      @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime      @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta    Conta              @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  unidade  Unidade            @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
-  servicos ItemClubeServico[]
-  adesoes  AdesaoClube[]
+  conta             Conta                   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade           Unidade                 @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  servicos          ItemClubeServico[]
+  adesoes           AdesaoClube[]
+  assinaturasOnline AssinaturaClubeOnline[]
 
   @@index([contaId])
   @@index([unidadeId])
@@ -1364,12 +1368,13 @@ model AdesaoClube {
   criadoEm           DateTime     @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm       DateTime     @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta      Conta            @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  cliente    Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  itemClube  ItemClube        @relation(fields: [itemClubeId], references: [id], onDelete: Restrict)
-  criadoPor  Usuario?         @relation("AdesaoCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
-  itens      ItemComanda[]
-  pagamentos PagamentoClube[]
+  conta            Conta                  @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  cliente          Cliente                @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  itemClube        ItemClube              @relation(fields: [itemClubeId], references: [id], onDelete: Restrict)
+  criadoPor        Usuario?               @relation("AdesaoCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  itens            ItemComanda[]
+  pagamentos       PagamentoClube[]
+  assinaturaOnline AssinaturaClubeOnline?
 
   @@index([contaId])
   @@index([clienteId, status])
@@ -1379,24 +1384,84 @@ model AdesaoClube {
 /// Mensalidade do clube recebida no balcão (Pix da barbearia, dinheiro ou cartão). É receita do
 /// clube, separada da receita de serviço: não entra no faturamento das comandas.
 model PagamentoClube {
-  id            String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contaId       String         @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
-  adesaoId      String         @map("adesao_id") @db.Uuid
-  valor         Int
-  forma         FormaPagamento
-  pagoEm        DateTime       @map("pago_em") @db.Date
+  id              String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId         String         @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  adesaoId        String         @map("adesao_id") @db.Uuid
+  valor           Int
+  forma           FormaPagamento
+  pagoEm          DateTime       @map("pago_em") @db.Date
   /// Vencimento que esta mensalidade pagou (o ciclo que ela cobre começa nele).
-  referenteA    DateTime       @map("referente_a") @db.Date
-  recebidoPorId String?        @map("recebido_por_id") @db.Uuid
-  criadoEm      DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+  referenteA      DateTime       @map("referente_a") @db.Date
+  recebidoPorId   String?        @map("recebido_por_id") @db.Uuid
+  /// balcao (baixa pela recepção) ou online (pago pelo link, Asaas com split).
+  origem          String         @default("balcao")
+  /// Cobrança do Asaas (online): um pagamento por cobrança.
+  idExterno       String?        @map("id_externo")
+  /// Online: taxa do Asaas, parte do Pente Fino e o que vai para a barbearia (centavos).
+  taxaAsaas       Int            @default(0) @map("taxa_asaas")
+  taxaPlataforma  Int            @default(0) @map("taxa_plataforma")
+  repasse         Int?
+  /// Online: quando o Asaas prevê o crédito na conta da barbearia.
+  creditoPrevisto DateTime?      @map("credito_previsto") @db.Date
+  criadoEm        DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
 
   conta       Conta       @relation(fields: [contaId], references: [id], onDelete: Cascade)
   adesao      AdesaoClube @relation(fields: [adesaoId], references: [id], onDelete: Cascade)
   recebidoPor Usuario?    @relation(fields: [recebidoPorId], references: [id], onDelete: SetNull)
 
+  @@unique([contaId, idExterno])
   @@index([contaId, pagoEm])
   @@index([adesaoId])
   @@map("pagamento_clube")
+}
+
+/// Conta da barbearia para receber online (subconta do Asaas): o split manda a mensalidade
+/// direto para a carteira dela. A chave de API da subconta fica cifrada (PLATAFORMA_CHAVE).
+model RecebimentoOnline {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId       String   @unique @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  asaasContaId  String   @map("asaas_conta_id")
+  walletId      String   @map("wallet_id")
+  apiKeyCifrada String   @map("api_key_cifrada")
+  /// documentos, analise, aprovada ou recusada (packages/shared/src/clube-online.ts).
+  situacao      String   @default("documentos")
+  nome          String
+  documento     String
+  criadoEm      DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta Conta @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  @@map("recebimento_online")
+}
+
+/// Assinatura do clube feita pelo link (cobrança recorrente no Asaas com split). A adesão nasce
+/// no primeiro pagamento e renova a cada mensalidade paga.
+model AssinaturaClubeOnline {
+  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId           String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  itemClubeId       String   @map("item_clube_id") @db.Uuid
+  clienteId         String   @map("cliente_id") @db.Uuid
+  asaasClienteId    String   @map("asaas_cliente_id")
+  asaasAssinaturaId String   @unique @map("asaas_assinatura_id")
+  /// aguardando (sem pagamento), ativa ou cancelada.
+  status            String   @default("aguardando")
+  adesaoId          String?  @unique @map("adesao_id") @db.Uuid
+  /// Página de pagamento da primeira mensalidade.
+  link              String?
+  /// Taxa da plataforma no momento da assinatura (o split no Asaas usa esta).
+  taxaBp            Int      @map("taxa_bp")
+  criadoEm          DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm      DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta     Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  itemClube ItemClube    @relation(fields: [itemClubeId], references: [id], onDelete: Restrict)
+  cliente   Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  adesao    AdesaoClube? @relation(fields: [adesaoId], references: [id], onDelete: SetNull)
+
+  @@index([contaId])
+  @@index([clienteId])
+  @@map("assinatura_clube_online")
 }
 
 /// Lista de espera: o cliente quer um horário no dia, numa faixa, com um profissional (ou

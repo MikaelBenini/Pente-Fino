@@ -1,7 +1,12 @@
 // Cobrança da assinatura do Pente Fino atrás de uma interface: Asaas de verdade (sandbox ou
 // produção) ou um provedor falso para os testes automáticos.
 import { Logger } from '@nestjs/common';
-import type { CobrancaExterna, DataISO } from '@pente-fino/shared';
+import type {
+  CobrancaExterna,
+  DadosRecebimento,
+  DataISO,
+  SituacaoRecebimento,
+} from '@pente-fino/shared';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 
 export interface ProvedorCobranca {
@@ -20,8 +25,18 @@ export interface ProvedorCobranca {
     vencimento: DataISO;
     descricao: string;
     referencia: string;
+    /** Clube online: parte que vai para a carteira da barbearia (subconta). */
+    split?: { walletId: string; percentual: number };
   }): Promise<{ id: string }>;
   cobrancasDaAssinatura(assinatura: string): Promise<CobrancaExterna[]>;
+  cancelarAssinatura(assinatura: string): Promise<void>;
+  // ─── Subconta da barbearia (clube online) ───
+  criarSubconta(d: DadosRecebimento): Promise<{ id: string; walletId: string; apiKey: string }>;
+  situacaoSubconta(apiKey: string): Promise<SituacaoRecebimento>;
+  /** Página do Asaas para a barbearia enviar os documentos; null = nada a enviar. */
+  linkDocumentos(apiKey: string): Promise<string | null>;
+  /** Saldo da subconta, em centavos. */
+  saldoSubconta(apiKey: string): Promise<number>;
   /** Troca de plano: valor e descrição novos, também nas cobranças ainda em aberto. */
   atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }): Promise<void>;
 }
@@ -61,13 +76,18 @@ export class ProvedorAsaas implements ProvedorCobranca {
   readonly nome = 'asaas' as const;
   constructor(private readonly c: { url: string; chave: string }) {}
 
-  private async pedir<T>(metodo: 'GET' | 'POST', caminho: string, corpo?: object): Promise<T> {
-    if (!this.c.chave)
+  private async pedir<T>(
+    metodo: 'GET' | 'POST' | 'DELETE',
+    caminho: string,
+    corpo?: object,
+    chave = this.c.chave,
+  ): Promise<T> {
+    if (!chave)
       throw new ErroCobranca('A cobrança não está configurada (falta ASAAS_API_KEY no .env).');
     const r = await fetch(`${this.c.url}${caminho}`, {
       method: metodo,
       headers: {
-        access_token: this.c.chave,
+        access_token: chave,
         'content-type': 'application/json',
         'user-agent': 'pente-fino',
       },
@@ -76,9 +96,12 @@ export class ProvedorAsaas implements ProvedorCobranca {
     });
     const json = (await r.json().catch(() => ({}))) as {
       errors?: { description?: string }[];
+      message?: string;
     } & T;
     if (!r.ok) {
-      const motivo = json.errors?.map((e) => e.description).join(' ') || `HTTP ${r.status}`;
+      // Validação vem em errors[]; recusa de permissão (403) vem em message.
+      const motivo =
+        json.errors?.map((e) => e.description).join(' ') || json.message || `HTTP ${r.status}`;
       throw new ErroCobranca(`O Asaas recusou: ${motivo}`);
     }
     return json;
@@ -106,8 +129,64 @@ export class ProvedorAsaas implements ProvedorCobranca {
       cycle: d.ciclo === 'anual' ? 'YEARLY' : 'MONTHLY',
       description: d.descricao,
       externalReference: d.referencia,
+      ...(d.split
+        ? { split: [{ walletId: d.split.walletId, percentualValue: d.split.percentual }] }
+        : {}),
     });
     return { id: r.id };
+  }
+
+  async cancelarAssinatura(assinatura: string) {
+    await this.pedir('DELETE', `/subscriptions/${encodeURIComponent(assinatura)}`);
+  }
+
+  async criarSubconta(d: DadosRecebimento) {
+    const r = await this.pedir<{ id: string; walletId: string; apiKey: string }>(
+      'POST',
+      '/accounts',
+      {
+        name: d.nome,
+        email: d.email,
+        cpfCnpj: d.documento,
+        ...(d.tipo === 'pf' ? { birthDate: d.nascimento } : { companyType: d.tipoEmpresa }),
+        mobilePhone: d.telefone,
+        incomeValue: d.faturamentoMensal / 100,
+        address: d.endereco,
+        addressNumber: d.numero,
+        complement: d.complemento,
+        province: d.bairro,
+        postalCode: d.cep,
+      },
+    );
+    return { id: r.id, walletId: r.walletId, apiKey: r.apiKey };
+  }
+
+  async situacaoSubconta(apiKey: string): Promise<SituacaoRecebimento> {
+    const r = await this.pedir<{ general?: string; documentation?: string }>(
+      'GET',
+      '/myAccount/status',
+      undefined,
+      apiKey,
+    );
+    if (r.general === 'APPROVED') return 'aprovada';
+    if (r.general === 'REJECTED' || r.documentation === 'REJECTED') return 'recusada';
+    if (r.documentation === 'PENDING') return 'documentos';
+    return 'analise';
+  }
+
+  async linkDocumentos(apiKey: string) {
+    const r = await this.pedir<{ data?: { onboardingUrl?: string | null }[] }>(
+      'GET',
+      '/myAccount/documents',
+      undefined,
+      apiKey,
+    );
+    return r.data?.find((x) => x.onboardingUrl)?.onboardingUrl ?? null;
+  }
+
+  async saldoSubconta(apiKey: string) {
+    const r = await this.pedir<{ balance?: number }>('GET', '/finance/balance', undefined, apiKey);
+    return centavos(r.balance ?? 0);
   }
 
   async atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }) {
@@ -131,17 +210,20 @@ export class ProvedorAsaas implements ProvedorCobranca {
 export class ProvedorCobrancaFalso implements ProvedorCobranca {
   readonly nome = 'falso' as const;
   private seq = 0;
+  /** Prefixo por execução: o banco de testes guarda os ids das execuções anteriores. */
+  private readonly rodada = Math.random().toString(36).slice(2, 8);
   readonly assinaturas = new Map<string, CobrancaExterna[]>();
 
   async criarCliente() {
-    return { id: `cus_falso_${++this.seq}` };
+    return { id: `cus_falso_${this.rodada}_${++this.seq}` };
   }
 
   async criarAssinatura(d: Parameters<ProvedorCobranca['criarAssinatura']>[0]) {
-    const id = `sub_falso_${++this.seq}`;
+    const id = `sub_falso_${this.rodada}_${++this.seq}`;
+    this.splits.set(id, d.split);
     this.assinaturas.set(id, [
       {
-        id: `pay_falso_${++this.seq}`,
+        id: `pay_falso_${this.rodada}_${++this.seq}`,
         status: 'PENDING',
         valor: d.valor,
         vencimento: d.vencimento,
@@ -160,6 +242,39 @@ export class ProvedorCobrancaFalso implements ProvedorCobranca {
   async atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }) {
     for (const c of this.assinaturas.get(assinatura) ?? [])
       if (c.status === 'PENDING') c.valor = d.valor;
+  }
+
+  readonly splits = new Map<string, { walletId: string; percentual: number } | undefined>();
+  readonly canceladas = new Set<string>();
+  readonly subcontas = new Map<string, SituacaoRecebimento>();
+
+  async cancelarAssinatura(assinatura: string) {
+    this.canceladas.add(assinatura);
+  }
+
+  async criarSubconta(d: DadosRecebimento) {
+    const n = ++this.seq;
+    const apiKey = `$aact_falso_${n}_${d.documento}`;
+    this.subcontas.set(apiKey, 'documentos');
+    return {
+      id: `acc_falso_${this.rodada}_${n}`,
+      walletId: `wal_falso_${this.rodada}_${n}`,
+      apiKey,
+    };
+  }
+
+  async situacaoSubconta(apiKey: string) {
+    return this.subcontas.get(apiKey) ?? 'documentos';
+  }
+
+  async linkDocumentos(apiKey: string) {
+    return this.subcontas.get(apiKey) === 'documentos'
+      ? `https://sandbox.asaas.com/onboarding/${encodeURIComponent(apiKey)}`
+      : null;
+  }
+
+  async saldoSubconta() {
+    return 0;
   }
 
   pagar(assinatura: string, forma = 'PIX'): CobrancaExterna {

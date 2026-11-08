@@ -34,6 +34,7 @@ import { SeletorMes } from '../indicadores';
 import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { BuscaCliente, type ClienteEscolhido } from './busca-cliente';
 import { ConviteSeFaltar } from '../convite-plano';
+import { CompartilharPlano, PlanosSugeridos, ReceberOnline } from './clube-online';
 
 const chaveItens = ['clube', 'itens'] as const;
 const chaveAdesoes = ['clube', 'adesoes'] as const;
@@ -60,6 +61,9 @@ export function TelaClube() {
           { id: 'assinantes', rotulo: 'Assinantes', conteudo: <Assinantes /> },
           { id: 'planos', rotulo: 'Planos', conteudo: <Planos /> },
           ...(gestao ? [{ id: 'resultado', rotulo: 'Resultado', conteudo: <Resultado /> }] : []),
+          ...(papeis.includes('dono')
+            ? [{ id: 'online', rotulo: 'Receber online', conteudo: <ReceberOnline /> }]
+            : []),
         ]}
       />
     </div>
@@ -307,6 +311,7 @@ function Planos() {
   const { papeis } = useApp();
   const dono = papeis.includes('dono');
   const itens = useItensClube();
+  const unidades = useUnidades();
   const [editando, setEditando] = useState<ItemClubeDetalhe | 'novo' | null>(null);
   return (
     <div className="flex flex-col gap-4">
@@ -324,11 +329,19 @@ function Planos() {
       <Estado consulta={itens}>
         {() =>
           itens.data!.length === 0 ? (
-            <EstadoVazio
-              icone={Crown}
-              titulo="Nenhum plano ainda"
-              texto="Assinatura mensal, combo ou convênio com empresa: cada plano diz o que cobre e quantas vezes por mês."
-            />
+            <div className="flex flex-col gap-4">
+              <EstadoVazio
+                icone={Crown}
+                titulo="Nenhum plano ainda"
+                texto="Assinatura mensal, combo ou convênio com empresa: cada plano diz o que cobre e quantas vezes por mês."
+              />
+              {dono && unidades.data?.[0] && (
+                <PlanosSugeridos
+                  unidadeId={unidades.data[0].id}
+                  onCriados={() => void itens.refetch()}
+                />
+              )}
+            </div>
           ) : (
             <ul className="grid gap-3 md:grid-cols-2" aria-label="Planos do clube">
               {itens.data!.map((i) => (
@@ -366,6 +379,7 @@ function Planos() {
                   <p className="text-sm text-tinta-suave">
                     {i.assinantes} {i.assinantes === 1 ? 'assinante' : 'assinantes'}
                   </p>
+                  {i.ativo && <CompartilharPlano planoId={i.id} />}
                   {dono && (
                     <Botao
                       variante="secundario"

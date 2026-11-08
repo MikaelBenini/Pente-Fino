@@ -10,6 +10,7 @@ export const TIPOS_AVISO = [
   'caixa_divergente',
   'caixa_sem_fechar',
   'resumo_dia',
+  'clube_online',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 
@@ -18,6 +19,7 @@ export const NOME_TIPO_AVISO: Readonly<Record<TipoAviso, string>> = {
   caixa_divergente: 'Caixa do dia fechado com diferença',
   caixa_sem_fechar: 'Caixa que ficou sem fechar no fim do dia',
   resumo_dia: 'Resumo do dia da unidade',
+  clube_online: 'Cliente que assinou o clube pelo link',
 };
 
 /**
@@ -29,6 +31,7 @@ export const QUEM_RECEBE: Readonly<Record<TipoAviso, readonly (readonly Papel[])
   caixa_divergente: [['gestor', 'dono']],
   caixa_sem_fechar: [['gestor', 'dono']],
   resumo_dia: [['dono', 'gestor']],
+  clube_online: [['dono', 'gestor']],
 };
 
 /** A rotina das comandas pendentes roda a cada 15 minutos. */

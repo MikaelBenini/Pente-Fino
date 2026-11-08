@@ -21,6 +21,15 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
 5. E-mail e Asaas: `nano .env` (campos marcados com PREENCHER) e `./atualizar.sh` de novo.
    O SMTP também pode ser configurado em `/admin → Configurações`.
 
+## Asaas: cobrança e clube online
+
+- A conta do Pente Fino no Asaas precisa ser de **pessoa jurídica (CNPJ)**: só ela cria as subcontas
+  das barbearias para o clube online (com conta de CPF o Asaas responde 403).
+- Webhook no Asaas (Integrações → Webhooks): `https://api.seudominio/webhooks/asaas`, com o token
+  `ASAAS_WEBHOOK_TOKEN`, eventos de cobrança. O mesmo webhook atende a assinatura do sistema e as
+  mensalidades do clube online.
+- A taxa do clube online fica em `/admin` → Configurações → "Clube online".
+
 ## Atualizar e voltar versão (rollback)
 
 - `./atualizar.sh` — versão do `.env` (`TAG`, padrão `latest`: o último merge na `main`).

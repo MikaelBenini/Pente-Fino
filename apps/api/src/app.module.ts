@@ -11,6 +11,8 @@ import { CobrancaService } from './cobranca/cobranca.service.js';
 import { AssistenteController } from './me/assistente.controller.js';
 import { PushController } from './me/push.controller.js';
 import { ClubeController } from './clube/clube.controller.js';
+import { ClubeOnlineController, ClubePublicoController } from './clube/clube-online.controller.js';
+import { ClubeOnlineService } from './clube/clube-online.service.js';
 import { EsperaController } from './agenda/espera.controller.js';
 import { provedorCobranca } from './cobranca/provedor.js';
 import { WebhookAsaasController } from './cobranca/webhook-asaas.controller.js';
@@ -167,6 +169,8 @@ export class ComumModule {}
     MeController,
     AssistenteController,
     PushController,
+    ClubeOnlineController,
+    ClubePublicoController,
     ClubeController,
     EsperaController,
     ConfiguracaoController,
@@ -179,6 +183,7 @@ export class ComumModule {}
   providers: [
     AuthService,
     BloqueioLogin,
+    ClubeOnlineService,
     LimiteCadastro,
     EmailConfirmadoGuard,
     ConvitesService,

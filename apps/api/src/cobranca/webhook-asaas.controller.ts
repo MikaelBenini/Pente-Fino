@@ -14,6 +14,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { Publico } from '../auth/decoradores.js';
 import { Erros } from '../comum/erros.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { ClubeOnlineService } from '../clube/clube-online.service.js';
 import { CobrancaService, type PagamentoWebhook } from './cobranca.service.js';
 
 const iguais = (a: string, b: string) => {
@@ -35,6 +36,7 @@ export class WebhookAsaasController {
   constructor(
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
     @Inject(CobrancaService) private readonly cobranca: CobrancaService,
+    @Inject(ClubeOnlineService) private readonly clube: ClubeOnlineService,
   ) {}
 
   @Post('asaas')
@@ -51,6 +53,10 @@ export class WebhookAsaasController {
     const p = corpo?.payment;
     if (!corpo?.event || !p?.id || !p.customer) return { ok: true, resultado: 'ignorado' };
     try {
+      // Mensalidade do clube online (assinatura de cliente de barbearia, com split).
+      const contaClube = p.subscription ? await this.clube.contaDaAssinatura(p.subscription) : null;
+      if (contaClube)
+        return { ok: true, resultado: await this.clube.webhook(contaClube, corpo.event, p) };
       return { ok: true, resultado: await this.cobranca.webhook(corpo.event, p) };
     } catch (e) {
       // Registra e responde 200: o "conferir" da tela recupera o que faltar.
