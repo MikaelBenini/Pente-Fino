@@ -54,6 +54,10 @@ export interface PagamentoWebhook {
   paymentDate?: string | null;
   confirmedDate?: string | null;
   clientPaymentDate?: string | null;
+  /** Valor depois da taxa do Asaas (o split usa este). */
+  netValue?: number | null;
+  /** Quando o Asaas prevê o crédito na conta. */
+  estimatedCreditDate?: string | null;
 }
 
 /**

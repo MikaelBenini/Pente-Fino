@@ -25,7 +25,9 @@ import {
 } from '@pente-fino/db';
 import {
   avisoGeralSchema,
+  configClubeOnlineSchema,
   configTesteSchema,
+  type ConfigClubeOnline,
   FILA_WHATSAPP_SAIDA,
   CHAVES_MODELO_EMAIL,
   cupomSchema,
@@ -208,6 +210,19 @@ export class AdminConfigController {
     @IpDaRequisicao() ip: string | null,
   ): Promise<void> {
     await this.gravar('teste', d, a, ip);
+  }
+
+  @Put('configuracoes/clube-online')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Taxa da plataforma sobre o clube online (vale para assinaturas novas)',
+  })
+  async clubeOnline(
+    @Corpo(configClubeOnlineSchema) d: ConfigClubeOnline,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    await this.gravar('clube_online', d, a, ip);
   }
 
   @Get('configuracoes/smtp')

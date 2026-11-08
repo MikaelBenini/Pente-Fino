@@ -223,6 +223,8 @@ export interface ClubeNoBot {
     emDia: boolean;
     restantes: readonly { servico: string; restam: number | null }[];
   } | null;
+  /** Clube online: link para assinar pelo celular (Pix ou cartão). */
+  linkAssinar?: string | null;
 }
 
 const ddmm = (d: DataISO) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
@@ -247,7 +249,9 @@ export function textoClubeNoBot(c: ClubeNoBot, moeda: (v: number) => string): st
     '',
     ...c.planos.map((p) => `• ${p.nome}: ${moeda(p.valor)} por mês (${p.inclusos})`),
     '',
-    'Para entrar, fale com a recepção ou responda ATENDENTE.',
+    c.linkAssinar
+      ? `Para assinar agora, no Pix ou no cartão: ${c.linkAssinar}`
+      : 'Para entrar, fale com a recepção ou responda ATENDENTE.',
   ].join('\n');
 }
 

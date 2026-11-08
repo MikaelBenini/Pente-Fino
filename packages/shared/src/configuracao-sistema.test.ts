@@ -16,6 +16,7 @@ describe('configurações do sistema', () => {
       teste: { dias: DIAS_TESTE, versaoTermos: VERSAO_TERMOS },
       modelosEmail: {},
       tabelasPreco: [TABELA_PADRAO],
+      clubeOnline: { taxaBp: 100 },
     });
     expect(lerConfiguracaoPublica({ teste: { dias: 999 } }).teste.dias).toBe(DIAS_TESTE);
   });

@@ -40,6 +40,7 @@ import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { data, exigirUnidade, filtroUnidade } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
+import { ClubeOnlineService } from './clube-online.service.js';
 
 /** Quem vê o clube e cuida das adesões no balcão. */
 const BALCAO = ['dono', 'gestor', 'recepcao'] as const;
@@ -57,7 +58,10 @@ const consultaAdesoes = z.object({
 @ExigeRecurso('clube', { soEscrita: true })
 @Controller('clube')
 export class ClubeController {
-  constructor(@Inject(BancoService) private readonly banco: BancoService) {}
+  constructor(
+    @Inject(BancoService) private readonly banco: BancoService,
+    @Inject(ClubeOnlineService) private readonly online: ClubeOnlineService,
+  ) {}
 
   private async plano(tx: Transacao, id: string) {
     const p = await tx.itemClube.findUnique({ where: { id } });
@@ -400,7 +404,7 @@ export class ClubeController {
     @Param('id', ParseUUIDPipe) id: string,
     @Corpo(cancelarAdesaoSchema) d: z.infer<typeof cancelarAdesaoSchema>,
   ): Promise<void> {
-    await this.banco.daConta(async (tx) => {
+    const noAsaas = await this.banco.daConta(async (tx) => {
       const a = await tx.adesaoClube.findUnique({ where: { id }, include: { itemClube: true } });
       if (!a) throw Erros.naoEncontrado('Adesão não encontrada.');
       exigirUnidade(a.itemClube.unidadeId, [...BALCAO]);
@@ -417,6 +421,9 @@ export class ClubeController {
         depois: { status: 'cancelada' },
         motivo: d.motivo,
       });
+      // Assinou pelo link: a cobrança recorrente no Asaas para também.
+      return this.online.cancelarDaAdesao(tx, id);
     });
+    if (noAsaas) await this.online.cancelarNoAsaas(noAsaas);
   }
 }

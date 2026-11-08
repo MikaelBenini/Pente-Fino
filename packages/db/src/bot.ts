@@ -34,6 +34,7 @@ import {
   type ClubeNoBot,
   type DataISO,
   type VagaLiberada,
+  caminhoAssinarClube,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -168,7 +169,7 @@ export async function contextoDaConversa(
     dentroDoHorario: s.aberto,
     link: s.link,
     precos,
-    clube: await clubeNoBot(tx, u.id, clienteId, hoje as DataISO),
+    clube: await clubeNoBot(tx, u, clienteId, hoje as DataISO, appUrl),
     ...resto,
   };
 }
@@ -176,10 +177,15 @@ export async function contextoDaConversa(
 /** Opção "Clube" do bot: planos ativos da unidade e o plano de quem conversa. */
 async function clubeNoBot(
   tx: Tx,
-  unidadeId: string,
+  u: { id: string; slug: string | null },
   clienteId: string | undefined,
   hoje: DataISO,
+  appUrl: string,
 ): Promise<ClubeNoBot> {
+  const unidadeId = u.id;
+  // Clube online ligado: o bot manda o link para o cliente assinar sozinho.
+  const online =
+    u.slug && appUrl ? await tx.recebimentoOnline.findFirst({ select: { id: true } }) : null;
   const planos = await tx.itemClube.findMany({
     where: { unidadeId, ativo: true },
     orderBy: { valor: 'asc' },
@@ -207,6 +213,7 @@ async function clubeNoBot(
           restantes: d.restantes.map((r) => ({ servico: r.servico, restam: r.restam })),
         }
       : null,
+    linkAssinar: online && u.slug ? `${appUrl}${caminhoAssinarClube(u.slug)}` : null,
   };
 }
 

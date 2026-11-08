@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { lerModelosEmail, type ChaveModeloEmail, type TextoModeloEmail } from './modelos-email.js';
 import { DIAS_TESTE, lerTabelasPreco, VERSAO_TERMOS, type TabelaPrecosPlanos } from './planos.js';
+import { lerConfigClubeOnline, type ConfigClubeOnline } from './clube-online.js';
 
 export const avisoGeralSchema = z
   .object({
@@ -33,6 +34,8 @@ export interface ConfiguracaoPublica {
   modelosEmail: Partial<Record<ChaveModeloEmail, TextoModeloEmail>>;
   /** Tabelas de preço em ordem de vigência (a primeira é a do lançamento). */
   tabelasPreco: TabelaPrecosPlanos[];
+  /** Clube online: taxa da plataforma sobre as mensalidades pagas pelo link. */
+  clubeOnline: ConfigClubeOnline;
 }
 
 export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
@@ -41,6 +44,7 @@ export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
     teste?: unknown;
     modelos_email?: unknown;
     precos?: unknown;
+    clube_online?: unknown;
   };
   const aviso = avisoGeralSchema.safeParse(o.aviso_geral);
   const teste = configTesteSchema.safeParse(o.teste ?? {});
@@ -49,6 +53,7 @@ export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
     teste: teste.success ? teste.data : { dias: DIAS_TESTE, versaoTermos: VERSAO_TERMOS },
     modelosEmail: lerModelosEmail(o.modelos_email),
     tabelasPreco: lerTabelasPreco(o.precos),
+    clubeOnline: lerConfigClubeOnline(o.clube_online),
   };
 }
 

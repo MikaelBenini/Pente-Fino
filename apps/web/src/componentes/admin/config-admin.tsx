@@ -95,6 +95,9 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
   );
   const [dias, setDias] = useState(String(c.teste.dias));
   const [versao, setVersao] = useState(c.teste.versaoTermos);
+  const [taxaClube, setTaxaClube] = useState(
+    (c.clubeOnline.taxaBp / 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 }),
+  );
   const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'configuracoes'] });
 
   return (
@@ -201,6 +204,41 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
             await adminApi('configuracoes/teste', {
               metodo: 'PUT',
               corpo: { dias: Number(dias) || 0, versaoTermos: versao },
+            });
+            await atualizar();
+          }}
+        />
+      </section>
+
+      <section
+        aria-labelledby="titulo-clube-online"
+        className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+      >
+        <h2 id="titulo-clube-online" className="text-lg font-semibold">
+          Clube online: taxa da plataforma
+        </h2>
+        <p className="text-sm text-tinta-suave">
+          Parte de cada mensalidade do clube paga pelo link que fica com o Pente Fino (o resto vai
+          direto para a conta da barbearia no Asaas). Vale para as assinaturas novas; as que já
+          existem seguem com a taxa de quando o cliente assinou. 0 zera.
+        </p>
+        <div className="max-w-48">
+          <Campo
+            id="clube-taxa"
+            rotulo="Taxa (%)"
+            inputMode="decimal"
+            dica="De 0 a 20%."
+            value={taxaClube}
+            onChange={(e) => setTaxaClube(e.target.value.replace(/[^\d,.]/g, ''))}
+          />
+        </div>
+        <Salvar
+          rotulo="Salvar taxa do clube"
+          enviar={async () => {
+            const pct = Number(taxaClube.replace(',', '.'));
+            await adminApi('configuracoes/clube-online', {
+              metodo: 'PUT',
+              corpo: { taxaBp: Number.isFinite(pct) ? Math.round(pct * 100) : -1 },
             });
             await atualizar();
           }}

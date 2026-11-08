@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (clube online)
+
+- Clube online: a barbearia ativa em Clube → "Receber online" uma conta no Asaas; cada plano ganha
+  "Copiar link" e "Mandar pelo WhatsApp"; o cliente assina pela página `/assinar` no Pix ou no
+  cartão e a mensalidade é cobrada todo mês, caindo direto na conta da barbearia (split). A
+  adesão nasce e renova sozinha a cada pagamento; repasses, taxas e saldo na mesma aba; aviso de
+  novo assinante na central. "Criar planos sugeridos" monta os planos a partir dos preços.
+- Administração: taxa da plataforma sobre o clube online, ajustável em Configurações.
+
 ### Segurança
 
 - Cadastro pelo site protegido contra robôs: campo isca invisível, tempo mínimo de preenchimento,
