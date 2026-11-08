@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado
+
+- Vídeo da home trocado pela versão editada (57 s, 1080p, sem o trecho em que a conversa do bot
+  parecia travar).
+
 ### Adicionado
 
 - Site público: Google Tag Manager e tag do Google Ads com aviso de cookies e Consent Mode —
