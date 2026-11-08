@@ -45,6 +45,7 @@ import { SistemaController } from './conta/sistema.controller.js';
 import { AdminAuthController, AdminController } from './admin/admin.controller.js';
 import { AdminConfigController, SaudeService } from './admin/admin-config.controller.js';
 import { AdminGestaoController } from './admin/admin-gestao.controller.js';
+import { BloqueioLogin } from './auth/bloqueio-login.js';
 import { AdminAuthService } from './admin/admin-auth.service.js';
 import { AdminContasService } from './admin/admin-contas.service.js';
 import { AdminVendasService } from './admin/admin-vendas.service.js';
@@ -175,6 +176,7 @@ export class ComumModule {}
   ],
   providers: [
     AuthService,
+    BloqueioLogin,
     ConvitesService,
     UsuariosService,
     ProfissionaisService,

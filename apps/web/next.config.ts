@@ -14,6 +14,26 @@ const codespace =
     ? [`${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`]
     : [];
 
+// Política de conteúdo (Etapa 21): só recursos do próprio site. Os scripts inline (tema e dados
+// estruturados) pedem 'unsafe-inline'; o resto bloqueia script, iframe e envio para outros
+// domínios. Fica de fora do desenvolvimento, onde o Next usa eval para recarregar.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "frame-src 'self'",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+const producao = process.env.NODE_ENV === 'production';
+
 const nextConfig: NextConfig = {
   // Imagem Docker (NEXT_STANDALONE=1): só o servidor e o que ele importa, a partir da raiz do
   // monorepo. Fora dela (dev e testes), o `next start` de sempre.
@@ -49,6 +69,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
+          ...(producao ? [{ key: 'Content-Security-Policy', value: CSP }] : []),
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
             key: 'Permissions-Policy',

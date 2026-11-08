@@ -8,6 +8,7 @@ import type {
 import { conferirSenha } from '../auth/senhas.js';
 import { gerarTokenOpaco, hashToken } from '../auth/tokens.js';
 import { Erros } from '../comum/erros.js';
+import { BloqueioLogin } from '../auth/bloqueio-login.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { BancoPlataforma } from './banco-plataforma.js';
 import { cifrar, decifrar } from '@pente-fino/db';
@@ -25,6 +26,7 @@ export class AdminAuthService {
   constructor(
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(BloqueioLogin) private readonly bloqueio: BloqueioLogin,
   ) {}
 
   /** Registra na auditoria da plataforma (quem, o quê, em que conta, antes e depois, IP). */
@@ -60,6 +62,7 @@ export class AdminAuthService {
     agora = new Date(),
   ): Promise<RespostaEntrarAdmin> {
     const db = this.banco.prisma;
+    await this.bloqueio.conferir('admin', d.email);
     const u = await db.usuarioPlataforma.findUnique({ where: { email: d.email } });
     const senhaOk = await conferirSenha(u?.ativo ? u.senhaHash : null, d.senha);
     if (!u || !senhaOk) {
@@ -69,6 +72,7 @@ export class AdminAuthService {
         depois: { email: d.email, motivo: 'senha' },
         ip: origem.ip,
       });
+      await this.bloqueio.falhou('admin', d.email);
       throw Erros.naoAutenticado(RECUSA);
     }
     const chave = this.config.plataforma.chave;
@@ -98,6 +102,7 @@ export class AdminAuthService {
         depois: { motivo: 'codigo' },
         ip: origem.ip,
       });
+      await this.bloqueio.falhou('admin', d.email);
       throw Erros.naoAutenticado(RECUSA);
     }
     const token = gerarTokenOpaco();
@@ -126,6 +131,7 @@ export class AdminAuthService {
       acao: u.totpConfirmadoEm ? 'entrar' : 'configurar_segundo_fator',
       ip: origem.ip,
     });
+    await this.bloqueio.acertou('admin', d.email);
     return {
       etapa: 'pronto',
       token,

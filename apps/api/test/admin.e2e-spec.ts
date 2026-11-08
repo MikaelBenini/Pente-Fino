@@ -958,8 +958,8 @@ describe('pronto quando (etapa 15.1)', () => {
 });
 
 describe('administração prática (etapa 15.2)', () => {
-  const chefe = { email: `chefe-${sufixo}@pentefino.dev`, senha: 'senha-do-chefe-123' };
-  const vende = { email: `vende-${sufixo}@pentefino.dev`, senha: 'senha-do-vende-123' };
+  const chefe = { email: `pratica-chefe-${sufixo}@pentefino.dev`, senha: 'senha-do-chefe-123' };
+  const vende = { email: `pratica-vende-${sufixo}@pentefino.dev`, senha: 'senha-do-vende-123' };
   let tChefe = '';
   let tVende = '';
   const como = (t: string) => ({

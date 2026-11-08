@@ -105,14 +105,30 @@ describe('login', () => {
     expect(eu.body.papeis).toEqual([{ papel: 'gestor', unidadeId: cenario.unidadeA }]);
   });
 
-  it('limita tentativas por IP + e-mail', async () => {
+  it('5 senhas erradas seguidas bloqueiam o e-mail por 15 minutos; outro e-mail segue', async () => {
     const email = `alvo-${randomUUID()}@x.dev`;
-    for (let i = 0; i < 20; i++)
+    for (let i = 0; i < 5; i++)
       await http().post('/auth/login').send({ email, senha: 'x' }).expect(401);
     const r = await http().post('/auth/login').send({ email, senha: 'x' }).expect(429);
-    expect(r.body.erro.mensagem).toBe('Muitas tentativas. Aguarde um minuto e tente de novo.');
+    expect(r.body.erro.codigo).toBe('login_bloqueado');
+    expect(r.body.erro.mensagem).toMatch(/Tente de novo em 15 minutos/);
     // Outro e-mail do mesmo IP continua liberado (a recepção não fica travada).
     await entrar(app, cenario.emails.barbeiro);
+  });
+
+  it('acertar a senha zera a contagem', async () => {
+    for (let i = 0; i < 4; i++)
+      await http()
+        .post('/auth/login')
+        .send({ email: cenario.emails.recepcao, senha: 'x' })
+        .expect(401);
+    await entrar(app, cenario.emails.recepcao);
+    for (let i = 0; i < 4; i++)
+      await http()
+        .post('/auth/login')
+        .send({ email: cenario.emails.recepcao, senha: 'x' })
+        .expect(401);
+    await entrar(app, cenario.emails.recepcao);
   });
 });
 
