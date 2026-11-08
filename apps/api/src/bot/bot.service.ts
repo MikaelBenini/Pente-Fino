@@ -35,6 +35,7 @@ import type { EstadoConexao, ProvedorWhatsApp } from '@pente-fino/whatsapp';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
+import { AlertaConexaoService } from '../whatsapp/alerta-conexao.service.js';
 import { Erros } from '../comum/erros.js';
 import { exigirUnidade, filtroUnidade, GESTAO } from '../comum/escopo.js';
 import { umPorVez } from '../comum/sequencia.js';
@@ -47,6 +48,7 @@ export class BotService {
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
     @Inject(PROVEDOR_WHATSAPP) private readonly provedor: ProvedorWhatsApp,
+    @Inject(AlertaConexaoService) private readonly alerta: AlertaConexaoService,
   ) {}
 
   private readonly logger = new Logger('Bot');
@@ -366,7 +368,11 @@ export class BotService {
 
   /** Grava o que o provedor disse e devolve como a tela mostra. */
   private async gravar(unidadeId: string, e: EstadoConexao): Promise<ConexaoBot> {
-    const linha = await this.banco.daConta((tx) => registrarEstadoConexao(tx, unidadeId, e));
+    const agora = new Date();
+    const linha = await this.banco.daConta((tx) => registrarEstadoConexao(tx, unidadeId, e, agora));
+    // A consulta da tela também descobre a queda (se o webhook não chegou).
+    if (this.alerta.caiuAgora(linha, agora))
+      await this.alerta.avisar(Contexto.usuario().contaId, unidadeId, agora);
     return this.resposta(unidadeId, linha, { qr: e.qr });
   }
 

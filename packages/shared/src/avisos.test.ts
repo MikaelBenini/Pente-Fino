@@ -147,6 +147,7 @@ describe('preferências de avisos', () => {
       'caixa_sem_fechar',
       'resumo_dia',
       'clube_online',
+      'whatsapp_caiu',
     ]);
   });
 });

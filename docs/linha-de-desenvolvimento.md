@@ -561,7 +561,7 @@ Saber do problema antes do cliente ligar, com ferramentas que rodam no próprio 
 - [ ] Uptime Kuma em `status.`: verifica `app`, `api/health` e a conexão do WhatsApp a cada minuto, avisa por e-mail ou Telegram
 - [ ] Rastreamento de erros no front e na API (GlitchTip, que roda no próprio servidor, ou Sentry)
 - [x] Alerta de disco acima de 80% e de memória alta
-- [ ] Alerta quando a sessão do WhatsApp cair (evento da Evolution API)
+- [x] Alerta quando a sessão do WhatsApp cair (evento da Evolution API) (feito em 2026-11-08: quando o `connection.update` da Evolution — ou a consulta da tela Bot — mostra que a conexão caiu sozinha, `AlertaConexaoService` grava o aviso "WhatsApp da unidade desconectado" para dono e gestor (tipo `whatsapp_caiu`, desligável no Perfil para o celular), manda o push e o e-mail editável "WhatsApp desconectado" aos donos com o botão para a tela Bot; o mesmo `close` repetido não avisa de novo, e desconectar pelo painel não avisa. A administração já via as quedas na Saúde do sistema)
 - [x] Alerta quando o backup do dia falhar
 - [ ] Painel simples de uso: contas ativas, comandas por dia, erros por dia
 - [ ] **Pronto quando:** derrubar a API de propósito gera um aviso em menos de 2 minutos

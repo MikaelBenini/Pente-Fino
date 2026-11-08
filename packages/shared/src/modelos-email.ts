@@ -16,6 +16,7 @@ export const CHAVES_MODELO_EMAIL = [
   'pagamento_recebido',
   'conta_sem_confirmar',
   'conta_sera_apagada',
+  'whatsapp_caiu',
 ] as const;
 export type ChaveModeloEmail = (typeof CHAVES_MODELO_EMAIL)[number];
 
@@ -167,6 +168,17 @@ export const MODELOS_EMAIL: Readonly<Record<ChaveModeloEmail, DefinicaoModeloEma
       botao: 'Entrar no Pente Fino',
     },
   },
+  whatsapp_caiu: {
+    nome: 'WhatsApp desconectado',
+    quando: 'Quando o WhatsApp de uma unidade cai sozinho (o bot para de responder).',
+    variaveis: ['nome', 'conta', 'unidade', 'data'],
+    padrao: {
+      assunto: 'O WhatsApp da {{unidade}} desconectou: o bot parou de responder',
+      corpo:
+        'Olá, {{nome}}!\n\nO WhatsApp da unidade {{unidade}} ({{conta}}) desconectou em {{data}}. Enquanto ele estiver fora, o bot não responde os clientes, os lembretes de horário não saem e a pesquisa de avaliação fica parada.\n\nPara voltar, abra a tela Bot no Pente Fino e leia o QR Code com o celular da barbearia (WhatsApp → Aparelhos conectados → Conectar um aparelho).\n\nIsso costuma acontecer quando o celular fica muito tempo sem internet, sem bateria ou quando o aparelho é desconectado no próprio WhatsApp.',
+      botao: 'Reconectar o WhatsApp',
+    },
+  },
 };
 
 /** Valores de exemplo para a pré-visualização na administração. */
@@ -181,6 +193,7 @@ export const EXEMPLO_VARIAVEIS: Readonly<Record<string, string>> = {
   vencimento: '05/12/2026',
   valor: 'R$ 149,90',
   periodo: '05/12/2026 a 04/01/2027',
+  unidade: 'Centro',
 };
 
 const textoModeloSchema = z.object({

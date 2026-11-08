@@ -241,3 +241,38 @@ export async function rotinaDosAvisos(
     return saida;
   });
 }
+
+/**
+ * O WhatsApp da unidade caiu sozinho (Etapa 19): aviso na central para dono e gestor, com as
+ * notificações do celular, e quem recebe o e-mail (os donos). Chave pela hora da queda: cair de
+ * novo depois de reconectar avisa de novo.
+ */
+export async function avisarConexaoCaida(
+  tx: Tx,
+  contaId: string,
+  unidadeId: string,
+  caiuEm: Date,
+): Promise<{
+  conta: string;
+  unidade: string;
+  notificacoes: TrabalhoNotificacao[];
+  donos: { nome: string; email: string }[];
+}> {
+  const [conta, unidade, donos] = await Promise.all([
+    tx.conta.findUniqueOrThrow({ where: { id: contaId }, select: { nome: true } }),
+    tx.unidade.findUniqueOrThrow({ where: { id: unidadeId }, select: { nome: true } }),
+    tx.usuario.findMany({
+      where: { ativo: true, papeis: { some: { papel: 'dono' } } },
+      select: { nome: true, email: true },
+    }),
+  ]);
+  const notificacoes = await gravarAviso(tx, contaId, unidadeId, {
+    tipo: 'whatsapp_caiu',
+    titulo: `WhatsApp da ${unidade.nome} desconectado`,
+    texto:
+      'O bot parou de responder e os lembretes não saem. Leia o QR Code na tela Bot para voltar.',
+    link: '/bot',
+    chave: `whatsapp_caiu:${unidadeId}:${caiuEm.toISOString()}`,
+  });
+  return { conta: conta.nome, unidade: unidade.nome, notificacoes, donos };
+}

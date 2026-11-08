@@ -63,6 +63,7 @@ import { BotController } from './bot/bot.controller.js';
 import { BotService } from './bot/bot.service.js';
 import { provedorWhatsApp } from './whatsapp/provedor.js';
 import { WebhooksController } from './whatsapp/webhooks.controller.js';
+import { AlertaConexaoService } from './whatsapp/alerta-conexao.service.js';
 import { DespesasController } from './despesas/despesas.controller.js';
 import { ResumoController } from './resumo/resumo.controller.js';
 import { ResumoService } from './resumo/resumo.service.js';
@@ -205,6 +206,7 @@ export class ComumModule {}
     SaudeService,
     AdminGuard,
     BotService,
+    AlertaConexaoService,
     ConversasService,
     CobrancaService,
     provedorCobranca,
