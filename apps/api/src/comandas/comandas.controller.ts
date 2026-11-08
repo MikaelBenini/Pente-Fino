@@ -174,7 +174,7 @@ export class ComandasController {
     @Param('id', ParseUUIDPipe) id: string,
     @Corpo(cancelarSchema) d: z.infer<typeof cancelarSchema>,
   ) {
-    return this.servico.cancelar(id, d.motivo, d.falta);
+    return this.servico.cancelar(id, d.motivo, d.falta, d.avisarCliente);
   }
 
   @Post(':id/reabrir')

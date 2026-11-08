@@ -20,6 +20,7 @@ import {
   textoMarcado,
   textoProfissionais,
   textoServicos,
+  textoMaisServico,
   type AgendaNaConversa,
   type RegrasAgendamento,
   type ResumoAgendamento,
@@ -195,6 +196,26 @@ const seguir = (a: AgendaNaConversa, respostas: string[]): PassoDaAgenda => ({
   agenda: a,
   voltarAoMenu: false,
 });
+
+/** Profissional (pula quando só um atende) e, depois, os dias. */
+async function irParaProfissional(tx: Tx, a: AgendaNaConversa, d: DadosDaConversa) {
+  const profs = await profissionaisDaUnidade(tx, d.unidadeId);
+  if (profs.length === 1) return irParaDias(tx, { ...a, profissionalId: profs[0]!.id }, d);
+  return seguir({ ...a, passo: 'profissional', opcoes: profs.map((p) => p.id) }, [
+    textoProfissionais(profs.map((p) => p.nome)),
+  ]);
+}
+
+/** Anota os serviços e pergunta se quer somar outro; sem outro para somar, segue. */
+async function perguntarMaisServico(tx: Tx, a: AgendaNaConversa, d: DadosDaConversa, hoje: string) {
+  const todos = await servicosParaAgendar(tx, d.unidadeId, hoje);
+  const escolhidos = todos.filter((s) => a.servicoIds.includes(s.id));
+  const restantes = todos.filter((s) => !a.servicoIds.includes(s.id));
+  if (restantes.length === 0) return irParaProfissional(tx, a, d);
+  return seguir({ ...a, passo: 'mais_servico', opcoes: restantes.map((s) => s.id) }, [
+    textoMaisServico(escolhidos, restantes),
+  ]);
+}
 
 /** Mostra os próximos dias com horário (só os que têm). */
 async function irParaDias(tx: Tx, a: AgendaNaConversa, d: DadosDaConversa, aviso?: string) {
@@ -559,12 +580,34 @@ export async function passoDaAgenda(
         numeros.length > 0 && numeros.every((n) => n >= 1 && n <= agenda.opcoes.length);
       if (!validos)
         return naoServiu(agenda, 'Responda com o número do serviço (por exemplo: 1, ou 1 e 3).');
-      const a = { ...agenda, servicoIds: numeros.map((n) => agenda.opcoes[n - 1]!), erros: 0 };
-      const profs = await profissionaisDaUnidade(tx, d.unidadeId);
-      if (profs.length === 1) return irParaDias(tx, { ...a, profissionalId: profs[0]!.id }, d);
-      return seguir({ ...a, passo: 'profissional', opcoes: profs.map((p) => p.id) }, [
-        textoProfissionais(profs.map((p) => p.nome)),
-      ]);
+      return perguntarMaisServico(
+        tx,
+        { ...agenda, servicoIds: numeros.map((n) => agenda.opcoes[n - 1]!), erros: 0 },
+        d,
+        hoje,
+      );
+    }
+    case 'mais_servico': {
+      if (um === 0) return irParaProfissional(tx, { ...agenda, erros: 0 }, d);
+      const validos =
+        numeros.length > 0 && numeros.every((n) => n >= 1 && n <= agenda.opcoes.length);
+      if (!validos)
+        return naoServiu(
+          agenda,
+          'Responda o número de outro serviço, ou 0 para escolher o horário.',
+        );
+      return perguntarMaisServico(
+        tx,
+        {
+          ...agenda,
+          servicoIds: [
+            ...new Set([...agenda.servicoIds, ...numeros.map((n) => agenda.opcoes[n - 1]!)]),
+          ],
+          erros: 0,
+        },
+        d,
+        hoje,
+      );
     }
     case 'profissional': {
       if (um === null || um > agenda.opcoes.length)

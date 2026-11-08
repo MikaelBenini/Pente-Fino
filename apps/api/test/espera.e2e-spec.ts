@@ -11,7 +11,13 @@ import {
   type TrabalhoWhatsappEntrada,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
-import { avisoHorarioMudou, criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
+import {
+  avisoHorarioCancelado,
+  avisoHorarioMudou,
+  criarPrisma,
+  naConta,
+  type PrismaClient,
+} from '@pente-fino/db';
 import type { App } from 'supertest/types.js';
 import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
 
@@ -365,6 +371,80 @@ describe('mover agendamento', () => {
       .patch(`/agendamentos/${c.agendamentoId}`, { inicio: primeiro, avisarCliente: true })
       .expect(200);
     expect(await avisos()).toHaveLength(1);
+  });
+});
+
+describe('avisar o cliente (etapa 15.3)', () => {
+  const novoHorario = async (nome: string, diaN: number) => {
+    const livres = (
+      await dono
+        .get(
+          `/agenda/horarios-livres?unidadeId=${a.unidadeA}&data=${dia(diaN)}&duracaoMin=30&profissionalId=${prof}`,
+        )
+        .expect(200)
+    ).body as { inicios: string[] }[];
+    const inicios = livres[0]!.inicios;
+    const c = (
+      await recepcao
+        .post('/agendamentos', {
+          unidadeId: a.unidadeA,
+          profissionalId: prof,
+          clienteNovo: { nome },
+          inicio: inicios[0],
+          servicoIds: [corte],
+        })
+        .expect(201)
+    ).body as { id: string; agendamentoId: string };
+    return { ...c, inicios };
+  };
+  const naFila = async (tipo: string, agendamentoId: string) =>
+    (await fila.getJobs(['delayed', 'waiting', 'prioritized'])).filter(
+      (j) => j.data.tipo === tipo && j.data.agendamentoId === agendamentoId,
+    );
+
+  it('mudar o horário com "avisar" desmarcado não põe aviso na fila', async () => {
+    const c = await novoHorario('Muda Calado', 10);
+    await recepcao
+      .patch(`/agendamentos/${c.agendamentoId}`, { inicio: c.inicios[2], avisarCliente: false })
+      .expect(200);
+    expect(await naFila('horario_mudou', c.agendamentoId)).toHaveLength(0);
+  });
+
+  it('cancelar com "avisar o cliente" põe o aviso na fila; sem marcar ou como falta, não', async () => {
+    const avisado = await novoHorario('Cancela Avisando', 11);
+    await recepcao
+      .post(`/comandas/${avisado.id}/cancelar`, {
+        motivo: 'Barbeiro doente',
+        falta: false,
+        avisarCliente: true,
+      })
+      .expect(200);
+    expect((await naFila('horario_cancelado', avisado.agendamentoId)).map((j) => j.data)).toEqual([
+      { tipo: 'horario_cancelado', contaId: a.contaId, agendamentoId: avisado.agendamentoId },
+    ]);
+    // Cliente novo, sem conversa com a unidade: o worker não manda nada.
+    expect(
+      await avisoHorarioCancelado(prisma, {
+        contaId: a.contaId,
+        agendamentoId: avisado.agendamentoId,
+      }),
+    ).toBeNull();
+
+    const calado = await novoHorario('Cancela Calado', 12);
+    await recepcao
+      .post(`/comandas/${calado.id}/cancelar`, { motivo: 'Desistiu', falta: false })
+      .expect(200);
+    expect(await naFila('horario_cancelado', calado.agendamentoId)).toHaveLength(0);
+
+    const falta = await novoHorario('Faltou', 13);
+    await recepcao
+      .post(`/comandas/${falta.id}/cancelar`, {
+        motivo: 'Não veio',
+        falta: true,
+        avisarCliente: true,
+      })
+      .expect(200);
+    expect(await naFila('horario_cancelado', falta.agendamentoId)).toHaveLength(0);
   });
 });
 

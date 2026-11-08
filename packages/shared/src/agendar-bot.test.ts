@@ -4,6 +4,7 @@ import {
   rotuloDoDia,
   textoConfirmar,
   textoHorarios,
+  textoMaisServico,
   textoServicos,
 } from './agendar-bot.js';
 
@@ -61,5 +62,18 @@ describe('textos', () => {
         total: 8000,
       }),
     ).toContain('✂️ Corte + Barba\n💈 Com Rafael\n📅 Segunda, 09/11, às 09:00\n💰 R$ 80,00');
+  });
+});
+
+describe('somar serviços', () => {
+  it('mostra o que já está anotado (total) e os outros para somar, com 0 para seguir', () => {
+    const t = textoMaisServico(
+      [{ id: 'c', nome: 'Corte', preco: 4500, duracaoMin: 30 }],
+      [{ id: 'b', nome: 'Barba', preco: 3000, duracaoMin: 20 }],
+    );
+    expect(t).toContain('✅ Anotado: Corte · R$');
+    expect(t).toContain('30 min');
+    expect(t).toMatch(/1\. Barba · R\$\s?30,00 · 20 min/);
+    expect(t).toContain('0. Não, escolher o horário');
   });
 });

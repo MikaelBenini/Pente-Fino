@@ -235,7 +235,7 @@ Ocupação = minutos agendados ÷ minutos disponíveis dos profissionais no per�
 
 - **Motor de fluxo.** O menu é uma árvore de nós: mensagem, opções numeradas, palavra-chave, pergunta com resposta, ação (agendar, ver preço, falar com atendente).
 - **Sessão por número.** Guarda o nó atual e os dados coletados; expira após um tempo sem resposta (proposta: 30 minutos) e volta ao menu.
-- **Agendamento pelo menu.** O bot lista serviços, profissionais e horários livres consultando a mesma API da agenda.
+- **Agendamento pelo menu.** O bot lista serviços, profissionais e horários livres consultando a mesma API da agenda. Depois de cada serviço escolhido, pergunta se o cliente quer adicionar outro (mostra o total anotado; 0 segue para o horário).
 - **Transferência.** A opção "falar com atendente" pausa o bot naquele número até a recepção devolver.
 - **Fora do horário.** Mensagem configurada, com opção de agendar mesmo assim.
 - **Provedor: Evolution API por QR Code.** Software livre instalado no próprio servidor e conectado como WhatsApp Web: sem custo por mensagem e sem aprovação da Meta. Não é a API oficial; com demanda baixa o risco de restrição é pequeno, e o bot usa número dedicado, espaça os envios e só manda lembrete a quem agendou. A camada do bot deve ficar atrás de uma interface para trocar de provedor sem reescrever o fluxo.
@@ -316,11 +316,12 @@ Todo caminho termina no mesmo lugar: uma comanda fechada, que alimenta caixa, co
 ### Cliente no WhatsApp (bot sem IA)
 
 1. Manda qualquer mensagem; recebe a boas-vindas e o menu numerado.
-2. Escolhe 1 Agendar: o bot lista serviços, depois profissionais, depois horários livres.
+2. Escolhe 1 Agendar: o bot lista serviços; a cada serviço escolhido pergunta "quer adicionar mais algum?" (corte + barba, por exemplo) e, com 0, segue para profissionais e horários livres.
 3. Confirma: o agendamento entra na agenda e já cria a comanda prevista.
 4. Recebe lembrete antes do horário e responde para confirmar ou remarcar.
-5. Outras opções: preços da unidade, endereço e horário, clube, falar com atendente.
-6. Palavra-chave reconhecida em qualquer ponto (ex.: "preço", "endereço") leva direto à resposta pronta.
+5. Se a barbearia mudar ou cancelar o horário, recebe o aviso pelo WhatsApp quando a recepção deixa marcada a opção "Avisar o cliente" (no cancelamento, com o convite para marcar outro).
+6. Outras opções: preços da unidade, endereço e horário, clube, falar com atendente.
+7. Palavra-chave reconhecida em qualquer ponto (ex.: "preço", "endereço") leva direto à resposta pronta.
 
 ### Estados da comanda
 

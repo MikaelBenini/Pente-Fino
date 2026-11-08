@@ -3,6 +3,7 @@ import {
   deveAvisarClienteDoMovimento,
   minutosDoArrasto,
   textoConfirmarMovimento,
+  textoHorarioCancelado,
   textoHorarioMudou,
 } from './mover.js';
 
@@ -87,6 +88,21 @@ describe('mover agendamento', () => {
       }),
     ).toBe(
       'Oi! Seu horário de Hoje (ter, 01/12), às 14:00 continua, agora com Thiago.\nSe não der para você, é só responder esta mensagem.',
+    );
+  });
+});
+
+describe('aviso de cancelamento pela barbearia', () => {
+  it('diz o dia, a hora e o serviço e convida para marcar de novo', () => {
+    expect(
+      textoHorarioCancelado({
+        cliente: 'João Silva',
+        diaRotulo: 'amanhã (qua, 02/12)',
+        inicio: h('14:00'),
+        servicos: ['Corte', 'Barba'],
+      }),
+    ).toBe(
+      'Oi, João! Precisamos cancelar o seu horário de amanhã (qua, 02/12), às 14:00 (Corte + Barba). Desculpe o transtorno.\nQuer marcar outro? Responda AGENDAR que eu te mostro os horários livres.',
     );
   });
 });

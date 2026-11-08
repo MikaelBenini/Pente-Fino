@@ -13,6 +13,8 @@ export type PassoAgenda =
   // Por onde marcar: conversa ou site (some quando a unidade não tem site ou o cliente já escolheu a conversa).
   | 'canal'
   | 'servico'
+  // Depois do serviço: "quer adicionar mais algum?" (0 segue para o horário).
+  | 'mais_servico'
   | 'profissional'
   | 'dia'
   | 'horario'
@@ -153,11 +155,31 @@ export function textoServicos(
 ): string {
   const linhas = servicos.map((s) => `${s.nome} · ${formatarMoeda(s.preco)} · ${s.duracaoMin} min`);
   return [
-    'Qual serviço você quer? Responda o número. Para mais de um, separe: 1 e 3.',
+    'Qual serviço você quer? Responda o número. Depois dá para adicionar outro.',
     '',
     lista(linhas),
     '0. Voltar ao menu',
     ...(link ? ['', `Prefere marcar pelo site? ${link}`] : []),
+  ].join('\n');
+}
+
+/** Depois de escolher: o que já está anotado e os outros serviços para somar (0 segue). */
+export function textoMaisServico(
+  escolhidos: readonly ServicoParaAgendar[],
+  restantes: readonly ServicoParaAgendar[],
+): string {
+  const preco = escolhidos.reduce((t, s) => t + s.preco, 0);
+  const min = escolhidos.reduce((t, s) => t + s.duracaoMin, 0);
+  const linhas = restantes.map(
+    (s) => `${s.nome} · ${formatarMoeda(s.preco)} · ${s.duracaoMin} min`,
+  );
+  return [
+    `✅ Anotado: ${escolhidos.map((s) => s.nome).join(' + ')} · ${formatarMoeda(preco)} · ${min} min`,
+    '',
+    'Quer adicionar mais algum serviço? Responda o número.',
+    '',
+    lista(linhas),
+    '0. Não, escolher o horário',
   ].join('\n');
 }
 

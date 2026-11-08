@@ -18,6 +18,7 @@ import {
   contasParaAvisosDaAssinatura,
   rotinaAvisosDaAssinatura,
   configuracaoDoSistema,
+  avisoHorarioCancelado,
   avisoHorarioMudou,
   contasComAutomacoes,
   rodarAutomacoes,
@@ -396,6 +397,16 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             { relogio, adicionar },
           );
           return 'horario_mudou: aviso enviado';
+        }
+        // A barbearia cancelou o horário e marcou "Avisar o cliente".
+        if (job.data.tipo === 'horario_cancelado') {
+          const r = await avisoHorarioCancelado(this.banco.prisma, job.data, new Date());
+          if (!r) return 'horario_cancelado: sem aviso';
+          await agendarRespostas(
+            { contaId: r.contaId, instancia: r.instancia, saidas: r.mensagemIds },
+            { relogio, adicionar },
+          );
+          return 'horario_cancelado: aviso enviado';
         }
         // Vagou um horário: oferece para quem está na lista de espera e cabe nele.
         if (job.data.tipo === 'vaga') {

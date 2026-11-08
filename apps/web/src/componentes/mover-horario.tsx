@@ -73,7 +73,7 @@ export function useMoverHorario(aoMover?: (c: ComandaDetalhe) => void) {
         agendamentoId: m.agendamentoId,
         inicio: m.para.inicio,
         profissionalId: m.para.profissionalId,
-        ...(mudouHorario ? {} : { avisarCliente: avisar }),
+        avisarCliente: avisar,
       });
       setPendente(null);
       setFeito(m);
@@ -144,21 +144,17 @@ export function useMoverHorario(aoMover?: (c: ComandaDetalhe) => void) {
                   },
                 })}
               </span>
-              {mudouHorario ? (
-                <span className="text-sm text-tinta-suave">
-                  O cliente recebe o aviso pelo WhatsApp, se aceita mensagens.
-                </span>
-              ) : (
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={avisar}
-                    onChange={(e) => setAvisar(e.target.checked)}
-                    className="size-5 accent-[var(--modulo)]"
-                  />
-                  Avisar o cliente da troca de barbeiro
-                </label>
-              )}
+              <label className="flex min-h-11 items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={avisar}
+                  onChange={(e) => setAvisar(e.target.checked)}
+                  className="size-5 accent-[var(--modulo)]"
+                />
+                {mudouHorario
+                  ? 'Avisar o cliente pelo WhatsApp do novo horário'
+                  : 'Avisar o cliente da troca de barbeiro'}
+              </label>
             </span>
           )
         }
@@ -173,7 +169,8 @@ export function useMoverHorario(aoMover?: (c: ComandaDetalhe) => void) {
   return {
     pedir: (m: Movimento) => {
       setErro(null);
-      setAvisar(false);
+      // Horário novo: avisar já vem marcado; só troca de barbeiro, desmarcado.
+      setAvisar(m.de.inicio !== m.para.inicio);
       setPendente(m);
     },
     elementos,

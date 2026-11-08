@@ -63,6 +63,7 @@ dono, gestor, recepcao, barbeiro. Ver a matriz de permissões em `docs/`.
 
 - Código e nomes de domínio em português (`comanda`, `item_comanda`, `unidade`); textos da interface em pt-BR.
 - Conventional Commits (`feat:`, `fix:`, `chore:`), uma branch por tarefa, PR com CI verde.
+- Toda mudança que quem usa ou opera percebe entra no `CHANGELOG.md` (seção "Não publicado"), e a etapa correspondente da linha de desenvolvimento é marcada com o que foi feito.
 - Validação com zod compartilhado entre API e front.
 - Toda regra de cálculo nova vai para `packages/shared` com teste unitário antes da tela.
 - Nunca publicar porta de PostgreSQL, Redis ou Evolution API na VPS (o Docker ignora o UFW).

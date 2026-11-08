@@ -460,6 +460,15 @@ O painel da administração organizado por assunto, com o que fazer no dia e sem
 - [x] Contas: ordenar (mais novas, nome, teste acabando, sem acesso há mais tempo, mais comandas), contador do filtro e "Exportar planilha" (CSV que abre no Excel)
 - [x] **Pronto quando:** o admin vê no Início o que cobrar e quem ligar, dá acesso a um vendedor e o desativa pela tela, e acha a ação na auditoria (conferido em `apps/web/e2e/admin.spec.ts` e em `administração prática (etapa 15.2)` de `apps/api/test/admin.e2e-spec.ts`)
 
+## Etapa 15.3 · Automação dos avisos e bot com vários serviços (pedido em 2026-11-08)
+
+A barbearia decide, em cada mudança, se o cliente fica sabendo; e o cliente monta o atendimento completo pela conversa.
+
+- [x] Bot: depois de escolher um serviço, pergunta "Quer adicionar mais algum serviço?", com o que já está anotado (serviços, preço e duração somados) e os outros serviços numerados; 0 segue para o profissional e o horário; quando não sobra serviço para somar, segue direto ("1 e 3" de uma vez continua valendo) (passo `mais_servico` em `packages/db/src/agendar-bot.ts`; texto `textoMaisServico` em `packages/shared/src/agendar-bot.ts`, com teste)
+- [x] Cancelar comanda com horário ainda por vir: caixa "Avisar o cliente pelo WhatsApp (com convite para marcar outro horário)", já marcada; "O cliente não veio" começa desmarcado antes do horário e marcado depois, e falta nunca avisa (`avisarCliente` em `cancelarSchema`; trabalho `horario_cancelado` na fila; o worker manda `textoHorarioCancelado` só se o horário continua cancelado e futuro, o cliente aceita mensagens, já falou com a unidade e o WhatsApp está conectado — `avisoHorarioCancelado` em `packages/db/src/mover.ts`)
+- [x] Mover horário (arrastar ou "Mover"): a caixa "Avisar o cliente pelo WhatsApp do novo horário" aparece sempre, marcada quando muda o horário e desmarcada quando só troca o barbeiro; desmarcada, nada sai (a regra `deveAvisarClienteDoMovimento` já aceitava; agora a tela manda a escolha)
+- [x] **Pronto quando:** um cliente marca corte + barba pelo bot escolhendo um de cada vez, e a recepção cancela um horário com "Avisar o cliente" marcado e o aviso entra na fila (conferido em `agendar-bot.db.test.ts`, `espera.e2e-spec.ts` → "avisar o cliente (etapa 15.3)", `operacao.spec.ts` e `mover.spec.ts`)
+
 ## Etapa 16 · Preparação da VPS
 
 Um servidor Ubuntu 24.04 LTS seguro antes de receber qualquer dado.

@@ -747,7 +747,12 @@ export class ComandasService {
     return this.buscar(id);
   }
 
-  async cancelar(id: string, motivo: string, falta: boolean): Promise<ComandaDetalhe> {
+  async cancelar(
+    id: string,
+    motivo: string,
+    falta: boolean,
+    avisarCliente = false,
+  ): Promise<ComandaDetalhe> {
     let liberado: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date } | null =
       null;
     const agendamentoId = await this.banco.daConta(async (tx) => {
@@ -781,6 +786,15 @@ export class ComandasService {
     // Cancelado (não falta): o profissional fica sabendo pelo assistente, se ligou.
     if (agendamentoId && falta)
       await avisarFalta(this.banco, this.filas, Contexto.usuario().contaId, agendamentoId);
+    // Cancelado pela barbearia com "Avisar o cliente": o worker confere aceite e conexão.
+    if (agendamentoId && !falta && avisarCliente && liberado)
+      await this.filas.whatsappEntrada
+        .add(
+          'horario_cancelado',
+          { tipo: 'horario_cancelado', contaId: Contexto.usuario().contaId, agendamentoId },
+          { jobId: `horario_cancelado_${agendamentoId}` },
+        )
+        .catch(() => undefined);
     if (agendamentoId && !falta)
       await avisarEquipe(
         this.banco,

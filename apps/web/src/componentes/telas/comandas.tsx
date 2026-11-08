@@ -592,6 +592,7 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
       />
       <Cancelamento
         aberto={cancelar}
+        inicioAgendado={c.agendamentoId && c.cliente ? c.inicio : null}
         onFechar={() => setCancelar(false)}
         onConfirmar={(corpo) => executar('cancelar', corpo)}
       />
@@ -865,15 +866,22 @@ function Fechamento({
 
 function Cancelamento({
   aberto,
+  inicioAgendado,
   onFechar,
   onConfirmar,
 }: {
   aberto: boolean;
+  /** Início do horário com cliente (null = sem agendamento ou sem cliente). */
+  inicioAgendado: string | null;
   onFechar: () => void;
   onConfirmar: (corpo: object) => Promise<void>;
 }) {
+  // Horário ainda vai acontecer e tem cliente: dá para avisar pelo WhatsApp.
+  const [podeAvisar] = useState(() => !!inicioAgendado && Date.parse(inicioAgendado) > Date.now());
   const [motivo, setMotivo] = useState('');
-  const [falta, setFalta] = useState(true);
+  // Antes do horário, o normal é a barbearia desmarcar (avisando); depois, é falta.
+  const [falta, setFalta] = useState(!podeAvisar);
+  const [avisar, setAvisar] = useState(true);
   return (
     <Dialogo
       aberto={aberto}
@@ -889,7 +897,11 @@ function Cancelamento({
           e.preventDefault();
           if (motivo.trim().length < 3) return;
           onFechar();
-          await onConfirmar({ motivo: motivo.trim(), falta });
+          await onConfirmar({
+            motivo: motivo.trim(),
+            falta,
+            avisarCliente: podeAvisar && !falta && avisar,
+          });
           setMotivo('');
         }}
       >
@@ -899,6 +911,14 @@ function Cancelamento({
           checked={falta}
           onChange={(e) => setFalta(e.target.checked)}
         />
+        {podeAvisar && !falta && (
+          <Marcador
+            id="cancelar-avisar"
+            rotulo="Avisar o cliente pelo WhatsApp (com convite para marcar outro horário)"
+            checked={avisar}
+            onChange={(e) => setAvisar(e.target.checked)}
+          />
+        )}
         <Campo
           id="cancelar-motivo"
           rotulo="Motivo"
