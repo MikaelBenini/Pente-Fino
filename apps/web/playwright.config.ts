@@ -20,6 +20,16 @@ export default defineConfig({
     timezoneId: 'America/Sao_Paulo',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // Visitante que já respondeu o aviso de cookies do site (senão ele cobre botões no rodapé).
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${PORTA_WEB}`,
+          localStorage: [{ name: 'pf-cookies', value: 'recusado' }],
+        },
+      ],
+    },
   },
   projects: [
     {
