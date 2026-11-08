@@ -17,7 +17,8 @@ describe('clube online', () => {
   });
 
   it('repasse: a barbearia fica com o líquido menos a taxa; percentual do split', () => {
-    expect(dividirRepasse(9_501, 100)).toEqual({ barbearia: 9_406, plataforma: 95 });
+    expect(dividirRepasse(9_752, 100)).toEqual({ barbearia: 9_654, plataforma: 98 });
+    expect(dividirRepasse(9_501, 100)).toEqual({ barbearia: 9_405, plataforma: 96 });
     expect(dividirRepasse(9_501, 0)).toEqual({ barbearia: 9_501, plataforma: 0 });
     expect(percentualDaBarbearia(150)).toBe(98.5);
     expect(percentualDaBarbearia(0)).toBe(100);

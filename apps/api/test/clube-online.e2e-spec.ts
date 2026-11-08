@@ -197,7 +197,7 @@ describe('clube online', () => {
     const mes = dataLocal(new Date()).slice(0, 7);
     const lista = (await dono.get(`/clube/recebimentos?mes=${mes}`).expect(200))
       .body as RecebimentoClube[];
-    // R$ 100,00 pagos; R$ 1,99 de taxa do Asaas; 1,5% de R$ 98,01 = R$ 1,47 para o Pente Fino.
+    // R$ 100,00 pagos; R$ 1,99 de taxa do Asaas; 98,5% de R$ 98,01 = R$ 96,53 para a barbearia.
     expect(lista).toEqual([
       expect.objectContaining({
         cliente: 'Paulo Pagante',
@@ -205,8 +205,8 @@ describe('clube online', () => {
         forma: 'pix',
         valor: 10_000,
         taxaAsaas: 199,
-        taxaPlataforma: 147,
-        repasse: 9_654,
+        taxaPlataforma: 148,
+        repasse: 9_653,
       }),
     ]);
     const avisos = (await dono.get('/avisos').expect(200)).body;
