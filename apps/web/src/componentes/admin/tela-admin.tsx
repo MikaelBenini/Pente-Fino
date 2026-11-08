@@ -21,9 +21,10 @@ import { Aviso } from '../aviso';
 import { Marca } from '../marca';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { AuditoriaAdmin, EquipeAdmin } from './equipe-admin';
 import { FichaConta } from './ficha-conta';
+import { CobrancaAdmin, InicioAdmin } from './inicio-admin';
 import { ConfiguracoesAdmin, SaudeAdmin } from './config-admin';
-import { MetricasAdmin } from './metricas-admin';
 import { NovaVenda, VendasPorVendedor } from './nova-venda';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
@@ -207,31 +208,115 @@ function Entrar() {
   );
 }
 
-/** Admin: abas do painel, configurações e saúde; vendedor: só as contas dele. */
+const ABAS_VENDEDOR = ['inicio', 'contas', 'cobranca'];
+
+/** Painel: abas por assunto; a ficha da conta e a nova venda abrem de qualquer aba. */
 function Painel({ u }: { u: UsuarioPlataformaSessao }) {
-  const [aba, setAba] = useState('painel');
-  if (u.papel !== 'admin') return <PainelContas u={u} />;
+  // A aba fica no endereço (#contas), para voltar nela ao recarregar. O painel só monta no
+  // navegador (depois de conferir a sessão), então dá para ler o endereço aqui.
+  const [aba, setAbaEstado] = useState(() =>
+    typeof window === 'undefined' ? 'inicio' : window.location.hash.slice(1) || 'inicio',
+  );
+  const [aberta, setAberta] = useState<string | null>(null);
+  const [vender, setVender] = useState(false);
+  const setAba = (id: string) => {
+    setAbaEstado(id);
+    window.history.replaceState(null, '', `#${id}`);
+  };
+  const abas = [
+    {
+      id: 'inicio',
+      rotulo: 'Início',
+      conteudo: <InicioAdmin u={u} onAbrirConta={setAberta} onIrPara={setAba} />,
+    },
+    { id: 'contas', rotulo: 'Contas', conteudo: <ContasAdmin u={u} onAbrirConta={setAberta} /> },
+    { id: 'cobranca', rotulo: 'Cobrança', conteudo: <CobrancaAdmin onAbrirConta={setAberta} /> },
+    { id: 'vendas', rotulo: 'Vendas', conteudo: <VendasPorVendedor /> },
+    { id: 'equipe', rotulo: 'Equipe', conteudo: <EquipeAdmin u={u} /> },
+    { id: 'auditoria', rotulo: 'Auditoria', conteudo: <AuditoriaAdmin onAbrirConta={setAberta} /> },
+    { id: 'configuracoes', rotulo: 'Configurações', conteudo: <ConfiguracoesAdmin /> },
+    { id: 'saude', rotulo: 'Saúde do sistema', conteudo: <SaudeAdmin /> },
+  ].filter((x) => u.papel === 'admin' || ABAS_VENDEDOR.includes(x.id));
   return (
-    <Abas
-      rotulo="Administração"
-      atual={aba}
-      onTrocar={setAba}
-      abas={[
-        { id: 'painel', rotulo: 'Painel', conteudo: <PainelContas u={u} /> },
-        { id: 'configuracoes', rotulo: 'Configurações', conteudo: <ConfiguracoesAdmin /> },
-        { id: 'saude', rotulo: 'Saúde do sistema', conteudo: <SaudeAdmin /> },
-      ]}
-    />
+    <main className="flex flex-col gap-6">
+      <div className="flex justify-end">
+        <Botao onClick={() => setVender(true)}>Nova venda</Botao>
+      </div>
+      <Abas
+        rotulo="Administração"
+        atual={abas.some((x) => x.id === aba) ? aba : 'inicio'}
+        onTrocar={setAba}
+        abas={abas}
+      />
+      <FichaConta id={aberta} onFechar={() => setAberta(null)} papel={u.papel} />
+      <NovaVenda aberto={vender} onFechar={() => setVender(false)} onAbrirConta={setAberta} />
+    </main>
   );
 }
 
-function PainelContas({ u }: { u: UsuarioPlataformaSessao }) {
+type Ordem = 'criada' | 'nome' | 'acesso' | 'fechadas' | 'teste';
+const ORDENAR: Record<Ordem, (a: ContaNaPlataforma, b: ContaNaPlataforma) => number> = {
+  criada: (a, b) => b.criadaEm.localeCompare(a.criadaEm),
+  nome: (a, b) => a.nome.localeCompare(b.nome, 'pt-BR'),
+  acesso: (a, b) => (a.ultimoAcessoEm ?? '').localeCompare(b.ultimoAcessoEm ?? ''),
+  fechadas: (a, b) => b.fechadas7Dias - a.fechadas7Dias,
+  teste: (a, b) => (a.testeAte ?? '9').localeCompare(b.testeAte ?? '9'),
+};
+
+/** Planilha (CSV com ponto e vírgula, abre direto no Excel em português). */
+function baixarCsv(contas: ContaNaPlataforma[]) {
+  const campo = (v: string | number | null) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const linhas = [
+    [
+      'Barbearia',
+      'Plano',
+      'Ciclo',
+      'Situação',
+      'Criada',
+      'Teste até',
+      'Unidades',
+      'Profissionais',
+      'WhatsApp',
+      'Fechadas 7 dias',
+      'Último acesso',
+      'Cobrança',
+    ],
+    ...contas.map((c) => [
+      c.nome,
+      NOME_PLANO[c.plano],
+      c.ciclo,
+      NOME_STATUS[c.status],
+      formatarData(c.criadaEm),
+      c.testeAte ? formatarData(c.testeAte) : '',
+      c.unidades,
+      c.profissionais,
+      c.whatsappConectado ? 'Conectado' : 'Não',
+      c.fechadas7Dias,
+      c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '',
+      c.cobrancaAutomatica ? 'Asaas' : 'Manual',
+    ]),
+  ];
+  const texto = '\ufeff' + linhas.map((l) => l.map(campo).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `contas-pente-fino-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function ContasAdmin({
+  u,
+  onAbrirConta,
+}: {
+  u: UsuarioPlataformaSessao;
+  onAbrirConta: (id: string) => void;
+}) {
   const contas = useQuery({
     queryKey: ['admin', 'contas'],
     queryFn: () => adminApi<ContaNaPlataforma[]>('contas'),
   });
-  const [vender, setVender] = useState(false);
-  const [aberta, setAberta] = useState<string | null>(null);
+  const [ordem, setOrdem] = useState<Ordem>('criada');
   const [busca, setBusca] = useState('');
   const [plano, setPlano] = useState('');
   const [situacao, setSituacao] = useState('');
@@ -241,146 +326,157 @@ function PainelContas({ u }: { u: UsuarioPlataformaSessao }) {
     queryFn: () => adminApi<VendasDoVendedor[]>('vendas'),
     enabled: u.papel === 'admin',
   });
+  const termo = busca.trim().toLowerCase();
+  const filtradas = (contas.data ?? [])
+    .filter(
+      (c) =>
+        (!termo || c.nome.toLowerCase().includes(termo)) &&
+        (!plano || c.plano === plano) &&
+        (!situacao || c.status === situacao) &&
+        (!vendedor || (vendedor === 'site' ? c.vendedorId === null : c.vendedorId === vendedor)),
+    )
+    .sort(ORDENAR[ordem]);
   return (
-    <main className="flex flex-col gap-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-semibold">
-          {u.papel === 'admin' ? 'Administração' : 'Minhas vendas'}
-        </h1>
-        <Botao onClick={() => setVender(true)}>Nova venda</Botao>
-      </div>
-      {u.papel === 'admin' && <MetricasAdmin />}
-      {u.papel === 'admin' && <VendasPorVendedor />}
-      <section aria-labelledby="titulo-contas" className="flex flex-col gap-4">
-        <h2 id="titulo-contas" className="text-2xl font-semibold">
-          Contas
-        </h2>
-        <p className="text-sm text-tinta-suave">
-          Plano, situação, datas e uso. Dados de clientes, comandas e conversas das barbearias não
-          aparecem aqui.
-        </p>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-full max-w-xs">
-            <Campo
-              id="busca-conta"
-              rotulo="Buscar barbearia"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-          </div>
+    <section aria-labelledby="titulo-contas" className="flex flex-col gap-4">
+      <h1 id="titulo-contas" className="text-3xl font-semibold">
+        Contas
+      </h1>
+      <p className="text-sm text-tinta-suave">
+        Plano, situação, datas e uso. Dados de clientes, comandas e conversas das barbearias não
+        aparecem aqui.
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-full max-w-xs">
+          <Campo
+            id="busca-conta"
+            rotulo="Buscar barbearia"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        <Selecao
+          id="filtro-plano"
+          rotulo="Plano"
+          value={plano}
+          onChange={(e) => setPlano(e.target.value)}
+          opcoes={[
+            { valor: '', rotulo: 'Todos' },
+            ...PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] })),
+          ]}
+        />
+        <Selecao
+          id="filtro-situacao"
+          rotulo="Situação"
+          value={situacao}
+          onChange={(e) => setSituacao(e.target.value)}
+          opcoes={[
+            { valor: '', rotulo: 'Todas' },
+            ...(Object.keys(NOME_STATUS) as ContaNaPlataforma['status'][]).map((s) => ({
+              valor: s,
+              rotulo: NOME_STATUS[s],
+            })),
+          ]}
+        />
+        {u.papel === 'admin' && (
           <Selecao
-            id="filtro-plano"
-            rotulo="Plano"
-            value={plano}
-            onChange={(e) => setPlano(e.target.value)}
+            id="filtro-vendedor"
+            rotulo="Vendedor"
+            value={vendedor}
+            onChange={(e) => setVendedor(e.target.value)}
             opcoes={[
               { valor: '', rotulo: 'Todos' },
-              ...PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] })),
+              { valor: 'site', rotulo: 'Cadastro pelo site' },
+              ...(vendas.data ?? []).map((v) => ({ valor: v.vendedorId, rotulo: v.nome })),
             ]}
           />
-          <Selecao
-            id="filtro-situacao"
-            rotulo="Situação"
-            value={situacao}
-            onChange={(e) => setSituacao(e.target.value)}
-            opcoes={[
-              { valor: '', rotulo: 'Todas' },
-              ...(Object.keys(NOME_STATUS) as ContaNaPlataforma['status'][]).map((s) => ({
-                valor: s,
-                rotulo: NOME_STATUS[s],
-              })),
-            ]}
-          />
-          {u.papel === 'admin' && (
-            <Selecao
-              id="filtro-vendedor"
-              rotulo="Vendedor"
-              value={vendedor}
-              onChange={(e) => setVendedor(e.target.value)}
-              opcoes={[
-                { valor: '', rotulo: 'Todos' },
-                { valor: 'site', rotulo: 'Cadastro pelo site' },
-                ...(vendas.data ?? []).map((v) => ({ valor: v.vendedorId, rotulo: v.nome })),
-              ]}
-            />
-          )}
-        </div>
-        <Estado consulta={contas}>
-          {() => (
-            <Tabela rotulo="Contas das barbearias">
-              <thead>
-                <tr className="border-b border-borda">
-                  {[
-                    'Barbearia',
-                    'Plano',
-                    'Situação',
-                    'Criada',
-                    'Unidades',
-                    'Profissionais',
-                    'WhatsApp',
-                    'Fechadas (7 dias)',
-                    'Última fechada',
-                    'Último acesso',
-                  ].map((c) => (
-                    <th key={c} scope="col" className={th}>
-                      {c}
-                    </th>
-                  ))}
+        )}
+        <Selecao
+          id="ordem-contas"
+          rotulo="Ordenar por"
+          value={ordem}
+          onChange={(e) => setOrdem(e.target.value as Ordem)}
+          opcoes={[
+            { valor: 'criada', rotulo: 'Mais novas' },
+            { valor: 'nome', rotulo: 'Nome' },
+            { valor: 'teste', rotulo: 'Teste acabando' },
+            { valor: 'acesso', rotulo: 'Sem acesso há mais tempo' },
+            { valor: 'fechadas', rotulo: 'Mais comandas na semana' },
+          ]}
+        />
+        <Botao
+          variante="secundario"
+          disabled={!filtradas.length}
+          onClick={() => baixarCsv(filtradas)}
+        >
+          Exportar planilha
+        </Botao>
+      </div>
+      <p className="text-sm text-tinta-suave" aria-live="polite">
+        {filtradas.length} de {contas.data?.length ?? 0} contas
+      </p>
+      <Estado consulta={contas}>
+        {() => (
+          <Tabela rotulo="Contas das barbearias">
+            <thead>
+              <tr className="border-b border-borda">
+                {[
+                  'Barbearia',
+                  'Plano',
+                  'Situação',
+                  'Criada',
+                  'Unidades',
+                  'Profissionais',
+                  'WhatsApp',
+                  'Fechadas (7 dias)',
+                  'Última fechada',
+                  'Último acesso',
+                ].map((c) => (
+                  <th key={c} scope="col" className={th}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtradas.map((c) => (
+                <tr key={c.id} className="border-b border-borda">
+                  <th scope="row" className={`${td} font-semibold`}>
+                    <button
+                      type="button"
+                      onClick={() => onAbrirConta(c.id)}
+                      className="text-left underline decoration-borda-forte underline-offset-4 hover:decoration-modulo focus-visible:outline-2 focus-visible:outline-foco"
+                    >
+                      {c.nome}
+                    </button>
+                  </th>
+                  <td className={td}>
+                    {NOME_PLANO[c.plano]} · {c.ciclo}
+                  </td>
+                  <td className={td}>
+                    <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>
+                    {c.status === 'teste' && c.testeAte && (
+                      <span className="block text-xs text-tinta-suave">
+                        até {formatarData(c.testeAte)}
+                      </span>
+                    )}
+                  </td>
+                  <td className={`${td} tabular-nums`}>{formatarData(c.criadaEm)}</td>
+                  <td className={`${td} tabular-nums`}>{c.unidades}</td>
+                  <td className={`${td} tabular-nums`}>{c.profissionais}</td>
+                  <td className={td}>{c.whatsappConectado ? 'Conectado' : 'Não'}</td>
+                  <td className={`${td} tabular-nums`}>{c.fechadas7Dias}</td>
+                  <td className={`${td} tabular-nums`}>
+                    {c.ultimaFechadaEm ? formatarDataHora(c.ultimaFechadaEm) : '—'}
+                  </td>
+                  <td className={`${td} tabular-nums`}>
+                    {c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '—'}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {contas
-                  .data!.filter(
-                    (c) =>
-                      (!busca.trim() ||
-                        c.nome.toLowerCase().includes(busca.trim().toLowerCase())) &&
-                      (!plano || c.plano === plano) &&
-                      (!situacao || c.status === situacao) &&
-                      (!vendedor ||
-                        (vendedor === 'site' ? c.vendedorId === null : c.vendedorId === vendedor)),
-                  )
-                  .map((c) => (
-                    <tr key={c.id} className="border-b border-borda">
-                      <th scope="row" className={`${td} font-semibold`}>
-                        <button
-                          type="button"
-                          onClick={() => setAberta(c.id)}
-                          className="text-left underline decoration-borda-forte underline-offset-4 hover:decoration-modulo focus-visible:outline-2 focus-visible:outline-foco"
-                        >
-                          {c.nome}
-                        </button>
-                      </th>
-                      <td className={td}>
-                        {NOME_PLANO[c.plano]} · {c.ciclo}
-                      </td>
-                      <td className={td}>
-                        <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>
-                        {c.status === 'teste' && c.testeAte && (
-                          <span className="block text-xs text-tinta-suave">
-                            até {formatarData(c.testeAte)}
-                          </span>
-                        )}
-                      </td>
-                      <td className={`${td} tabular-nums`}>{formatarData(c.criadaEm)}</td>
-                      <td className={`${td} tabular-nums`}>{c.unidades}</td>
-                      <td className={`${td} tabular-nums`}>{c.profissionais}</td>
-                      <td className={td}>{c.whatsappConectado ? 'Conectado' : 'Não'}</td>
-                      <td className={`${td} tabular-nums`}>{c.fechadas7Dias}</td>
-                      <td className={`${td} tabular-nums`}>
-                        {c.ultimaFechadaEm ? formatarDataHora(c.ultimaFechadaEm) : '—'}
-                      </td>
-                      <td className={`${td} tabular-nums`}>
-                        {c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '—'}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </Tabela>
-          )}
-        </Estado>
-      </section>
-      <FichaConta id={aberta} onFechar={() => setAberta(null)} papel={u.papel} />
-      <NovaVenda aberto={vender} onFechar={() => setVender(false)} onAbrirConta={setAberta} />
-    </main>
+              ))}
+            </tbody>
+          </Tabela>
+        )}
+      </Estado>
+    </section>
   );
 }

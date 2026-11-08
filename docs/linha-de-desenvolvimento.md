@@ -448,6 +448,18 @@ Cada pessoa recebe só o aviso que precisa agir, e cada plano entrega exatamente
 
 - [x] **Pronto quando:** um vendedor cria uma conta na rua, registra o Pix na hora, o dono recebe o convite e entra; o admin vê a conta nova nas métricas, muda o plano com motivo e tudo fica na auditoria, sem nunca ver um dado de cliente da barbearia (conferido no teste e2e `pronto quando (etapa 15.1)` em `apps/api/test/admin.e2e-spec.ts`: o vendedor vende e registra o Pix, o dono recebe o convite, entra e cadastra um cliente; o admin vê a conta nas métricas e na lista, muda o plano com motivo, o histórico mostra quem fez cada ação e nenhuma resposta da administração traz o cliente da barbearia)
 
+## Etapa 15.2 · Administração prática (pedido em 2026-11-08)
+
+O painel da administração organizado por assunto, com o que fazer no dia e sem depender do servidor para o trabalho de rotina.
+
+- [x] Abas por assunto (Início, Contas, Cobrança, Vendas, Equipe, Auditoria, Configurações, Saúde do sistema), com a aba no endereço (`/admin#cobranca`); vendedor vê Início, Contas e Cobrança só das contas dele; a ficha da conta e a "Nova venda" abrem de qualquer aba
+- [x] Início com "Precisa de atenção": cobrança vencida (urgente com 5 dias, quando a conta já está só leitura), cobrança a vencer em 7 dias, teste acabando em até 3 dias sem pagamento, dono que não criou a senha há 2 dias, conta que entrou e não terminou a configuração, conta parada há 7 dias; cada item com a ação sugerida e "Abrir conta" (`pendenciasDaPlataforma` em `packages/shared/src/plataforma-gestao.ts`, com teste; `GET /admin/pendencias`)
+- [x] Cobrança: vencido, a vencer em 7 dias e recebido no mês; lista para receber (dias de atraso, recusada) e recebidas em 60 dias, de todas as contas (`resumirCobrancas`, `GET /admin/cobrancas`)
+- [x] Equipe da plataforma pela tela: dar acesso (senha temporária mostrada uma vez, com copiar; autenticador no 1º acesso), trocar papel, desativar e reativar (encerra as sessões na hora), redefinir senha e autenticador; ninguém mexe no próprio acesso; tudo na auditoria sem a senha (`/admin/equipe`). O `pnpm admin:criar` continua para o primeiro admin
+- [x] Auditoria da plataforma para consulta: quem, ação, conta, motivo, IP e o que mudou (sem segredos), com filtros por pessoa, ação, conta e período (`GET /admin/auditoria`)
+- [x] Contas: ordenar (mais novas, nome, teste acabando, sem acesso há mais tempo, mais comandas), contador do filtro e "Exportar planilha" (CSV que abre no Excel)
+- [x] **Pronto quando:** o admin vê no Início o que cobrar e quem ligar, dá acesso a um vendedor e o desativa pela tela, e acha a ação na auditoria (conferido em `apps/web/e2e/admin.spec.ts` e em `administração prática (etapa 15.2)` de `apps/api/test/admin.e2e-spec.ts`)
+
 ## Etapa 16 · Preparação da VPS
 
 Um servidor Ubuntu 24.04 LTS seguro antes de receber qualquer dado.

@@ -30,7 +30,7 @@ Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linh
 - Telas: antes de criar ou mudar tela, carregar a skill de design; tokens de cor em `apps/web/src/app/globals.css`, componentes em `packages/ui`
 - Usuários da demonstração: `dono@demo.pentefino.dev` (e os demais `@demo.pentefino.dev`), senha `pentefino123`; documentação da API em `http://localhost:3001/docs`
 - `pnpm whatsapp:qr` — conecta o WhatsApp de teste à Evolution API local
-- `pnpm admin:criar --email x --nome "Y"` — cria quem administra o sistema (`/admin`, segundo fator no 1º acesso); `--redefinir` para senha e autenticador novos. Banco que já existia: rode `pnpm infra:plataforma` uma vez (cria o usuário de banco da administração)
+- `pnpm admin:criar --email x --nome "Y"` — cria o primeiro admin (`/admin`, segundo fator no 1º acesso); `--redefinir` para senha e autenticador novos. Os próximos acessos (vendedor, admin) se dão em `/admin` → Equipe. Banco que já existia: rode `pnpm infra:plataforma` uma vez (cria o usuário de banco da administração)
 - `pnpm test` / `pnpm lint` / `pnpm typecheck`
 
 ## Regras de negócio que não podem quebrar

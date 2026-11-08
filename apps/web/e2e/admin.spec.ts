@@ -41,10 +41,13 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await page.getByLabel('Código do autenticador').fill(codigoDoPasso(segredo, passoDe(new Date())));
   await page.getByRole('button', { name: 'Confirmar código' }).click();
 
+  // Início: o que precisa de atenção e os números do negócio.
+  await expect(page.getByRole('heading', { name: 'Precisa de atenção' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Números do negócio' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Vendas por vendedor' })).toBeVisible();
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Contas por situação' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Contas' }).click();
+  await expect(page).toHaveURL(/#contas$/);
   await expect(page.getByRole('heading', { name: 'Contas', exact: true })).toBeVisible();
   const tabela = page.getByRole('table', { name: 'Contas das barbearias' });
   await expect(
@@ -87,7 +90,40 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
     'Manual',
   );
   await fichaVenda.getByRole('button', { name: 'Fechar' }).click();
+  await page.getByRole('tab', { name: 'Vendas' }).click();
   await expect(page.getByRole('table', { name: 'Vendas por vendedor' })).toContainText('Ana Teste');
+  await page.getByRole('tab', { name: 'Cobrança' }).click();
+  await expect(page.getByRole('heading', { name: 'Cobrança', exact: true })).toBeVisible();
+  await page.getByLabel('Ver', { exact: true }).selectOption('recebidas');
+  await expect(page.getByRole('table', { name: 'Cobranças recebidas' })).toContainText(
+    `Barbearia da Feira ${sufixoVenda}`,
+  );
+
+  // Equipe: dá acesso a um vendedor (senha aparece uma vez) e a auditoria registra.
+  await page.getByRole('tab', { name: 'Equipe' }).click();
+  const darAcesso = page.getByRole('form', { name: 'Dar acesso' });
+  await darAcesso.getByLabel('Nome').fill('Vítor Vendas');
+  await darAcesso.getByLabel('E-mail').fill(`vitor-${sufixoVenda}@pentefino.dev`);
+  await darAcesso.getByRole('button', { name: 'Criar acesso' }).click();
+  const pronto = page.getByRole('dialog', { name: 'Acesso pronto' });
+  await expect(pronto).toContainText(`vitor-${sufixoVenda}@pentefino.dev`);
+  await pronto.getByRole('button', { name: 'Fechar' }).click();
+  const equipe = page.getByRole('table', { name: 'Equipe da plataforma' });
+  await expect(
+    equipe.getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) }),
+  ).toContainText('Falta configurar');
+  await equipe
+    .getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) })
+    .getByRole('button', { name: 'Desativar' })
+    .click();
+  await expect(
+    equipe.getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) }),
+  ).toContainText('Desativado');
+  await page.getByRole('tab', { name: 'Auditoria' }).click();
+  await page.getByRole('combobox', { name: 'Ação', exact: true }).selectOption('criar_membro');
+  await expect(page.getByRole('table', { name: 'Auditoria da plataforma' })).toContainText(
+    `vitor-${sufixoVenda}@pentefino.dev`,
+  );
 
   // Configurações: aviso geral (vale 15 min) aparece para a barbearia; saúde do sistema.
   await page.getByRole('tab', { name: 'Configurações' }).click();
@@ -151,7 +187,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   );
   await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
   await expect(page.getByRole('table', { name: 'Filas' })).toContainText('E-mails');
-  await page.getByRole('tab', { name: 'Painel' }).click();
+  await page.getByRole('tab', { name: 'Início' }).click();
 
   // A sessão da barbearia não existe aqui, e a da administração não abre o painel.
   await page.goto('/app');
