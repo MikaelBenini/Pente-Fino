@@ -7,6 +7,7 @@ import {
   type ResultadoTesteSmtp,
   type SmtpNaTela,
   emailDoModelo,
+  montarEmail,
   EXEMPLO_VARIAVEIS,
   type ChaveModeloEmail,
   type ModeloEmailNaTela,
@@ -553,6 +554,14 @@ function EditorModelo({ m }: { m: ModeloEmailNaTela }) {
     { assunto, corpo, botao: m.padrao.botao === null ? null : botao || m.padrao.botao },
     EXEMPLO_VARIAVEIS,
   );
+  // O mesmo HTML que chega na caixa de entrada.
+  const html = montarEmail(
+    'exemplo@pentefino.dev',
+    previa.assunto,
+    previa.paragrafos,
+    previa.botao ? { texto: previa.botao, link: 'https://seupentefino.com.br/…' } : null,
+    { site: typeof window === 'undefined' ? undefined : window.location.origin },
+  ).html;
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="flex flex-col gap-3">
@@ -574,8 +583,8 @@ function EditorModelo({ m }: { m: ModeloEmailNaTela }) {
         <CampoTexto
           id="modelo-corpo"
           rotulo="Texto"
-          dica="Uma linha em branco separa os parágrafos."
-          rows={8}
+          dica='Uma linha em branco separa os parágrafos; linhas que começam com "- " viram lista.'
+          rows={12}
           value={corpo}
           onChange={(e) => setCorpo(e.target.value)}
         />
@@ -613,24 +622,16 @@ function EditorModelo({ m }: { m: ModeloEmailNaTela }) {
           )}
         </div>
       </div>
-      <figure
-        aria-label="Pré-visualização"
-        className="flex flex-col gap-2 rounded-md bg-white p-5 text-[#18181b]"
-      >
-        <figcaption className="text-xs font-semibold uppercase tracking-wider text-[#52525b]">
-          Pré-visualização (com dados de exemplo)
+      <figure aria-label="Pré-visualização" className="flex flex-col gap-2">
+        <figcaption className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+          Pré-visualização (com dados de exemplo) · Assunto: {previa.assunto}
         </figcaption>
-        <p className="font-semibold">{previa.assunto}</p>
-        {previa.paragrafos.map((p, i) => (
-          <p key={i} className="leading-relaxed">
-            {p}
-          </p>
-        ))}
-        {previa.botao && (
-          <span className="self-start rounded-md bg-[#18181b] px-4 py-2 font-semibold text-white">
-            {previa.botao}
-          </span>
-        )}
+        <iframe
+          title="Pré-visualização do e-mail"
+          sandbox=""
+          srcDoc={html}
+          className="h-[34rem] w-full rounded-md border border-borda bg-white"
+        />
       </figure>
     </div>
   );

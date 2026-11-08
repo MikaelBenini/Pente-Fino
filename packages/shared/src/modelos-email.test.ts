@@ -59,3 +59,31 @@ describe('modelos de e-mail', () => {
     );
   });
 });
+
+describe('visual do e-mail', () => {
+  it('lista com "- ", logo e rodapé com o site, prévia escondida', () => {
+    const e = emailPronto(
+      'carlos@x.dev',
+      'boas_vindas',
+      {},
+      EXEMPLO_VARIAVEIS,
+      'https://seupentefino.com.br/app',
+      { site: 'https://seupentefino.com.br/' },
+    );
+    expect(e.html).toContain(
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px">',
+    );
+    expect(e.html).not.toContain('- Cadastre');
+    expect(e.html).toContain('https://seupentefino.com.br/icones/icone-192.png');
+    expect(e.html).toContain('>seupentefino.com.br</a>');
+    expect(e.html).toContain('display:none');
+    expect(e.texto).toContain('- Cadastre seus serviços');
+    expect(e.texto).toMatch(/Equipe Pente Fino\nhttps:\/\/seupentefino.com.br$/);
+  });
+
+  it('sem site, sai sem imagem', () => {
+    expect(emailPronto('c@x.dev', 'pagamento_recebido', {}, EXEMPLO_VARIAVEIS).html).not.toContain(
+      '<img',
+    );
+  });
+});

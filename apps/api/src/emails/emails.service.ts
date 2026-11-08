@@ -4,12 +4,12 @@ import {
   emailPronto,
   FUSO_EXIBICAO,
   lerConfiguracaoPublica,
-  montarEmail as montar,
   type ChaveModeloEmail,
   type TextoModeloEmail,
   type TrabalhoEmail,
 } from '@pente-fino/shared';
 import { BancoService } from '../comum/banco.service.js';
+import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { Filas } from '../filas/filas.module.js';
 
 function dataHora(d: Date): string {
@@ -31,6 +31,7 @@ export class EmailsService {
   constructor(
     @Inject(Filas) private readonly filas: Filas,
     @Inject(BancoService) private readonly banco: BancoService,
+    @Inject(CONFIGURACAO) private readonly config: Configuracao,
   ) {}
 
   /** A administração mudou um modelo: vale no próximo e-mail. */
@@ -54,7 +55,11 @@ export class EmailsService {
     vars: Record<string, string>,
     link?: string,
   ): Promise<void> {
-    await this.enfileirar(emailPronto(para, chave, await this.personalizados(), vars, link));
+    await this.enfileirar(
+      emailPronto(para, chave, await this.personalizados(), vars, link, {
+        site: this.config.appUrl,
+      }),
+    );
   }
 
   private async enfileirar(email: TrabalhoEmail): Promise<void> {
@@ -120,12 +125,24 @@ export class EmailsService {
   }
 
   senhaAlterada(d: { para: string; nome: string }) {
-    return this.enfileirar(
-      montar(d.para, 'Sua senha foi alterada', [
-        `Olá, ${d.nome}!`,
-        `Sua senha do Pente Fino foi alterada em ${dataHora(new Date())}. Por segurança, as outras sessões foram encerradas.`,
-        'Se não foi você, fale agora com o dono da barbearia.',
-      ]),
+    return this.doModelo(d.para, 'senha_alterada', {
+      nome: d.nome,
+      data: dataHora(new Date()),
+    });
+  }
+
+  /** Cadastro pelo site: boas-vindas com os primeiros passos do teste. */
+  boasVindas(d: { para: string; nome: string; conta: string; testeAte: Date; dias: number }) {
+    return this.doModelo(
+      d.para,
+      'boas_vindas',
+      {
+        nome: d.nome.split(' ')[0] ?? d.nome,
+        conta: d.conta,
+        dias: String(d.dias),
+        data: d.testeAte.toLocaleDateString('pt-BR', { timeZone: FUSO_EXIBICAO }),
+      },
+      `${this.config.appUrl}/app`,
     );
   }
 }

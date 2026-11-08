@@ -80,7 +80,7 @@ describe('cobrança manual', () => {
     expect(avisos).toEqual([
       expect.objectContaining({
         para: `dora-${conta.slice(0, 8)}@teste.dev`,
-        assunto: 'Mensalidade do Pente Fino vence em 05/12/2026',
+        assunto: 'Lembrete: a mensalidade da Barbearia Manual vence em 05/12/2026',
       }),
     ]);
     expect(await rotinaAvisosDaAssinatura(app, conta, { agora, modelos: {} })).toEqual([]);
@@ -180,7 +180,7 @@ describe('avisos da assinatura', () => {
       agora: new Date('2026-12-11T15:00:00Z'),
     });
     expect(avisos.map((a) => a.assunto)).toEqual([
-      'A mensalidade do Pente Fino venceu em 10/12/2026',
+      'Mensalidade da Barbearia Asaas em aberto desde 10/12/2026',
     ]);
   });
 });

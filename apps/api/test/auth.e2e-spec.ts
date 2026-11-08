@@ -154,7 +154,7 @@ describe('convite', () => {
     expect(r.body.linkWhatsapp).toMatch(/^https:\/\/wa\.me\/5511988887777\?text=/);
 
     const email1 = await ultimoEmail(email);
-    expect(email1?.assunto).toContain('Convite para a equipe');
+    expect(email1?.assunto).toContain('convidou você para a equipe');
     const token = tokenDoLink(email1!.texto);
     expect(r.body.linkConvite).toContain(token);
 
@@ -253,7 +253,7 @@ describe('senha', () => {
     expect(r.body.mensagem).toContain('Se o e-mail estiver cadastrado');
 
     const email = await ultimoEmail(cenario.emails.gestor);
-    expect(email?.assunto).toBe('Redefinir sua senha');
+    expect(email?.assunto).toBe('Redefina sua senha do Pente Fino');
     await http()
       .post('/auth/redefinir-senha')
       .send({ token: tokenDoLink(email!.texto), senha: 'senha-redefinida' })
@@ -265,7 +265,9 @@ describe('senha', () => {
       .expect(401);
     await entrar(app, cenario.emails.gestor, 'senha-redefinida');
     await http().post('/auth/renovar').send({ refreshToken: antiga.refreshToken }).expect(401);
-    expect((await ultimoEmail(cenario.emails.gestor))?.assunto).toBe('Sua senha foi alterada');
+    expect((await ultimoEmail(cenario.emails.gestor))?.assunto).toBe(
+      'Sua senha do Pente Fino foi alterada',
+    );
   });
 
   it('esqueci a senha com e-mail desconhecido responde igual e não envia nada', async () => {
