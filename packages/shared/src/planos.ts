@@ -221,7 +221,7 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
   { nome: 'Preço por unidade', desde: 'premium', disponivel: true },
   doRecurso('lucroReal'),
   doRecurso('automacoes'),
-  { nome: 'Campeonato dos barbeiros e TV da unidade', desde: 'premium', disponivel: false },
+  { nome: 'Campeonato dos barbeiros', desde: 'premium', disponivel: false },
   { nome: 'Cobrança automática do clube', desde: 'premium', disponivel: false },
 ];
 

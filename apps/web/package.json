@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test:e2e": "playwright test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "video:gravar": "node video/gravar.mjs",
+    "video:editar": "node video/editar.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",

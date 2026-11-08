@@ -70,7 +70,7 @@ O produto existe para que cada atendimento seja lançado uma vez só e para que 
 | Métricas e metas | Indicadores, ritmo, projeção, metas, lucratividade | Pro (lucratividade: Premium) |
 | App do barbeiro | Agenda, comandas, clientes, desempenho, comissão, metas | Básico a Premium |
 | Bot WhatsApp | Menu, respostas prontas, agendamento pela conversa ou pelo site (o cliente escolhe), lembretes, avaliação depois do atendimento, mensagens de retorno | Pro (automações: Premium) |
-| TV da unidade e campeonato | Ranking por % da meta e % de extras, sem valores | Premium |
+| Campeonato dos barbeiros | Ranking por % da meta, % de extras e nota, sem valores, no app e no painel (a TV da unidade foi descartada em 2026-11-08) | Premium |
 
 ### Requisitos funcionais
 
@@ -103,7 +103,7 @@ O produto existe para que cada atendimento seja lançado uma vez só e para que 
 | RF-25 | Bot: agendamento pelo menu (serviço, profissional, horário livre) | V2 |
 | RF-26 | Lembrete e confirmação por modelo de mensagem | V2 |
 | RF-27 | Bot: transferir para atendente e devolver ao bot | V2 |
-| RF-28 | Campeonato dos barbeiros e TV da unidade sem valores | V3 |
+| RF-28 | Campeonato dos barbeiros sem valores (TV da unidade descartada) | V3 |
 | RF-29 | Cobrança recorrente online do clube (Pix e cartão) | V3 |
 | RF-30 | Estoque com baixa do produto gasto no serviço, fornecedores e compras | V3 |
 | RF-31 | Fidelidade (pontos e cashback) e mensagens de retorno | V3 |
@@ -366,7 +366,6 @@ A interface é pensada para uso em pé e com pressa: recepção no balcão e bar
 | Gestor | Computador | Igual ao dono, limitado à unidade, sem Planos |
 | Recepção | Tablet ou computador no balcão | Agenda · Comandas · Caixa do dia · Clientes · Conversas do bot (tudo o que a recepção vê, dono e gestor também veem) |
 | Barbeiro | Celular (PWA) | Hoje · Comandas · Clientes · Desempenho · Comissões · Metas · Perfil |
-| TV da unidade | Smart TV ou monitor | Tela única: campeonato e colocação, sem valores, atualiza sozinha |
 
 ### Telas principais
 
@@ -573,7 +572,7 @@ Cada losango é um portão: a fase seguinte só começa quando o critério de ac
 ### Fase 4 · V3, rede e automação (6 semanas)
 
 - Cobrança automática do clube pelo Asaas (Pix e cartão).
-- Campeonato dos barbeiros e TV da unidade.
+- Campeonato dos barbeiros (a TV da unidade foi descartada).
 - Estoque completo, fornecedores e compras.
 - Fidelidade, recorrência e mensagens de retorno.
 - Google Agenda e importação do histórico da planilha.
@@ -649,7 +648,7 @@ O que cada plano destrava:
 
 - **Básico:** agenda, comanda automática, caixa, despesas, indicadores, app do barbeiro e comanda impressa.
 - **Pro:** tudo do Básico, mais comissões, clube, metas, ritmo e projeção, lista de espera e bot de WhatsApp.
-- **Premium:** tudo do Pro, mais várias unidades, painel da rede, preço por unidade, lucro real e margem, campeonato e TV, automações do bot e cobrança automática do clube.
+- **Premium:** tudo do Pro, mais várias unidades, painel da rede, preço por unidade, lucro real e margem, campeonato dos barbeiros, automações do bot e cobrança automática do clube.
 
 ### Por que esses valores
 
@@ -668,7 +667,7 @@ A maioria dos concorrentes vende agenda e lembrete. Este sistema vende **control
 | --- | --- | --- |
 | Lucro real e margem por serviço | Faturamento, comissão e relatórios; nenhum dos comparativos cita margem por serviço | Lucro do mês e margem de cada serviço (produto + comissão), por unidade |
 | Lançamento único | Avec tem comanda digital integrada ao caixa; os demais falam em agenda e caixa separados | Agendamento cria a comanda, o barbeiro completa e confirma, a recepção fecha; caixa, comissão e indicadores atualizam juntos |
-| Metas e campeonato | Não aparece nos comparativos | Metas por unidade e serviço no app do barbeiro; ranking na TV da unidade, sem valores |
+| Metas e campeonato | Não aparece nos comparativos | Metas por unidade e serviço no app do barbeiro; ranking no app e no painel, sem valores |
 | WhatsApp incluído | Trinks cobra à parte; outros limitam por plano ou por mensagem | Bot incluso no Pro, sem custo por mensagem |
 | App do barbeiro com comissão | Comissão calculada para o dono | O barbeiro vê previsto, a receber e pago, e só os próprios dados |
 | Regras que não mudam | Não é tema dos concorrentes | Cliente, atendimento e comissão com a mesma regra todo mês; preço e comissão com vigência |

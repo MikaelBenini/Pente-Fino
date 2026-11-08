@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
+    // Sobras da gravação do vídeo (fora do Git).
+    'video-tmp/**',
   ]),
 ]);
 
