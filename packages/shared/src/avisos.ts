@@ -11,6 +11,7 @@ export const TIPOS_AVISO = [
   'caixa_sem_fechar',
   'resumo_dia',
   'clube_online',
+  'whatsapp_caiu',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 
@@ -20,6 +21,7 @@ export const NOME_TIPO_AVISO: Readonly<Record<TipoAviso, string>> = {
   caixa_sem_fechar: 'Caixa que ficou sem fechar no fim do dia',
   resumo_dia: 'Resumo do dia da unidade',
   clube_online: 'Cliente que assinou o clube pelo link',
+  whatsapp_caiu: 'WhatsApp da unidade desconectado (o bot parou)',
 };
 
 /**
@@ -32,6 +34,7 @@ export const QUEM_RECEBE: Readonly<Record<TipoAviso, readonly (readonly Papel[])
   caixa_sem_fechar: [['gestor', 'dono']],
   resumo_dia: [['dono', 'gestor']],
   clube_online: [['dono', 'gestor']],
+  whatsapp_caiu: [['dono', 'gestor']],
 };
 
 /** A rotina das comandas pendentes roda a cada 15 minutos. */

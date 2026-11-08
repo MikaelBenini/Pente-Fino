@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (alerta do WhatsApp)
+
+- WhatsApp da unidade que cai sozinho avisa na hora: aviso na central para dono e gestor,
+  notificação no celular e e-mail para os donos com o botão "Reconectar o WhatsApp" (modelo
+  editável na administração).
+
 ### Adicionado (status)
 
 - `infra/status.sh`: configura o Uptime Kuma de uma vez — monitores do site, API, painel do

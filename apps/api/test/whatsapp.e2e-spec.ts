@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { PROVEDOR_WHATSAPP } from '../src/whatsapp/provedor.js';
-import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+import { como, criarApp, criarCenario, ultimoEmail, type Cenario } from './ajudantes.js';
 
 let app: INestApplication<App>;
 let a: Cenario;
@@ -147,6 +147,18 @@ describe('webhook', () => {
     let u = estado.unidades.find((x) => x.id === a.unidadeA)!;
     expect(u.conexao).toMatchObject({ status: 'desconectado', numero: '5511900002222' });
     expect(u.conexao?.caiuEm).toBeTruthy();
+    // Dono e gestor ficam sabendo na central; o dono recebe e-mail com o link da tela Bot.
+    const avisos = (await gestor.get('/avisos').expect(200)).body;
+    expect(JSON.stringify(avisos)).toContain('desconectado');
+    const email = await ultimoEmail(a.emails.dono);
+    expect(email?.assunto).toContain('desconectou');
+    expect(email?.html).toContain('/bot');
+    // O mesmo "close" repetido não avisa de novo.
+    await webhook(conexaoEvento('close')).expect(200);
+    const depois = (await gestor.get('/avisos').expect(200)).body;
+    expect(JSON.stringify(depois).match(/desconectado/g)?.length).toBe(
+      JSON.stringify(avisos).match(/desconectado/g)?.length,
+    );
 
     await webhook(conexaoEvento('open', '5511900002222@s.whatsapp.net')).expect(200);
     estado = (await dono.get('/bot').expect(200)).body as EstadoBot;

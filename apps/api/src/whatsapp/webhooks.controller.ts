@@ -13,6 +13,7 @@ import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { Filas } from '../filas/filas.module.js';
+import { AlertaConexaoService } from './alerta-conexao.service.js';
 
 /**
  * Webhook da Evolution API. Confere a assinatura da instância (enviada pela própria
@@ -26,6 +27,7 @@ export class WebhooksController {
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(Filas) private readonly filas: Filas,
+    @Inject(AlertaConexaoService) private readonly alerta: AlertaConexaoService,
   ) {}
 
   @Post('whatsapp')
@@ -49,10 +51,14 @@ export class WebhooksController {
       return { ok: true };
     }
     const conexao = await conexaoDaInstancia(this.banco.prisma, instancia);
-    if (conexao)
-      await this.banco.naConta(conexao.contaId, (tx) =>
-        registrarEstadoConexao(tx, conexao.unidadeId, evento),
+    if (conexao) {
+      const agora = new Date();
+      const linha = await this.banco.naConta(conexao.contaId, (tx) =>
+        registrarEstadoConexao(tx, conexao.unidadeId, evento, agora),
       );
+      if (this.alerta.caiuAgora(linha, agora))
+        await this.alerta.avisar(conexao.contaId, conexao.unidadeId, agora);
+    }
     return { ok: true };
   }
 }

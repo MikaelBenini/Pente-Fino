@@ -131,6 +131,21 @@ export class EmailsService {
     });
   }
 
+  /** O WhatsApp de uma unidade caiu sozinho: o botão leva à tela Bot para ler o QR Code. */
+  whatsappCaiu(d: { para: string; nome: string; conta: string; unidade: string; caiuEm: Date }) {
+    return this.doModelo(
+      d.para,
+      'whatsapp_caiu',
+      {
+        nome: d.nome.split(' ')[0] ?? d.nome,
+        conta: d.conta,
+        unidade: d.unidade,
+        data: dataHora(d.caiuEm),
+      },
+      `${this.config.appUrl}/bot`,
+    );
+  }
+
   /** Novo link de confirmação do e-mail ("Reenviar e-mail" no painel). */
   confirmarEmail(d: { para: string; nome: string; link: string; expiraEm: Date }) {
     return this.doModelo(
