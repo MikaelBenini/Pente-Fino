@@ -40,7 +40,7 @@ const DESTAQUES: Record<PlanoConta, readonly string[]> = {
     'Tudo do Pro',
     'Painel da rede e preço por unidade',
     'Lucro real e margem por serviço',
-    'Campeonato e TV da unidade (em breve)',
+    'Campeonato dos barbeiros (em breve)',
   ],
 };
 

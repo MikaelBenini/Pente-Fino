@@ -9,6 +9,8 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ### Adicionado
 
+- Home: vídeo de 1 minuto do sistema funcionando (agenda, comanda no celular, fechamento, lucro do
+  mês e agendamento pelo WhatsApp), gravado da conta de demonstração por roteiro (`apps/web/video`).
 - Bot do WhatsApp: depois de escolher um serviço, o cliente pode adicionar outro (corte + barba)
   antes de ir para o horário; o bot mostra o total anotado (Etapa 15.3).
 - Cancelar comanda: caixa "Avisar o cliente pelo WhatsApp", que manda o cancelamento com o
@@ -22,6 +24,7 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ### Corrigido
 
+- Arquivos de `/video` eram tratados como página com login e redirecionavam para `/entrar`.
 - Teste da administração prática que quebrava o CI do `main` (#108).
 
 ## 2026-11-08

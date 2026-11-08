@@ -43,3 +43,6 @@ Thumbs.db
 
 # Cliente gerado pelo Prisma (pnpm install / prisma generate)
 packages/db/src/generated/
+
+# Gravação do vídeo (apps/web/video): cenas e edição intermediárias
+apps/web/video-tmp/

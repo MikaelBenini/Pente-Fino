@@ -10,7 +10,7 @@ Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linh
 ## Stack
 
 - Monorepo pnpm + Turborepo, TypeScript `strict`
-- `apps/web`: Next.js (App Router) + Tailwind, PWA — painel, app do barbeiro, TV da unidade, link público de agendamento
+- `apps/web`: Next.js (App Router) + Tailwind, PWA — site, painel, app do barbeiro e link público de agendamento
 - `apps/api`: NestJS — regras, permissões, auditoria
 - `apps/worker`: NestJS sem HTTP — bot do WhatsApp e rotinas agendadas (BullMQ)
 - `packages/db`: Prisma + PostgreSQL com Row Level Security

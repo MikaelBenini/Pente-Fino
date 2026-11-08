@@ -469,6 +469,33 @@ A barbearia decide, em cada mudança, se o cliente fica sabendo; e o cliente mon
 - [x] Mover horário (arrastar ou "Mover"): a caixa "Avisar o cliente pelo WhatsApp do novo horário" aparece sempre, marcada quando muda o horário e desmarcada quando só troca o barbeiro; desmarcada, nada sai (a regra `deveAvisarClienteDoMovimento` já aceitava; agora a tela manda a escolha)
 - [x] **Pronto quando:** um cliente marca corte + barba pelo bot escolhendo um de cada vez, e a recepção cancela um horário com "Avisar o cliente" marcado e o aviso entra na fila (conferido em `agendar-bot.db.test.ts`, `espera.e2e-spec.ts` → "avisar o cliente (etapa 15.3)", `operacao.spec.ts` e `mover.spec.ts`)
 
+## Etapa 15.4 · Proteção do cadastro, limpeza de dados e status (pedido em 2026-11-08)
+
+Meta fixa, antes da Etapa 24: o cadastro aberto pelo site não pode virar porta para contas de robô,
+o banco não pode crescer sem limite e a página de status precisa mostrar algo útil.
+
+**Cadastro protegido contra robôs**
+
+- [ ] Confirmação de e-mail: a conta criada pelo site entra no teste, mas só cria horários, convida a equipe e conecta o WhatsApp depois de confirmar o link enviado por e-mail (vale 48 h; dá para reenviar)
+- [ ] Campo isca invisível e tempo mínimo de preenchimento no cadastro (robô preenche tudo em menos de 2 s); recusa sem dizer o motivo
+- [ ] Limite de cadastros por IP (3 por hora, 10 por dia), além do limite por minuto que já existe; e-mail de domínio descartável recusado
+- [ ] Desafio anti-robô gratuito (Cloudflare Turnstile) no cadastro, ligado por variável de ambiente; sem a chave, o formulário segue com as outras proteções
+- [ ] Conta não confirmada em 7 dias sai na rotina de limpeza (abaixo), com aviso por e-mail 2 dias antes
+
+**Exclusão automática de dados (90 dias)**
+
+- [ ] Política escrita na página de Privacidade e nos termos: o que sai e depois de quanto tempo
+- [ ] Conta cancelada, ou com o teste vencido sem nenhum pagamento, é apagada 90 dias depois (aviso por e-mail 15 e 3 dias antes; o dono exporta os dados até lá); a auditoria da plataforma guarda só que a conta existiu e quando saiu
+- [ ] Em todas as contas: conversas do bot, sessões e tokens vencidos, avisos lidos e trabalhos antigos das filas saem depois de 90 dias; avaliações perdem o comentário (a nota fica para a média). Comandas, caixa e auditoria de contas ativas não saem (são histórico financeiro)
+- [ ] Rotina diária no worker, em lotes pequenos (sem travar o banco), com o total apagado por tipo em Saúde do sistema
+- [ ] **Pronto quando:** um cadastro de robô é recusado, uma conta sem confirmar some no prazo e a Saúde do sistema mostra o que cada execução apagou
+
+**Status útil**
+
+- [ ] Monitores criados por script (`infra/status.sh`, na VPS, com o login do Uptime Kuma digitado na hora): site, API, painel do WhatsApp, backup do dia e disco/memória; as URLs dos monitores "push" vão sozinhas para o `.env`
+- [ ] Página pública de status (`status.seudominio/status/pente-fino`) com os serviços agrupados e o histórico; o painel interno continua com login
+- [ ] Alerta por e-mail (o SMTP do Brevo) quando um monitor cair
+
 ## Etapa 16 · Preparação da VPS
 
 Um servidor Ubuntu 24.04 LTS seguro antes de receber qualquer dado.
@@ -544,10 +571,10 @@ Saber do problema antes do cliente ligar, com ferramentas que rodam no próprio 
 Convites e recuperação de senha chegando na caixa de entrada, não no spam.
 
 - [x] Escolher o serviço de envio e conferir o limite do plano gratuito
-- [ ] Domínio de envio configurado com SPF, DKIM e DMARC
+- [x] Domínio de envio configurado com SPF, DKIM e DMARC
 - [x] Modelos de e-mail: convite, recuperar senha, boas-vindas, aviso de pagamento do plano
 - [x] Em desenvolvimento, tudo cai no Mailpit
-- [ ] **Pronto quando:** convite enviado para Gmail e Outlook chega na caixa de entrada
+- [x] **Pronto quando:** convite enviado para Gmail e Outlook chega na caixa de entrada
 
 ## Etapa 21 · Segurança e LGPD
 
@@ -574,7 +601,7 @@ Uma barbearia real usa o sistema por um mês antes de qualquer venda.
 - [ ] Rodar a suíte inteira em homologação com o seed de demonstração
 - [ ] Importar a planilha da barbearia-piloto (serviços, preços, profissionais, clientes)
 - [ ] Configuração guiada feita junto com o dono
-- [ ] Treino de 30 minutos com a recepção e com os barbeiros; vídeo curto de cada fluxo
+- [ ] Treino de 30 minutos com a recepção e com os barbeiros; vídeo curto de cada fluxo (em parte: vídeo de apresentação de 1 minuto gravado do sistema por roteiro em `apps/web/video`, na home; falta um vídeo por fluxo para o treino, com o mesmo roteiro)
 - [ ] Barbeiros instalam o PWA no celular e ligam as notificações
 - [ ] WhatsApp da unidade conectado, menu do bot revisado com o dono e publicado; clientes avisados de que podem agendar pelo WhatsApp ou pelo link
 - [ ] Pesquisa de avaliação ligada; o dono revisa as fichas dos barbeiros no fim de cada semana
@@ -604,10 +631,10 @@ O sistema passa a cobrar das barbearias e a receber clientes sozinho.
 Depois do lançamento, o que o Premium anuncia como "em breve".
 
 - [ ] Campeonato dos barbeiros: ranking mensal por % da meta, % de extras e nota média, sem valores em reais; o dono define a premiação
-- [ ] TV da unidade (`/tv`): tela cheia sem login, liberada por um código da unidade que o dono pode trocar; mostra o ranking, os próximos horários (só o primeiro nome do cliente) e recados; atualiza sozinha
+- [ ] ~~TV da unidade (`/tv`)~~ — **descartada em 2026-11-08** (decisão do dono do produto): o campeonato fica no app e no painel, sem tela de TV
 - [ ] Automações do bot: campanhas só para quem aceitou mensagens (clientes sumidos, aniversariantes do mês, horários vagos de amanhã), com limite diário e relatório de resultado
 - [ ] Cobrança automática do clube pelo Asaas (Pix e cartão): assinatura recorrente, baixa automática pelo webhook, aviso ao cliente quando a cobrança falhar
-- [ ] **Pronto quando:** uma rede Premium acompanha o campeonato na TV, recupera clientes por campanha e recebe o clube sem baixa manual
+- [ ] **Pronto quando:** uma rede Premium acompanha o campeonato no painel, recupera clientes por campanha e recebe o clube sem baixa manual
 
 ## Etapa 25 · Operação contínua e próximas versões
 
@@ -630,7 +657,7 @@ O trabalho depois do lançamento, para o sistema seguir estável e crescer.
 
 - [ ] Estoque completo: baixa do produto gasto no serviço, estoque mínimo, fornecedores e compras
 - [ ] Fidelidade: pontos ou cashback por visita, resgate na comanda
-- [ ] Sinal por Pix no agendamento pelo link e pelo bot, para horários disputados
+- [ ] Sinal por Pix no agendamento pelo link e pelo bot, para horários disputados — **para o futuro** (2026-11-08: sem necessidade agora)
 - [ ] Google Agenda: espelhar a agenda do profissional
-- [ ] Importação do histórico da planilha (comandas antigas), com conferência
+- [ ] Importação do histórico da planilha (comandas antigas), com conferência — antes, definir com o dono o modelo da planilha (colunas e formato)
 - [ ] Revisar os preços a cada 6 meses com a tabela de mercado do documento principal

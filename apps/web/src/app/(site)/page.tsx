@@ -15,6 +15,7 @@ import { ComandaExemplo } from '@/componentes/comanda-exemplo';
 import { CartoesPlanos } from '@/componentes/site/cartoes-planos';
 import { LinkBotao } from '@/componentes/site/link-botao';
 import { type Pergunta, Perguntas } from '@/componentes/site/perguntas';
+import { VideoApresentacao } from '@/componentes/site/video-apresentacao';
 import { URL_SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
@@ -175,6 +176,23 @@ export default function Pagina() {
             <ComandaExemplo />
           </div>
         </div>
+      </section>
+
+      {/* O sistema funcionando, em 1 minuto. */}
+      <section aria-labelledby="video" className="mx-auto max-w-5xl px-4 pt-16 sm:px-6 md:pt-24">
+        <div className="mb-8 flex flex-col items-start gap-3">
+          <p className="font-denso text-lg font-semibold tracking-widest text-modulo-texto uppercase">
+            Veja em 1 minuto
+          </p>
+          <h2 id="video" className="max-w-3xl font-denso text-4xl font-bold uppercase sm:text-5xl">
+            Do horário marcado ao lucro do mês
+          </h2>
+          <p className="max-w-2xl text-lg text-tinta-suave">
+            O barbeiro lança no celular, a recepção fecha, você vê quanto sobrou e o cliente marca
+            sozinho pelo WhatsApp. Tudo na mesma comanda.
+          </p>
+        </div>
+        <VideoApresentacao />
       </section>
 
       <section aria-labelledby="como" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
