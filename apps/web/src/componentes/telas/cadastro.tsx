@@ -27,6 +27,7 @@ import { useTabelaPrecos } from '@/lib/consultas';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
 import { Aviso } from '../aviso';
+import { eventoGoogle } from '../site/tag-google';
 
 function limitePlano(p: PlanoConta) {
   if (p === 'premium') return 'Várias unidades · profissionais ilimitados';
@@ -84,6 +85,8 @@ export function FormularioCadastro() {
     setErroGeral(null);
     try {
       await api('publico/contas', { corpo: dados });
+      // Conversão para o Google Ads (só com a tag carregada e o aceite de cookies).
+      eventoGoogle('cadastro_concluido', { plano: dados.plano, ciclo: dados.ciclo });
       router.replace('/configuracao-inicial');
     } catch (e) {
       setErroGeral(aplicarErroDaApi(e, setError));

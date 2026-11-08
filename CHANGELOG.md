@@ -9,6 +9,9 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ### Adicionado
 
+- Site público: tag do Google (Tag Manager / Google Ads) com aviso de cookies e Consent Mode —
+  sem "Aceitar", nada de cookie de anúncio; evento `cadastro_concluido` para medir conversão.
+  Privacidade atualizada.
 - Home: vídeo de 1 minuto do sistema funcionando (agenda, comanda no celular, fechamento, lucro do
   mês e agendamento pelo WhatsApp), gravado da conta de demonstração por roteiro (`apps/web/video`).
 - Bot do WhatsApp: depois de escolher um serviço, o cliente pode adicionar outro (corte + barba)

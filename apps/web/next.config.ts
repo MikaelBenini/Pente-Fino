@@ -19,12 +19,13 @@ const codespace =
 // domínios. Fica de fora do desenvolvimento, onde o Next usa eval para recarregar.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  // Google Tag Manager / Google Ads (só carregam no site público, com Consent Mode).
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self'",
-  "frame-src 'self'",
+  "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://*.doubleclick.net https://www.google.com https://www.googleadservices.com https://pagead2.googlesyndication.com",
+  "frame-src 'self' https://www.googletagmanager.com https://*.doubleclick.net",
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",

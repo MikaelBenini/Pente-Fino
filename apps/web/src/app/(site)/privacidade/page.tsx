@@ -114,10 +114,19 @@ const SECOES: readonly SecaoLegal[] = [
     id: 'cookies',
     titulo: 'Cookies',
     conteudo: (
-      <p>
-        Usamos apenas cookies necessários para manter a sessão de quem entra no sistema e a
-        preferência de tema. Não usamos cookies de publicidade nem de rastreamento de terceiros.
-      </p>
+      <>
+        <p>
+          Dentro do sistema (painel, app do barbeiro e administração), usamos apenas cookies
+          necessários: a sessão de quem entra e a preferência de tema.
+        </p>
+        <p>
+          No site público (página inicial, planos e cadastro), usamos o Google Tag Manager para
+          medir de onde vêm as visitas e o resultado dos nossos anúncios no Google. Esses cookies só
+          são gravados se você clicar em &quot;Aceitar&quot; no aviso de cookies; recusando, o site
+          funciona igual. Para mudar a escolha, limpe os dados do site no navegador e o aviso
+          aparece de novo.
+        </p>
+      </>
     ),
   },
   {
