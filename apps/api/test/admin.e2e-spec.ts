@@ -956,3 +956,108 @@ describe('pronto quando (etapa 15.1)', () => {
     expect(respostas).not.toContain('11944443333');
   });
 });
+
+describe('administração prática (etapa 15.2)', () => {
+  const chefe = { email: `chefe-${sufixo}@pentefino.dev`, senha: 'senha-do-chefe-123' };
+  const vende = { email: `vende-${sufixo}@pentefino.dev`, senha: 'senha-do-vende-123' };
+  let tChefe = '';
+  let tVende = '';
+  const como = (t: string) => ({
+    get: (url: string) => http().get(url).set('authorization', `Bearer ${t}`),
+    post: (url: string, corpo: object = {}) =>
+      http().post(url).set('authorization', `Bearer ${t}`).send(corpo),
+    put: (url: string, corpo: object) =>
+      http().put(url).set('authorization', `Bearer ${t}`).send(corpo),
+  });
+  const novos: string[] = [];
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.createMany({
+      data: [
+        {
+          email: chefe.email,
+          nome: 'Célia Chefe',
+          papel: 'admin',
+          senhaHash: await hash(chefe.senha),
+        },
+        {
+          email: vende.email,
+          nome: 'Vera Vende',
+          papel: 'vendedor',
+          senhaHash: await hash(vende.senha),
+        },
+      ],
+    });
+    tChefe = (await entrarComSegundoFator(chefe)).token;
+    tVende = (await entrarComSegundoFator(vende)).token;
+  });
+  afterAll(async () => {
+    await plataforma.usuarioPlataforma.updateMany({
+      where: { email: { in: [chefe.email, vende.email, ...novos] } },
+      data: { ativo: false },
+    });
+  });
+
+  it('equipe: cria com senha temporária, muda papel, desativa (encerra a sessão) e redefine', async () => {
+    const email = `novo-${sufixo}@pentefino.dev`;
+    novos.push(email);
+    await como(tVende).get('/admin/equipe').expect(403);
+    await como(tChefe).post('/admin/equipe', { nome: 'N', email, papel: 'vendedor' }).expect(400);
+    const criado = (
+      await como(tChefe)
+        .post('/admin/equipe', { nome: 'Nina Nova', email, papel: 'vendedor' })
+        .expect(201)
+    ).body as { id: string; senha: string };
+    expect(criado.senha.length).toBeGreaterThanOrEqual(16);
+    await como(tChefe).post('/admin/equipe', { nome: 'Nina', email, papel: 'admin' }).expect(409);
+    const lista = (await como(tChefe).get('/admin/equipe').expect(200)).body as {
+      email: string;
+      segundoFatorConfigurado: boolean;
+    }[];
+    expect(lista.find((m) => m.email === email)).toMatchObject({ segundoFatorConfigurado: false });
+
+    // A pessoa nova entra (configura o autenticador) e é desativada: a sessão cai na hora.
+    const { token } = await entrarComSegundoFator({ email, senha: criado.senha });
+    await como(token).get('/admin/eu').expect(200);
+    await como(tChefe).put(`/admin/equipe/${criado.id}`, { ativo: false }).expect(204);
+    await como(token).get('/admin/eu').expect(401);
+    const eu = (await como(tChefe).get('/admin/eu').expect(200)).body as { id: string };
+    await como(tChefe).put(`/admin/equipe/${eu.id}`, { ativo: false }).expect(409);
+
+    // Redefinir: senha nova, autenticador do zero e reativa.
+    const novo = (await como(tChefe).post(`/admin/equipe/${criado.id}/redefinir`).expect(200))
+      .body as { senha: string };
+    expect(novo.senha).not.toBe(criado.senha);
+    await entrar({ email, senha: criado.senha }).expect(401);
+    expect((await entrar({ email, senha: novo.senha }).expect(200)).body.etapa).toBe('configurar');
+
+    const eventos = (await como(tChefe).get(`/admin/auditoria?usuario=${eu.id}`).expect(200))
+      .body as { acao: string; detalhe: string | null }[];
+    expect(eventos.map((e) => e.acao)).toEqual(
+      expect.arrayContaining(['criar_membro', 'mudar_membro', 'redefinir_membro']),
+    );
+    expect(JSON.stringify(eventos)).not.toContain(novo.senha);
+    expect(eventos.find((e) => e.acao === 'mudar_membro')?.detalhe).toContain(
+      'ativo: true → false',
+    );
+    await como(tChefe).get('/admin/auditoria?de=ontem').expect(400);
+  });
+
+  it('pendências e cobranças: admin vê todas; vendedor só as contas dele', async () => {
+    const pend = await como(tChefe).get('/admin/pendencias').expect(200);
+    expect(Array.isArray(pend.body)).toBe(true);
+    const cob = (await como(tChefe).get('/admin/cobrancas').expect(200)).body as {
+      pendentes: { contaId: string }[];
+      totais: { vencido: number };
+    };
+    expect(typeof cob.totais.vencido).toBe('number');
+    const doVendedor = (await como(tVende).get('/admin/cobrancas').expect(200)).body as {
+      pendentes: unknown[];
+      recebidas: unknown[];
+    };
+    expect(doVendedor.pendentes).toEqual([]);
+    expect(doVendedor.recebidas).toEqual([]);
+    expect((await como(tVende).get('/admin/pendencias').expect(200)).body).toEqual([]);
+    await como(tVende).get('/admin/auditoria').expect(403);
+  });
+});

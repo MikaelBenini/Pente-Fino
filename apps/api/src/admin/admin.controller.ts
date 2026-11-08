@@ -44,8 +44,7 @@ import { AdminContasService } from './admin-contas.service.js';
 import { AdminVendasService } from './admin-vendas.service.js';
 import { PrecosService } from '../comum/precos.service.js';
 import { BancoPlataforma } from './banco-plataforma.js';
-
-const iso = (d: Date | null) => d?.toISOString() ?? null;
+import { contaParaTela } from './conta-para-tela.js';
 
 @ApiTags('Administração do sistema')
 @Controller('admin')
@@ -140,27 +139,7 @@ export class AdminController {
     const linhas = (await contasDaPlataforma(this.banco.prisma)).filter(
       (c) => a.papel === 'admin' || c.vendedor_id === a.id,
     );
-    return linhas.map((c) => ({
-      id: c.id,
-      nome: c.nome,
-      plano: c.plano,
-      ciclo: c.ciclo,
-      status: c.status,
-      criadaEm: c.criado_em.toISOString(),
-      testeAte: iso(c.teste_ate),
-      configuradaEm: iso(c.configurada_em),
-      cobrancaAutomatica: c.cobranca_automatica,
-      canceladaEm: iso(c.cancelada_em),
-      motivoCancelamento: c.motivo_cancelamento,
-      vendedorId: c.vendedor_id,
-      donoAtivou: c.dono_ativou,
-      unidades: c.unidades,
-      profissionais: c.profissionais,
-      whatsappConectado: c.whatsapp_conectado,
-      fechadas7Dias: c.fechadas_7_dias,
-      ultimaFechadaEm: iso(c.ultima_fechada_em),
-      ultimoAcessoEm: iso(c.ultimo_acesso_em),
-    }));
+    return linhas.map(contaParaTela);
   }
 
   @Get('contas/:id')

@@ -45,6 +45,7 @@ export * from './avisos.js';
 export * from './rede.js';
 export * from './plataforma.js';
 export * from './metricas-plataforma.js';
+export * from './plataforma-gestao.js';
 export * from './cobranca-manual.js';
 export * from './configuracao-sistema.js';
 export * from './modelos-email.js';
