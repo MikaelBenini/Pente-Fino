@@ -1,143 +1,234 @@
-import { DIAS_TESTE, formatarMoeda } from '@pente-fino/shared';
+import { DIAS_TESTE } from '@pente-fino/shared';
 import {
+  BellRing,
+  Building2,
   CalendarCheck,
+  Check,
   ClipboardCheck,
-  HandCoins,
-  LineChart,
+  Crown,
+  FileSpreadsheet,
+  ListOrdered,
+  MessageCircle,
+  Minus,
+  Printer,
+  ShieldCheck,
   Smartphone,
+  Star,
   Store,
   UserCog,
   Users,
+  Wallet,
+  X,
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ComandaExemplo } from '@/componentes/comanda-exemplo';
+import { CalculadoraSobra } from '@/componentes/site/calculadora-sobra';
 import { CartoesPlanos } from '@/componentes/site/cartoes-planos';
+import { Depoimentos } from '@/componentes/site/depoimentos';
 import { LinkBotao } from '@/componentes/site/link-botao';
 import { type Pergunta, Perguntas } from '@/componentes/site/perguntas';
 import { VideoApresentacao } from '@/componentes/site/video-apresentacao';
+import { Celular, ConversaWhatsapp, Janela, TELAS, Vitrine } from '@/componentes/site/vitrine';
 import { URL_SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: { absolute: 'Pente Fino · Gestão de barbearia que mostra o lucro real' },
   description:
-    'Agenda, comanda, caixa, comissão e lucro por serviço, barbeiro e unidade. O barbeiro lança no celular, a recepção fecha, o dono vê quanto sobrou.',
+    'Agenda, comanda, caixa, comissão e WhatsApp num lugar só. O barbeiro lança no celular, a recepção fecha e você vê quanto sobrou por serviço, barbeiro e unidade. 14 dias grátis.',
   alternates: { canonical: '/' },
 };
 
-const PASSOS = [
-  {
-    icone: CalendarCheck,
-    titulo: 'Agendou, a comanda existe',
-    texto: 'Pelo balcão ou pelo link de agendamento, o horário marcado já abre a comanda prevista.',
-  },
-  {
-    icone: Smartphone,
-    titulo: 'O barbeiro lança no celular',
-    texto: 'Inclui barba, sobrancelha ou pomada e confirma. Funciona mesmo sem internet.',
-  },
-  {
-    icone: ClipboardCheck,
-    titulo: 'A recepção fecha',
-    texto: 'Confere, recebe em uma ou mais formas de pagamento e o caixa do dia bate sozinho.',
-  },
-  {
-    icone: LineChart,
-    titulo: 'O dono vê o que sobrou',
-    texto: 'Faturamento, comissão, despesas e lucro por serviço, sem planilha no fim do mês.',
-  },
+const SELOS = [
+  `${DIAS_TESTE} dias grátis, sem cartão`,
+  'WhatsApp incluso, sem custo por mensagem',
+  'Sem cobrança por barbeiro',
+  'Funciona no celular, sem baixar app',
 ] as const;
+
+const ANTES = [
+  'Comanda de papel que some ou chega rasgada no caixa',
+  'A recepção digita tudo de novo na planilha à noite',
+  'Agenda num app, caixa em outro, comissão na calculadora',
+  'Faturamento bonito e nenhuma ideia de quanto sobrou',
+] as const;
+const DEPOIS = [
+  'O horário marcado já vira comanda; o barbeiro só completa',
+  'Lançou uma vez: entra no caixa, na comissão e no lucro',
+  'Agenda, caixa, comissão e WhatsApp na mesma tela',
+  'Lucro do mês e de cada serviço, sem planilha',
+] as const;
+
+const EXTRAS = [
+  { icone: BellRing, titulo: 'Lembretes automáticos', texto: '24 h e 2 h antes, com confirmação.' },
+  { icone: ListOrdered, titulo: 'Lista de espera', texto: 'Vagou? O bot oferece na ordem.' },
+  { icone: Star, titulo: 'Avaliação no WhatsApp', texto: 'Nota baixa avisa você na hora.' },
+  { icone: Crown, titulo: 'Clube de assinatura', texto: 'A comanda reconhece o assinante.' },
+  { icone: Wallet, titulo: 'Caixa do dia', texto: 'Divergência apontada no fechamento.' },
+  { icone: Building2, titulo: 'Várias unidades', texto: 'Painel da rede e preço por unidade.' },
+  { icone: Printer, titulo: 'Comanda impressa', texto: 'PDF com QR code, 4 ou 6 por folha.' },
+  { icone: FileSpreadsheet, titulo: 'Relatório do contador', texto: 'Planilha e PDF do mês.' },
+] as const;
+
+type Celula = boolean | 'parcial';
+const COMPARATIVO: { recurso: string; nos: Celula; agenda: Celula; planilha: Celula }[] = [
+  {
+    recurso: 'Agenda online e link para o cliente marcar',
+    nos: true,
+    agenda: true,
+    planilha: false,
+  },
+  {
+    recurso: 'Bot de WhatsApp que agenda, incluso no plano',
+    nos: true,
+    agenda: 'parcial',
+    planilha: false,
+  },
+  {
+    recurso: 'Comanda criada pelo agendamento (lança uma vez)',
+    nos: true,
+    agenda: false,
+    planilha: false,
+  },
+  {
+    recurso: 'Comissão calculada item a item, com vigência',
+    nos: true,
+    agenda: 'parcial',
+    planilha: 'parcial',
+  },
+  {
+    recurso: 'Lucro do mês e margem de cada serviço e produto',
+    nos: true,
+    agenda: false,
+    planilha: 'parcial',
+  },
+  {
+    recurso: 'Preço novo não muda o que já foi vendido',
+    nos: true,
+    agenda: 'parcial',
+    planilha: false,
+  },
+  {
+    recurso: 'Barbeiro vê só a própria comissão, no celular',
+    nos: true,
+    agenda: 'parcial',
+    planilha: false,
+  },
+  { recurso: 'Sem cobrança extra por barbeiro', nos: true, agenda: false, planilha: true },
+];
 
 const PAPEIS = [
   {
     icone: UserCog,
     titulo: 'Dono',
-    texto: 'Lucro real, projeção do mês, metas e despesas. Reabre comanda com motivo registrado.',
+    pergunta: 'Quanto sobrou?',
+    itens: [
+      'Lucro real e projeção do mês',
+      'Margem por serviço e produto',
+      'Metas e painel da rede',
+    ],
   },
   {
     icone: Store,
     titulo: 'Recepção',
-    texto: 'Agenda do dia, fechamento rápido e caixa com divergência apontada na hora.',
+    pergunta: 'Quem é o próximo?',
+    itens: ['Agenda de todos e encaixes', 'Fechamento em segundos', 'Caixa do dia que bate'],
   },
   {
     icone: Users,
     titulo: 'Barbeiro',
-    texto:
-      'Só os próprios atendimentos e a própria comissão. Telefone do cliente pode ficar oculto.',
-  },
-] as const;
-
-// Números de exemplo (fictícios) para ilustrar o painel do dono.
-const PAINEL = {
-  faturamento: 3_842_000,
-  comissoes: 1_652_000,
-  produtos: 118_000,
-  despesas: 905_000,
-  projecao: 5_380_000,
-};
-const LUCRO = PAINEL.faturamento - PAINEL.comissoes - PAINEL.produtos - PAINEL.despesas;
-
-const SERVICOS = [
-  { nome: 'Corte', preco: 4500, sobra: 2350 },
-  { nome: 'Barba', preco: 3500, sobra: 1720 },
-  { nome: 'Corte + Barba', preco: 7000, sobra: 3500 },
-  { nome: 'Pigmentação', preco: 6000, sobra: 2100 },
-] as const;
-
-const DIFERENCIAIS = [
-  {
-    titulo: 'Lançamento único',
-    texto:
-      'Ninguém digita o mesmo atendimento duas vezes. A comanda nasce na agenda e vai até o caixa.',
-  },
-  {
-    titulo: 'O passado não muda',
-    texto:
-      'Preço e comissão têm vigência. Aumentou o corte hoje? As comandas de ontem continuam certas.',
-  },
-  {
-    titulo: 'Conta que fecha',
-    texto:
-      'Retirada do dono, investimento e cartão ficam fora do % de despesas operacionais. Sobra é sobra.',
-  },
-  {
-    titulo: 'Seus dados, sua barbearia',
-    texto:
-      'Cada barbearia isolada no banco de dados, exportação em planilha quando quiser e LGPD desde o início.',
+    pergunta: 'Quanto ganhei hoje?',
+    itens: ['Agenda e comandas no celular', 'Comissão em tempo real', 'Só os próprios dados'],
   },
 ] as const;
 
 const PERGUNTAS: readonly Pergunta[] = [
   {
-    pergunta: 'Funciona no celular?',
+    pergunta: 'Preciso instalar alguma coisa?',
     resposta:
-      'Sim. O painel abre no computador ou no celular, e o app do barbeiro pode ser instalado na tela inicial, sem loja de aplicativos.',
+      'Não. Abre no navegador do computador ou do celular. O barbeiro pode pôr o app na tela inicial do celular, sem loja de aplicativos.',
   },
   {
     pergunta: 'Quanto tempo leva para começar?',
     resposta:
-      'A configuração guiada pede unidade, serviços, preços e equipe, e importa sua planilha de clientes. Dá para atender no mesmo dia.',
+      'A configuração guiada pede unidade, serviços, preços e equipe e importa sua planilha de clientes. Dá para atender no mesmo dia.',
   },
   {
-    pergunta: 'O cliente consegue agendar sozinho?',
+    pergunta: 'O bot de WhatsApp usa inteligência artificial?',
     resposta:
-      'Sim, pelo link de agendamento da unidade. Ele escolhe serviço, barbeiro e horário livre; a comanda já fica prevista.',
+      'Não. Ele responde com o menu e as palavras-chave que você escreve, agenda, remarca e cancela pela conversa e chama alguém da equipe quando o cliente pede. Nada é inventado, e não há custo por mensagem.',
   },
   {
-    pergunta: 'Tem inteligência artificial respondendo meus clientes?',
+    pergunta: 'Cobram por barbeiro?',
     resposta:
-      'Não. O bot de WhatsApp (em construção) responde só com menus e palavras-chave que você programa. Nada é inventado.',
+      'Não. O limite de profissionais muda de plano para plano, mas não existe valor por cabeça. No Premium, os profissionais são ilimitados.',
+  },
+  {
+    pergunta: 'E se eu quiser cancelar?',
+    resposta:
+      'Cancela quando quiser, sem multa. Os dados continuam disponíveis para consulta e você exporta tudo em planilha.',
+  },
+  {
+    pergunta: 'Meus dados ficam seguros?',
+    resposta:
+      'Cada barbearia fica isolada no banco de dados, com acesso por papel, auditoria das alterações, backup diário criptografado e LGPD desde o início.',
   },
 ];
 
 function jsonLd() {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'Pente Fino',
-    url: URL_SITE,
-    logo: `${URL_SITE}/icones/icone-512.png`,
-  };
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Pente Fino',
+      url: URL_SITE,
+      logo: `${URL_SITE}/icones/icone-512.png`,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Pente Fino',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web, Android, iOS',
+      url: URL_SITE,
+      offers: { '@type': 'Offer', price: '79.90', priceCurrency: 'BRL' },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: PERGUNTAS.map((p) => ({
+        '@type': 'Question',
+        name: p.pergunta,
+        acceptedAnswer: { '@type': 'Answer', text: p.resposta },
+      })),
+    },
+  ];
+}
+
+const Sobretitulo = ({ children }: { children: React.ReactNode }) => (
+  <p className="font-denso text-lg font-semibold tracking-widest text-modulo-texto uppercase">
+    {children}
+  </p>
+);
+
+function Marca({ valor }: { valor: Celula }) {
+  if (valor === true)
+    return (
+      <span className="inline-flex size-7 items-center justify-center rounded-full bg-acao/15 text-acao-texto">
+        <Check aria-label="Sim" className="size-4" />
+      </span>
+    );
+  if (valor === 'parcial')
+    return (
+      <span className="inline-flex size-7 items-center justify-center rounded-full bg-superficie-3 text-tinta-suave">
+        <Minus aria-label="Em parte ou pago à parte" className="size-4" />
+      </span>
+    );
+  return (
+    <span className="inline-flex size-7 items-center justify-center text-tinta-fraca">
+      <X aria-label="Não" className="size-4" />
+    </span>
+  );
 }
 
 export default function Pagina() {
@@ -148,198 +239,347 @@ export default function Pagina() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, '\\u003c') }}
       />
 
-      {/* Abertura: a promessa e a prova (uma comanda que mostra a sobra). */}
-      <section className="border-b border-borda bg-[linear-gradient(160deg,var(--superficie-2),var(--fundo)_60%)]">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 md:grid-cols-[1.15fr_1fr] md:py-24">
+      {/* Abertura: a promessa e o produto de verdade. */}
+      <section className="relative overflow-hidden border-b border-borda">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_75%_20%,color-mix(in_oklch,var(--modulo)_14%,transparent),transparent_70%),radial-gradient(40%_40%_at_10%_90%,color-mix(in_oklch,var(--acao)_10%,transparent),transparent_70%)]"
+        />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-4 py-14 sm:px-6 md:py-20 lg:grid-cols-[1fr_1.15fr]">
           <div className="animar-escalonado flex flex-col items-start gap-6">
-            <p className="font-denso text-lg font-semibold tracking-widest text-modulo-texto uppercase">
-              Gestão de barbearia
-            </p>
+            <Sobretitulo>Gestão de barbearia</Sobretitulo>
             <h1 className="font-denso text-5xl leading-[0.92] font-bold uppercase sm:text-7xl">
               Saiba quanto sobra, <span className="text-modulo-texto">não só quanto entrou.</span>
             </h1>
             <p className="max-w-xl text-lg text-tinta-suave">
-              Agenda, comanda, caixa e comissão num lugar só. O barbeiro lança uma vez, a recepção
-              fecha e você vê o lucro real por serviço, por barbeiro e por unidade.
+              Agenda, comanda, caixa, comissão e WhatsApp num lugar só. O barbeiro lança uma vez no
+              celular, a recepção fecha e você vê o lucro real por serviço, por barbeiro e por
+              unidade.
             </p>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
               <LinkBotao href="/cadastro" grande>
                 Testar {DIAS_TESTE} dias grátis
               </LinkBotao>
-              <LinkBotao href="/planos" variante="contorno" grande>
-                Ver planos e preços
+              <LinkBotao href="#video" variante="contorno" grande>
+                Ver em 1 minuto
               </LinkBotao>
             </div>
-            <p className="text-sm text-tinta-suave">Sem cartão de crédito. Sem fidelidade.</p>
+            <ul className="grid gap-x-6 gap-y-2 text-sm text-tinta-suave sm:grid-cols-2">
+              {SELOS.map((s) => (
+                <li key={s} className="flex items-center gap-2">
+                  <Check aria-hidden className="size-4 shrink-0 text-acao-texto" />
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <Vitrine />
+        </div>
+      </section>
+
+      {/* O problema que a planilha não resolve. */}
+      <section aria-labelledby="problema" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+        <div className="mb-12 grid items-center gap-10 md:grid-cols-[1.2fr_1fr]">
+          <div className="flex max-w-3xl flex-col gap-3">
+            <Sobretitulo>Faturamento não é lucro</Sobretitulo>
+            <h2 id="problema" className="font-denso text-4xl font-bold uppercase sm:text-5xl">
+              Entrou bastante. E quanto ficou?
+            </h2>
+            <p className="text-lg text-tinta-suave">
+              A maioria dos sistemas mostra a agenda cheia e o faturamento do mês. O que paga as
+              contas é o que sobra depois da comissão, do produto e das despesas.
+            </p>
           </div>
           <div className="flex justify-center md:justify-end">
             <ComandaExemplo />
           </div>
         </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="revelar rounded-2xl border border-borda bg-superficie p-6">
+            <h3 className="mb-4 text-lg font-semibold text-tinta-suave">Hoje, sem o Pente Fino</h3>
+            <ul className="flex flex-col gap-3">
+              {ANTES.map((t) => (
+                <li key={t} className="flex gap-3">
+                  <X aria-hidden className="mt-0.5 size-5 shrink-0 text-perigo-texto" />
+                  <span className="text-tinta-suave">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="revelar rounded-2xl border border-modulo/40 bg-superficie p-6 shadow-[0_0_60px_-30px_var(--modulo)]">
+            <h3 className="mb-4 text-lg font-semibold">Com o Pente Fino</h3>
+            <ul className="flex flex-col gap-3">
+              {DEPOIS.map((t) => (
+                <li key={t} className="flex gap-3">
+                  <Check aria-hidden className="mt-0.5 size-5 shrink-0 text-acao-texto" />
+                  <span>{t}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </section>
 
       {/* O sistema funcionando, em 1 minuto. */}
-      <section aria-labelledby="video" className="mx-auto max-w-5xl px-4 pt-16 sm:px-6 md:pt-24">
-        <div className="mb-8 flex flex-col items-start gap-3">
-          <p className="font-denso text-lg font-semibold tracking-widest text-modulo-texto uppercase">
-            Veja em 1 minuto
-          </p>
-          <h2 id="video" className="max-w-3xl font-denso text-4xl font-bold uppercase sm:text-5xl">
-            Do horário marcado ao lucro do mês
-          </h2>
-          <p className="max-w-2xl text-lg text-tinta-suave">
-            O barbeiro lança no celular, a recepção fecha, você vê quanto sobrou e o cliente marca
-            sozinho pelo WhatsApp. Tudo na mesma comanda.
-          </p>
-        </div>
-        <VideoApresentacao />
-      </section>
-
-      <section aria-labelledby="como" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-        <h2
-          id="como"
-          className="mb-10 max-w-2xl font-denso text-4xl font-bold uppercase sm:text-5xl"
-        >
-          Do agendamento ao lucro, sem digitar duas vezes
-        </h2>
-        <ol className="grid gap-px overflow-hidden rounded-xl border border-borda bg-borda sm:grid-cols-2 lg:grid-cols-4">
-          {PASSOS.map((p, i) => (
-            <li key={p.titulo} className="revelar flex flex-col gap-3 bg-superficie p-6">
-              <span className="flex items-center justify-between">
-                <p.icone aria-hidden className="size-7 text-modulo-texto" />
-                <span className="font-denso text-4xl font-bold text-tinta-fraca tabular-nums">
-                  {i + 1}
-                </span>
-              </span>
-              <h3 className="text-xl font-semibold">{p.titulo}</h3>
-              <p className="text-tinta-suave">{p.texto}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* Painel do dono com números de exemplo. */}
-      <section aria-labelledby="painel" className="border-y border-borda bg-superficie">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-[1fr_1.2fr] md:py-24">
-          <div className="flex flex-col gap-4">
-            <h2 id="painel" className="font-denso text-4xl font-bold uppercase sm:text-5xl">
-              O mês inteiro numa tela
+      <section aria-labelledby="video" className="scroll-mt-24 border-y border-borda bg-superficie">
+        <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 md:py-24">
+          <div className="mb-8 flex flex-col items-start gap-3">
+            <Sobretitulo>Veja em 1 minuto</Sobretitulo>
+            <h2
+              id="video"
+              className="max-w-3xl font-denso text-4xl font-bold uppercase sm:text-5xl"
+            >
+              Do horário marcado ao lucro do mês
             </h2>
-            <p className="text-lg text-tinta-suave">
-              Faturamento só de comanda fechada, comissão calculada item a item e despesas separadas
-              do que é investimento ou retirada. A projeção usa o calendário da sua unidade, não 30
-              dias genéricos.
+            <p className="max-w-2xl text-lg text-tinta-suave">
+              O barbeiro lança no celular, a recepção fecha, você vê quanto sobrou e o cliente marca
+              sozinho pelo WhatsApp. Tudo na mesma comanda.
             </p>
-            <Link
-              href="/cadastro"
-              className="font-semibold text-acao-texto underline underline-offset-4"
-            >
-              Ver com os dados da minha barbearia
-            </Link>
           </div>
-          <figure className="revelar flex flex-col gap-4 rounded-xl border border-borda bg-fundo p-5 sm:p-6">
-            <figcaption className="flex items-center justify-between text-sm text-tinta-suave">
-              <span className="font-semibold text-tinta">Resultado do mês · Centro</span>
-              <span className="rounded-sm bg-superficie-3 px-1.5">Exemplo fictício</span>
-            </figcaption>
-            <dl className="grid grid-cols-2 gap-3">
-              {[
-                ['Faturamento', PAINEL.faturamento],
-                ['Projeção do mês', PAINEL.projecao],
-                ['Comissões', PAINEL.comissoes],
-                ['Despesas operacionais', PAINEL.despesas],
-              ].map(([rotulo, valor]) => (
-                <div key={rotulo} className="rounded-lg bg-superficie p-3">
-                  <dt className="text-sm text-tinta-suave">{rotulo}</dt>
-                  <dd className="font-denso text-2xl font-bold tabular-nums">
-                    {formatarMoeda(valor as number)}
-                  </dd>
-                </div>
-              ))}
-              <div className="col-span-2 rounded-lg border border-modulo/40 bg-superficie p-3">
-                <dt className="text-sm text-tinta-suave">Sobrou até hoje</dt>
-                <dd className="font-denso text-4xl font-bold text-modulo-texto tabular-nums">
-                  {formatarMoeda(LUCRO)}
-                </dd>
-              </div>
-            </dl>
-            <table className="w-full text-left">
-              <caption className="mb-2 text-left text-sm font-semibold">
-                Quanto sobra de cada serviço
-              </caption>
-              <thead className="text-sm text-tinta-suave">
-                <tr>
-                  <th scope="col" className="py-1 font-medium">
-                    Serviço
-                  </th>
-                  <th scope="col" className="py-1 text-right font-medium">
-                    Preço
-                  </th>
-                  <th scope="col" className="py-1 text-right font-medium">
-                    Sobra
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-borda tabular-nums">
-                {SERVICOS.map((s) => (
-                  <tr key={s.nome}>
-                    <th scope="row" className="py-2 font-normal">
-                      {s.nome}
-                    </th>
-                    <td className="py-2 text-right text-tinta-suave">{formatarMoeda(s.preco)}</td>
-                    <td className="py-2 text-right font-semibold">{formatarMoeda(s.sobra)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </figure>
+          <VideoApresentacao />
         </div>
       </section>
 
-      <section aria-labelledby="papeis" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-        <h2 id="papeis" className="mb-10 font-denso text-4xl font-bold uppercase sm:text-5xl">
-          Cada um vê o que precisa
-        </h2>
-        <ul className="grid gap-4 md:grid-cols-3">
-          {PAPEIS.map((p) => (
+      {/* Recursos, com as telas de verdade. */}
+      <section aria-labelledby="recursos" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+        <div className="mb-12 flex max-w-3xl flex-col gap-3">
+          <Sobretitulo>Tudo num lugar só</Sobretitulo>
+          <h2 id="recursos" className="font-denso text-4xl font-bold uppercase sm:text-5xl">
+            Do balcão ao lucro, sem digitar duas vezes
+          </h2>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-12">
+          <article className="revelar flex flex-col gap-5 rounded-2xl border border-borda bg-superficie p-6 lg:col-span-7">
+            <div className="flex flex-col gap-2">
+              <CalendarCheck aria-hidden className="size-7 text-modulo-texto" />
+              <h3 className="text-2xl font-semibold">A comanda nasce na agenda</h3>
+              <p className="text-tinta-suave">
+                Marcou pelo balcão, pelo link ou pelo WhatsApp: o horário já abre a comanda
+                prevista, com cliente, barbeiro e serviços. Arraste para remarcar e avise o cliente
+                com um toque.
+              </p>
+            </div>
+            <Janela
+              tela={TELAS.agenda}
+              alt="Agenda do dia com os barbeiros em colunas e os horários de cada um"
+            />
+          </article>
+
+          <article className="revelar flex flex-col gap-5 rounded-2xl border border-borda bg-superficie p-6 lg:col-span-5">
+            <div className="flex flex-col gap-2">
+              <Smartphone aria-hidden className="size-7 text-modulo-texto" />
+              <h3 className="text-2xl font-semibold">O barbeiro lança no celular</h3>
+              <p className="text-tinta-suave">
+                Barba, sobrancelha ou pomada em um toque e confirma. A recepção já vê pronta para
+                receber, e ele acompanha a própria comissão em tempo real.
+              </p>
+            </div>
+            <div className="flex justify-center gap-4">
+              <Celular
+                tela={TELAS.celularComanda}
+                alt="Comanda no celular com os extras para lançar"
+                className="w-[46%]"
+              />
+              <Celular
+                tela={TELAS.celularDesempenho}
+                alt="Desempenho do barbeiro no celular"
+                className="mt-10 w-[46%]"
+              />
+            </div>
+          </article>
+
+          <article className="revelar flex flex-col gap-5 rounded-2xl border border-modulo/40 bg-superficie p-6 lg:col-span-12 lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex flex-col gap-3 lg:w-[38%]">
+              <ClipboardCheck aria-hidden className="size-7 text-modulo-texto" />
+              <h3 className="text-2xl font-semibold">O que dá lucro, e o que só dá trabalho</h3>
+              <p className="text-tinta-suave">
+                Lucro e margem de cada serviço e produto, com o que fazer: investir, divulgar ou
+                rever o preço. Comissão e custo de produto já descontados, item a item.
+              </p>
+              <p className="text-tinta-suave">
+                Mudou o preço do corte? As comandas de ontem continuam certas: preço e comissão têm
+                vigência.
+              </p>
+            </div>
+            <Janela
+              tela={TELAS.lucroProdutos}
+              alt="Métricas de outubro: lucro e margem por serviço e por produto, com as situações Investir, Divulgar e Rever preço"
+              className="lg:flex-1"
+            />
+          </article>
+
+          <article className="revelar flex flex-col gap-5 rounded-2xl border border-borda bg-superficie p-6 lg:col-span-5">
+            <div className="flex flex-col gap-2">
+              <MessageCircle aria-hidden className="size-7 text-modulo-texto" />
+              <h3 className="text-2xl font-semibold">WhatsApp que agenda sozinho</h3>
+              <p className="text-tinta-suave">
+                O cliente marca, soma serviços, remarca e cancela pela conversa, 24 horas. Sem
+                inteligência artificial inventando resposta e sem custo por mensagem.
+              </p>
+            </div>
+            <ConversaWhatsapp />
+          </article>
+
+          <article className="revelar flex flex-col gap-5 rounded-2xl border border-borda bg-superficie p-6 lg:col-span-7">
+            <div className="flex flex-col gap-2">
+              <ShieldCheck aria-hidden className="size-7 text-modulo-texto" />
+              <h3 className="text-2xl font-semibold">O mês inteiro numa tela</h3>
+              <p className="text-tinta-suave">
+                Faturamento só de comanda fechada, lucro, clientes, ticket médio, % de extras e
+                despesas sobre o faturamento, comparados com o mês anterior. A projeção usa o
+                calendário da sua unidade, não 30 dias genéricos.
+              </p>
+            </div>
+            <Janela
+              tela={TELAS.metas}
+              alt="Métricas e metas de outubro: faturamento, lucro, clientes, ticket médio, atendimentos e extras"
+            />
+          </article>
+        </div>
+
+        <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {EXTRAS.map((e) => (
             <li
-              key={p.titulo}
-              className="revelar flex flex-col gap-3 rounded-xl border border-borda p-6 transition-colors hover:border-borda-forte"
+              key={e.titulo}
+              className="revelar flex items-start gap-3 rounded-xl border border-borda bg-superficie p-4"
             >
-              <p.icone aria-hidden className="size-7 text-modulo-texto" />
-              <h3 className="text-xl font-semibold">{p.titulo}</h3>
-              <p className="text-tinta-suave">{p.texto}</p>
+              <e.icone aria-hidden className="mt-0.5 size-5 shrink-0 text-modulo-texto" />
+              <span>
+                <span className="block font-semibold">{e.titulo}</span>
+                <span className="text-sm text-tinta-suave">{e.texto}</span>
+              </span>
             </li>
           ))}
         </ul>
       </section>
 
-      <section aria-labelledby="diferenciais" className="border-y border-borda bg-superficie">
+      {/* A conta que o sistema faz sozinho. */}
+      <section
+        aria-labelledby="calculadora"
+        className="border-y border-borda bg-[linear-gradient(180deg,var(--superficie-2),var(--fundo))]"
+      >
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-          <h2
-            id="diferenciais"
-            className="mb-10 flex items-center gap-3 font-denso text-4xl font-bold uppercase sm:text-5xl"
-          >
-            <HandCoins aria-hidden className="size-9 text-modulo-texto" />
-            Feito para a conta fechar
-          </h2>
-          <dl className="grid gap-x-10 gap-y-8 md:grid-cols-2">
-            {DIFERENCIAIS.map((d) => (
-              <div key={d.titulo} className="revelar border-l-2 border-modulo pl-4">
-                <dt className="text-xl font-semibold">{d.titulo}</dt>
-                <dd className="mt-1 text-tinta-suave">{d.texto}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="mb-10 flex max-w-3xl flex-col gap-3">
+            <Sobretitulo>Faça a conta</Sobretitulo>
+            <h2 id="calculadora" className="font-denso text-4xl font-bold uppercase sm:text-5xl">
+              Quanto sobra de cada corte?
+            </h2>
+            <p className="text-lg text-tinta-suave">
+              Ponha os números da sua barbearia. É a mesma conta que o Pente Fino faz em cada
+              comanda, sem você abrir a calculadora.
+            </p>
+          </div>
+          <CalculadoraSobra />
         </div>
       </section>
 
-      <section aria-labelledby="precos" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
-        <div className="mb-10 flex flex-col gap-3 text-center">
-          <h2 id="precos" className="font-denso text-4xl font-bold uppercase sm:text-5xl">
-            Planos para cada tamanho de barbearia
+      {/* Comparação honesta, sem citar marcas. */}
+      <section
+        aria-labelledby="comparativo"
+        className="mx-auto max-w-5xl px-4 py-16 sm:px-6 md:py-24"
+      >
+        <div className="mb-10 flex flex-col gap-3">
+          <Sobretitulo>Por que o Pente Fino</Sobretitulo>
+          <h2 id="comparativo" className="font-denso text-4xl font-bold uppercase sm:text-5xl">
+            Mais que uma agenda bonita
           </h2>
-          <p className="text-tinta-suave">
+        </div>
+        <div className="revelar overflow-x-auto rounded-2xl border border-borda">
+          <table className="w-full min-w-[36rem] text-left">
+            <caption className="sr-only">
+              Comparação entre o Pente Fino, um app de agenda comum e a planilha
+            </caption>
+            <thead className="bg-superficie text-sm">
+              <tr>
+                <th scope="col" className="px-4 py-3 font-medium text-tinta-suave">
+                  Recurso
+                </th>
+                <th
+                  scope="col"
+                  className="px-4 py-3 text-center font-denso text-base font-bold text-modulo-texto uppercase"
+                >
+                  Pente Fino
+                </th>
+                <th scope="col" className="px-4 py-3 text-center font-medium text-tinta-suave">
+                  App de agenda comum
+                </th>
+                <th scope="col" className="px-4 py-3 text-center font-medium text-tinta-suave">
+                  Planilha
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-borda">
+              {COMPARATIVO.map((l) => (
+                <tr key={l.recurso}>
+                  <th scope="row" className="px-4 py-3 font-normal">
+                    {l.recurso}
+                  </th>
+                  <td className="bg-modulo/5 px-4 py-3 text-center">
+                    <Marca valor={l.nos} />
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <Marca valor={l.agenda} />
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <Marca valor={l.planilha} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-sm text-tinta-suave">
+          <Minus aria-hidden className="mr-1 inline size-3.5" />= em parte, depende do plano ou é
+          pago à parte.
+        </p>
+      </section>
+
+      {/* Cada papel, a sua pergunta. */}
+      <section aria-labelledby="papeis" className="border-y border-borda bg-superficie">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+          <h2 id="papeis" className="mb-10 font-denso text-4xl font-bold uppercase sm:text-5xl">
+            Cada um vê o que precisa
+          </h2>
+          <ul className="grid gap-4 md:grid-cols-3">
+            {PAPEIS.map((p) => (
+              <li
+                key={p.titulo}
+                className="revelar flex flex-col gap-4 rounded-2xl border border-borda bg-fundo p-6"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="grid size-11 place-items-center rounded-xl bg-modulo/10">
+                    <p.icone aria-hidden className="size-6 text-modulo-texto" />
+                  </span>
+                  <span>
+                    <span className="block text-xl font-semibold">{p.titulo}</span>
+                    <span className="text-sm text-tinta-suave">“{p.pergunta}”</span>
+                  </span>
+                </span>
+                <ul className="flex flex-col gap-2">
+                  {p.itens.map((i) => (
+                    <li key={i} className="flex items-center gap-2 text-tinta-suave">
+                      <Check aria-hidden className="size-4 shrink-0 text-acao-texto" />
+                      {i}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <Depoimentos />
+
+      <section aria-labelledby="precos" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+        <div className="mb-10 flex flex-col items-center gap-3 text-center">
+          <Sobretitulo>Planos</Sobretitulo>
+          <h2 id="precos" className="font-denso text-4xl font-bold uppercase sm:text-5xl">
+            Preço justo, sem cobrar por barbeiro
+          </h2>
+          <p className="max-w-2xl text-tinta-suave">
+            WhatsApp incluso no Pro e no Premium, sem custo por mensagem. Anual com 2 meses grátis.{' '}
             <Link href="/planos" className="text-tinta underline underline-offset-4">
               Compare tudo o que vem em cada plano
             </Link>
@@ -357,13 +597,18 @@ export default function Pagina() {
         <Perguntas itens={PERGUNTAS} />
       </section>
 
-      <section className="border-t border-borda bg-[linear-gradient(200deg,var(--superficie-2),var(--fundo)_60%)]">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-20 text-center sm:px-6">
-          <h2 className="max-w-3xl font-denso text-5xl leading-[0.95] font-bold uppercase">
-            Este mês você vai saber quanto sobrou
+      <section className="relative overflow-hidden border-t border-borda">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(50%_70%_at_50%_100%,color-mix(in_oklch,var(--modulo)_16%,transparent),transparent_70%)]"
+        />
+        <div className="relative mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-20 text-center sm:px-6 md:py-28">
+          <h2 className="max-w-3xl font-denso text-5xl leading-[0.95] font-bold uppercase sm:text-6xl">
+            Este mês você vai saber <span className="text-modulo-texto">quanto sobrou</span>
           </h2>
-          <p className="text-lg text-tinta-suave">
-            {DIAS_TESTE} dias grátis, configuração guiada e importação da sua planilha.
+          <p className="max-w-xl text-lg text-tinta-suave">
+            {DIAS_TESTE} dias grátis, sem cartão. Configuração guiada e importação da sua planilha:
+            dá para atender no mesmo dia.
           </p>
           <LinkBotao href="/cadastro" grande>
             Criar conta grátis

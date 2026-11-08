@@ -23,6 +23,12 @@ node video/editar.mjs     # junta, transições, MP4 + WebM + capa em public/vid
 
 Grave em horário comercial: fora dele, o simulador do bot mostra a mensagem de "fechado".
 
+## Fotos das telas do site
+
+`node video/telas.mjs` (com o `servidores.sh` rodando) tira as fotos usadas na página inicial
+(`public/site/*.webp`): financeiro e métricas de outubro, agenda de um dia cheio, comanda e
+desempenho no celular do barbeiro.
+
 ## Arquivos
 
 - `gravar.mjs`: o roteiro (cenas, legendas, cliques). Cria um horário de amanhã com o Rafael para
