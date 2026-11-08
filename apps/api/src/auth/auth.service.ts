@@ -14,6 +14,7 @@ import { BancoService } from '../comum/banco.service.js';
 import { Contexto, type UsuarioAutenticado } from '../comum/contexto.js';
 import { ErroApp, Erros } from '../comum/erros.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { BloqueioLogin } from './bloqueio-login.js';
 import { EmailsService } from '../emails/emails.service.js';
 import { EventosService } from '../filas/filas.module.js';
 import { conferirSenha, gerarHashSenha } from './senhas.js';
@@ -42,16 +43,22 @@ export class AuthService {
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
     @Inject(EmailsService) private readonly emails: EmailsService,
     @Inject(EventosService) private readonly eventos: EventosService,
+    @Inject(BloqueioLogin) private readonly bloqueio: BloqueioLogin,
   ) {}
 
   // ─── Sessão ────────────────────────────────────────────────────────────
 
   async login({ email, senha }: LoginEntrada): Promise<Sessao> {
+    await this.bloqueio.conferir('app', email);
     const usuario = await this.banco.semConta({ loginEmail: email }, (tx) =>
       tx.usuario.findUnique({ where: { email } }),
     );
     const senhaConfere = await conferirSenha(usuario?.ativo ? usuario.senhaHash : null, senha);
-    if (!usuario || !usuario.ativo || !senhaConfere) throw credenciaisInvalidas();
+    if (!usuario || !usuario.ativo || !senhaConfere) {
+      await this.bloqueio.falhou('app', email);
+      throw credenciaisInvalidas();
+    }
+    await this.bloqueio.acertou('app', email);
 
     return this.banco.naConta(usuario.contaId, async (tx) => {
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: usuario.contaId } });
