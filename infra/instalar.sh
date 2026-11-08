@@ -12,7 +12,12 @@ cd "$(dirname "$0")"
 DOMINIO="${1:-}"
 ACME_EMAIL="${2:-}"
 if [[ -f .env ]]; then
-  echo ".env já existe; nada foi trocado. Para subir: ./atualizar.sh"
+  # Instalação antiga: acrescenta só o que faltar, sem trocar nada.
+  if ! grep -q '^BACKUP_SENHA=' .env; then
+    printf '\n# --- Backup (backup.sh) ---\n# Guarde esta senha fora do servidor: sem ela, o backup não abre.\nBACKUP_SENHA=%s\n# Remoto do rclone para a cópia externa (ex.: b2:pente-fino-backup). Vazio = só no servidor.\nBACKUP_DESTINO=\n# Monitor "push" do Uptime Kuma, avisado a cada backup que deu certo.\nBACKUP_AVISO_URL=\n# Monitor "push" do Uptime Kuma para o vigia de disco e memória (vigia.sh).\nVIGIA_AVISO_URL=\n' "$(openssl rand -hex 24)" >> .env
+    echo "BACKUP_SENHA criada no .env. Guarde-a fora do servidor: grep BACKUP_SENHA .env"
+  fi
+  echo ".env já existe; nada mais foi trocado. Para subir: ./atualizar.sh"
   exit 0
 fi
 if [[ -z "$DOMINIO" || -z "$ACME_EMAIL" ]]; then
@@ -86,6 +91,16 @@ ASAAS_WEBHOOK_TOKEN=$(hex 24)
 VAPID_CHAVE_PUBLICA=$VAPID_PUB
 VAPID_CHAVE_PRIVADA=$VAPID_PRIV
 VAPID_CONTATO=mailto:$ACME_EMAIL
+
+# --- Backup (backup.sh) ---
+# Guarde esta senha fora do servidor: sem ela, o backup não abre.
+BACKUP_SENHA=$(hex 24)
+# Remoto do rclone para a cópia externa (ex.: b2:pente-fino-backup). Vazio = só no servidor.
+BACKUP_DESTINO=
+# Monitor "push" do Uptime Kuma, avisado a cada backup que deu certo.
+BACKUP_AVISO_URL=
+# Monitor "push" do Uptime Kuma para o vigia de disco e memória (vigia.sh).
+VIGIA_AVISO_URL=
 
 LOG_LEVEL=info
 API_DOCS=false

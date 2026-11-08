@@ -9,25 +9,25 @@ Contas, ferramentas e nomes definidos antes da primeira linha de código.
 **Contas**
 
 - [x] GitHub com repositório privado
-- [ ] Domínio registrado (Registro.br para .com.br)
-- [ ] Provedor de VPS escolhido (Ubuntu 24.04 LTS, mínimo 2 vCPU e 4 GB de RAM para começar)
+- [x] Domínio registrado (Registro.br para .com.br)
+- [x] Provedor de VPS escolhido (Ubuntu 24.04 LTS, mínimo 2 vCPU e 4 GB de RAM para começar)
 - [ ] Armazenamento externo compatível com S3 para backup
-- [ ] Serviço de e-mail transacional (convite e recuperação de senha)
+- [x] Serviço de e-mail transacional (convite e recuperação de senha)
 - [ ] Um chip de WhatsApp dedicado para testes e um por unidade em produção
-- [ ] Conta no Asaas (cobrança das barbearias na Etapa 23; cobrança do clube na Etapa 24)
+- [x] Conta no Asaas (cobrança das barbearias na Etapa 23; cobrança do clube na Etapa 24)
 
 **Ferramentas no computador**
 
-- [ ] Git
+- [x] Git
 - [x] Node.js na versão LTS ativa, instalado com nvm ou fnm
 - [x] pnpm (ativado com `corepack enable`)
-- [ ] Docker Desktop (Windows e Mac) ou Docker Engine (Linux)
-- [ ] VS Code com extensões ESLint, Prettier, Prisma, Tailwind CSS e Docker
-- [ ] Chave SSH criada com `ssh-keygen -t ed25519`
+- [x] Docker Desktop (Windows e Mac) ou Docker Engine (Linux)
+- [x] VS Code com extensões ESLint, Prettier, Prisma, Tailwind CSS e Docker
+- [x] Chave SSH criada com `ssh-keygen -t ed25519`
 
 **Nomes**
 
-- [ ] Nome do produto e domínio
+- [x] Nome do produto e domínio
 - [ ] Subdomínios: `app.` (sistema), `api.` (API), `wa.` (Evolution API), `status.` (monitoramento), `homolog.` (homologação)
 
 ## Etapa 1 · Pasta e repositório
@@ -484,11 +484,11 @@ Tudo roda em containers na VPS, atrás do Caddy, que emite e renova o certificad
 
 - [x] `infra/docker-compose.prod.yml` com: Caddy, web, api, worker, PostgreSQL, Redis e Evolution API, cada um com reinício automático e checagem de saúde
 - [x] `infra/Caddyfile`: `app.` para o web, `api.` para a API, `wa.` para a Evolution API com acesso restrito (senha ou IP), cabeçalhos de segurança
-- [ ] `.env` de produção criado direto na VPS, com permissão `600`, senhas longas e diferentes das de desenvolvimento
+- [x] `.env` de produção criado direto na VPS, com permissão `600`, senhas longas e diferentes das de desenvolvimento
 - [x] Pasta `/opt/barbearia` com o compose, o Caddyfile e o `.env`
-- [ ] Primeira subida: `docker compose pull`, migrações do banco, `docker compose up -d`
+- [x] Primeira subida: `docker compose pull`, migrações do banco, `docker compose up -d`
 - [ ] Conectar o WhatsApp da unidade-piloto pelo QR Code
-- [ ] Deploy automático: ao gerar as imagens, o GitHub Actions entra por SSH, baixa a nova tag, roda as migrações e reinicia os serviços
+- [x] Deploy automático: ao gerar as imagens, o GitHub Actions entra por SSH, baixa a nova tag, roda as migrações e reinicia os serviços
 - [x] Rollback: voltar para a tag anterior com um comando documentado em `docs/`
 - [ ] Ambiente de homologação no mesmo servidor (`homolog.`), com banco separado, para testar antes de produção
 - [ ] **Pronto quando:** `https://app.seudominio` abre com cadeado, o login funciona e um merge na `main` chega ao ar sozinho
@@ -497,13 +497,13 @@ Tudo roda em containers na VPS, atrás do Caddy, que emite e renova o certificad
 
 Um backup que nunca foi restaurado não é backup. A restauração é testada antes do piloto e todo mês.
 
-- [ ] Script `infra/backup.sh`: `pg_dump` compactado do banco de produção
+- [x] Script `infra/backup.sh`: `pg_dump` compactado do banco de produção
 - [ ] Envio para o armazenamento externo com rclone, criptografado
-- [ ] Cópia também do volume de sessões da Evolution API (evita escanear o QR de novo)
-- [ ] Agendado no cron da VPS todo dia de madrugada
-- [ ] Retenção: 30 diários e 12 mensais
+- [x] Cópia também do volume de sessões da Evolution API (evita escanear o QR de novo)
+- [x] Agendado no cron da VPS todo dia de madrugada
+- [x] Retenção: 30 diários e 12 mensais
 - [ ] Snapshot semanal da VPS no painel do provedor
-- [ ] Restauração testada num banco vazio, com o passo a passo em `docs/restaurar.md`
+- [x] Restauração testada num banco vazio, com o passo a passo em `docs/restaurar.md`
 - [ ] **Pronto quando:** o banco é restaurado do zero a partir do armazenamento externo e o sistema volta a abrir
 
 ## Etapa 19 · Monitoramento
@@ -512,9 +512,9 @@ Saber do problema antes do cliente ligar, com ferramentas que rodam no próprio 
 
 - [ ] Uptime Kuma em `status.`: verifica `app`, `api/health` e a conexão do WhatsApp a cada minuto, avisa por e-mail ou Telegram
 - [ ] Rastreamento de erros no front e na API (GlitchTip, que roda no próprio servidor, ou Sentry)
-- [ ] Alerta de disco acima de 80% e de memória alta
+- [x] Alerta de disco acima de 80% e de memória alta
 - [ ] Alerta quando a sessão do WhatsApp cair (evento da Evolution API)
-- [ ] Alerta quando o backup do dia falhar
+- [x] Alerta quando o backup do dia falhar
 - [ ] Painel simples de uso: contas ativas, comandas por dia, erros por dia
 - [ ] **Pronto quando:** derrubar a API de propósito gera um aviso em menos de 2 minutos
 
@@ -522,10 +522,10 @@ Saber do problema antes do cliente ligar, com ferramentas que rodam no próprio 
 
 Convites e recuperação de senha chegando na caixa de entrada, não no spam.
 
-- [ ] Escolher o serviço de envio e conferir o limite do plano gratuito
+- [x] Escolher o serviço de envio e conferir o limite do plano gratuito
 - [ ] Domínio de envio configurado com SPF, DKIM e DMARC
-- [ ] Modelos de e-mail: convite, recuperar senha, boas-vindas, aviso de pagamento do plano
-- [ ] Em desenvolvimento, tudo cai no Mailpit
+- [x] Modelos de e-mail: convite, recuperar senha, boas-vindas, aviso de pagamento do plano
+- [x] Em desenvolvimento, tudo cai no Mailpit
 - [ ] **Pronto quando:** convite enviado para Gmail e Outlook chega na caixa de entrada
 
 ## Etapa 21 · Segurança e LGPD

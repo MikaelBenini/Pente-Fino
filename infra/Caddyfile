@@ -35,6 +35,12 @@ wa.{$DOMINIO} {
 	reverse_proxy evolution:8080
 }
 
+# Monitoramento (Uptime Kuma, com login próprio).
+status.{$DOMINIO} {
+	import seguranca
+	reverse_proxy status:3001
+}
+
 # www e o antigo app. levam ao domínio principal, mantendo o caminho.
 www.{$DOMINIO}, app.{$DOMINIO} {
 	redir https://{$DOMINIO}{uri} permanent
