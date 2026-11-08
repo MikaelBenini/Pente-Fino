@@ -58,6 +58,8 @@ export interface PagamentoWebhook {
   netValue?: number | null;
   /** Quando o Asaas prevê o crédito na conta. */
   estimatedCreditDate?: string | null;
+  /** Split da cobrança (clube online): quanto foi para cada carteira, em reais. */
+  split?: { walletId?: string; totalValue?: number | null }[] | null;
 }
 
 /**

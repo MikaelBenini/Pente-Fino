@@ -295,7 +295,11 @@ export class ClubeOnlineService {
       const adesaoId = await this.renovarAdesao(tx, a, hoje);
       const valor = centavos(p.value);
       const liquido = p.netValue != null ? centavos(p.netValue) : valor;
-      const { barbearia, plataforma } = dividirRepasse(liquido, a.taxaBp);
+      // O Asaas informa quanto foi para a carteira da barbearia; sem isso, a mesma conta dele.
+      const doAsaas = p.split?.find((x) => x.totalValue != null)?.totalValue;
+      const calculado = dividirRepasse(liquido, a.taxaBp);
+      const barbearia = doAsaas != null ? centavos(doAsaas) : calculado.barbearia;
+      const plataforma = liquido - barbearia;
       await tx.pagamentoClube.create({
         data: {
           adesaoId,

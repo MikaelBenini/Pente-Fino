@@ -25,12 +25,12 @@ export function lerConfigClubeOnline(json: unknown): ConfigClubeOnline {
 
 /**
  * Divisão do que o Asaas repassa (valor líquido, já sem a taxa do Asaas): a barbearia recebe o
- * percentual do split; o resto fica com a plataforma. Centavos inteiros, arredondando a favor da
- * barbearia.
+ * percentual do split, arredondado para baixo como o Asaas faz (conferido no sandbox: 99% de
+ * R$ 97,52 = R$ 96,54); o resto fica com a plataforma. Centavos inteiros.
  */
 export function dividirRepasse(liquido: number, taxaBp: number) {
-  const plataforma = Math.floor((liquido * taxaBp) / 10_000);
-  return { barbearia: liquido - plataforma, plataforma };
+  const barbearia = Math.floor((liquido * (10_000 - taxaBp)) / 10_000);
+  return { barbearia, plataforma: liquido - barbearia };
 }
 
 /** Percentual do split para a carteira da barbearia (o Asaas aceita até 4 casas). */
