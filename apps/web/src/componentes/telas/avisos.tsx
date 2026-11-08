@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { chaveAvisos, useAcao, useAvisos } from '@/lib/consultas';
 import { CabecalhoPagina, Estado } from '../pagina';
+import { ConviteNotificacoes } from '../notificacoes-aparelho';
 
 /** Central de avisos: o que precisa da atenção de quem está logado, com histórico. */
 export function TelaAvisos() {
@@ -32,6 +33,7 @@ export function TelaAvisos() {
           ) : undefined
         }
       />
+      <ConviteNotificacoes />
       <Estado consulta={avisos}>
         {() =>
           avisos.data!.avisos.length === 0 ? (

@@ -31,6 +31,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
 import { useAvisos, useBot, useConversas, useSituacaoConta } from '@/lib/consultas';
 import { notificar, tocarAviso, usePreferenciasAvisos } from '@/lib/avisos';
+import { usePushAparelho } from './notificacoes-aparelho';
 import { useFilaOffline } from '@/lib/fila';
 import {
   NOME_PAPEL,
@@ -384,9 +385,20 @@ function BlocoUsuario() {
 /** Sino da central de avisos, com quantos ainda não foram lidos. */
 function BotaoAvisos({ className }: { className: string }) {
   const n = useAvisos().data?.naoLidos ?? 0;
+  const push = usePushAparelho();
   const rotulo = n > 0 ? `Avisos: ${n} não ${n === 1 ? 'lido' : 'lidos'}` : 'Avisos';
   return (
-    <Link href="/avisos" aria-label={rotulo} title={rotulo} className={cn(className, 'relative')}>
+    <Link
+      href="/avisos"
+      aria-label={rotulo}
+      title={rotulo}
+      className={cn(className, 'relative')}
+      // No primeiro toque no sino, o navegador pergunta se pode mandar notificações (precisa
+      // ser num clique). Depois disso, o convite fica na tela de Avisos e no Perfil.
+      onClick={() => {
+        if (push.podePerguntar && !push.jaPerguntou()) void push.ligar();
+      }}
+    >
       <Bell aria-hidden className="size-5" strokeWidth={1.75} />
       {n > 0 && (
         <span
