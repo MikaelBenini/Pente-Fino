@@ -5,6 +5,7 @@ import { lerModelosEmail, type ChaveModeloEmail, type TextoModeloEmail } from '.
 import { DIAS_TESTE, lerTabelasPreco, VERSAO_TERMOS, type TabelaPrecosPlanos } from './planos.js';
 import { lerConfigClubeOnline, type ConfigClubeOnline } from './clube-online.js';
 import { lerConfigNotaFiscal, type ConfigNotaFiscal } from './nota-fiscal.js';
+import type { ExecucaoLimpezaNaTela } from './limpeza.js';
 
 export const avisoGeralSchema = z
   .object({
@@ -88,6 +89,8 @@ export interface SaudeDoSistema {
   }[];
   /** Trabalhos que falharam nas últimas 24 h (sem o conteúdo, só o motivo). */
   errosRecentes: { fila: string; tipo: string; motivo: string; quando: string }[];
+  /** Últimas execuções da limpeza de dados (a mais recente primeiro). */
+  limpeza: ExecucaoLimpezaNaTela[];
 }
 
 // ─── E-mail (SMTP) ────────────────────────────────────────────────────────

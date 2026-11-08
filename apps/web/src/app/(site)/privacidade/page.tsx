@@ -86,11 +86,34 @@ const SECOES: readonly SecaoLegal[] = [
     id: 'prazos',
     titulo: 'Por quanto tempo guardamos',
     conteudo: (
-      <p>
-        Enquanto a conta estiver ativa. Após o cancelamento, por 90 dias para permitir a exportação;
-        depois, os dados são apagados, exceto o que a lei obriga a guardar (por exemplo, registros
-        de cobrança e de acesso).
-      </p>
+      <>
+        <p>
+          Os dados da barbearia ficam enquanto a conta estiver ativa. Para o banco não guardar o que
+          não serve mais, uma rotina diária apaga sozinha:
+        </p>
+        <ul>
+          <li>
+            <strong>Depois de 90 dias</strong>, em todas as contas: conversas do WhatsApp com o
+            robô, sessões e links de acesso vencidos, avisos já lidos e registros técnicos de envio.
+            Avaliações perdem o comentário escrito; a nota fica, para a média do profissional.
+          </li>
+          <li>
+            <strong>Conta criada pelo site sem confirmar o e-mail</strong>: apagada em 7 dias, com
+            aviso por e-mail 2 dias antes.
+          </li>
+          <li>
+            <strong>Conta cancelada, ou com o teste grátis vencido sem nenhum pagamento</strong>:
+            apagada 90 dias depois do cancelamento ou do fim do teste, com aviso por e-mail 15 e 3
+            dias antes, para dar tempo de exportar os dados.
+          </li>
+        </ul>
+        <p>
+          Comandas, caixa e o histórico de alterações das contas ativas não saem: são registros
+          financeiros da barbearia. Ficam guardados também o que a lei obriga (por exemplo,
+          registros de cobrança e de acesso) e, quando uma conta é apagada, só a informação de que
+          ela existiu e quando saiu. As cópias de segurança são substituídas em até 12 meses.
+        </p>
+      </>
     ),
   },
   {

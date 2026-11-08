@@ -36,6 +36,15 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
   salve e clique em "Aplicar às assinaturas atuais". As assinaturas novas já saem com a nota; o
   Asaas manda a nota por e-mail para a barbearia.
 
+## Limpeza automática de dados
+
+O worker roda todo dia às 3h30 (depois do backup) e apaga o que passou do prazo da política de
+privacidade. O resultado de cada execução fica em `/admin` → Saúde do sistema → "Limpeza de
+dados". Se aparecer uma conta **retida**, ela já devia ter saído mas ainda tem cobrança ativa no
+Asaas. Cancele a assinatura no painel do Asaas; o vínculo na conta (`asaas_assinatura_id`) ainda
+precisa ser limpo direto no banco. O cancelamento pela administração, que faz as duas coisas, está
+planejado na Etapa 23. A rotina tenta de novo no dia seguinte.
+
 ## Atualizar e voltar versão (rollback)
 
 - `./atualizar.sh` — versão do `.env` (`TAG`, padrão `latest`: o último merge na `main`).

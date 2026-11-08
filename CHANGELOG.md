@@ -7,6 +7,16 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (limpeza de dados)
+
+- Limpeza automática de dados, todo dia às 3h30: conversas do bot, logins e links vencidos, avisos
+  lidos e trabalhos das filas com mais de 90 dias saem; avaliações perdem o comentário (a nota
+  fica). Conta criada pelo site sem confirmar o e-mail sai em 7 dias (aviso 2 dias antes); conta
+  cancelada ou com o teste vencido sem pagamento sai 90 dias depois (avisos 15 e 3 dias antes).
+  Conta com cobrança ativa no Asaas fica retida. Saúde do sistema mostra o que cada execução
+  apagou.
+- Privacidade e termos com os prazos de guarda (versão 2026-11-08).
+
 ### Adicionado (nota fiscal)
 
 - Nota fiscal de serviço (NFS-e) das mensalidades do Pente Fino, emitida pelo Asaas: configuração

@@ -49,6 +49,7 @@ export * from './plataforma-gestao.js';
 export * from './protecao-cadastro.js';
 export * from './clube-online.js';
 export * from './nota-fiscal.js';
+export * from './limpeza.js';
 export * from './cobranca-manual.js';
 export * from './configuracao-sistema.js';
 export * from './modelos-email.js';

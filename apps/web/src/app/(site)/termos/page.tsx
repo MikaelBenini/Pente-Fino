@@ -93,7 +93,10 @@ const SECOES: readonly SecaoLegal[] = [
         Não há fidelidade nem multa. O cancelamento vale ao fim do período já pago, sem reembolso
         proporcional do anual, salvo o direito de arrependimento de 7 dias da primeira contratação
         (Código de Defesa do Consumidor, art. 49), quando aplicável. Os dados ficam guardados por 90
-        dias após o fim da assinatura para exportação e depois são apagados.
+        dias após o fim da assinatura para exportação e depois são apagados. A conta com o teste
+        grátis vencido sem nenhum pagamento também é apagada 90 dias depois do fim do teste, e a
+        conta criada pelo site sem confirmar o e-mail, em 7 dias; nos dois casos o dono recebe aviso
+        por e-mail antes (detalhes na política de privacidade).
       </p>
     ),
   },
