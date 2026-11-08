@@ -75,6 +75,7 @@ export async function rotinaAvisosDaAssinatura(
           modelos,
           { nome: d.nome.split(' ')[0] ?? d.nome, conta: conta.nome, ...vars },
           link,
+          { site: opcoes.appUrl },
         ),
       );
     const saida: TrabalhoEmail[] = [];

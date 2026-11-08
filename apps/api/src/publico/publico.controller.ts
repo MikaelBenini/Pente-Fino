@@ -53,6 +53,7 @@ import { LimiteAutenticacao, Publico } from '../auth/decoradores.js';
 import { gerarHashSenha } from '../auth/senhas.js';
 import { BancoService } from '../comum/banco.service.js';
 import { PrecosService } from '../comum/precos.service.js';
+import { EmailsService } from '../emails/emails.service.js';
 import { Erros } from '../comum/erros.js';
 import { EventosService } from '../filas/filas.module.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
@@ -116,6 +117,7 @@ export class PublicoController {
     @Inject(AgendaService) private readonly agenda: AgendaService,
     @Inject(EventosService) private readonly eventos: EventosService,
     @Inject(PrecosService) private readonly precosServico: PrecosService,
+    @Inject(EmailsService) private readonly emails: EmailsService,
   ) {}
 
   // ─── Cadastro de conta ──────────────────────────────────────────────────
@@ -152,8 +154,10 @@ export class PublicoController {
     // Dias de teste e versão dos termos vêm da administração (com padrão do sistema).
     const { teste } = lerConfiguracaoPublica(await configuracaoDoSistema(this.banco.prisma));
     const desconto = await this.precosServico.cupomValido(d.cupom);
+    const testeAte = new Date(Date.now() + teste.dias * 86_400_000);
+    let sessao: Sessao;
     try {
-      return await this.banco.naConta(contaId, async (tx) => {
+      sessao = await this.banco.naConta(contaId, async (tx) => {
         await tx.conta.create({
           data: {
             id: contaId,
@@ -161,7 +165,7 @@ export class PublicoController {
             plano: d.plano,
             ciclo: d.ciclo,
             status: 'teste',
-            testeAte: new Date(Date.now() + teste.dias * 86_400_000),
+            testeAte,
             precosDesde: new Date(`${dataLocal(new Date())}T00:00:00Z`),
             cupom: desconto.cupom,
             descontoBp: desconto.descontoBp,
@@ -210,6 +214,11 @@ export class PublicoController {
       }
       throw e;
     }
+    // A conta já existe: falha no e-mail não desfaz o cadastro.
+    await this.emails
+      .boasVindas({ para: d.email, nome: d.nome, conta: d.barbearia, testeAte, dias: teste.dias })
+      .catch(() => undefined);
+    return sessao;
   }
 
   // ─── Link público de agendamento ────────────────────────────────────────

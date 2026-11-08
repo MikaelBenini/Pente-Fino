@@ -340,7 +340,7 @@ describe('venda presencial', () => {
     expect(r.linkWhatsapp).toMatch(/^https:\/\/wa\.me\/5511977776666\?text=/);
     expect(r.linkConvite).toMatch(/\/convite\?token=/);
     const email = await ultimoEmail(donoEmail);
-    expect(email?.assunto).toContain('está pronta');
+    expect(email?.assunto).toContain('já está no Pente Fino');
     await v.post('/admin/contas', venda).expect(409);
 
     // O vendedor vê só a conta dele e não abre as outras.
@@ -456,6 +456,9 @@ describe('configurações e saúde do sistema', () => {
     const situacao = (await dono.get('/conta/situacao').expect(200)).body;
     contasCriadas.push((await dono.get('/auth/eu').expect(200)).body.contaId);
     expect(situacao).toMatchObject({ situacao: 'teste', diasRestantesTeste: 7 });
+    const boasVindas = await ultimoEmail(email);
+    expect(boasVindas?.assunto).toBe('Bem-vindo ao Pente Fino, Sara! Seu teste grátis começou');
+    expect(boasVindas?.texto).toContain('são 7 dias com tudo liberado');
   });
 
   it('aviso geral aparece para as barbearias só enquanto vale', async () => {
@@ -622,7 +625,7 @@ describe('modelos de e-mail', () => {
       chave: string;
       personalizado: unknown;
     }[];
-    expect(lista).toHaveLength(7);
+    expect(lista).toHaveLength(9);
     await req('put', '/admin/configuracoes/modelos-email/inventado', {}).expect(400);
     const recusa = await req('put', '/admin/configuracoes/modelos-email/redefinir_senha', {
       assunto: 'Senha nova, {{nome}}',
@@ -644,7 +647,7 @@ describe('modelos de e-mail', () => {
 
     await req('delete', '/admin/configuracoes/modelos-email/redefinir_senha').expect(204);
     await http().post('/auth/esqueci-senha').send({ email: a.emails.gestor }).expect(202);
-    expect((await ultimoEmail(a.emails.gestor))?.assunto).toBe('Redefinir sua senha');
+    expect((await ultimoEmail(a.emails.gestor))?.assunto).toBe('Redefina sua senha do Pente Fino');
   });
 });
 
@@ -893,7 +896,7 @@ describe('pronto quando (etapa 15.1)', () => {
         .expect(201)
     ).body as VendaCriada;
     contaId = venda.contaId;
-    expect((await ultimoEmail(donoEmail))?.assunto).toContain('está pronta');
+    expect((await ultimoEmail(donoEmail))?.assunto).toContain('já está no Pente Fino');
     const hoje = dataLocal(new Date());
     await v
       .post(`/admin/contas/${contaId}/pagamentos`, {
@@ -905,7 +908,7 @@ describe('pronto quando (etapa 15.1)', () => {
       .expect(201);
 
     // 2. O dono recebe o convite, entra e usa (cadastra um cliente).
-    expect((await ultimoEmail(donoEmail))?.assunto).toContain('Recebemos o pagamento');
+    expect((await ultimoEmail(donoEmail))?.assunto).toContain('Pagamento confirmado');
     await http()
       .post('/auth/convite')
       .send({ token: tokenDoLink(venda.linkConvite), senha: 'senha-do-edu-123' })
