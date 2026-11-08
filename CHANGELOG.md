@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (status)
+
+- `infra/status.sh`: configura o Uptime Kuma de uma vez — monitores do site, API, painel do
+  WhatsApp, backup e disco/memória, alerta por e-mail e página pública
+  `status.seudominio/status/pente-fino`; grava as URLs push no `.env`.
+
 ### Adicionado (limpeza de dados)
 
 - Limpeza automática de dados, todo dia às 3h30: conversas do bot, logins e links vencidos, avisos

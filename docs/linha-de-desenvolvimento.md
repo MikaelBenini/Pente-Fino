@@ -492,9 +492,9 @@ o banco não pode crescer sem limite e a página de status precisa mostrar algo 
 
 **Status útil**
 
-- [ ] Monitores criados por script (`infra/status.sh`, na VPS, com o login do Uptime Kuma digitado na hora): site, API, painel do WhatsApp, backup do dia e disco/memória; as URLs dos monitores "push" vão sozinhas para o `.env`
-- [ ] Página pública de status (`status.seudominio/status/pente-fino`) com os serviços agrupados e o histórico; o painel interno continua com login
-- [ ] Alerta por e-mail (o SMTP do Brevo) quando um monitor cair
+- [x] Monitores criados por script (`infra/status.sh`, na VPS, com o login do Uptime Kuma digitado na hora): site, API, painel do WhatsApp, backup do dia e disco/memória; as URLs dos monitores "push" vão sozinhas para o `.env` (feito em 2026-11-08: `infra/status.sh` roda `infra/status-kuma.mjs` num contêiner Node na rede do Compose, pela API de socket.io do Kuma; conferido contra um Kuma 1.23.16 local, com os monitores HTTP verdes contra a produção e o push respondendo. **Falta rodar uma vez na VPS** — vem com o próximo deploy)
+- [x] Página pública de status (`status.seudominio/status/pente-fino`) com os serviços agrupados e o histórico; o painel interno continua com login (feito: grupos Sistema e Servidor, criada pelo mesmo script)
+- [x] Alerta por e-mail (o SMTP do Brevo) quando um monitor cair (feito: notificação SMTP padrão, aplicada a todos os monitores, com o e-mail informado na hora)
 
 ## Etapa 16 · Preparação da VPS
 
