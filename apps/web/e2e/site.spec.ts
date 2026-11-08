@@ -5,7 +5,10 @@ import { expect, test } from '@playwright/test';
 test('página inicial apresenta a proposta e leva ao teste grátis', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1, name: /Saiba quanto sobra/ })).toBeVisible();
-  await expect(page.getByText('Exemplo fictício')).toBeVisible();
+  // Calculadora: R$ 60 com 45% de comissão e R$ 3,50 de produto sobra R$ 29,50 por corte.
+  const calculadora = page.getByRole('region', { name: 'Quanto sobra de cada corte?' });
+  await calculadora.getByLabel('Preço do corte').fill('60');
+  await expect(calculadora.getByText('R$ 29,50').first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Perguntas frequentes' })).toBeVisible();
   await page
     .getByRole('link', { name: /Testar 14 dias grátis/ })

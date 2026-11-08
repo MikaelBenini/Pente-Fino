@@ -14,6 +14,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - Confirmação de e-mail no cadastro pelo site: até clicar no link do e-mail de boas-vindas, a conta
   não agenda, não convida a equipe nem conecta o WhatsApp; aviso no painel com "Reenviar e-mail".
 
+### Alterado
+
+- Página inicial nova: telas reais do sistema no topo (computador e celular), "Faturamento não é
+  lucro", vídeo, recursos em mosaico com as telas, calculadora "Quanto sobra de cada corte?",
+  comparação com app de agenda comum e planilha, perguntas frequentes atualizadas. Seção de
+  depoimentos pronta para quando houver depoimentos reais autorizados.
+
 ### Adicionado
 
 - Site público: Google Tag Manager e tag do Google Ads com aviso de cookies e Consent Mode —
