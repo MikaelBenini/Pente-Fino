@@ -35,17 +35,36 @@ async function registro() {
   );
 }
 
+const PERGUNTADO = 'pf-push-perguntado';
+const lerPerguntado = () => {
+  try {
+    return localStorage.getItem(PERGUNTADO) === '1';
+  } catch {
+    return false;
+  }
+};
+const marcarPerguntado = () => {
+  try {
+    localStorage.setItem(PERGUNTADO, '1');
+  } catch {
+    // Sem armazenamento (aba anônima): pode perguntar de novo no próximo clique.
+  }
+};
+
 /**
- * Perfil → Notificações neste aparelho: horários novos, remarcados e cancelados da agenda
- * chegam como notificação, mesmo com o app fechado. Cada aparelho liga o seu.
+ * Notificações deste aparelho (push do PWA): estado, ligar (pede a permissão do navegador e
+ * inscreve) e desligar. Usado no Perfil, no sino e na tela de Avisos.
  */
-export function NotificacoesAparelho() {
+export function usePushAparelho() {
   const estado = useQuery({ queryKey: chave, queryFn: () => api<EstadoPush>('me/push') });
   const [inscrito, setInscrito] = useState<boolean | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [testou, setTestou] = useState(false);
   const [ocupado, setOcupado] = useState(false);
-  const teste = useAcao(() => api('me/push/teste', { corpo: {} }), []);
+  // Só afeta o que aparece depois de saber se está inscrito (efeito abaixo), então não muda o HTML
+  // do servidor.
+  const [permissao, setPermissao] = useState<NotificationPermission | null>(() =>
+    suportado() ? Notification.permission : null,
+  );
 
   useEffect(() => {
     if (!suportado()) return;
@@ -56,18 +75,21 @@ export function NotificacoesAparelho() {
       .catch(() => setInscrito(false));
   }, []);
 
-  if (!estado.data?.chavePublica) return null;
-  const chavePublica = estado.data.chavePublica;
+  const chavePublica = estado.data?.chavePublica ?? null;
 
-  async function ligar() {
+  async function ligar(): Promise<boolean> {
+    if (!chavePublica || !suportado()) return false;
     setErro(null);
     setOcupado(true);
+    marcarPerguntado();
     try {
-      if ((await Notification.requestPermission()) !== 'granted') {
+      const p = await Notification.requestPermission();
+      setPermissao(p);
+      if (p !== 'granted') {
         setErro(
-          'O navegador bloqueou as notificações. Libere nas configurações do site e tente de novo.',
+          'O navegador bloqueou as notificações. Libere nas configurações do site (o cadeado ao lado do endereço) e tente de novo.',
         );
-        return;
+        return false;
       }
       const r = await registro();
       await navigator.serviceWorker.ready;
@@ -80,8 +102,10 @@ export function NotificacoesAparelho() {
       await api('me/push', { corpo: s.toJSON() });
       setInscrito(true);
       void estado.refetch();
+      return true;
     } catch (e) {
       setErro(e instanceof ErroApi ? e.message : 'Não foi possível ligar neste aparelho.');
+      return false;
     } finally {
       setOcupado(false);
     }
@@ -99,7 +123,6 @@ export function NotificacoesAparelho() {
         await s.unsubscribe();
       }
       setInscrito(false);
-      setTestou(false);
       void estado.refetch();
     } catch (e) {
       setErro(e instanceof ErroApi ? e.message : 'Não foi possível desligar.');
@@ -107,6 +130,70 @@ export function NotificacoesAparelho() {
       setOcupado(false);
     }
   }
+
+  return {
+    /** O servidor tem push ligado e o navegador suporta. */
+    disponivel: !!chavePublica && suportado(),
+    suportado: suportado(),
+    chavePublica,
+    inscrito,
+    permissao,
+    erro,
+    ocupado,
+    ligar,
+    desligar,
+    /** Ainda não perguntou neste aparelho e o navegador deixa perguntar. */
+    podePerguntar: !!chavePublica && suportado() && permissao === 'default' && inscrito === false,
+    jaPerguntou: lerPerguntado,
+  };
+}
+
+/**
+ * Tela de Avisos: convite para ligar as notificações neste aparelho, enquanto não estiverem
+ * ligadas. Bloqueadas no navegador: mostra como liberar.
+ */
+export function ConviteNotificacoes() {
+  const push = usePushAparelho();
+  if (!push.disponivel || push.inscrito !== false) return null;
+  const bloqueado = push.permissao === 'denied';
+  return (
+    <section
+      aria-labelledby="titulo-convite-push"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-borda-forte bg-superficie p-4"
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        <Bell aria-hidden className="mt-0.5 size-5 shrink-0 text-acao-texto" />
+        <div className="flex flex-col gap-1">
+          <h2 id="titulo-convite-push" className="font-semibold">
+            Ative as notificações neste aparelho
+          </h2>
+          <p className="text-sm text-tinta-suave">
+            {bloqueado
+              ? 'O navegador está bloqueando. Toque no cadeado ao lado do endereço, libere "Notificações" e recarregue a página.'
+              : 'Saiba na hora quando entra, muda ou cai um horário, mesmo com o app fechado.'}
+          </p>
+          {push.erro && !bloqueado && <p className="text-sm text-perigo-texto">{push.erro}</p>}
+        </div>
+      </div>
+      {!bloqueado && (
+        <Botao carregando={push.ocupado} onClick={() => void push.ligar()}>
+          Ativar notificações
+        </Botao>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Perfil → Notificações neste aparelho: horários novos, remarcados e cancelados da agenda
+ * chegam como notificação, mesmo com o app fechado. Cada aparelho liga o seu.
+ */
+export function NotificacoesAparelho() {
+  const push = usePushAparelho();
+  const { inscrito, erro, ocupado, ligar, desligar } = push;
+  const [testou, setTestou] = useState(false);
+  const teste = useAcao(() => api('me/push/teste', { corpo: {} }), []);
+  if (!push.chavePublica) return null;
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby="titulo-notificacoes">
@@ -146,7 +233,14 @@ export function NotificacoesAparelho() {
               >
                 Mandar um teste
               </Botao>
-              <Botao variante="fantasma" carregando={ocupado} onClick={() => void desligar()}>
+              <Botao
+                variante="fantasma"
+                carregando={ocupado}
+                onClick={() => {
+                  setTestou(false);
+                  void desligar();
+                }}
+              >
                 Desligar neste aparelho
               </Botao>
             </div>

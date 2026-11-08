@@ -9,6 +9,8 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   browser,
 }, info) => {
   test.skip(info.project.name === 'celular', 'administração no computador');
+  // Percorre todas as abas da administração: mais que os 30 s padrão quando roda junto.
+  test.setTimeout(120_000);
   const email = `admin-${Date.now().toString(36)}@pentefino.dev`;
   const saida = execFileSync(
     'pnpm',
