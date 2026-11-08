@@ -544,11 +544,11 @@ Convites e recuperação de senha chegando na caixa de entrada, não no spam.
 
 Dados de clientes e de dinheiro exigem cuidado desde o primeiro dia.
 
-- [ ] HTTPS em tudo; cookies seguros; CORS liberando só os domínios do sistema
-- [ ] Cabeçalhos de segurança (CSP, HSTS, X-Frame-Options) no Caddy
-- [ ] Senhas com argon2; bloqueio temporário após tentativas erradas de login
+- [x] HTTPS em tudo; cookies seguros; CORS liberando só os domínios do sistema (feito: Caddy com HTTPS e HSTS em todos os endereços; cookies httpOnly, `Secure` atrás do HTTPS e SameSite; CORS da API só para o `APP_URL`)
+- [x] Cabeçalhos de segurança (CSP, HSTS, X-Frame-Options) no Caddy (feito: HSTS, nosniff e Referrer-Policy no Caddy; CSP do site em produção no `next.config.ts` (só recursos do próprio site, sem iframe de fora, `frame-ancestors 'none'`), X-Frame-Options DENY e Permissions-Policy)
+- [x] Senhas com argon2; bloqueio temporário após tentativas erradas de login (feito: argon2id; 5 senhas erradas seguidas bloqueiam o e-mail por 15 minutos no login das barbearias e da administração (`apps/api/src/auth/bloqueio-login.ts`, no Redis), além do limite por minuto por IP + e-mail; acertar zera a contagem)
 - [ ] Revisão de permissões: cada rota com papel e unidade conferidos, incluindo as das Etapas 9 a 15 e o webhook do WhatsApp
-- [ ] Auditoria imutável de comandas fechadas, preços, comissões e despesas
+- [x] Auditoria imutável de comandas fechadas, preços, comissões e despesas (feito: tabela `auditoria` com gatilho que recusa UPDATE, DELETE e TRUNCATE desde a migração `restricoes`; a da plataforma usa o mesmo gatilho)
 - [x] Política de privacidade e termos de uso publicados e aceitos no cadastro (`/termos` e `/privacidade`; a versão aceita fica na auditoria da conta. Texto é rascunho: falta revisão jurídica e CNPJ)
 - [ ] Consentimento do cliente para receber mensagens de WhatsApp, com opção de sair (construído na Etapa 10; aqui, revisão do texto e do registro)
 - [ ] Exportar e apagar os dados de um cliente quando ele pedir, incluindo mensagens do bot e comentários de avaliação
