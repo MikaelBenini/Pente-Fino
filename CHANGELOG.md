@@ -7,10 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
-### Alterado
+### Segurança
 
-- Vídeo da home trocado pela versão editada (57 s, 1080p, sem o trecho em que a conversa do bot
-  parecia travar).
+- Cadastro pelo site protegido contra robôs: campo isca invisível, tempo mínimo de preenchimento,
+  limite de 3 contas por hora e 10 por dia por conexão e recusa de e-mail descartável.
+- Confirmação de e-mail no cadastro pelo site: até clicar no link do e-mail de boas-vindas, a conta
+  não agenda, não convida a equipe nem conecta o WhatsApp; aviso no painel com "Reenviar e-mail".
 
 ### Adicionado
 

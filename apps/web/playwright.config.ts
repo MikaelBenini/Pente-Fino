@@ -49,6 +49,10 @@ export default defineConfig({
         LOG_LEVEL: 'warn',
         API_PORT: String(PORTA_API),
         LIMITE_AUTH_POR_MINUTO: '60',
+        // Cadastro pelo site: o teste preenche em menos de 2,5 s e cria várias contas pelo mesmo IP.
+        CADASTRO_TEMPO_MINIMO_MS: '0',
+        CADASTRO_LIMITE_POR_HORA: '1000',
+        CADASTRO_LIMITE_POR_DIA: '1000',
         // Sem WhatsApp de verdade: a tela de conexão mostra um QR de teste.
         WHATSAPP_PROVEDOR: 'falso',
         COBRANCA_PROVEDOR: 'falso',

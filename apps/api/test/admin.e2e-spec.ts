@@ -450,6 +450,7 @@ describe('configurações e saúde do sistema', () => {
         email,
         senha: 'senha-do-site-123',
         aceite: true,
+        abertoEm: Date.now() - 10_000,
       })
       .expect(201);
     const dono = await como(app, email, 'senha-do-site-123');
@@ -625,7 +626,7 @@ describe('modelos de e-mail', () => {
       chave: string;
       personalizado: unknown;
     }[];
-    expect(lista).toHaveLength(9);
+    expect(lista).toHaveLength(10);
     await req('put', '/admin/configuracoes/modelos-email/inventado', {}).expect(400);
     const recusa = await req('put', '/admin/configuracoes/modelos-email/redefinir_senha', {
       assunto: 'Senha nova, {{nome}}',
@@ -731,6 +732,7 @@ describe('tabelas de preço com vigência', () => {
         senha: 'senha-da-nina-123',
         plano: 'pro',
         aceite: true,
+        abertoEm: Date.now() - 10_000,
       })
       .expect(201);
     const nina = await como(app, email, 'senha-da-nina-123');
@@ -771,6 +773,7 @@ describe('cupons', () => {
         email,
         senha: 'senha-do-cupom-123',
         aceite: true,
+        abertoEm: Date.now() - 10_000,
         ...(cupom ? { cupom } : {}),
       });
 

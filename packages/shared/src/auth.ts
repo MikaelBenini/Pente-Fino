@@ -79,6 +79,10 @@ export type ConvidarUsuarioEntrada = z.infer<typeof convidarUsuarioSchema>;
 export const aceitarConviteSchema = z.object({ token: tokenSchema, senha: senhaSchema });
 export type AceitarConviteEntrada = z.infer<typeof aceitarConviteSchema>;
 
+/** Link do e-mail de confirmação (cadastro pelo site, Etapa 15.4). */
+export const confirmarEmailSchema = z.object({ token: tokenSchema });
+export type ConfirmarEmailEntrada = z.infer<typeof confirmarEmailSchema>;
+
 /** Resposta de login, aceite de convite e renovação. */
 export interface Sessao {
   accessToken: string;
@@ -94,6 +98,8 @@ export interface UsuarioSessao {
   email: string;
   contaId: string;
   papeis: { papel: z.infer<typeof papelSchema>; unidadeId: string | null }[];
+  /** E-mail confirmado (só o cadastro pelo site começa sem): até lá, não agenda nem convida. */
+  emailConfirmado: boolean;
 }
 
 /** Unidade como a lista de escolha mostra. */

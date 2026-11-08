@@ -4,7 +4,8 @@ import { dataLocal } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
-import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+import { CONFIGURACAO, type Configuracao } from '../src/config/configuracao.js';
+import { como, criarApp, criarCenario, ultimoEmail, type Cenario } from './ajudantes.js';
 
 let app: INestApplication<App>;
 let cenario: Cenario;
@@ -87,6 +88,7 @@ describe('cadastro de conta e configuração guiada', () => {
       plano: 'pro',
       ciclo: 'anual',
       aceite: true,
+      abertoEm: Date.now() - 10_000,
     };
     await http()
       .post('/publico/contas')
@@ -100,6 +102,87 @@ describe('cadastro de conta e configuração guiada', () => {
       .post('/publico/contas')
       .send({ ...base, email: cenario.emails.dono })
       .expect(409);
+  });
+
+  it('cadastro pelo site começa sem e-mail confirmado: não agenda nem convida até clicar no link', async () => {
+    const auth = { authorization: `Bearer ${token}` };
+    expect((await http().get('/auth/eu').set(auth).expect(200)).body.emailConfirmado).toBe(false);
+    const convite = await http()
+      .post('/usuarios/convites')
+      .set(auth)
+      .send({
+        nome: 'Barbeiro Novo',
+        email: `b-${randomUUID().slice(0, 6)}@e2e.pentefino.dev`,
+        papel: 'barbeiro',
+      });
+    expect(convite.status).toBe(403);
+    expect(convite.body.erro.codigo).toBe('email_nao_confirmado');
+    // O link vai no e-mail de boas-vindas.
+    const boasVindas = await ultimoEmail(email);
+    expect(boasVindas?.assunto).toContain('Bem-vindo ao Pente Fino');
+    const link = /\/confirmar-email\?token=([\w-]+)/.exec(boasVindas!.texto)!;
+    await http()
+      .post('/publico/confirmar-email')
+      .send({ token: 'x'.repeat(43) })
+      .expect(400);
+    // Reenviar: link novo (o anterior deixa de valer).
+    expect((await http().post('/auth/reenviar-confirmacao').set(auth).expect(200)).body).toEqual({
+      enviado: true,
+    });
+    await http().post('/publico/confirmar-email').send({ token: link[1] }).expect(400);
+    const novo = /\/confirmar-email\?token=([\w-]+)/.exec((await ultimoEmail(email))!.texto)!;
+    await http().post('/publico/confirmar-email').send({ token: novo[1] }).expect(204);
+    // Clicar de novo no mesmo link não dá erro (já confirmado).
+    await http().post('/publico/confirmar-email').send({ token: novo[1] }).expect(204);
+    expect((await http().get('/auth/eu').set(auth).expect(200)).body.emailConfirmado).toBe(true);
+    expect((await http().post('/auth/reenviar-confirmacao').set(auth).expect(200)).body).toEqual({
+      enviado: false,
+    });
+  });
+
+  it('robô é recusado: campo isca, sem carimbo, rápido demais, e-mail descartável e limite por IP', async () => {
+    const config = app.get<Configuracao>(CONFIGURACAO);
+    const base = {
+      barbearia: 'Barbearia Robô',
+      nome: 'Robô',
+      senha: 'senha-forte-1',
+      aceite: true,
+      abertoEm: Date.now() - 10_000,
+    };
+    const novoEmail = () => `robo-${randomUUID().slice(0, 8)}@e2e.pentefino.dev`;
+    const antes = { ...config.cadastro };
+    config.cadastro.tempoMinimoMs = 2500;
+    try {
+      for (const extra of [
+        { site: 'http://spam' },
+        { abertoEm: undefined },
+        { abertoEm: Date.now() - 500 },
+      ]) {
+        const r = await http()
+          .post('/publico/contas')
+          .send({ ...base, email: novoEmail(), ...extra })
+          .expect(400);
+        expect(r.body.erro.codigo).toBe('cadastro_recusado');
+      }
+      const descartavel = await http()
+        .post('/publico/contas')
+        .send({ ...base, email: 'robo@mailinator.com' })
+        .expect(400);
+      expect(descartavel.body.erro.campos[0].campo).toBe('email');
+      // O contador do IP já tem os cadastros deste teste: com limite 1, o próximo passa do limite.
+      config.cadastro.limitePorHora = 1;
+      const primeiro = await http()
+        .post('/publico/contas')
+        .send({ ...base, email: novoEmail() });
+      expect([201, 429]).toContain(primeiro.status);
+      const depois = await http()
+        .post('/publico/contas')
+        .send({ ...base, email: novoEmail() })
+        .expect(429);
+      expect(depois.body.erro.codigo).toBe('muitos_cadastros');
+    } finally {
+      Object.assign(config.cadastro, antes);
+    }
   });
 
   it('a conta nova começa sem serviços, com categorias, e pede a configuração guiada', async () => {

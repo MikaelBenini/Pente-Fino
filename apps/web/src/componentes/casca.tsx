@@ -20,6 +20,7 @@ import {
   MessageCircleOff,
   MessagesSquare,
   Lock,
+  MailCheck,
   Megaphone,
   Moon,
   SunMedium,
@@ -130,6 +131,7 @@ export function Casca({ children }: { children: ReactNode }) {
           <BarraTopo />
           <AvisoConexao />
           <AvisoGeral />
+          <AvisoConfirmarEmail />
           <AvisoAssinatura />
           <AvisoWhatsapp />
           <AvisoConversas />
@@ -642,6 +644,53 @@ function AvisoGeral() {
           )}
         />
         <span>{aviso.texto}</span>
+      </p>
+    </div>
+  );
+}
+
+/** Cadastro pelo site sem e-mail confirmado: o que fica travado e o botão de reenviar o link. */
+function AvisoConfirmarEmail() {
+  const usuario = useUsuario().data;
+  const [estado, setEstado] = useState<'parado' | 'enviando' | 'enviado' | 'erro'>('parado');
+  if (!usuario || usuario.emailConfirmado !== false) return null;
+  return (
+    <div
+      role="status"
+      className="border-b border-borda bg-superficie-2 px-[max(1rem,env(safe-area-inset-left))] py-2 text-sm sm:px-8"
+    >
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <MailCheck aria-hidden className="size-4 shrink-0 text-aviso-texto" />
+        <span>
+          Confirme seu e-mail (<strong>{usuario.email}</strong>) para liberar a agenda, os convites
+          da equipe e o WhatsApp.
+        </span>
+        {estado === 'enviado' ? (
+          <span className="text-acao-texto">
+            Link enviado. Confira a caixa de entrada e o spam.
+          </span>
+        ) : (
+          <button
+            type="button"
+            disabled={estado === 'enviando'}
+            onClick={async () => {
+              setEstado('enviando');
+              try {
+                await api('auth/reenviar-confirmacao', { corpo: {} });
+                setEstado('enviado');
+              } catch {
+                setEstado('erro');
+              }
+            }}
+            className="min-h-9 font-semibold underline underline-offset-4 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco disabled:opacity-60"
+          >
+            {estado === 'enviando'
+              ? 'Enviando…'
+              : estado === 'erro'
+                ? 'Tentar de novo'
+                : 'Reenviar e-mail'}
+          </button>
+        )}
       </p>
     </div>
   );

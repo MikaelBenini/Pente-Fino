@@ -131,8 +131,25 @@ export class EmailsService {
     });
   }
 
-  /** Cadastro pelo site: boas-vindas com os primeiros passos do teste. */
-  boasVindas(d: { para: string; nome: string; conta: string; testeAte: Date; dias: number }) {
+  /** Novo link de confirmação do e-mail ("Reenviar e-mail" no painel). */
+  confirmarEmail(d: { para: string; nome: string; link: string; expiraEm: Date }) {
+    return this.doModelo(
+      d.para,
+      'confirmar_email',
+      { nome: d.nome.split(' ')[0] ?? d.nome, validade: dataHora(d.expiraEm) },
+      d.link,
+    );
+  }
+
+  /** Cadastro pelo site: boas-vindas com o botão de confirmar o e-mail e os primeiros passos. */
+  boasVindas(d: {
+    para: string;
+    nome: string;
+    conta: string;
+    testeAte: Date;
+    dias: number;
+    link?: string;
+  }) {
     return this.doModelo(
       d.para,
       'boas_vindas',
@@ -142,7 +159,7 @@ export class EmailsService {
         dias: String(d.dias),
         data: d.testeAte.toLocaleDateString('pt-BR', { timeZone: FUSO_EXIBICAO }),
       },
-      `${this.config.appUrl}/app`,
+      d.link ?? `${this.config.appUrl}/app`,
     );
   }
 }

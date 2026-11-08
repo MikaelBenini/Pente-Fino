@@ -95,6 +95,11 @@ test('dono novo cria a conta e passa pela configuração guiada', async ({ page 
   await page.getByRole('button', { name: 'Ir para o Início' }).click();
   await page.waitForURL(/inicio/);
   await expect(page.getByText('Termine a configuração da barbearia')).toHaveCount(0);
+  // Cadastro pelo site: aviso para confirmar o e-mail, com o botão de reenviar (Etapa 15.4).
+  const confirmar = page.getByRole('status').filter({ hasText: 'Confirme seu e-mail' });
+  await expect(confirmar).toBeVisible();
+  await confirmar.getByRole('button', { name: 'Reenviar e-mail' }).click();
+  await expect(confirmar).toContainText('Link enviado');
   await page.goto('/servicos');
   await page.getByRole('tab', { name: 'Tabela de preços' }).click();
   await expect(page.getByLabel('Unidade principal (R$), Corte', { exact: true })).toHaveValue(

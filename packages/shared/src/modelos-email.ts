@@ -5,6 +5,7 @@ import type { TrabalhoEmail } from './filas.js';
 
 export const CHAVES_MODELO_EMAIL = [
   'boas_vindas',
+  'confirmar_email',
   'ativacao_conta',
   'convite_equipe',
   'redefinir_senha',
@@ -39,8 +40,19 @@ export const MODELOS_EMAIL: Readonly<Record<ChaveModeloEmail, DefinicaoModeloEma
     padrao: {
       assunto: 'Bem-vindo ao Pente Fino, {{nome}}! Seu teste grátis começou',
       corpo:
-        'Olá, {{nome}}!\n\nA conta da {{conta}} está criada e o teste grátis já começou: são {{dias}} dias com tudo liberado, até {{data}}, sem cartão de crédito.\n\nPara ver resultado já na primeira semana, comece por aqui:\n- Cadastre seus serviços e preços (a configuração guiada leva uns 5 minutos)\n- Convide os barbeiros: cada um lança os próprios atendimentos pelo celular\n- Ligue o link de agendamento para os clientes marcarem sozinhos\n\nNo fim do dia, o painel mostra quanto entrou e, principalmente, quanto sobrou: o lucro real por serviço, por barbeiro e por unidade.\n\nBons atendimentos!',
-      botao: 'Abrir meu painel',
+        'Olá, {{nome}}!\n\nA conta da {{conta}} está criada e o teste grátis já começou: são {{dias}} dias com tudo liberado, até {{data}}, sem cartão de crédito.\n\nPrimeiro, confirme o seu e-mail pelo botão abaixo: é o que libera a agenda, os convites da equipe e o WhatsApp.\n\nPara ver resultado já na primeira semana, comece por aqui:\n- Cadastre seus serviços e preços (a configuração guiada leva uns 5 minutos)\n- Convide os barbeiros: cada um lança os próprios atendimentos pelo celular\n- Ligue o link de agendamento para os clientes marcarem sozinhos\n\nNo fim do dia, o painel mostra quanto entrou e, principalmente, quanto sobrou: o lucro real por serviço, por barbeiro e por unidade.\n\nBons atendimentos!',
+      botao: 'Confirmar e-mail e começar',
+    },
+  },
+  confirmar_email: {
+    nome: 'Confirmação do e-mail',
+    quando: 'Quando o dono pede um novo link de confirmação (cadastro pelo site).',
+    variaveis: ['nome', 'validade'],
+    padrao: {
+      assunto: 'Confirme seu e-mail no Pente Fino',
+      corpo:
+        'Olá, {{nome}}!\n\nFalta só confirmar o seu e-mail para liberar a agenda, os convites da equipe e o WhatsApp da barbearia.\n\nÉ só tocar no botão abaixo. O link vale até {{validade}}.\n\nNão criou uma conta no Pente Fino? Pode ignorar este e-mail.',
+      botao: 'Confirmar meu e-mail',
     },
   },
   ativacao_conta: {

@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -25,6 +26,7 @@ import { Papeis } from '../auth/decoradores.js';
 import { Corpo } from '../comum/validacao.js';
 import { ConvitesService, type ConviteCriado } from './convites.service.js';
 import { UsuariosService } from './usuarios.service.js';
+import { EmailConfirmadoGuard } from '../auth/email-confirmado.guard.js';
 
 @ApiTags('Usuários')
 @ApiBearerAuth()
@@ -43,6 +45,7 @@ export class UsuariosController {
   }
 
   @Post('convites')
+  @UseGuards(EmailConfirmadoGuard)
   @Papeis('dono', 'gestor')
   @Auditada()
   @HttpCode(HttpStatus.CREATED)

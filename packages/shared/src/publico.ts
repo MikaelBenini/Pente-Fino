@@ -13,6 +13,10 @@ export const cadastroContaSchema = z.object({
   aceite: z.literal(true, { error: 'É preciso aceitar os termos de uso.' }),
   /** Cupom de desconto (opcional). */
   cupom: z.string().trim().max(30).optional(),
+  /** Campo isca, invisível para pessoas: robô preenche (Etapa 15.4). */
+  site: z.string().max(200).optional(),
+  /** Quando o formulário abriu (ms): envio rápido demais é robô. */
+  abertoEm: z.number().optional(),
 });
 export type CadastroContaEntrada = z.infer<typeof cadastroContaSchema>;
 

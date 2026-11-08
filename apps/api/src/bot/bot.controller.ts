@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -38,6 +39,7 @@ import { GESTAO } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { z } from 'zod';
 import { BotService } from './bot.service.js';
+import { EmailConfirmadoGuard } from '../auth/email-confirmado.guard.js';
 
 const periodoAutomacoes = z.object({
   de: z.iso.date().optional(),
@@ -172,6 +174,7 @@ export class BotController {
   }
 
   @Post('conexao/:unidadeId')
+  @UseGuards(EmailConfirmadoGuard)
   @Papeis(...GESTAO)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Conectar (ou reconectar) o WhatsApp da unidade: devolve o QR Code' })

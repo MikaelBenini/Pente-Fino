@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, Inject, Param, Post } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   aplicarModelosIniciais,
@@ -24,6 +24,10 @@ import {
   bloqueadoPorFaltas,
   caminhoDoHorario,
   cadastroContaSchema,
+  confirmarEmailSchema,
+  emailDescartavel,
+  pareceRobo,
+  type ConfirmarEmailEntrada,
   dataLocal,
   formatarDiaPorExtenso,
   formatarHora,
@@ -44,6 +48,7 @@ import {
   type TabelaPrecosPlanos,
   temRecurso,
 } from '@pente-fino/shared';
+import type { Request } from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { auditar } from '../auditoria/auditoria.js';
@@ -55,6 +60,8 @@ import { BancoService } from '../comum/banco.service.js';
 import { PrecosService } from '../comum/precos.service.js';
 import { EmailsService } from '../emails/emails.service.js';
 import { Erros } from '../comum/erros.js';
+import { LimiteCadastro } from './limite-cadastro.js';
+import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { EventosService } from '../filas/filas.module.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { emSequencia, umPorVez } from '../comum/sequencia.js';
@@ -118,6 +125,8 @@ export class PublicoController {
     @Inject(EventosService) private readonly eventos: EventosService,
     @Inject(PrecosService) private readonly precosServico: PrecosService,
     @Inject(EmailsService) private readonly emails: EmailsService,
+    @Inject(LimiteCadastro) private readonly limiteCadastro: LimiteCadastro,
+    @Inject(CONFIGURACAO) private readonly config: Configuracao,
   ) {}
 
   // ─── Cadastro de conta ──────────────────────────────────────────────────
@@ -143,7 +152,24 @@ export class PublicoController {
   @LimiteAutenticacao()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Criar conta (barbearia + dono) e já entrar' })
-  async cadastrar(@Corpo(cadastroContaSchema) d: CadastroContaEntrada): Promise<Sessao> {
+  async cadastrar(
+    @Corpo(cadastroContaSchema) d: CadastroContaEntrada,
+    @Req() req: Request,
+  ): Promise<Sessao> {
+    // Robôs (Etapa 15.4): campo isca ou envio rápido demais; recusa sem dizer por quê.
+    if (pareceRobo(d, Date.now(), this.config.cadastro.tempoMinimoMs))
+      throw Erros.requisicaoInvalida(
+        'cadastro_recusado',
+        'Não foi possível criar a conta agora. Confira os dados e tente de novo.',
+      );
+    if (emailDescartavel(d.email))
+      throw Erros.validacao([
+        {
+          campo: 'email',
+          mensagem: 'Use um e-mail permanente: ele recebe a confirmação e os avisos.',
+        },
+      ]);
+    await this.limiteCadastro.conferir(req.ip);
     const existente = await this.banco.semConta({ loginEmail: d.email }, (tx) =>
       tx.usuario.findUnique({ where: { email: d.email } }),
     );
@@ -156,6 +182,7 @@ export class PublicoController {
     const desconto = await this.precosServico.cupomValido(d.cupom);
     const testeAte = new Date(Date.now() + teste.dias * 86_400_000);
     let sessao: Sessao;
+    let linkConfirmacao: string | undefined;
     try {
       sessao = await this.banco.naConta(contaId, async (tx) => {
         await tx.conta.create({
@@ -178,7 +205,11 @@ export class PublicoController {
             slug: `${gerarSlug(d.barbearia).slice(0, 50) || 'barbearia'}-${randomBytes(2).toString('hex')}`,
           },
         });
-        const dono = await tx.usuario.create({ data: { nome: d.nome, email: d.email, senhaHash } });
+        // Começa sem e-mail confirmado: o link vai no e-mail de boas-vindas.
+        const dono = await tx.usuario.create({
+          data: { nome: d.nome, email: d.email, senhaHash, emailConfirmadoEm: null },
+        });
+        linkConfirmacao = (await this.auth.criarLinkDeConfirmacao(tx, dono.id)).link;
         await tx.papelUsuario.create({
           data: { usuarioId: dono.id, papel: 'dono', unidadeId: null },
         });
@@ -216,9 +247,25 @@ export class PublicoController {
     }
     // A conta já existe: falha no e-mail não desfaz o cadastro.
     await this.emails
-      .boasVindas({ para: d.email, nome: d.nome, conta: d.barbearia, testeAte, dias: teste.dias })
+      .boasVindas({
+        para: d.email,
+        nome: d.nome,
+        conta: d.barbearia,
+        testeAte,
+        dias: teste.dias,
+        link: linkConfirmacao,
+      })
       .catch(() => undefined);
     return sessao;
+  }
+
+  @Post('confirmar-email')
+  @Publico()
+  @LimiteAutenticacao()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Confirmar o e-mail pelo link (cadastro pelo site)' })
+  async confirmarEmail(@Corpo(confirmarEmailSchema) d: ConfirmarEmailEntrada): Promise<void> {
+    await this.auth.confirmarEmail(d.token);
   }
 
   // ─── Link público de agendamento ────────────────────────────────────────

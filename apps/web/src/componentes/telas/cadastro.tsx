@@ -66,6 +66,8 @@ export function FormularioCadastro() {
   const params = useSearchParams();
   const hidratado = useHidratado();
   const [erroGeral, setErroGeral] = useState<string | null>(null);
+  // Proteção contra robôs: quando o formulário abriu e um campo isca que pessoas não veem.
+  const [abertoEm] = useState(() => Date.now());
   const { register, handleSubmit, setError, setValue, control, formState } = useForm<
     z.input<typeof cadastroContaSchema>,
     unknown,
@@ -81,20 +83,33 @@ export function FormularioCadastro() {
   const plano = useWatch({ control, name: 'plano' });
   const ciclo: Ciclo = useWatch({ control, name: 'ciclo' }) ?? 'mensal';
 
-  const enviar = handleSubmit(async (dados) => {
-    setErroGeral(null);
-    try {
-      await api('publico/contas', { corpo: dados });
-      // Conversão para o Google Ads (só com a tag carregada e o aceite de cookies).
-      eventoGoogle('cadastro_concluido', { plano: dados.plano, ciclo: dados.ciclo });
-      router.replace('/configuracao-inicial');
-    } catch (e) {
-      setErroGeral(aplicarErroDaApi(e, setError));
-    }
-  });
+  const enviar = (site: string) =>
+    handleSubmit(async (dados) => {
+      setErroGeral(null);
+      try {
+        await api('publico/contas', {
+          corpo: { ...dados, abertoEm, site },
+        });
+        // Conversão para o Google Ads (só com a tag carregada e o aceite de cookies).
+        eventoGoogle('cadastro_concluido', { plano: dados.plano, ciclo: dados.ciclo });
+        router.replace('/configuracao-inicial');
+      } catch (e) {
+        setErroGeral(aplicarErroDaApi(e, setError));
+      }
+    });
 
   return (
-    <form method="post" noValidate onSubmit={enviar} className="flex flex-col gap-5">
+    <form
+      method="post"
+      noValidate
+      onSubmit={(e) => enviar(String(new FormData(e.currentTarget).get('site') ?? ''))(e)}
+      className="flex flex-col gap-5"
+    >
+      {/* Campo isca: fora da tela e do teclado; só robô preenche. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor="cadastro-site">Site da barbearia (deixe em branco)</label>
+        <input id="cadastro-site" name="site" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-semibold">Criar conta</h1>
         <p className="text-tinta-suave">
