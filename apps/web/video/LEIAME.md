@@ -4,6 +4,11 @@ O vídeo da home (`public/video/apresentacao.mp4`, `.webm` e a capa `.jpg`) é *
 de verdade**, com a conta de demonstração, por um roteiro do Playwright. Quando uma tela mudar,
 basta gravar de novo. Nada é editado à mão.
 
+> **Versão no ar:** o vídeo do site é a edição final feita à mão a partir desta gravação
+> (2026-11-08, 57 s, 1080p, sem o trecho em que a conversa do bot parecia travar), recomprimido
+> para web com `ffmpeg -vf fps=30 -crf 26` (MP4) e `-crf 38` (WebM). Rodar o `editar.mjs`
+> **sobrescreve** `public/video` com a versão automática: use a gravação como base para editar.
+
 ## Como regravar
 
 Precisa do Docker de desenvolvimento rodando, do `ffmpeg` (`sudo apt-get install ffmpeg`) e do build
