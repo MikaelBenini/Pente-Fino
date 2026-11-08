@@ -9,7 +9,7 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ### Adicionado
 
-- Site público: tag do Google (Tag Manager / Google Ads) com aviso de cookies e Consent Mode —
+- Site público: Google Tag Manager e tag do Google Ads com aviso de cookies e Consent Mode —
   sem "Aceitar", nada de cookie de anúncio; evento `cadastro_concluido` para medir conversão.
   Privacidade atualizada.
 - Home: vídeo de 1 minuto do sistema funcionando (agenda, comanda no celular, fechamento, lucro do
