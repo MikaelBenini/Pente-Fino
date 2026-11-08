@@ -476,9 +476,9 @@ o banco não pode crescer sem limite e a página de status precisa mostrar algo 
 
 **Cadastro protegido contra robôs**
 
-- [ ] Confirmação de e-mail: a conta criada pelo site entra no teste, mas só cria horários, convida a equipe e conecta o WhatsApp depois de confirmar o link enviado por e-mail (vale 48 h; dá para reenviar)
-- [ ] Campo isca invisível e tempo mínimo de preenchimento no cadastro (robô preenche tudo em menos de 2 s); recusa sem dizer o motivo
-- [ ] Limite de cadastros por IP (3 por hora, 10 por dia), além do limite por minuto que já existe; e-mail de domínio descartável recusado
+- [x] Confirmação de e-mail: a conta criada pelo site entra no teste, mas só cria horários, convida a equipe e conecta o WhatsApp depois de confirmar o link enviado por e-mail (vale 48 h; dá para reenviar) (feito: `usuario.email_confirmado_em` nasce com `now()` — convite, venda e demonstração já confirmados — e o cadastro pelo site grava null; o botão do e-mail de boas-vindas é "Confirmar e-mail e começar" (`/confirmar-email?token=`, token `confirmar_email`); `EmailConfirmadoGuard` responde 403 `email_nao_confirmado` em `POST /agendamentos`, `POST /usuarios/convites` e `POST /bot/conexao/:unidadeId`; aviso no topo do painel com "Reenviar e-mail" (`POST /auth/reenviar-confirmacao`, modelo editável "Confirmação do e-mail"); aceitar convite ou redefinir a senha pelo link também confirma)
+- [x] Campo isca invisível e tempo mínimo de preenchimento no cadastro (robô preenche tudo em menos de 2 s); recusa sem dizer o motivo (feito: campo `site` fora da tela e do teclado e carimbo `abertoEm`; menos de 2,5 s, mais de 24 h, sem carimbo ou isca preenchida = 400 `cadastro_recusado` com mensagem genérica; `pareceRobo` em `packages/shared/src/protecao-cadastro.ts`, com teste)
+- [x] Limite de cadastros por IP (3 por hora, 10 por dia), além do limite por minuto que já existe; e-mail de domínio descartável recusado (feito: `LimiteCadastro` no Redis, 429 `muitos_cadastros`; limites e tempo mínimo em `CADASTRO_*` no `.env`, afrouxados nos testes; lista de domínios temporários em `DOMINIOS_DESCARTAVEIS`)
 - [ ] Desafio anti-robô gratuito (Cloudflare Turnstile) no cadastro, ligado por variável de ambiente; sem a chave, o formulário segue com as outras proteções
 - [ ] Conta não confirmada em 7 dias sai na rotina de limpeza (abaixo), com aviso por e-mail 2 dias antes
 

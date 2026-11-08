@@ -60,6 +60,15 @@ export class AuthController {
     return this.auth.eu();
   }
 
+  @Post('reenviar-confirmacao')
+  @ApiBearerAuth()
+  @LimiteAutenticacao()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Mandar de novo o link de confirmação do e-mail' })
+  reenviarConfirmacao(): Promise<{ enviado: boolean }> {
+    return this.auth.reenviarConfirmacao();
+  }
+
   @Post('esqueci-senha')
   @Publico()
   @LimiteAutenticacao()

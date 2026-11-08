@@ -6,6 +6,7 @@ const PUBLICAS = [
   '/esqueci-senha',
   '/redefinir-senha',
   '/convite',
+  '/confirmar-email',
   '/offline',
   '/cadastro',
   '/agendar',

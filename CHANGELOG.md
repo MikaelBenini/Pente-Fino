@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Segurança
+
+- Cadastro pelo site protegido contra robôs: campo isca invisível, tempo mínimo de preenchimento,
+  limite de 3 contas por hora e 10 por dia por conexão e recusa de e-mail descartável.
+- Confirmação de e-mail no cadastro pelo site: até clicar no link do e-mail de boas-vindas, a conta
+  não agenda, não convida a equipe nem conecta o WhatsApp; aviso no painel com "Reenviar e-mail".
+
 ### Adicionado
 
 - Site público: Google Tag Manager e tag do Google Ads com aviso de cookies e Consent Mode —

@@ -8,6 +8,7 @@ import type {
   TrocarSenhaEntrada,
   UsuarioSessao,
 } from '@pente-fino/shared';
+import { VALIDADE_CONFIRMAR_EMAIL_H } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -21,6 +22,7 @@ import { conferirSenha, gerarHashSenha } from './senhas.js';
 import { gerarTokenOpaco, hashToken, TokensAcesso } from './tokens.js';
 
 const REDEFINIR_SENHA_VALIDADE_MS = 60 * 60_000;
+const CONFIRMAR_EMAIL_VALIDADE_MS = VALIDADE_CONFIRMAR_EMAIL_H * 3_600_000;
 
 const credenciaisInvalidas = () =>
   new ErroApp(HttpStatus.UNAUTHORIZED, 'credenciais_invalidas', 'E-mail ou senha incorretos.');
@@ -161,6 +163,11 @@ export class AuthService {
         where: { id: registro.usuarioId },
         data: { senhaHash },
       });
+      // O link chegou pelo e-mail: ele está confirmado.
+      await tx.usuario.updateMany({
+        where: { id: atualizado.id, emailConfirmadoEm: null },
+        data: { emailConfirmadoEm: new Date() },
+      });
       await this.revogarSessoes(tx, atualizado.id);
       await auditar(
         tx,
@@ -213,6 +220,11 @@ export class AuthService {
         where: { id: registro.usuarioId },
         data: { senhaHash, ativo: true },
       });
+      // O convite chegou pelo e-mail: ele está confirmado.
+      await tx.usuario.updateMany({
+        where: { id: registro.usuarioId, emailConfirmadoEm: null },
+        data: { emailConfirmadoEm: new Date() },
+      });
       await auditar(
         tx,
         { entidade: 'usuario', entidadeId: registro.usuarioId, acao: 'aceitar_convite' },
@@ -222,6 +234,65 @@ export class AuthService {
     });
     if (!sessao) throw linkInvalido();
     return sessao;
+  }
+
+  // ─── Confirmação do e-mail (cadastro pelo site) ────────────────────────────
+
+  /** Novo link de confirmação (revoga os anteriores). Devolve o endereço para o e-mail. */
+  async criarLinkDeConfirmacao(
+    tx: Transacao,
+    usuarioId: string,
+  ): Promise<{ link: string; expiraEm: Date }> {
+    await tx.tokenAcesso.updateMany({
+      where: { usuarioId, tipo: 'confirmar_email', usadoEm: null, revogadoEm: null },
+      data: { revogadoEm: new Date() },
+    });
+    const token = gerarTokenOpaco();
+    const expiraEm = new Date(Date.now() + CONFIRMAR_EMAIL_VALIDADE_MS);
+    await tx.tokenAcesso.create({
+      data: {
+        usuarioId,
+        tipo: 'confirmar_email',
+        hash: hashToken(token),
+        expiraEm,
+        ...this.origem(),
+      },
+    });
+    return { link: `${this.config.appUrl}/confirmar-email?token=${token}`, expiraEm };
+  }
+
+  /** Link do e-mail: marca o e-mail como confirmado. Link usado de novo por quem já confirmou vale. */
+  async confirmarEmail(token: string): Promise<void> {
+    const registro = await this.buscarToken(token);
+    if (!registro || registro.tipo !== 'confirmar_email') throw linkInvalido();
+    const ok = await this.banco.naConta(registro.contaId, async (tx) => {
+      const u = await tx.usuario.findUnique({ where: { id: registro.usuarioId } });
+      if (!u) return false;
+      if (u.emailConfirmadoEm) return true;
+      if (!(await this.consumir(tx, registro))) return false;
+      await tx.usuario.update({ where: { id: u.id }, data: { emailConfirmadoEm: new Date() } });
+      await auditar(tx, { entidade: 'usuario', entidadeId: u.id, acao: 'confirmar_email' }, u.id);
+      return true;
+    });
+    if (!ok) throw linkInvalido();
+  }
+
+  /** "Reenviar e-mail" no aviso do painel. Já confirmado: não manda nada. */
+  async reenviarConfirmacao(): Promise<{ enviado: boolean }> {
+    const { id } = Contexto.usuario();
+    const r = await this.banco.daConta(async (tx) => {
+      const u = await tx.usuario.findUniqueOrThrow({ where: { id } });
+      if (u.emailConfirmadoEm) return null;
+      return { u, ...(await this.criarLinkDeConfirmacao(tx, id)) };
+    });
+    if (!r) return { enviado: false };
+    await this.emails.confirmarEmail({
+      para: r.u.email,
+      nome: r.u.nome,
+      link: r.link,
+      expiraEm: r.expiraEm,
+    });
+    return { enviado: true };
   }
 
   // ─── Apoio ─────────────────────────────────────────────────────────────
@@ -277,6 +348,7 @@ export class AuthService {
       email: u.email,
       contaId: u.contaId,
       papeis: u.papeis.map((p) => ({ papel: p.papel, unidadeId: p.unidadeId })),
+      emailConfirmado: u.emailConfirmadoEm !== null,
     };
   }
 

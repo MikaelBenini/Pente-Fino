@@ -50,6 +50,10 @@ const esquema = z
       .default('info'),
     /** Tentativas por minuto nas rotas de login, convite e senha (por IP + e-mail ou token). */
     LIMITE_AUTH_POR_MINUTO: z.coerce.number().int().positive().default(10),
+    /** Cadastro pelo site (Etapa 15.4): tempo mínimo de preenchimento e limites por IP. */
+    CADASTRO_TEMPO_MINIMO_MS: z.coerce.number().int().min(0).default(2500),
+    CADASTRO_LIMITE_POR_HORA: z.coerce.number().int().positive().default(3),
+    CADASTRO_LIMITE_POR_DIA: z.coerce.number().int().positive().default(10),
     /** Requisições por minuto por IP em qualquer rota (o teste de carga sobe este número). */
     LIMITE_POR_MINUTO: z.coerce.number().int().positive().default(300),
     /** evolution = Evolution API de verdade; falso = sem WhatsApp (testes e tela sem celular). */
@@ -134,6 +138,8 @@ export interface Configuracao {
     sessaoExpiraEmMs: number;
   };
   redisUrl: string;
+  /** Proteção do cadastro pelo site contra robôs. */
+  cadastro: { tempoMinimoMs: number; limitePorHora: number; limitePorDia: number };
   jwtSegredo: string;
   /** Validade do token de acesso, em segundos. */
   acessoExpiraEmS: number;
@@ -188,6 +194,11 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
       sessaoExpiraEmMs: duracaoEmMs(e.PLATAFORMA_SESSAO_EXPIRA_EM),
     },
     redisUrl: e.REDIS_URL,
+    cadastro: {
+      tempoMinimoMs: e.CADASTRO_TEMPO_MINIMO_MS,
+      limitePorHora: e.CADASTRO_LIMITE_POR_HORA,
+      limitePorDia: e.CADASTRO_LIMITE_POR_DIA,
+    },
     jwtSegredo: e.JWT_ACCESS_SECRET,
     acessoExpiraEmS: duracaoEmMs(e.JWT_ACCESS_EXPIRES_IN) / 1000,
     renovacaoExpiraEmMs: duracaoEmMs(e.REFRESH_TOKEN_EXPIRES_IN),

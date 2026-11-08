@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -23,6 +24,7 @@ import { Papeis } from '../auth/decoradores.js';
 import { TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { AgendaService } from './agenda.service.js';
+import { EmailConfirmadoGuard } from '../auth/email-confirmado.guard.js';
 
 @ApiTags('Agenda')
 @ApiBearerAuth()
@@ -45,6 +47,7 @@ export class AgendaController {
   }
 
   @Post('agendamentos')
+  @UseGuards(EmailConfirmadoGuard)
   @Papeis('dono', 'gestor', 'recepcao')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Agendar (cria a comanda prevista com os serviços)' })
