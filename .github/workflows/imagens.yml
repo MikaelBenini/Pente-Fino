@@ -70,3 +70,29 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.nome }}
           cache-to: type=gha,mode=max,scope=${{ matrix.nome }}
+
+  # Deploy automático na VPS: a chave só roda infra/implantar.sh (ver infra/chave-deploy.sh).
+  # Sem o secret DEPLOY_SSH_KEY, o passo só avisa e não falha.
+  implantar:
+    name: Implantar na VPS
+    needs: imagem
+    runs-on: ubuntu-latest
+    environment: producao
+    concurrency:
+      group: implantar-producao
+      cancel-in-progress: false
+    steps:
+      - name: Entrar por SSH e subir a versão
+        env:
+          CHAVE: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+          CONHECIDOS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          if [ -z "$CHAVE" ] || [ -z "$HOST" ] || [ -z "$CONHECIDOS" ]; then
+            echo "::notice::Deploy automático desligado: falta DEPLOY_SSH_KEY, DEPLOY_HOST ou DEPLOY_KNOWN_HOSTS."
+            exit 0
+          fi
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$CHAVE" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$CONHECIDOS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy -o StrictHostKeyChecking=yes -o ConnectTimeout=20 "deploy@$HOST" "${{ github.sha }}"

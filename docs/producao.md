@@ -30,6 +30,34 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
 Migração de banco não se desfaz sozinha: voltar a versão só funciona se o banco novo ainda servir
 para o código antigo. Antes de uma migração que apaga ou renomeia coluna, faça backup.
 
+## Deploy automático
+
+Cada merge na `main` gera as imagens e o job **Implantar na VPS** entra por SSH e roda
+`infra/implantar.sh <sha>`: baixa os arquivos de `infra/` daquele commit, sobe a versão com
+`./atualizar.sh <sha>` e recarrega o Caddy se ele mudou. A chave do GitHub só consegue rodar esse
+script (sem terminal). Para ligar, uma vez, no terminal do navegador da Hostinger:
+
+```bash
+su - deploy
+cd /opt/barbearia && ./chave-deploy.sh
+```
+
+E no GitHub (Settings → Secrets and variables → Actions): secret `DEPLOY_SSH_KEY` com a chave
+privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os valores mostrados.
+
+## Monitoramento
+
+- Uptime Kuma em `https://status.seudominio` (registro A `status`). **Crie a conta de administrador
+  logo no primeiro acesso.** Monitores sugeridos:
+  - HTTP: `https://seudominio/entrar` e `https://api.seudominio/health` (palavra-chave `"ok"`), a cada 60 s;
+  - Push "Backup do dia" (intervalo 26 h): a URL vai em `BACKUP_AVISO_URL` no `.env`;
+  - Push "Disco e memória" (intervalo 10 min): a URL vai em `VIGIA_AVISO_URL` (`vigia.sh`, cron de 5 min,
+    acusa disco acima de 80% ou memória acima de 90%);
+  - HTTP "WhatsApp": `http://evolution:8080/instance/connectionState/<instância>` com o cabeçalho
+    `apikey` (`EVOLUTION_API_KEY` do `.env`) e palavra-chave `"open"`.
+- Notificação: em Configurações → Notificações, e-mail (SMTP do Brevo) ou Telegram.
+- Backup: ver docs/restaurar.md.
+
 ## Comandos úteis
 
 ```bash

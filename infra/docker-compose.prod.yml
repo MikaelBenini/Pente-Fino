@@ -184,9 +184,23 @@ services:
       retries: 5
       start_period: 20s
 
+  # Monitoramento (status.): confere o site, a API e o WhatsApp e avisa por e-mail ou Telegram.
+  status:
+    <<: *imagem
+    image: louislam/uptime-kuma:1.23.16
+    volumes:
+      - status_dados:/app/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:3001/ >/dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
 volumes:
   postgres_dados:
   redis_dados:
   evolution_instancias:
   caddy_dados:
   caddy_config:
+  status_dados:
