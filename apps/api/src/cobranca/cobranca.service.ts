@@ -1,7 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { Transacao } from '@pente-fino/db';
+import { configuracaoDoSistema, type Transacao } from '@pente-fino/db';
 import {
   formatarData,
+  lerConfiguracaoPublica,
   formatarMoeda,
   dataLocal,
   EVENTOS_RECUSA,
@@ -148,6 +149,7 @@ export class CobrancaService {
         referencia: conta.id,
       }),
     );
+    const nota = await this.ligarNotaFiscal(assinatura.id);
     await this.banco.daConta(async (tx) => {
       await tx.conta.update({
         where: { id: conta.id },
@@ -164,7 +166,7 @@ export class CobrancaService {
         entidadeId: conta.id,
         acao: 'assinar',
         antes: { plano: conta.plano, ciclo: conta.ciclo, status: conta.status },
-        depois: { plano: d.plano, ciclo: d.ciclo, assinatura: assinatura.id },
+        depois: { plano: d.plano, ciclo: d.ciclo, assinatura: assinatura.id, notaFiscal: nota },
       });
     });
     await this.conferir();
@@ -175,6 +177,22 @@ export class CobrancaService {
       }),
     );
     return { linkPagamento: pendente?.linkPagamento ?? null };
+  }
+
+  /**
+   * Nota fiscal das mensalidades (configurada na administração): o Asaas emite a NFS-e de cada
+   * cobrança. Falhar aqui não impede a assinatura; a administração reaplica depois.
+   */
+  private async ligarNotaFiscal(assinatura: string): Promise<'ligada' | 'desligada' | 'falhou'> {
+    const { notaFiscal } = lerConfiguracaoPublica(await configuracaoDoSistema(this.banco.prisma));
+    if (!notaFiscal.ativa) return 'desligada';
+    try {
+      await this.provedor.configurarNotaAssinatura(assinatura, notaFiscal);
+      return 'ligada';
+    } catch (e) {
+      this.log.warn(`Nota fiscal não ligada na assinatura ${assinatura}: ${(e as Error).message}`);
+      return 'falhou';
+    }
   }
 
   /** Uso da conta e prévia da troca para o plano escolhido. */

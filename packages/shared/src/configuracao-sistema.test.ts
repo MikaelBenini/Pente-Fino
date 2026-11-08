@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { avisoGeralSchema, avisoVigente, lerConfiguracaoPublica } from './configuracao-sistema.js';
 import { DIAS_TESTE, TABELA_PADRAO, VERSAO_TERMOS } from './planos.js';
+import { NOTA_FISCAL_PADRAO } from './nota-fiscal.js';
 
 describe('configurações do sistema', () => {
   const aviso = {
@@ -17,6 +18,7 @@ describe('configurações do sistema', () => {
       modelosEmail: {},
       tabelasPreco: [TABELA_PADRAO],
       clubeOnline: { taxaBp: 100 },
+      notaFiscal: NOTA_FISCAL_PADRAO,
     });
     expect(lerConfiguracaoPublica({ teste: { dias: 999 } }).teste.dias).toBe(DIAS_TESTE);
   });

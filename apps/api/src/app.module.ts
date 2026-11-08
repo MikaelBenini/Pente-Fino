@@ -46,6 +46,7 @@ import { RedeController } from './desempenho/rede.controller.js';
 import { SistemaController } from './conta/sistema.controller.js';
 import { AdminAuthController, AdminController } from './admin/admin.controller.js';
 import { AdminConfigController, SaudeService } from './admin/admin-config.controller.js';
+import { AdminNotaFiscalController } from './admin/admin-nota-fiscal.controller.js';
 import { AdminGestaoController } from './admin/admin-gestao.controller.js';
 import { BloqueioLogin } from './auth/bloqueio-login.js';
 import { EmailConfirmadoGuard } from './auth/email-confirmado.guard.js';
@@ -159,6 +160,7 @@ export class ComumModule {}
     AdminAuthController,
     AdminController,
     AdminConfigController,
+    AdminNotaFiscalController,
     AdminGestaoController,
     AvisosController,
     ResumoController,

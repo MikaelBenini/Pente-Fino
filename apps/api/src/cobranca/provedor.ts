@@ -1,11 +1,15 @@
 // Cobrança da assinatura do Pente Fino atrás de uma interface: Asaas de verdade (sandbox ou
 // produção) ou um provedor falso para os testes automáticos.
 import { Logger } from '@nestjs/common';
-import type {
-  CobrancaExterna,
-  DadosRecebimento,
-  DataISO,
-  SituacaoRecebimento,
+import {
+  configuracaoNotaAsaas,
+  type CobrancaExterna,
+  type ConfigNotaFiscal,
+  type DadosRecebimento,
+  type DataISO,
+  type ServicoMunicipal,
+  type SituacaoFiscalAsaas,
+  type SituacaoRecebimento,
 } from '@pente-fino/shared';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 
@@ -39,9 +43,22 @@ export interface ProvedorCobranca {
   saldoSubconta(apiKey: string): Promise<number>;
   /** Troca de plano: valor e descrição novos, também nas cobranças ainda em aberto. */
   atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }): Promise<void>;
+  // ─── Nota fiscal das mensalidades (conta do Pente Fino) ───
+  /** Liga a emissão da NFS-e em todas as cobranças da assinatura. */
+  configurarNotaAssinatura(assinatura: string, c: ConfigNotaFiscal): Promise<void>;
+  situacaoFiscal(): Promise<SituacaoFiscalAsaas>;
+  servicosMunicipais(busca: string): Promise<ServicoMunicipal[]>;
 }
 
-export class ErroCobranca extends Error {}
+export class ErroCobranca extends Error {
+  constructor(
+    mensagem: string,
+    /** Código HTTP da resposta do Asaas, quando houve resposta. */
+    readonly status?: number,
+  ) {
+    super(mensagem);
+  }
+}
 
 const centavos = (reais: number) => Math.round(reais * 100);
 
@@ -102,7 +119,7 @@ export class ProvedorAsaas implements ProvedorCobranca {
       // Validação vem em errors[]; recusa de permissão (403) vem em message.
       const motivo =
         json.errors?.map((e) => e.description).join(' ') || json.message || `HTTP ${r.status}`;
-      throw new ErroCobranca(`O Asaas recusou: ${motivo}`);
+      throw new ErroCobranca(`O Asaas recusou: ${motivo}`, r.status);
     }
     return json;
   }
@@ -134,6 +151,51 @@ export class ProvedorAsaas implements ProvedorCobranca {
         : {}),
     });
     return { id: r.id };
+  }
+
+  async configurarNotaAssinatura(assinatura: string, c: ConfigNotaFiscal) {
+    await this.pedir(
+      'POST',
+      `/subscriptions/${encodeURIComponent(assinatura)}/invoiceSettings`,
+      configuracaoNotaAsaas(c),
+    );
+  }
+
+  async situacaoFiscal(): Promise<SituacaoFiscalAsaas> {
+    try {
+      const f = await this.pedir<{
+        municipalInscription?: string | null;
+        simplesNacional?: boolean | null;
+        passwordSent?: boolean;
+        accessTokenSent?: boolean;
+        certificateSent?: boolean;
+      }>('GET', '/fiscalInfo');
+      return {
+        configurada: true,
+        inscricaoMunicipal: f.municipalInscription || null,
+        simplesNacional: f.simplesNacional ?? null,
+        acessoPrefeitura: Boolean(f.passwordSent || f.accessTokenSent || f.certificateSent),
+      };
+    } catch (e) {
+      // Sem dados fiscais o Asaas responde 404 (sem corpo de erro).
+      if (e instanceof ErroCobranca && e.status === 404)
+        return {
+          configurada: false,
+          inscricaoMunicipal: null,
+          simplesNacional: null,
+          acessoPrefeitura: false,
+        };
+      throw e;
+    }
+  }
+
+  async servicosMunicipais(busca: string) {
+    const q = new URLSearchParams({ limit: '30', ...(busca ? { description: busca } : {}) });
+    const r = await this.pedir<{ data: { id: string; description: string; issTax?: number }[] }>(
+      'GET',
+      `/fiscalInfo/services?${q}`,
+    );
+    return r.data.map((s) => ({ id: s.id, descricao: s.description, iss: s.issTax ?? null }));
   }
 
   async cancelarAssinatura(assinatura: string) {
@@ -275,6 +337,32 @@ export class ProvedorCobrancaFalso implements ProvedorCobranca {
 
   async saldoSubconta() {
     return 0;
+  }
+
+  readonly notas = new Map<string, ConfigNotaFiscal>();
+  /** Teste: assinaturas cuja nota o "Asaas" recusa. */
+  readonly notaRecusada = new Set<string>();
+
+  async configurarNotaAssinatura(assinatura: string, c: ConfigNotaFiscal) {
+    if (this.notaRecusada.has(assinatura))
+      throw new ErroCobranca('O Asaas recusou: Informações fiscais não configuradas.');
+    this.notas.set(assinatura, c);
+  }
+
+  async situacaoFiscal(): Promise<SituacaoFiscalAsaas> {
+    return {
+      configurada: true,
+      inscricaoMunicipal: '123456',
+      simplesNacional: true,
+      acessoPrefeitura: true,
+    };
+  }
+
+  async servicosMunicipais(busca: string) {
+    return [
+      { id: 'svc_falso_105', descricao: '1.05 - Licenciamento de programas de computação', iss: 2 },
+      { id: 'svc_falso_601', descricao: '6.01 - Barbearia, cabeleireiros', iss: 3 },
+    ].filter((s) => !busca || s.descricao.toLowerCase().includes(busca.toLowerCase()));
   }
 
   pagar(assinatura: string, forma = 'PIX'): CobrancaExterna {
