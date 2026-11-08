@@ -14,6 +14,8 @@ export const CHAVES_MODELO_EMAIL = [
   'cobranca_aviso',
   'cobranca_vencida',
   'pagamento_recebido',
+  'conta_sem_confirmar',
+  'conta_sera_apagada',
 ] as const;
 export type ChaveModeloEmail = (typeof CHAVES_MODELO_EMAIL)[number];
 
@@ -141,6 +143,28 @@ export const MODELOS_EMAIL: Readonly<Record<ChaveModeloEmail, DefinicaoModeloEma
       corpo:
         'Olá, {{nome}}!\n\nConfirmamos o recebimento de {{valor}} referente à mensalidade da {{conta}}, período de {{periodo}}.\n\nSua assinatura está em dia. Obrigado pela confiança, e bons atendimentos!',
       botao: null,
+    },
+  },
+  conta_sem_confirmar: {
+    nome: 'Conta sem confirmar o e-mail',
+    quando: 'Cadastro pelo site sem confirmar o e-mail: 2 dias antes de a conta ser apagada.',
+    variaveis: ['nome', 'conta', 'data'],
+    padrao: {
+      assunto: 'Confirme seu e-mail para não perder a {{conta}}',
+      corpo:
+        'Olá, {{nome}}!\n\nVocê criou a conta da {{conta}} no Pente Fino, mas o e-mail ainda não foi confirmado. Contas sem confirmação são apagadas em {{data}}, para proteger o sistema de cadastros falsos.\n\nPara manter a conta, entre no Pente Fino e toque em "Reenviar e-mail" no aviso do topo; depois é só abrir o link que chega na sua caixa de entrada.\n\nNão criou essa conta? Pode ignorar: ela sai sozinha.',
+      botao: 'Entrar e confirmar',
+    },
+  },
+  conta_sera_apagada: {
+    nome: 'Conta será apagada',
+    quando: 'Conta cancelada ou com o teste vencido sem pagamento: 15 e 3 dias antes de apagar.',
+    variaveis: ['nome', 'conta', 'dias', 'data'],
+    padrao: {
+      assunto: 'Os dados da {{conta}} serão apagados em {{dias}} dias',
+      corpo:
+        'Olá, {{nome}}!\n\nA conta da {{conta}} no Pente Fino está parada, e pela nossa política de privacidade os dados de contas paradas são apagados 90 dias depois. A exclusão está marcada para {{data}}.\n\nO que sai: clientes, agenda, comandas, caixa, equipe e conversas do WhatsApp. Depois disso não dá para recuperar.\n\nQuer continuar usando? Entre e escolha um plano, ou responda este e-mail. Se quiser guardar alguma informação, baixe os relatórios antes da data.',
+      botao: 'Entrar no Pente Fino',
     },
   },
 };

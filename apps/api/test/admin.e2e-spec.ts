@@ -626,7 +626,7 @@ describe('modelos de e-mail', () => {
       chave: string;
       personalizado: unknown;
     }[];
-    expect(lista).toHaveLength(10);
+    expect(lista).toHaveLength(12);
     await req('put', '/admin/configuracoes/modelos-email/inventado', {}).expect(400);
     const recusa = await req('put', '/admin/configuracoes/modelos-email/redefinir_senha', {
       assunto: 'Senha nova, {{nome}}',

@@ -54,6 +54,7 @@ import {
   type ConfigTeste,
   type ConfiguracaoPublica,
   type SaudeDoSistema,
+  type ExecucaoLimpezaNaTela,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { z } from 'zod';
@@ -121,6 +122,10 @@ export class SaudeService implements OnModuleDestroy {
           });
     }
     const caidas = await conexoesCaidasPlataforma(this.banco.prisma);
+    const limpeza = await this.banco.prisma.execucaoLimpeza.findMany({
+      orderBy: { iniciadaEm: 'desc' },
+      take: 7,
+    });
     return {
       banco,
       filas,
@@ -132,6 +137,13 @@ export class SaudeService implements OnModuleDestroy {
         caiuEm: x.caiu_em.toISOString(),
       })),
       errosRecentes: errosRecentes.sort((a, b) => b.quando.localeCompare(a.quando)).slice(0, 50),
+      limpeza: limpeza.map((e) => ({
+        iniciadaEm: e.iniciadaEm.toISOString(),
+        terminadaEm: e.terminadaEm?.toISOString() ?? null,
+        apagados: e.apagados as ExecucaoLimpezaNaTela['apagados'],
+        retidas: e.retidas as ExecucaoLimpezaNaTela['retidas'],
+        erro: e.erro,
+      })),
     };
   }
 

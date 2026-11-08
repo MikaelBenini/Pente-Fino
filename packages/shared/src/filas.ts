@@ -8,6 +8,8 @@ export const FILA_WHATSAPP_ENTRADA = 'whatsapp-entrada';
 export const FILA_WHATSAPP_SAIDA = 'whatsapp-saida';
 /** Notificações no celular (push do PWA). */
 export const FILA_NOTIFICACOES = 'notificacoes';
+/** Rotina diária de limpeza de dados (Etapa 15.4). */
+export const FILA_LIMPEZA = 'limpeza';
 
 /** Uma notificação para todos os aparelhos que a pessoa ligou. */
 export interface TrabalhoNotificacao {

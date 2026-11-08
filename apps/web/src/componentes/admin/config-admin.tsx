@@ -23,6 +23,7 @@ import { ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { LimpezaNaSaude } from './limpeza-admin';
 import { NotaFiscalAdmin } from './nota-fiscal-admin';
 import { useTabelasAdmin } from './precos-admin';
 
@@ -340,6 +341,7 @@ export function SaudeAdmin() {
                 </ul>
               )}
             </section>
+            <LimpezaNaSaude execucoes={d.limpeza} />
           </div>
         );
       }}

@@ -480,15 +480,15 @@ o banco não pode crescer sem limite e a página de status precisa mostrar algo 
 - [x] Campo isca invisível e tempo mínimo de preenchimento no cadastro (robô preenche tudo em menos de 2 s); recusa sem dizer o motivo (feito: campo `site` fora da tela e do teclado e carimbo `abertoEm`; menos de 2,5 s, mais de 24 h, sem carimbo ou isca preenchida = 400 `cadastro_recusado` com mensagem genérica; `pareceRobo` em `packages/shared/src/protecao-cadastro.ts`, com teste)
 - [x] Limite de cadastros por IP (3 por hora, 10 por dia), além do limite por minuto que já existe; e-mail de domínio descartável recusado (feito: `LimiteCadastro` no Redis, 429 `muitos_cadastros`; limites e tempo mínimo em `CADASTRO_*` no `.env`, afrouxados nos testes; lista de domínios temporários em `DOMINIOS_DESCARTAVEIS`)
 - [ ] Desafio anti-robô gratuito (Cloudflare Turnstile) no cadastro, ligado por variável de ambiente; sem a chave, o formulário segue com as outras proteções — **sob demanda** (2026-11-08): só se aparecerem muitas contas não confirmadas; as outras barreiras e a confirmação de e-mail bastam por ora
-- [ ] Conta não confirmada em 7 dias sai na rotina de limpeza (abaixo), com aviso por e-mail 2 dias antes
+- [x] Conta não confirmada em 7 dias sai na rotina de limpeza (abaixo), com aviso por e-mail 2 dias antes (feito em 2026-11-08: `decidirLimpezaDaConta` em `packages/shared/src/limpeza.ts` — conta em teste, sem pagamento, com dono sem `email_confirmado_em`; aviso no 5º dia com o modelo editável "Conta sem confirmar o e-mail" e botão para entrar e reenviar o link)
 
 **Exclusão automática de dados (90 dias)**
 
-- [ ] Política escrita na página de Privacidade e nos termos: o que sai e depois de quanto tempo
-- [ ] Conta cancelada, ou com o teste vencido sem nenhum pagamento, é apagada 90 dias depois (aviso por e-mail 15 e 3 dias antes; o dono exporta os dados até lá); a auditoria da plataforma guarda só que a conta existiu e quando saiu
-- [ ] Em todas as contas: conversas do bot, sessões e tokens vencidos, avisos lidos e trabalhos antigos das filas saem depois de 90 dias; avaliações perdem o comentário (a nota fica para a média). Comandas, caixa e auditoria de contas ativas não saem (são histórico financeiro)
-- [ ] Rotina diária no worker, em lotes pequenos (sem travar o banco), com o total apagado por tipo em Saúde do sistema
-- [ ] **Pronto quando:** um cadastro de robô é recusado, uma conta sem confirmar some no prazo e a Saúde do sistema mostra o que cada execução apagou
+- [x] Política escrita na página de Privacidade e nos termos: o que sai e depois de quanto tempo (feito: seção "Por quanto tempo guardamos" em `/privacidade` com cada prazo e o que fica; termos com o teste vencido e a conta sem confirmar; versão dos termos 2026-11-08)
+- [x] Conta cancelada, ou com o teste vencido sem nenhum pagamento, é apagada 90 dias depois (aviso por e-mail 15 e 3 dias antes; o dono exporta os dados até lá); a auditoria da plataforma guarda só que a conta existiu e quando saiu (feito: 90 dias depois de `cancelada_em` ou de `teste_ate`, avisos no modelo "Conta será apagada"; a conta sai inteira em cascata e `registrar_conta_apagada()` grava em `auditoria_plataforma` só o id, o nome e o motivo. **Conta com cobrança viva no Asaas fica retida** — assinatura do sistema ou do clube online ativa — e aparece na Saúde do sistema para cancelar lá antes; assim ninguém segue cobrado por uma conta que sumiu)
+- [x] Em todas as contas: conversas do bot, sessões e tokens vencidos, avisos lidos e trabalhos antigos das filas saem depois de 90 dias; avaliações perdem o comentário (a nota fica para a média). Comandas, caixa e auditoria de contas ativas não saem (são histórico financeiro) (feito: `limparDadosDaConta` em `packages/db/src/limpeza.ts` — mensagens, sessões do bot paradas, tokens e links vencidos, links de horário, avisos lidos e comentários de avaliação; sessões da administração por `limpar_sessoes_plataforma()`; filas pelo `clean` do BullMQ)
+- [x] Rotina diária no worker, em lotes pequenos (sem travar o banco), com o total apagado por tipo em Saúde do sistema (feito: fila `limpeza`, às 3h30 depois do backup, lotes de 500 por transação; cada execução em `execucao_limpeza` e na Saúde do sistema, com as 7 últimas lado a lado; uma conta com erro não para as outras. Teste em `packages/db/test/limpeza.db.test.ts`)
+- [x] **Pronto quando:** um cadastro de robô é recusado, uma conta sem confirmar some no prazo e a Saúde do sistema mostra o que cada execução apagou (conferido nos testes e numa execução no banco local: 125 contas em 3 s)
 
 **Status útil**
 
@@ -588,7 +588,7 @@ Dados de clientes e de dinheiro exigem cuidado desde o primeiro dia.
 - [x] Política de privacidade e termos de uso publicados e aceitos no cadastro (`/termos` e `/privacidade`; a versão aceita fica na auditoria da conta. Texto é rascunho: falta revisão jurídica e CNPJ)
 - [ ] Consentimento do cliente para receber mensagens de WhatsApp, com opção de sair (construído na Etapa 10; aqui, revisão do texto e do registro)
 - [ ] Exportar e apagar os dados de um cliente quando ele pedir, incluindo mensagens do bot e comentários de avaliação
-- [ ] Prazo de guarda das conversas do bot e das avaliações definido na política de privacidade e aplicado por rotina
+- [x] Prazo de guarda das conversas do bot e das avaliações definido na política de privacidade e aplicado por rotina (feito na Etapa 15.4: 90 dias para as conversas; avaliação perde o comentário e mantém a nota)
 - [x] Telefone do cliente oculto para o barbeiro quando o dono ativar (Etapa 6.6; vale também na ficha do profissional e nas avaliações)
 - [ ] Contrato com a barbearia dizendo quem é responsável pelos dados (a barbearia controla, o sistema opera)
 - [ ] Atualização mensal de dependências e da imagem da Evolution API
@@ -625,6 +625,7 @@ O sistema passa a cobrar das barbearias e a receber clientes sozinho.
 - [ ] WhatsApp de suporte com horário definido
 - [x] Termos de uso e política de privacidade com as condições dos planos e do cancelamento (rascunho para revisão jurídica)
 - [ ] Exportação completa dos dados para quem cancelar
+- [ ] Cancelar a conta pela administração também cancela a assinatura do sistema e as do clube online no Asaas (hoje a limpeza de dados retém a conta e avisa na Saúde do sistema até alguém cancelar no Asaas)
 - [ ] **Pronto quando:** uma barbearia desconhecida se cadastra, testa, assina e paga sem falar com ninguém
 
 ## Etapa 24 · Premium completo

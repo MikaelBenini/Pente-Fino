@@ -1632,3 +1632,19 @@ model ConfiguracaoPlataforma {
 
   @@map("configuracao_plataforma")
 }
+
+/// Execuções da rotina diária de limpeza (Etapa 15.4): quanto saiu de cada tipo. Fora do RLS
+/// das barbearias (não pertence a uma conta); o worker grava e a administração lê.
+model ExecucaoLimpeza {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  iniciadaEm  DateTime  @default(now()) @map("iniciada_em") @db.Timestamptz(3)
+  terminadaEm DateTime? @map("terminada_em") @db.Timestamptz(3)
+  /// { tipo: quantidade } (TIPOS_LIMPEZA).
+  apagados    Json      @default("{}")
+  /// Contas que já deviam sair mas têm cobrança ativa no Asaas: [{ contaId, conta, motivo }].
+  retidas     Json      @default("[]")
+  erro        String?
+
+  @@index([iniciadaEm])
+  @@map("execucao_limpeza")
+}
