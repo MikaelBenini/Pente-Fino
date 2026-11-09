@@ -5,6 +5,8 @@ import {
   formatarData,
   formatarMoeda,
   formatarPercentualBp,
+  OFERTA_LANCAMENTO,
+  textoVagasOferta,
   NOME_PLANO,
   NOME_SITUACAO_ASSINATURA,
   NOME_STATUS_FATURA,
@@ -303,9 +305,9 @@ function Assinar({
   const [codigo, setCodigo] = useState('');
   const [cupom, setCupom] = useState<{ codigo: string; descontoBp: number } | null>(null);
   const [erroCupom, setErroCupom] = useState<string | null>(null);
-  const fundador = useQuery({
-    queryKey: ['cupom', 'FUNDADOR'],
-    queryFn: () => api<{ restantes: number | null }>('publico/cupom/FUNDADOR'),
+  const oferta = useQuery({
+    queryKey: ['cupom', OFERTA_LANCAMENTO.codigo],
+    queryFn: () => api<{ restantes: number | null }>(`publico/cupom/${OFERTA_LANCAMENTO.codigo}`),
     enabled: descontoBp === 0,
     retry: false,
     staleTime: 300_000,
@@ -419,19 +421,23 @@ function Assinar({
           />
           {descontoBp === 0 && (
             <div className="flex flex-col gap-2 sm:col-span-3">
-              {!cupom && (fundador.data?.restantes ?? 0) > 0 && (
+              {!cupom && oferta.data && (
                 <Aviso tom="info">
-                  Plano fundador: 30% de desconto enquanto a assinatura estiver ativa. Restam{' '}
-                  {fundador.data!.restantes} vagas.{' '}
+                  Oferta de lançamento: 30% de desconto em toda mensalidade, para sempre (enquanto a
+                  assinatura estiver ativa), para quem assinar até{' '}
+                  {formatarData(`${OFERTA_LANCAMENTO.ate}T12:00:00Z`)}.{' '}
+                  {textoVagasOferta(oferta.data.restantes)
+                    ? `${textoVagasOferta(oferta.data.restantes)}. `
+                    : ''}
                   <button
                     type="button"
                     className="font-semibold underline underline-offset-4"
                     onClick={() => {
-                      setCodigo('FUNDADOR');
-                      void aplicarCupom('FUNDADOR');
+                      setCodigo(OFERTA_LANCAMENTO.codigo);
+                      void aplicarCupom(OFERTA_LANCAMENTO.codigo);
                     }}
                   >
-                    Usar o cupom FUNDADOR
+                    Usar o desconto
                   </button>
                 </Aviso>
               )}

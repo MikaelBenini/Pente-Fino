@@ -1,5 +1,6 @@
-// Plano fundador (Etapa 23): o cupom FUNDADOR já existe (migração), a vaga só conta quando a
-// conta paga e o desconto é conferido de novo na hora de assinar. Provedor falso do Asaas.
+// Oferta de lançamento (Etapa 23): o cupom LANCAMENTO já existe (migração) e o FUNDADOR saiu;
+// a vaga só conta quando a conta paga e o desconto é conferido de novo na hora de assinar.
+// As compras usam um cupom do próprio teste, para não depender da data da oferta.
 import type { INestApplication } from '@nestjs/common';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
 import { lerCupons, type AssinaturaDetalhe } from '@pente-fino/shared';
@@ -16,6 +17,7 @@ let provedor: ProvedorCobrancaFalso;
 const cenarios: Cenario[] = [];
 const http = () => request(app.getHttpServer());
 const CUPOM_UMA_VAGA = `UMAVAGA${Date.now().toString(36).toUpperCase()}`;
+const CUPOM = `TESTE${Date.now().toString(36).toUpperCase()}`;
 
 /** Conta em teste vencido (só consulta), com ou sem cupom guardado do cadastro. */
 async function contaEmTeste(cupom: string | null, descontoBp = 0) {
@@ -65,6 +67,7 @@ beforeAll(async () => {
           vagas: 1,
           ativo: true,
         },
+        { codigo: CUPOM, descricao: '', descontoBp: 3000, validoAte: null, vagas: 20, ativo: true },
       ],
     },
   });
@@ -76,7 +79,11 @@ afterAll(async () => {
   });
   await plataforma.configuracaoPlataforma.update({
     where: { chave: 'cupons' },
-    data: { valor: lerCupons(atual.valor).filter((c) => c.codigo !== CUPOM_UMA_VAGA) },
+    data: {
+      valor: lerCupons(atual.valor).filter(
+        (c) => c.codigo !== CUPOM_UMA_VAGA && c.codigo !== CUPOM,
+      ),
+    },
   });
   for (const c of cenarios) await c.remover();
   await plataforma.$disconnect();
@@ -84,33 +91,41 @@ afterAll(async () => {
   await app.close();
 });
 
-describe('plano fundador', () => {
-  it('o cupom FUNDADOR já existe: 30%, com as vagas que restam', async () => {
-    const r = (await http().get('/publico/cupom/fundador').expect(200)).body;
-    expect(r).toMatchObject({ codigo: 'FUNDADOR', descontoBp: 3000 });
-    expect(r.restantes).toBeGreaterThan(0);
-    expect(r.restantes).toBeLessThanOrEqual(20);
+describe('oferta de lançamento', () => {
+  it('o cupom LANCAMENTO já existe (30%, até 31/01/2027, 20 vagas) e o FUNDADOR saiu', async () => {
+    const cupons = lerCupons(
+      (await plataforma.configuracaoPlataforma.findUniqueOrThrow({ where: { chave: 'cupons' } }))
+        .valor,
+    );
+    expect(cupons.find((c) => c.codigo === 'LANCAMENTO')).toMatchObject({
+      descontoBp: 3000,
+      validoAte: '2027-01-31',
+      vagas: 20,
+      ativo: true,
+    });
+    expect(cupons.find((c) => c.codigo === 'FUNDADOR')?.ativo ?? false).toBe(false);
+    await http().get('/publico/cupom/FUNDADOR').expect(400);
   });
 
   it('quem se cadastrou com o cupom assina com 30%; a vaga só conta depois de pagar', async () => {
-    const antes = (await http().get('/publico/cupom/FUNDADOR').expect(200)).body.restantes;
-    const { c, dono } = await contaEmTeste('FUNDADOR', 3000);
+    const antes = (await http().get(`/publico/cupom/${CUPOM}`).expect(200)).body.restantes;
+    const { c, dono } = await contaEmTeste(CUPOM, 3000);
     await dono
       .post('/conta/assinatura', { plano: 'pro', ciclo: 'mensal', documento: '529.982.247-25' })
       .expect(201);
     const d = (await dono.get('/conta/assinatura').expect(200)).body as AssinaturaDetalhe;
     expect(d.pendente?.valor).toBe(10493); // R$ 149,90 com 30%
     // Ainda não pagou: a vaga não foi ocupada.
-    expect((await http().get('/publico/cupom/FUNDADOR').expect(200)).body.restantes).toBe(antes);
+    expect((await http().get(`/publico/cupom/${CUPOM}`).expect(200)).body.restantes).toBe(antes);
 
     provedor.pagar((await contaDe(c)).asaasAssinaturaId!, 'PIX');
     await dono.post('/conta/assinatura/conferir').expect(200);
     expect(await contaDe(c)).toMatchObject({
       status: 'ativa',
-      cupom: 'FUNDADOR',
+      cupom: CUPOM,
       descontoBp: 3000,
     });
-    expect((await http().get('/publico/cupom/FUNDADOR').expect(200)).body.restantes).toBe(
+    expect((await http().get(`/publico/cupom/${CUPOM}`).expect(200)).body.restantes).toBe(
       antes - 1,
     );
   });
@@ -131,10 +146,10 @@ describe('plano fundador', () => {
         plano: 'pro',
         ciclo: 'mensal',
         documento: '52998224725',
-        cupom: 'fundador',
+        cupom: CUPOM.toLowerCase(),
       })
       .expect(201);
-    expect(await contaDe(c)).toMatchObject({ cupom: 'FUNDADOR', descontoBp: 3000 });
+    expect(await contaDe(c)).toMatchObject({ cupom: CUPOM, descontoBp: 3000 });
   });
 
   it('vagas esgotadas enquanto a conta estava em teste: assina sem o desconto', async () => {

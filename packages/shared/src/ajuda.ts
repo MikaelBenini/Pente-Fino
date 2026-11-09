@@ -239,14 +239,14 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
   },
   {
     id: 'assinatura-e-fundador',
-    titulo: 'Assinar o plano, cupom e plano fundador',
+    titulo: 'Assinar o plano, cupom e oferta de lançamento',
     resumo: 'Pix, boleto ou cartão; o teste continua valendo até o fim.',
     categoria: 'Conta e dados',
     papeis: ['dono'],
     rota: '/configuracoes?aba=assinatura',
     passos: [
       'Em Configurações → Assinatura, escolha o plano e o ciclo (anual sai mais barato).',
-      'Tem cupom? Digite e toque em Aplicar. Enquanto houver vaga, o cupom FUNDADOR dá 30% em toda mensalidade.',
+      'Tem cupom? Digite e toque em Aplicar. Na oferta de lançamento, o cupom LANCAMENTO dá 30% em toda mensalidade enquanto a assinatura estiver ativa.',
       'Informe o CPF ou CNPJ e pague na página que abre. Depois toque em "Já paguei, conferir".',
       'Atrasou? O sistema fica só para consulta até o pagamento; nada é apagado.',
     ],

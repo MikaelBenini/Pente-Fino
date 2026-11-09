@@ -219,3 +219,15 @@ describe('cupons', () => {
     ]);
   });
 });
+
+describe('oferta de lançamento', () => {
+  it('o contador só aparece quando sobra pouco', async () => {
+    const { textoVagasOferta } = await import('./planos.js');
+    expect(textoVagasOferta(null)).toBeNull();
+    expect(textoVagasOferta(20)).toBeNull();
+    expect(textoVagasOferta(6)).toBeNull();
+    expect(textoVagasOferta(5)).toBe('Últimas 5 vagas');
+    expect(textoVagasOferta(1)).toBe('Última vaga');
+    expect(textoVagasOferta(0)).toBeNull();
+  });
+});

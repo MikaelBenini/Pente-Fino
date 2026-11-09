@@ -832,7 +832,7 @@ describe('cupons', () => {
     });
 
     // Em teste não ocupa vaga: outro cadastro com o mesmo cupom passa (quem pagar primeiro
-    // leva; ver plano-fundador.e2e-spec.ts).
+    // leva; ver oferta-lancamento.e2e-spec.ts).
     await cadastro(`cupom2-${sufixo}@e2e.pentefino.dev`, codigo).expect(201);
     const outro = await como(app, `cupom2-${sufixo}@e2e.pentefino.dev`, 'senha-do-cupom-123');
     contasCriadas.push((await outro.get('/auth/eu').expect(200)).body.contaId);

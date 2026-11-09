@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (oferta)
+
+- Plano fundador virou **oferta de lançamento**: cupom `LANCAMENTO`, 30% para sempre para quem
+  assinar até 31/01/2027. O contador de vagas só aparece quando restam 5 ou menos, e o bloco some
+  quando a oferta acaba. O cupom `FUNDADOR` foi desativado.
+
 ### Corrigido (planos)
 
 - `/planos`: clube com cobrança automática pelo link aparece como disponível no Pro (estava "em

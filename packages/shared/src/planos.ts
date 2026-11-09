@@ -55,8 +55,25 @@ export function diasRestantesTeste(testeAte: Date, agora: Date): number {
   return Math.round((dia(testeAte) - dia(agora)) / 86_400_000);
 }
 
-/** Plano fundador: desconto para as primeiras barbearias, enquanto a assinatura estiver ativa. */
-export const FUNDADOR = { descontoBp: 3000, vagas: 20 } as const;
+/**
+ * Oferta de lançamento: 30% em toda mensalidade, enquanto a assinatura estiver ativa, para quem
+ * assinar até a data. A urgência vem da data; o limite de vagas existe, mas o contador só
+ * aparece quando sobra pouco (um contador cheio passa a ideia de que ninguém assinou).
+ */
+export const OFERTA_LANCAMENTO = {
+  codigo: 'LANCAMENTO',
+  descontoBp: 3000,
+  ate: '2027-01-31',
+  vagas: 20,
+  mostrarVagasAte: 5,
+} as const;
+
+/** "Últimas 3 vagas" quando sobra pouco; null quando ainda há bastante (ou sem limite). */
+export function textoVagasOferta(restantes: number | null): string | null {
+  if (restantes === null || restantes <= 0 || restantes > OFERTA_LANCAMENTO.mostrarVagasAte)
+    return null;
+  return restantes === 1 ? 'Última vaga' : `Últimas ${restantes} vagas`;
+}
 
 export interface PrecoPlano {
   /** Centavos por mês no plano mensal. */
