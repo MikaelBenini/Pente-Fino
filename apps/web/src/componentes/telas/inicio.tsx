@@ -8,6 +8,7 @@ import { useEstadoConfiguracao } from './configuracao-inicial';
 import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores } from '../indicadores';
+import { PrimeirosPassos } from '../primeiros-passos';
 import { CardOcupacao } from '../ocupacao';
 import { CabecalhoPagina, Estado } from '../pagina';
 
@@ -51,6 +52,7 @@ export function TelaInicio() {
           </span>
         </Link>
       )}
+      {configuracao.data?.configurada !== false && <PrimeirosPassos />}
       <Estado consulta={metas}>
         {() =>
           metas.data!.length > 0 ? (
