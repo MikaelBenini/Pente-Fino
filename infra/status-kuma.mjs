@@ -6,7 +6,7 @@
 // opcional), DOMINIO, ALERTA_EMAIL e SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM.
 // Saída (stdout, uma linha por item): "PUSH <CHAVE_DO_ENV> <url>" e mensagens "OK ..."/"AVISO ...".
 import { randomBytes } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { io } from 'socket.io-client';
 
 const env = process.env;
@@ -178,7 +178,9 @@ socket.on('connect', async () => {
       showTags: false,
       domainNameList: [],
       // Visual do Pente Fino (infra/status.css, montado ao lado pelo status.sh).
-      customCSS: existsSync('status.css') ? readFileSync('status.css', 'utf8') : '',
+      customCSS: statSync('status.css', { throwIfNoEntry: false })?.isFile()
+        ? readFileSync('status.css', 'utf8')
+        : '',
       footerText: `Pente Fino · https://${DOMINIO}`,
       showPoweredBy: false,
       googleAnalyticsId: null,
