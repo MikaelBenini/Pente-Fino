@@ -42,7 +42,7 @@ export const CICLOS = ['mensal', 'anual'] as const;
 export type Ciclo = (typeof CICLOS)[number];
 
 /** Data da versão dos termos e da política (mudou o texto, muda a data; o cadastro grava). */
-export const VERSAO_TERMOS = '2026-11-08';
+export const VERSAO_TERMOS = '2026-11-09';
 
 /** Dias de teste grátis, sem cartão. */
 export const DIAS_TESTE = 14;

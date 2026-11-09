@@ -71,6 +71,7 @@ import { MeController } from './me/me.controller.js';
 import { ResultadosController } from './resultados/resultados.controller.js';
 import { ResultadosService } from './resultados/resultados.service.js';
 import { ClientesController } from './clientes/clientes.controller.js';
+import { DadosClienteController } from './clientes/dados-cliente.controller.js';
 import { ComandasController } from './comandas/comandas.controller.js';
 import { ComandasService } from './comandas/comandas.service.js';
 import { ContaController } from './conta/conta.controller.js';
@@ -148,6 +149,7 @@ export class ComumModule {}
     ProfissionaisController,
     ProdutosController,
     ClientesController,
+    DadosClienteController,
     AgendaController,
     ComandasController,
     CaixaController,

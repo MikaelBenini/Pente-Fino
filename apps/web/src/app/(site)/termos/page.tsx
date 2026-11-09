@@ -114,6 +114,54 @@ const SECOES: readonly SecaoLegal[] = [
     ),
   },
   {
+    id: 'dados-dos-clientes',
+    titulo: 'Dados dos clientes da barbearia',
+    conteudo: (
+      <>
+        <p>
+          Para os dados dos clientes da barbearia (nome, telefone, atendimentos, conversas do
+          WhatsApp), a <strong>barbearia é a controladora</strong> e o Pente Fino é o{' '}
+          <strong>operador</strong> (LGPD, art. 5º). Com o aceite destes termos, as partes combinam:
+        </p>
+        <ul>
+          <li>
+            O Pente Fino trata esses dados só para prestar o serviço contratado e conforme as
+            configurações feitas pela barbearia; não vende, não usa para publicidade própria e não
+            entra em contato com os clientes da barbearia por conta própria.
+          </li>
+          <li>
+            A barbearia é responsável por ter base legal para cadastrar os clientes e mandar
+            mensagens a eles (o bot pede o consentimento e respeita quem responde SAIR).
+          </li>
+          <li>
+            Fornecedores que podem ter acesso técnico aos dados, só para o serviço: hospedagem do
+            servidor (Hostinger), cópia de segurança criptografada (Backblaze, nos Estados Unidos),
+            envio de e-mail (Brevo) e cobrança (Asaas). Mudanças nessa lista são avisadas com 30
+            dias de antecedência.
+          </li>
+          <li>
+            Segurança: dados separados por conta no banco, acesso por papel e unidade, senhas
+            guardadas só como hash, conexões com HTTPS e cópia de segurança diária criptografada.
+          </li>
+          <li>
+            Incidente de segurança que afete os dados da barbearia é comunicado a ela em até 2 dias
+            úteis depois de confirmado, com o que se sabe e o que foi feito, para que ela possa
+            avisar a ANPD e os clientes quando for o caso.
+          </li>
+          <li>
+            Pedidos dos clientes (acesso, correção, eliminação) são atendidos pela barbearia; o
+            sistema dá as ferramentas: na ficha do cliente, o dono baixa os dados dele e apaga os
+            dados pessoais.
+          </li>
+          <li>
+            No fim do contrato, a barbearia exporta os dados; depois do prazo da política de
+            privacidade, eles são apagados do sistema e saem das cópias de segurança no ciclo delas.
+          </li>
+        </ul>
+      </>
+    ),
+  },
+  {
     id: 'disponibilidade',
     titulo: 'Disponibilidade e suporte',
     conteudo: (

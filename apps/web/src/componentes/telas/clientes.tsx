@@ -5,6 +5,7 @@ import {
   formatarDataHora,
   formatarMoeda,
   formatarTelefone,
+  NOME_CLIENTE_REMOVIDO,
   NOME_MOTIVO_RECUPERAR,
   type AdesaoDetalhe,
   type ClienteParaRecuperar,
@@ -25,6 +26,7 @@ import {
   useMensagensCliente,
 } from '@/lib/consultas';
 import { Aviso } from '../aviso';
+import { DadosClienteLgpd } from '../dados-cliente-lgpd';
 import { ListaMensagens } from '../lista-mensagens';
 import { MandarMensagem } from '../mandar-mensagem';
 import { useApp } from '../contexto-app';
@@ -382,6 +384,9 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
                 </ul>
               )}
             </section>
+            {papeis.includes('dono') && c!.nome !== NOME_CLIENTE_REMOVIDO && (
+              <DadosClienteLgpd clienteId={c!.id} nome={c!.nome} onApagado={onFechar} />
+            )}
           </div>
         )}
       </Estado>
