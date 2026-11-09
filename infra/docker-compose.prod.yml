@@ -187,7 +187,7 @@ services:
   # Monitoramento (status.): confere o site, a API e o WhatsApp e avisa por e-mail ou Telegram.
   status:
     <<: *imagem
-    image: louislam/uptime-kuma:1.23.16
+    image: louislam/uptime-kuma:2.5.9
     volumes:
       - status_dados:/app/data
     healthcheck:
