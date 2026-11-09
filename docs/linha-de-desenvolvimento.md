@@ -653,6 +653,7 @@ O trabalho depois do lançamento, para o sistema seguir estável e crescer.
 
 - [ ] Testar a restauração do backup
 - [ ] Atualizar dependências, imagem da Evolution API e pacotes do Ubuntu
+- [ ] Uptime Kuma 1.23 → 2.x (o Dependabot não sugere a versão maior; proposta em #129): backup do volume `status_dados`, testar o `status.sh` contra a 2.x num Kuma local (a API de socket mudou), subir e conferir a página pública
 - [ ] Acompanhar receita recorrente, cancelamentos, clientes por plano e uso de disco e memória da VPS
 - [ ] Quando a VPS passar de 70% de memória ou CPU com frequência, subir de plano ou separar o banco
 
