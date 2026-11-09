@@ -492,7 +492,7 @@ o banco não pode crescer sem limite e a página de status precisa mostrar algo 
 
 **Status útil**
 
-- [x] Monitores criados por script (`infra/status.sh`, na VPS, com o login do Uptime Kuma digitado na hora): site, API, painel do WhatsApp, backup do dia e disco/memória; as URLs dos monitores "push" vão sozinhas para o `.env` (feito em 2026-11-08: `infra/status.sh` roda `infra/status-kuma.mjs` num contêiner Node na rede do Compose, pela API de socket.io do Kuma; conferido contra um Kuma 1.23.16 local, com os monitores HTTP verdes contra a produção e o push respondendo. **Falta rodar uma vez na VPS** — vem com o próximo deploy)
+- [x] Monitores criados por script (`infra/status.sh`, na VPS, com o login do Uptime Kuma digitado na hora): site, API, painel do WhatsApp, backup do dia e disco/memória; as URLs dos monitores "push" vão sozinhas para o `.env` (feito em 2026-11-08: `infra/status.sh` roda `infra/status-kuma.mjs` num contêiner Node na rede do Compose, pela API de socket.io do Kuma; conferido contra um Kuma 1.23.16 local, com os monitores HTTP verdes contra a produção e o push respondendo. Rodado na VPS em 2026-11-09: página pública no ar com os 5 monitores verdes)
 - [x] Página pública de status (`status.seudominio/status/pente-fino`) com os serviços agrupados e o histórico; o painel interno continua com login (feito: grupos Sistema e Servidor, criada pelo mesmo script)
 - [x] Alerta por e-mail (o SMTP do Brevo) quando um monitor cair (feito: notificação SMTP padrão, aplicada a todos os monitores, com o e-mail informado na hora)
 
@@ -546,13 +546,13 @@ Tudo roda em containers na VPS, atrás do Caddy, que emite e renova o certificad
 Um backup que nunca foi restaurado não é backup. A restauração é testada antes do piloto e todo mês.
 
 - [x] Script `infra/backup.sh`: `pg_dump` compactado do banco de produção
-- [x] Envio para o armazenamento externo com rclone, criptografado (feito em 2026-11-09: `infra/backup-externo.sh` configura B2 ou R2 passo a passo, testa e liga `BACKUP_DESTINO`; o rclone roda em contêiner; envio por cópia (nunca apaga lá fora por falta local) com retenção de 35 dias para os diários e 400 para os mensais; `./restaurar.sh --teste --externo` baixa o mais recente e restaura. **Falta criar a conta e o bucket e rodar o script na VPS**)
+- [x] Envio para o armazenamento externo com rclone, criptografado (feito em 2026-11-09: `infra/backup-externo.sh` configura B2 ou R2 passo a passo, testa e liga `BACKUP_DESTINO`; o rclone roda em contêiner; envio por cópia (nunca apaga lá fora por falta local) com retenção de 35 dias para os diários e 400 para os mensais; `./restaurar.sh --teste --externo` baixa o mais recente e restaura. Ligado em produção em 2026-11-09 no Backblaze B2, bucket privado `pente-fino-backup`)
 - [x] Cópia também do volume de sessões da Evolution API (evita escanear o QR de novo)
 - [x] Agendado no cron da VPS todo dia de madrugada
 - [x] Retenção: 30 diários e 12 mensais
 - [ ] Snapshot semanal da VPS no painel do provedor
 - [x] Restauração testada num banco vazio, com o passo a passo em `docs/restaurar.md`
-- [ ] **Pronto quando:** o banco é restaurado do zero a partir do armazenamento externo e o sistema volta a abrir
+- [x] **Pronto quando:** o banco é restaurado do zero a partir do armazenamento externo e o sistema volta a abrir (conferido em 2026-11-09: `./restaurar.sh --teste --externo` na VPS baixou o backup mais recente do B2 e restaurou num PostgreSQL descartável com contas, usuários, migrações, dono das tabelas e RLS forçado)
 
 ## Etapa 19 · Monitoramento
 
