@@ -9,6 +9,7 @@ import {
   Contact,
   Crown,
   Gauge,
+  LifeBuoy,
   MessageCircle,
   Network,
   MessagesSquare,
@@ -26,6 +27,7 @@ import {
 
 export const ICONES_MENU: Record<IdMenu, LucideIcon> = {
   inicio: Gauge,
+  ajuda: LifeBuoy,
   dia: ClipboardList,
   hoje: Sun,
   agenda: CalendarDays,

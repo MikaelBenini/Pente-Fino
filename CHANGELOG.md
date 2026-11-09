@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (ajuda)
+
+- Central de ajuda (menu "Ajuda"): busca, artigos passo a passo (WhatsApp, bot, agenda, comanda,
+  caixa, lucro, comissões, clube, assinatura, LGPD) e perguntas frequentes.
+- Tutorial "Primeiros passos" no Início: 8 passos que se marcam sozinhos conforme a barbearia
+  usa o sistema, cada um com "Como fazer" e "Fazer agora".
+
 ### Adicionado (LGPD)
 
 - Ficha do cliente (dono): "Baixar os dados" entrega tudo o que o sistema guarda do cliente, e

@@ -16,6 +16,7 @@ import {
   trocarPlanoSchema,
   type PreviaTrocaPlano,
   type TrocarPlanoEntrada,
+  type EstadoPrimeirosPassos,
 } from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { LivreSemAssinatura, Papeis } from '../auth/decoradores.js';
@@ -142,6 +143,38 @@ export class ContaController {
   async conferir(): Promise<AssinaturaDetalhe> {
     await this.cobranca.conferir();
     return this.assinatura();
+  }
+
+  @Get('primeiros-passos')
+  @Papeis('dono', 'gestor')
+  @ApiOperation({ summary: 'Tutorial do Início: quais primeiros passos a barbearia já fez' })
+  async primeirosPassos(): Promise<EstadoPrimeirosPassos> {
+    const usuarioId = Contexto.usuario().id;
+    return this.banco.daConta(async (tx) => {
+      const [servicos, equipe, convite, whatsapp, agendamento, comanda, meta, notificacoes] =
+        await emSequencia([
+          tx.precoServico.count(),
+          tx.profissional.count({ where: { ativo: true } }),
+          tx.usuario.count({
+            where: { papeis: { some: { papel: { in: ['gestor', 'recepcao', 'barbeiro'] } } } },
+          }),
+          tx.botConexao.count({ where: { status: 'conectado' } }),
+          tx.agendamento.count(),
+          tx.comanda.count({ where: { status: 'fechada' } }),
+          tx.meta.count(),
+          tx.inscricaoPush.count({ where: { usuarioId } }),
+        ]);
+      return {
+        servicos: servicos > 0,
+        equipe: equipe > 0,
+        convite: convite > 0,
+        whatsapp: whatsapp > 0,
+        agendamento: agendamento > 0,
+        comanda: comanda > 0,
+        meta: meta > 0,
+        notificacoes: notificacoes > 0,
+      };
+    });
   }
 
   @Get()

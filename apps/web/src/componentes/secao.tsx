@@ -5,7 +5,7 @@ import { EstadoVazio } from '@pente-fino/ui';
 import { ICONES_MENU } from './icones-menu';
 import { nomeDaUnidade, useApp } from './contexto-app';
 
-type IdSecao = Exclude<IdMenu, 'perfil'>;
+type IdSecao = Exclude<IdMenu, 'perfil' | 'ajuda'>;
 
 /** O que cada tela vai mostrar e como começa a ter dados. */
 const TEXTOS: Record<IdSecao, { pergunta: string; vazio: string; texto: string }> = {

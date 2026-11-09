@@ -23,7 +23,8 @@ export type IdMenu =
   | 'bot'
   | 'conversas'
   | 'configuracoes'
-  | 'perfil';
+  | 'perfil'
+  | 'ajuda';
 
 /** Seções do menu lateral, na ordem em que aparecem. */
 export const GRUPOS_MENU = ['Dia a dia', 'Gestão', 'Cadastros', 'WhatsApp', 'Conta'] as const;
@@ -98,6 +99,7 @@ export const ITENS_MENU: readonly ItemMenu[] = [
     grupo: 'Conta',
   },
   { id: 'perfil', rotulo: 'Perfil', rota: '/perfil', papeis: ['barbeiro'], grupo: 'Conta' },
+  { id: 'ajuda', rotulo: 'Ajuda', rota: '/ajuda', papeis: TODOS, grupo: 'Conta' },
 ];
 
 /** O menu em seções, só as que têm item; o menu curto (até 7 itens) fica numa lista só. */
