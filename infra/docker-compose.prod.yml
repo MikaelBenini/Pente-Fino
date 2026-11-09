@@ -95,7 +95,7 @@ services:
 
   redis:
     <<: *imagem
-    image: redis:8.8-alpine
+    image: redis:8.10-alpine
     command: ['redis-server', '--appendonly', 'yes']
     volumes:
       - redis_dados:/data
