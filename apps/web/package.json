@@ -21,7 +21,7 @@
     "@pente-fino/ui": "workspace:*",
     "@tanstack/react-query": "5.106.1",
     "idb-keyval": "6.3.0",
-    "lucide-react": "1.69.0",
+    "lucide-react": "1.70.0",
     "next": "16.4.5",
     "qrcode": "1.5.4",
     "react": "19.3.1",
