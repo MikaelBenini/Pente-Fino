@@ -546,7 +546,7 @@ Tudo roda em containers na VPS, atrás do Caddy, que emite e renova o certificad
 Um backup que nunca foi restaurado não é backup. A restauração é testada antes do piloto e todo mês.
 
 - [x] Script `infra/backup.sh`: `pg_dump` compactado do banco de produção
-- [ ] Envio para o armazenamento externo com rclone, criptografado
+- [x] Envio para o armazenamento externo com rclone, criptografado (feito em 2026-11-09: `infra/backup-externo.sh` configura B2 ou R2 passo a passo, testa e liga `BACKUP_DESTINO`; o rclone roda em contêiner; envio por cópia (nunca apaga lá fora por falta local) com retenção de 35 dias para os diários e 400 para os mensais; `./restaurar.sh --teste --externo` baixa o mais recente e restaura. **Falta criar a conta e o bucket e rodar o script na VPS**)
 - [x] Cópia também do volume de sessões da Evolution API (evita escanear o QR de novo)
 - [x] Agendado no cron da VPS todo dia de madrugada
 - [x] Retenção: 30 diários e 12 mensais

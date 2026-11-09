@@ -14,7 +14,7 @@ flock -w 600 9 || { echo "Outro deploy em andamento." >&2; exit 3; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-for f in docker-compose.prod.yml Caddyfile atualizar.sh admin.sh backup.sh restaurar.sh vigia.sh implantar.sh instalar.sh chave-deploy.sh status.sh status-kuma.mjs; do
+for f in docker-compose.prod.yml Caddyfile atualizar.sh admin.sh backup.sh restaurar.sh vigia.sh implantar.sh instalar.sh chave-deploy.sh status.sh status-kuma.mjs status.css backup-externo.sh; do
   curl -fsSL -m 30 "https://raw.githubusercontent.com/$REPO/$SHA/infra/$f" -o "$TMP/$f"
 done
 mkdir -p "$TMP/postgres/init"

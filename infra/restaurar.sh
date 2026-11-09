@@ -3,6 +3,8 @@
 #   ./restaurar.sh --teste    [arquivo]   restaura num PostgreSQL descartável e confere (não mexe
 #                                        na produção). Sem arquivo: o backup mais recente.
 #   ./restaurar.sh --producao  arquivo    APAGA o banco atual e põe o do backup no lugar.
+#   Com --externo no lugar do arquivo, baixa antes o backup mais recente do armazenamento
+#   externo (BACKUP_DESTINO), como num servidor novo: ./restaurar.sh --teste --externo
 set -euo pipefail
 cd "$(dirname "$0")"
 umask 077
@@ -10,8 +12,22 @@ ler() { sed -n "s/^$1=//p" .env | tail -1 | sed "s/^['\"]//; s/['\"]$//"; }
 export BACKUP_SENHA="${BACKUP_SENHA:-$(ler BACKUP_SENHA)}"
 BANCO="$(ler DB_NAME)"; BANCO="${BANCO:-pente_fino}"
 MODO="${1:-}"
-ARQ="${2:-$(ls -1t /opt/barbearia/backups/diario/*.enc 2>/dev/null | head -1)}"
-[[ "$MODO" == --teste || "$MODO" == --producao ]] || { sed -n '2,6p' "$0"; exit 1; }
+[[ "$MODO" == --teste || "$MODO" == --producao ]] || { sed -n '2,8p' "$0"; exit 1; }
+if [[ "${2:-}" == --externo ]]; then
+  DESTINO="$(ler BACKUP_DESTINO)"
+  [[ -n "$DESTINO" ]] || { echo "BACKUP_DESTINO vazio: rode ./backup-externo.sh" >&2; exit 1; }
+  PASTA_BAIXADOS=/opt/barbearia/backups/baixados
+  mkdir -p "$PASTA_BAIXADOS"
+  rc() { docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/rclone:/config/rclone" \
+    -v "$PASTA_BAIXADOS:$PASTA_BAIXADOS" rclone/rclone:1.68.2 "$@"; }
+  ultimo="$(rc lsf "$DESTINO/diario" --files-only | sort | tail -1)"
+  [[ -n "$ultimo" ]] || { echo "Nenhum backup em $DESTINO/diario." >&2; exit 1; }
+  echo "Baixando $ultimo de $DESTINO..."
+  rc copyto "$DESTINO/diario/$ultimo" "$PASTA_BAIXADOS/$ultimo"
+  ARQ="$PASTA_BAIXADOS/$ultimo"
+else
+  ARQ="${2:-$(ls -1t /opt/barbearia/backups/diario/*.enc 2>/dev/null | head -1)}"
+fi
 [[ -f "$ARQ" ]] || { echo "Backup não encontrado: $ARQ" >&2; exit 1; }
 
 TMP="$(mktemp -d)"

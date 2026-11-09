@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (operação)
+
+- Página pública de status com o visual do Pente Fino (cores, fonte e logo), aplicado pelo
+  `status.sh`.
+- `infra/backup-externo.sh`: liga a cópia do backup no Backblaze B2 ou no Cloudflare R2 passo a
+  passo; `restaurar.sh --externo` restaura direto de lá. O envio passou a ser por cópia com
+  retenção por idade (um servidor novo nunca apaga o backup guardado lá fora).
+
 ### Adicionado (alerta do WhatsApp)
 
 - WhatsApp da unidade que cai sozinho avisa na hora: aviso na central para dono e gestor,

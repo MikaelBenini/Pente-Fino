@@ -35,7 +35,7 @@ saida="$(
     -e SMTP_HOST="$(ler SMTP_HOST)" -e SMTP_PORT="$(ler SMTP_PORT)" \
     -e SMTP_USER="$(ler SMTP_USER)" -e SMTP_PASSWORD="$(ler SMTP_PASSWORD)" \
     -e EMAIL_FROM="$(ler EMAIL_FROM)" \
-    -v "$PWD/status-kuma.mjs:/app/status-kuma.mjs:ro" -w /app \
+    -v "$PWD/status-kuma.mjs:/app/status-kuma.mjs:ro" -v "$PWD/status.css:/app/status.css:ro" -w /app \
     node:24-alpine sh -c 'npm install --silent --no-audit --no-fund socket.io-client@4.8.1 >/dev/null 2>&1 && node status-kuma.mjs'
 )" || { echo "$saida" | grep -v '^PUSH' >&2; exit 1; }
 unset KUMA_SENHA
