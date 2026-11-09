@@ -20,6 +20,8 @@ import { data } from '../comum/escopo.js';
 import { Corpo, PipeZod } from '../comum/validacao.js';
 import { ProfissionaisService } from '../profissionais/profissionais.service.js';
 
+// O uso em @Param('tipo', tipoParam) não é visto pela regra (decorador de parâmetro).
+// eslint-disable-next-line no-useless-assignment
 const tipoParam = new PipeZod(z.enum(TIPOS_IMPORTACAO, { error: 'Tipo de importação inválido.' }));
 
 /**
