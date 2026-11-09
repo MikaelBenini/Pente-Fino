@@ -49,7 +49,7 @@ x-ambiente-app: &ambiente-app
 services:
   caddy:
     <<: *imagem
-    image: caddy:2.10-alpine
+    image: caddy:2.11-alpine
     ports:
       - '80:80'
       - '443:443'
