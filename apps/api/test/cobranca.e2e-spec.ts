@@ -147,7 +147,10 @@ describe('webhook do Asaas', () => {
       motivoRecusa: 'Cartão recusado pelo banco.',
     });
     // "Conferir" não apaga a recusa (no Asaas a cobrança segue pendente).
-    d = (await dono.post('/conta/assinatura/conferir').expect(200)).body as AssinaturaDetalhe;
+    await dono.post('/conta/assinatura/conferir').expect(200);
+    expect(
+      ((await dono.get('/conta/assinatura').expect(200)).body as AssinaturaDetalhe).pendente,
+    ).toMatchObject({ status: 'recusada' });
 
     await webhook({
       event: 'PAYMENT_RECEIVED',
