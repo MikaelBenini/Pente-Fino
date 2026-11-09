@@ -40,6 +40,11 @@ updates:
   # Evolution corrige o WhatsApp com frequência; cada PR passa pelo CI antes de ir ao ar.
   - package-ecosystem: docker-compose
     directory: /infra
+    # Uptime Kuma 2 migra o banco dele na subida e mudou a API usada pelo status.sh: a troca de
+    # versão maior é uma tarefa própria (Etapa 25), não um PR automático.
+    ignore:
+      - dependency-name: louislam/uptime-kuma
+        update-types: ['version-update:semver-major']
     schedule:
       interval: weekly
       day: monday
