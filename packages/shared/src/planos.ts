@@ -212,6 +212,11 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
   doRecurso('comissoes'),
   doRecurso('metas'),
   doRecurso('clube'),
+  {
+    nome: 'Clube com cobrança automática pelo link (Pix e cartão)',
+    desde: 'pro',
+    disponivel: true,
+  },
   doRecurso('bot'),
   doRecurso('listaEspera'),
   doRecurso('fichaProfissional'),
@@ -222,7 +227,6 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
   doRecurso('lucroReal'),
   doRecurso('automacoes'),
   { nome: 'Campeonato dos barbeiros', desde: 'premium', disponivel: false },
-  { nome: 'Cobrança automática do clube', desde: 'premium', disponivel: false },
 ];
 
 export const incluiRecurso = (plano: PlanoConta, r: RecursoPlano) => ORDEM[plano] >= ORDEM[r.desde];

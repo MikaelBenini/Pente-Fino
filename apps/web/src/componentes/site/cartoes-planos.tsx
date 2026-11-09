@@ -34,7 +34,7 @@ const DESTAQUES: Record<PlanoConta, readonly string[]> = {
     'Tudo do Básico',
     'Comissão automática e extrato do barbeiro',
     'Metas com ritmo e projeção',
-    'Clube e bot de WhatsApp (em breve)',
+    'Clube de assinatura e bot de WhatsApp',
   ],
   premium: [
     'Tudo do Pro',

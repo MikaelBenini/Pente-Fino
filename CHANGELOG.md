@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (planos)
+
+- `/planos`: clube com cobrança automática pelo link aparece como disponível no Pro (estava "em
+  breve" no Premium), e o cartão do Pro não diz mais que clube e bot estão "em breve".
+
 ### Adicionado (ajuda)
 
 - Central de ajuda (menu "Ajuda"): busca, artigos passo a passo (WhatsApp, bot, agenda, comanda,
