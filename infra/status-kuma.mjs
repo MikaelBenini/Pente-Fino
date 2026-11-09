@@ -6,6 +6,7 @@
 // opcional), DOMINIO, ALERTA_EMAIL e SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM.
 // Saída (stdout, uma linha por item): "PUSH <CHAVE_DO_ENV> <url>" e mensagens "OK ..."/"AVISO ...".
 import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import { io } from 'socket.io-client';
 
 const env = process.env;
@@ -171,17 +172,18 @@ socket.on('connect', async () => {
       slug: SLUG,
       title: 'Pente Fino',
       description: 'Situação do sistema Pente Fino: site, API, WhatsApp e servidor.',
-      icon: '/icon.svg',
+      icon: `https://${DOMINIO}/icones/icone-192.png`,
       theme: 'auto',
       published: true,
       showTags: false,
       domainNameList: [],
-      customCSS: '',
+      // Visual do Pente Fino (infra/status.css, montado ao lado pelo status.sh).
+      customCSS: existsSync('status.css') ? readFileSync('status.css', 'utf8') : '',
       footerText: `Pente Fino · https://${DOMINIO}`,
       showPoweredBy: false,
       googleAnalyticsId: null,
     };
-    const salvo = await pedir('saveStatusPage', SLUG, config, '/icon.svg', grupos);
+    const salvo = await pedir('saveStatusPage', SLUG, config, config.icon, grupos);
     if (!salvo.ok) sair(`página de status não salva: ${salvo.msg}`);
     console.log(`OK página pública: ${PUBLICO}/status/${SLUG}`);
     socket.close();

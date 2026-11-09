@@ -1,0 +1,205 @@
+/* Página pública de status (Uptime Kuma 1.23) com a cara do Pente Fino: fundo grafite, amarelo
+   da marca nos títulos, verde de "no ar" e vermelho de queda, fonte Barlow. Aplicado pelo
+   status.sh (campo "CSS personalizado" da página); pode colar direto no Kuma também. */
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap');
+
+:root {
+  --pf-fundo: #f3f4f1;
+  --pf-superficie: #ffffff;
+  --pf-borda: #d8dad2;
+  --pf-tinta: #121211;
+  --pf-suave: #4f504a;
+  --pf-amarelo: #f5d33b;
+  --pf-amarelo-texto: #765c00;
+  --pf-verde: #a5e34b;
+  --pf-verde-texto: #3b6a08;
+  --pf-vermelho: #c93a2b;
+  --pf-laranja: #e8a33d;
+}
+.dark {
+  --pf-fundo: #0b0b0b;
+  --pf-superficie: #141414;
+  --pf-borda: #262624;
+  --pf-tinta: #f4f4ef;
+  --pf-suave: #aaaaa1;
+  --pf-amarelo-texto: #f5d33b;
+  --pf-verde-texto: #a5e34b;
+  --pf-vermelho: #f06a5a;
+}
+
+body,
+body *:not(svg):not(path),
+.dark body,
+body.dark {
+  font-family:
+    'Barlow',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif !important;
+}
+body,
+.dark body,
+body.dark {
+  background: var(--pf-fundo) !important;
+  color: var(--pf-tinta);
+  font-family:
+    'Barlow',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+.container {
+  max-width: 880px;
+}
+
+/* Cabeçalho: logo menor e título em condensada, como o painel. */
+.title-flex {
+  gap: 14px;
+  padding-top: 24px;
+}
+.title-flex .logo-wrapper img,
+.title-flex .logo {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 10px;
+}
+.title-flex .title,
+.title-flex span {
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--pf-tinta);
+}
+.description {
+  color: var(--pf-suave);
+  font-size: 1rem;
+}
+
+/* Faixa de situação geral: verde quando tudo está no ar, vermelho com queda. */
+.overall-status {
+  background: var(--pf-superficie) !important;
+  border: 1px solid var(--pf-borda);
+  border-left: 6px solid var(--pf-verde);
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  font-weight: 600;
+  color: var(--pf-tinta);
+}
+.overall-status .ok {
+  color: var(--pf-verde-texto) !important;
+}
+.overall-status .danger {
+  color: var(--pf-vermelho) !important;
+}
+.overall-status:has(.danger) {
+  border-left-color: var(--pf-vermelho);
+}
+.overall-status:has(.warning) {
+  border-left-color: var(--pf-laranja);
+}
+
+/* Grupos (Sistema, Servidor) e cartões. */
+.group-title,
+h2.group-title,
+.group-title span {
+  font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif !important;
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pf-amarelo-texto) !important;
+}
+.shadow-box {
+  background: var(--pf-superficie) !important;
+  border: 1px solid var(--pf-borda);
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+/* Dentro do grupo, linhas separadas por um fio (sem caixa dentro de caixa). */
+.monitor-list .item {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--pf-borda) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 14px 16px;
+}
+.monitor-list .item:last-child {
+  border-bottom: 0 !important;
+}
+.monitor-list .item:hover {
+  background: var(--pf-superficie) !important;
+}
+.item-name {
+  font-weight: 600;
+  color: var(--pf-tinta);
+}
+
+/* Porcentagem de disponibilidade. */
+.badge.bg-primary,
+.badge.bg-success {
+  background: var(--pf-verde) !important;
+  color: #121211 !important;
+  font-weight: 700;
+  border-radius: 999px;
+}
+.badge.bg-danger {
+  background: var(--pf-vermelho) !important;
+}
+
+/* Barrinhas do histórico: verde no ar, vermelho caído, laranja tentando, cinza sem dado. */
+.hp-bar-big .beat,
+.beat {
+  background-color: var(--pf-verde) !important;
+  border-radius: 3px !important;
+}
+.hp-bar-big .beat.down,
+.beat.down {
+  background-color: var(--pf-vermelho) !important;
+}
+.hp-bar-big .beat.pending,
+.beat.pending {
+  background-color: var(--pf-laranja) !important;
+}
+.hp-bar-big .beat.maintenance,
+.beat.maintenance {
+  background-color: #6b8afd !important;
+}
+.hp-bar-big .beat.empty,
+.beat.empty {
+  background-color: var(--pf-borda) !important;
+}
+
+/* Incidente fixado no topo. */
+.incident {
+  border-radius: 12px !important;
+  border: 1px solid var(--pf-borda);
+}
+.incident.bg-warning {
+  background: var(--pf-amarelo) !important;
+  color: #121211 !important;
+}
+
+/* Rodapé discreto; esconde o "Powered by". */
+footer,
+.footer {
+  color: var(--pf-suave);
+  font-size: 0.9rem;
+}
+footer a {
+  color: var(--pf-amarelo-texto);
+}
+.powered-by {
+  display: none !important;
+}
+
+@media (max-width: 600px) {
+  .monitor-list .item {
+    padding: 10px 12px;
+  }
+  .title-flex {
+    padding-top: 12px;
+  }
+}

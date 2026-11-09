@@ -87,7 +87,9 @@ privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os va
     Servidor);
   - grava `BACKUP_AVISO_URL` e `VIGIA_AVISO_URL` no `.env` e já manda o primeiro aviso.
 
-  Pode rodar de novo: o que já existe não é duplicado. O painel interno continua com login.
+  Pode rodar de novo: o que já existe não é duplicado. O painel interno continua com login. A
+  página pública sai com o visual do Pente Fino (`infra/status.css`, aplicado pelo script; dá para
+  colar também em Editar página → CSS personalizado).
 - Backup: ver docs/restaurar.md.
 
 ## Comandos úteis
