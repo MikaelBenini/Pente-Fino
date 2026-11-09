@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { configuracaoDoSistema, cupomParaCadastro } from '@pente-fino/db';
 import {
   conferirCupom,
+  lerCupons,
   dataLocal,
   lerConfiguracaoPublica,
   TABELA_PADRAO,
@@ -43,17 +44,22 @@ export class PrecosService {
     return new Date(`${dataLocal(new Date())}T00:00:00Z`);
   }
 
+  /** Confere um cupom (sem lançar erro): o resultado e quantas vagas ainda restam. */
+  async conferir(codigo: string) {
+    const bruto = await cupomParaCadastro(this.banco.prisma, codigo.trim());
+    const r = conferirCupom(bruto, dataLocal(new Date()));
+    const vagas = lerCupons(bruto.cupom ? [bruto.cupom] : [])[0]?.vagas ?? null;
+    return { ...r, restantes: vagas === null ? null : Math.max(0, vagas - bruto.usados) };
+  }
+
   /** Confere um cupom para uma conta nova: 400 com o motivo se não vale. */
   async cupomValido(
     codigo: string | undefined,
-  ): Promise<{ cupom: string | null; descontoBp: number }> {
-    if (!codigo?.trim()) return { cupom: null, descontoBp: 0 };
-    const r = conferirCupom(
-      await cupomParaCadastro(this.banco.prisma, codigo.trim()),
-      dataLocal(new Date()),
-    );
+  ): Promise<{ cupom: string | null; descontoBp: number; restantes: number | null }> {
+    if (!codigo?.trim()) return { cupom: null, descontoBp: 0, restantes: null };
+    const r = await this.conferir(codigo);
     if (!r.ok) throw Erros.validacao([{ campo: 'cupom', mensagem: r.motivo }]);
-    return { cupom: r.codigo, descontoBp: r.descontoBp };
+    return { cupom: r.codigo, descontoBp: r.descontoBp, restantes: r.restantes };
   }
 
   /** A administração mudou as tabelas: vale na hora. */

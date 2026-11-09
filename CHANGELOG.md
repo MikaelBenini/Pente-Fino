@@ -7,6 +7,17 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (plano fundador)
+
+- Plano fundador pronto: cupom `FUNDADOR` (30% enquanto a assinatura estiver ativa, 20 vagas)
+  já cadastrado; `/planos` mostra quantas vagas restam e o botão leva o cupom para o cadastro; a
+  tela de assinatura aceita cupom e convida para o FUNDADOR.
+
+### Alterado
+
+- A vaga de um cupom passa a contar quando a barbearia paga (antes, no cadastro): conta em teste
+  que nunca paga não ocupa vaga.
+
 ### Adicionado (LGPD)
 
 - Ficha do cliente (dono): "Baixar os dados" entrega tudo o que o sistema guarda do cliente, e

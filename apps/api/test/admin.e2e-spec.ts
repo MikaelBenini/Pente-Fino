@@ -805,7 +805,7 @@ describe('cupons', () => {
     await app2.$disconnect();
   });
 
-  it('cupom com 1 vaga: confere no site, dá o desconto na assinatura e recusa quando acaba', async () => {
+  it('cupom com 1 vaga: confere no site e dá o desconto; a vaga só conta quando a conta paga', async () => {
     await req('put', '/admin/configuracoes/cupons', { codigo: 'x', descontoBp: 100 }).expect(400);
     await req('put', '/admin/configuracoes/cupons', {
       codigo: codigo.toLowerCase(),
@@ -816,6 +816,7 @@ describe('cupons', () => {
     expect((await http().get(`/publico/cupom/${codigo.toLowerCase()}`).expect(200)).body).toEqual({
       codigo,
       descontoBp: 3000,
+      restantes: 1,
     });
     const nao = await http().get('/publico/cupom/NAOEXISTE').expect(400);
     expect(nao.body.erro.campos[0]).toEqual({ campo: 'cupom', mensagem: 'Cupom não encontrado.' });
@@ -830,13 +831,16 @@ describe('cupons', () => {
       precoPorMes: Math.round(7990 * 0.7),
     });
 
-    const recusa = await cadastro(`cupom2-${sufixo}@e2e.pentefino.dev`, codigo).expect(400);
-    expect(recusa.body.erro.campos[0].mensagem).toBe('As vagas deste cupom acabaram.');
+    // Em teste não ocupa vaga: outro cadastro com o mesmo cupom passa (quem pagar primeiro
+    // leva; ver plano-fundador.e2e-spec.ts).
+    await cadastro(`cupom2-${sufixo}@e2e.pentefino.dev`, codigo).expect(201);
+    const outro = await como(app, `cupom2-${sufixo}@e2e.pentefino.dev`, 'senha-do-cupom-123');
+    contasCriadas.push((await outro.get('/auth/eu').expect(200)).body.contaId);
     const lista = (await req('get', '/admin/configuracoes/cupons').expect(200)).body as {
       codigo: string;
       usados: number;
     }[];
-    expect(lista.find((c) => c.codigo === codigo)?.usados).toBe(1);
+    expect(lista.find((c) => c.codigo === codigo)?.usados).toBe(0);
   });
 });
 

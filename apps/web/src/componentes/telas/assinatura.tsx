@@ -299,12 +299,38 @@ function Assinar({
   const [documento, setDocumento] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  // Cupom digitado aqui (quem se cadastrou sem); o da conta já vem em descontoBp.
+  const [codigo, setCodigo] = useState('');
+  const [cupom, setCupom] = useState<{ codigo: string; descontoBp: number } | null>(null);
+  const [erroCupom, setErroCupom] = useState<string | null>(null);
+  const fundador = useQuery({
+    queryKey: ['cupom', 'FUNDADOR'],
+    queryFn: () => api<{ restantes: number | null }>('publico/cupom/FUNDADOR'),
+    enabled: descontoBp === 0,
+    retry: false,
+    staleTime: 300_000,
+  });
+  async function aplicarCupom(texto = codigo) {
+    setErroCupom(null);
+    setCupom(null);
+    if (!texto.trim()) return;
+    try {
+      setCupom(
+        await api<{ codigo: string; descontoBp: number }>(
+          `publico/cupom/${encodeURIComponent(texto.trim())}`,
+        ),
+      );
+    } catch (e) {
+      setErroCupom(mensagemDe(e));
+    }
+  }
+  const descontoEfetivo = cupom?.descontoBp ?? descontoBp;
   const assinar = useAcao(
     (corpo: object) => api<{ linkPagamento: string | null }>('conta/assinatura', { corpo }),
     [chaveAssinatura],
   );
   const docOk = documentoValido(documento);
-  const valor = valorDaCobranca(plano, ciclo, unidades, tabela, descontoBp);
+  const valor = valorDaCobranca(plano, ciclo, unidades, tabela, descontoEfetivo);
   return (
     <section
       aria-labelledby="titulo-assinar"
@@ -343,7 +369,12 @@ function Assinar({
             setErro(null);
             if (!docOk) return setErro('Confira o CPF ou CNPJ.');
             try {
-              const r = await assinar.mutateAsync({ plano, ciclo, documento });
+              const r = await assinar.mutateAsync({
+                plano,
+                ciclo,
+                documento,
+                ...(cupom ? { cupom: cupom.codigo } : {}),
+              });
               setLink(r.linkPagamento);
               if (r.linkPagamento) window.open(r.linkPagamento, '_blank', 'noopener');
             } catch (er) {
@@ -386,6 +417,50 @@ function Assinar({
                 : undefined
             }
           />
+          {descontoBp === 0 && (
+            <div className="flex flex-col gap-2 sm:col-span-3">
+              {!cupom && (fundador.data?.restantes ?? 0) > 0 && (
+                <Aviso tom="info">
+                  Plano fundador: 30% de desconto enquanto a assinatura estiver ativa. Restam{' '}
+                  {fundador.data!.restantes} vagas.{' '}
+                  <button
+                    type="button"
+                    className="font-semibold underline underline-offset-4"
+                    onClick={() => {
+                      setCodigo('FUNDADOR');
+                      void aplicarCupom('FUNDADOR');
+                    }}
+                  >
+                    Usar o cupom FUNDADOR
+                  </button>
+                </Aviso>
+              )}
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-48 flex-1">
+                  <Campo
+                    id="assinar-cupom"
+                    rotulo="Cupom (opcional)"
+                    autoComplete="off"
+                    value={codigo}
+                    onChange={(e) => {
+                      setCodigo(e.target.value.toUpperCase());
+                      setCupom(null);
+                    }}
+                    erro={erroCupom ?? undefined}
+                  />
+                </div>
+                <Botao type="button" variante="secundario" onClick={() => void aplicarCupom()}>
+                  Aplicar
+                </Botao>
+              </div>
+              {cupom && (
+                <p role="status" className="text-sm text-acao-texto">
+                  Cupom {cupom.codigo}: {formatarPercentualBp(cupom.descontoBp)} de desconto em toda
+                  cobrança.
+                </p>
+              )}
+            </div>
+          )}
           <p className="font-denso text-lg tabular-nums sm:col-span-2">
             {formatarMoeda(valor)}{' '}
             <span className="font-sans text-base text-tinta-suave">

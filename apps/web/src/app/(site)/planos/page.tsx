@@ -12,6 +12,7 @@ import { ComparativoPlanos } from '@/componentes/site/comparativo-planos';
 import { LinkBotao } from '@/componentes/site/link-botao';
 import { type Pergunta, Perguntas } from '@/componentes/site/perguntas';
 import { URL_SITE } from '@/lib/site';
+import { VagasFundador } from '@/componentes/site/vagas-fundador';
 
 export const metadata: Metadata = {
   title: 'Planos e preços',
@@ -109,11 +110,12 @@ export default function Pagina() {
             </h2>
             <p className="max-w-2xl text-tinta-suave">
               Para as {FUNDADOR.vagas} primeiras barbearias que assinarem, em qualquer plano,
-              enquanto a assinatura estiver ativa. Em troca, pedimos uma conversa por mês sobre o
-              que melhorar.
+              enquanto a assinatura estiver ativa (a vaga é garantida no primeiro pagamento). Em
+              troca, pedimos uma conversa por mês sobre o que melhorar.
             </p>
+            <VagasFundador total={FUNDADOR.vagas} />
           </div>
-          <LinkBotao href="/cadastro" variante="modulo" className="shrink-0">
+          <LinkBotao href="/cadastro?cupom=FUNDADOR" variante="modulo" className="shrink-0">
             Quero ser fundador
           </LinkBotao>
         </div>
