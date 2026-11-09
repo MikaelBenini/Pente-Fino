@@ -37,7 +37,7 @@ services:
       retries: 20
 
   redis:
-    image: redis:8.8-alpine
+    image: redis:8.10-alpine
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     ports:
