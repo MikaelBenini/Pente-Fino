@@ -139,10 +139,11 @@ export class CobrancaService {
       }),
     );
     const tabelaHoje = await this.precos.vigente(dataLocal(new Date()));
+    const desconto = await this.descontoAoAssinar(conta, d.cupom);
     const assinatura = await this.externo(() =>
       this.provedor.criarAssinatura({
         cliente: clienteId,
-        valor: valorDaCobranca(d.plano, d.ciclo, unidades, tabelaHoje, conta.descontoBp),
+        valor: valorDaCobranca(d.plano, d.ciclo, unidades, tabelaHoje, desconto.descontoBp),
         ciclo: d.ciclo,
         vencimento: dataLocal(new Date()),
         descricao: `Pente Fino ${NOME_PLANO[d.plano]} (${d.ciclo})`,
@@ -157,6 +158,8 @@ export class CobrancaService {
           asaasAssinaturaId: assinatura.id,
           plano: d.plano,
           ciclo: d.ciclo,
+          cupom: desconto.cupom,
+          descontoBp: desconto.descontoBp,
           // Assinar é contrato: vale a tabela de hoje.
           precosDesde: this.precos.hoje(),
         },
@@ -166,7 +169,13 @@ export class CobrancaService {
         entidadeId: conta.id,
         acao: 'assinar',
         antes: { plano: conta.plano, ciclo: conta.ciclo, status: conta.status },
-        depois: { plano: d.plano, ciclo: d.ciclo, assinatura: assinatura.id, notaFiscal: nota },
+        depois: {
+          plano: d.plano,
+          ciclo: d.ciclo,
+          assinatura: assinatura.id,
+          notaFiscal: nota,
+          cupom: desconto.cupom,
+        },
       });
     });
     await this.conferir();
@@ -177,6 +186,27 @@ export class CobrancaService {
       }),
     );
     return { linkPagamento: pendente?.linkPagamento ?? null };
+  }
+
+  /**
+   * Cupom na hora de assinar. O digitado agora precisa valer (400 com o motivo). O do cadastro é
+   * conferido de novo: a vaga só conta quando a conta paga, então se as vagas acabaram enquanto
+   * a conta estava em teste, ela assina sem o desconto. Conta já ativa (venda presencial) mantém
+   * o desconto que tem.
+   */
+  private async descontoAoAssinar(
+    conta: { status: string; cupom: string | null; descontoBp: number },
+    digitado: string | undefined,
+  ): Promise<{ cupom: string | null; descontoBp: number }> {
+    if (digitado?.trim()) {
+      const r = await this.precos.conferir(digitado);
+      if (!r.ok) throw Erros.validacao([{ campo: 'cupom', mensagem: r.motivo }]);
+      return { cupom: r.codigo, descontoBp: r.descontoBp };
+    }
+    if (!conta.cupom) return { cupom: null, descontoBp: 0 };
+    if (conta.status === 'ativa') return { cupom: conta.cupom, descontoBp: conta.descontoBp };
+    const r = await this.precos.conferir(conta.cupom);
+    return r.ok ? { cupom: r.codigo, descontoBp: r.descontoBp } : { cupom: null, descontoBp: 0 };
   }
 
   /**

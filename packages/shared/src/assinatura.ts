@@ -206,6 +206,8 @@ export const assinarSchema = z.object({
     .string()
     .transform((v) => v.replace(/\D/g, ''))
     .refine(documentoValido, { error: 'CPF ou CNPJ inválido.' }),
+  /** Cupom digitado na hora de assinar (quem se cadastrou sem); vazio = o da conta, se houver. */
+  cupom: z.string().trim().max(30).optional(),
 });
 export type AssinarEntrada = z.infer<typeof assinarSchema>;
 

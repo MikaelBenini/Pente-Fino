@@ -435,7 +435,9 @@ export class AdminConfigController {
     const contas = await contasDaPlataforma(this.banco.prisma);
     return lerCupons(await this.valor('cupons')).map((c) => ({
       ...c,
-      usados: contas.filter((x) => x.cupom?.toUpperCase() === c.codigo).length,
+      // A vaga conta quando a conta paga (igual a cupom_para_cadastro()).
+      usados: contas.filter((x) => x.cupom?.toUpperCase() === c.codigo && x.status === 'ativa')
+        .length,
     }));
   }
 

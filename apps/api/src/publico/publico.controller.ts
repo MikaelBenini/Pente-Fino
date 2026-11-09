@@ -142,9 +142,11 @@ export class PublicoController {
   @Publico()
   @LimiteAutenticacao()
   @ApiOperation({ summary: 'Conferir um cupom antes de se cadastrar (desconto ou o motivo)' })
-  async cupom(@Param('codigo') codigo: string): Promise<{ codigo: string; descontoBp: number }> {
+  async cupom(
+    @Param('codigo') codigo: string,
+  ): Promise<{ codigo: string; descontoBp: number; restantes: number | null }> {
     const r = await this.precosServico.cupomValido(codigo.slice(0, 30));
-    return { codigo: r.cupom!, descontoBp: r.descontoBp };
+    return { codigo: r.cupom!, descontoBp: r.descontoBp, restantes: r.restantes };
   }
 
   @Post('contas')
