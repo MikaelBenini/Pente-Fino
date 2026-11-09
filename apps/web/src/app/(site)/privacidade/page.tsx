@@ -60,9 +60,11 @@ const SECOES: readonly SecaoLegal[] = [
     titulo: 'Com quem compartilhamos',
     conteudo: (
       <p>
-        Só com fornecedores necessários ao serviço: hospedagem do servidor, envio de e-mail e
-        processamento de pagamento da assinatura. O WhatsApp usado pelo bot é o da própria
-        barbearia. Os dados ficam em servidor no Brasil ou em país com proteção adequada.
+        Só com fornecedores necessários ao serviço: hospedagem do servidor (Hostinger), cópia de
+        segurança criptografada (Backblaze, nos Estados Unidos; o arquivo sai do servidor já cifrado
+        e o fornecedor não consegue ler), envio de e-mail (Brevo) e cobrança (Asaas). O WhatsApp
+        usado pelo bot é o da própria barbearia. Nenhum dado é vendido ou usado para publicidade de
+        terceiros.
       </p>
     ),
   },
@@ -129,7 +131,11 @@ const SECOES: readonly SecaoLegal[] = [
           <strong>Cliente de uma barbearia?</strong> Fale primeiro com ela, que é a controladora dos
           seus dados; se precisar, nós ajudamos a barbearia a atender o pedido.
         </p>
-        <p>O dono da conta exporta os dados da barbearia em planilha pelo próprio sistema.</p>
+        <p>
+          O dono da conta exporta os dados da barbearia em planilha pelo próprio sistema e, na ficha
+          de cada cliente, baixa tudo o que o sistema guarda dele ou apaga os dados pessoais a
+          pedido.
+        </p>
       </>
     ),
   },

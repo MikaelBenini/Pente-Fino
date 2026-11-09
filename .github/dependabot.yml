@@ -36,3 +36,14 @@ updates:
       interval: weekly
       day: monday
       timezone: America/Sao_Paulo
+  # Imagens do compose de produção (Evolution API, PostgreSQL, Redis, Caddy, Uptime Kuma): a
+  # Evolution corrige o WhatsApp com frequência; cada PR passa pelo CI antes de ir ao ar.
+  - package-ecosystem: docker-compose
+    directory: /infra
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore

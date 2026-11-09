@@ -7,6 +7,20 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (LGPD)
+
+- Ficha do cliente (dono): "Baixar os dados" entrega tudo o que o sistema guarda do cliente, e
+  "Apagar os dados pessoais" atende o pedido de eliminação (atendimentos e caixa ficam, sem o
+  nome).
+- Termos com a seção "Dados dos clientes da barbearia" (quem controla, quem opera, fornecedores,
+  incidentes); Privacidade cita os fornecedores (versão 2026-11-09).
+
+### Segurança
+
+- Teste que confere a regra de acesso de todas as rotas da API e a separação entre unidades;
+  rota nova sem regra não passa no CI.
+- Dependabot também para as imagens do servidor (Evolution API, PostgreSQL, Redis, Caddy).
+
 ### Operação
 
 - Backup diário também no Backblaze B2 (criptografado), com restauração a partir de lá testada.
