@@ -26,7 +26,7 @@
     "@pente-fino/db": "workspace:*",
     "@pente-fino/shared": "workspace:*",
     "@pente-fino/whatsapp": "workspace:*",
-    "bullmq": "6.7.0",
+    "bullmq": "6.7.1",
     "ioredis": "6.0.0",
     "jose": "6.2.15",
     "nestjs-pino": "5.3.1",
