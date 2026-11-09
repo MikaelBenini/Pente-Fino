@@ -7,6 +7,16 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Operação
+
+- Backup diário também no Backblaze B2 (criptografado), com restauração a partir de lá testada.
+- Página pública de status no ar: `https://status.seupentefino.com.br/status/pente-fino`.
+
+### Corrigido (deploy)
+
+- Deploy automático quebrava quando o próprio `implantar.sh` mudava (#125); pasta `status.css`
+  criada pelo Docker travava o `status.sh` (#124).
+
 ### Adicionado (operação)
 
 - Página pública de status com o visual do Pente Fino (cores, fonte e logo), aplicado pelo
