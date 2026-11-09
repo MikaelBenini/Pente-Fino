@@ -22,6 +22,7 @@ describe('menu por papel', () => {
       'Bot',
       'Conversas do bot',
       'Configurações',
+      'Ajuda',
     ]);
   });
 
@@ -54,6 +55,7 @@ describe('menu por papel', () => {
       'Caixa do dia',
       'Clientes',
       'Conversas do bot',
+      'Ajuda',
     ]);
   });
 
@@ -66,6 +68,7 @@ describe('menu por papel', () => {
       'Comissões',
       'Metas',
       'Perfil',
+      'Ajuda',
     ]);
   });
 
