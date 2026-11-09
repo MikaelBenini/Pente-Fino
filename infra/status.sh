@@ -12,6 +12,11 @@ set -euo pipefail
 cd "$(dirname "$0")"
 [[ -f .env ]] || { echo "Falta o .env: rode ./instalar.sh primeiro." >&2; exit 1; }
 [[ -f status-kuma.mjs ]] || { echo "Falta o status-kuma.mjs (vem com o deploy)." >&2; exit 1; }
+# Montar um arquivo que não existe faz o Docker criar uma pasta com o nome dele: sem o CSS, a
+# página sai com o visual padrão do Kuma (o deploy traz o status.css).
+[[ -d status.css ]] && { rmdir status.css 2>/dev/null || true; }
+CSS=()
+[[ -f status.css ]] && CSS=(-v "$PWD/status.css:/app/status.css:ro")
 
 ler() { sed -n "s/^$1=//p" .env | tail -1 | sed "s/^['\"]//; s/['\"]$//"; }
 DOMINIO="$(ler DOMINIO)"
@@ -35,7 +40,7 @@ saida="$(
     -e SMTP_HOST="$(ler SMTP_HOST)" -e SMTP_PORT="$(ler SMTP_PORT)" \
     -e SMTP_USER="$(ler SMTP_USER)" -e SMTP_PASSWORD="$(ler SMTP_PASSWORD)" \
     -e EMAIL_FROM="$(ler EMAIL_FROM)" \
-    -v "$PWD/status-kuma.mjs:/app/status-kuma.mjs:ro" -v "$PWD/status.css:/app/status.css:ro" -w /app \
+    -v "$PWD/status-kuma.mjs:/app/status-kuma.mjs:ro" "${CSS[@]}" -w /app \
     node:24-alpine sh -c 'npm install --silent --no-audit --no-fund socket.io-client@4.8.1 >/dev/null 2>&1 && node status-kuma.mjs'
 )" || { echo "$saida" | grep -v '^PUSH' >&2; exit 1; }
 unset KUMA_SENHA

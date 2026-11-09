@@ -25,6 +25,8 @@ chmod +x "$TMP"/*.sh "$TMP"/postgres/init/*.sh
 
 caddy_mudou=0
 cmp -s "$TMP/Caddyfile" Caddyfile || caddy_mudou=1
+# Pasta deixada pelo Docker no lugar de um arquivo que ainda não existia (ex.: status.css).
+for f in "$TMP"/*; do [[ -f "$f" && -d "$(basename "$f")" ]] && { rmdir "$(basename "$f")" 2>/dev/null || true; }; done
 cp -r "$TMP"/. .
 ./atualizar.sh "$SHA"
 docker compose --env-file .env -f docker-compose.prod.yml up -d --remove-orphans caddy status >/dev/null
