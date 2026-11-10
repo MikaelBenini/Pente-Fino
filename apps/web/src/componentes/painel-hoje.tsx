@@ -142,12 +142,10 @@ export function PainelHoje() {
         />
         <Cartao
           rotulo="Para bater a meta"
-          valor={
-            porDia !== null ? `${formatarMoeda(porDia)}/dia` : metasFat.length ? 'Batida' : '—'
-          }
+          valor={porDia !== null ? formatarMoeda(porDia) : metasFat.length ? 'Batida' : '—'}
           detalhe={
             porDia !== null
-              ? 'por dia de trabalho que sobra no mês'
+              ? 'por dia, em cada dia de trabalho que sobra no mês'
               : metasFat.length
                 ? 'A meta de faturamento do mês já foi alcançada.'
                 : 'Defina a meta do mês em Métricas e metas.'
