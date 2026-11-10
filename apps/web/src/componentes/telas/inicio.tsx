@@ -8,6 +8,7 @@ import { useEstadoConfiguracao } from './configuracao-inicial';
 import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
 import { PainelIndicadores } from '../indicadores';
+import { PainelHoje } from '../painel-hoje';
 import { PrimeirosPassos } from '../primeiros-passos';
 import { CardOcupacao } from '../ocupacao';
 import { CabecalhoPagina, Estado } from '../pagina';
@@ -36,7 +37,7 @@ export function TelaInicio() {
 
   return (
     <div className="flex flex-col gap-8">
-      <CabecalhoPagina titulo="Início" pergunta={`Como está ${nomeDoMes(mes)}?`} />
+      <CabecalhoPagina titulo="Início" pergunta={`O dia de hoje e como está ${nomeDoMes(mes)}`} />
       {configuracao.data && !configuracao.data.configurada && (
         <Link
           href="/configuracao-inicial"
@@ -52,7 +53,9 @@ export function TelaInicio() {
           </span>
         </Link>
       )}
+      <PainelHoje />
       {configuracao.data?.configurada !== false && <PrimeirosPassos />}
+      <h2 className="text-xl font-semibold">O mês</h2>
       <Estado consulta={metas}>
         {() =>
           metas.data!.length > 0 ? (

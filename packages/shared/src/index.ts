@@ -52,6 +52,7 @@ export * from './nota-fiscal.js';
 export * from './limpeza.js';
 export * from './dados-cliente.js';
 export * from './ajuda.js';
+export * from './painel.js';
 export * from './cobranca-manual.js';
 export * from './configuracao-sistema.js';
 export * from './modelos-email.js';
