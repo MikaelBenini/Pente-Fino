@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (painel do dia)
+
+- Início com o bloco "Hoje": quanto entrou e quanto ainda vai entrar, atendidos, agenda ocupada,
+  quanto precisa entrar por dia para bater a meta, "Precisa de você agora" (cada item leva à tela
+  de resolver) e os próximos horários — o dono vê o dia sem trocar de aba.
+
 ### Alterado (oferta)
 
 - Plano fundador virou **oferta de lançamento**: cupom `LANCAMENTO`, 30% para sempre para quem
