@@ -372,7 +372,7 @@ function FormSmtp({ atual }: { atual: SmtpNaTela | null }) {
   const [usuario, setUsuario] = useState(atual?.usuario ?? '');
   const [senha, setSenha] = useState('');
   const [remetente, setRemetente] = useState(
-    atual?.remetente ?? 'Pente Fino <nao-responda@pentefino.com.br>',
+    atual?.remetente ?? 'Pente Fino <nao-responda@seupentefino.com.br>',
   );
   const [acao, setAcao] = useState<'salvar' | 'conexao' | 'email' | 'env' | null>(null);
   const [resultado, setResultado] = useState<Resultado | null>(null);

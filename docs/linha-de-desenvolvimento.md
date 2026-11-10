@@ -628,6 +628,32 @@ O sistema passa a cobrar das barbearias e a receber clientes sozinho.
 - [ ] Cancelar a conta pela administração também cancela a assinatura do sistema e as do clube online no Asaas (hoje a limpeza de dados retém a conta e avisa na Saúde do sistema até alguém cancelar no Asaas)
 - [ ] **Pronto quando:** uma barbearia desconhecida se cadastra, testa, assina e paga sem falar com ninguém
 
+## Etapa 23.1 · Crescimento e diferenciais (pedido em 2026-11-10)
+
+Meta fixa: ser melhor que BestBarbers e Cash Barber nos quesitos que fazem a barbearia assinar e
+ficar (comparativo em 2026-11-09: eles têm app próprio na loja, nota fiscal, totem e mentoria; nós
+temos bot de WhatsApp, lucro real, comanda única e preço menor). Ordem de construção abaixo.
+
+**Visão do dono**
+
+- [ ] **Painel do dia ("Hoje na barbearia")**: uma tela para o dono ver o que importa hoje sem trocar de aba — faturamento do dia e quanto falta para a meta do dia, agenda (atendidos, em atendimento, a seguir, faltas), comandas esperando confirmação ou fechamento, caixa (aberto, fechado, diferença), clientes novos e aniversariantes, avaliações baixas, WhatsApp (conectado, conversas esperando atendente), avisos e atalhos para agir; por unidade ou a rede inteira. Vira a tela inicial do dono e do gestor; o Início do mês continua para a visão do mês
+- [ ] **Relatório do mês, comparado mês a mês**: faturamento, lucro, atendimentos, ticket médio, clientes novos, retorno de clientes (voltaram em até 45 dias), faltas, ocupação, nota média, agendamentos por canal (WhatsApp, link, balcão) — cada um com o mês anterior, a variação em % e seta; bloco "O que melhorou" e "O que piorou" escrito em frases; gráfico dos últimos 12 meses; escolhe o mês e a unidade; exporta em PDF e planilha
+- [ ] **Barbeiros: quanto custa e quanto dá de lucro**: por barbeiro no mês — faturamento, comissão (o custo dele) e, se houver, valor fixo/salário cadastrado; lucro que ele gera (receita − custo de produto − comissão − fixo); atendimentos, ticket, % de extras, retorno dos clientes dele, nota média, faltas; pontos fortes e fracos comparando com a média da equipe (em frases: "ticket 18% acima da média", "pouco extra"); serviços que ele mais faz
+- [ ] **Mix de serviços e produtos**: participação de cada serviço e produto no faturamento, na quantidade e no lucro (%), com a variação contra o mês anterior; serviços mais feitos e os que dão menos margem
+- [ ] **Raio-X semanal no WhatsApp do dono**: toda segunda, uma mensagem curta com quanto sobrou na semana, o serviço que mais deu lucro, onde vazou (faltas, desconto, extra baixo) e o barbeiro destaque, com o link do relatório; liga e desliga no Perfil
+
+**Vitrine e agendamento**
+
+- [ ] **Página da barbearia** (`/b/<slug>`, "bom para pôr no Instagram"): nome, logo, endereço e horário de cada unidade, serviços com preço, equipe, clube com os planos e o botão "Agendar"; com mais de uma unidade, o cliente escolhe a unidade e cai no agendamento dela; QR code para imprimir no balcão; prévia bonita no WhatsApp e no Instagram
+- [ ] **"App da barbearia" sem loja**: a página da barbearia instala no celular do cliente com o nome e a logo da barbearia (não do Pente Fino) e abre direto em "Agendar" e "Meus horários" — a resposta ao "app próprio" dos concorrentes, sem esperar loja nem pagar mais
+- [ ] **Agendar pelo Google**: passo a passo para pôr o link de agendamento no perfil do Google (botão "Agendar" no Maps); integração oficial "Reserve with Google" só depois (exige parceria com o Google)
+
+**Retenção e receita**
+
+- [ ] **Clube que não perde assinante**: aviso ao cliente e à barbearia quando o cartão é recusado, nova tentativa e link de pagamento pelo WhatsApp; previsão de receita do clube no mês; lista de assinantes em risco (não vem há muito tempo, cobrança atrasada); planos semanais e quinzenais
+- [ ] **Migração assistida**: importar clientes, serviços e equipe exportados de outros sistemas (planilhas do BestBarbers, Cash Barber, Trinks, AppBarber) com o mapeamento de colunas automático e a conferência antes de gravar
+- [ ] **Pronto quando:** o dono abre o sistema e entende o dia numa tela, compara o mês com o anterior sem calcular nada, sabe quanto cada barbeiro custa e rende, e a barbearia tem uma página própria que o cliente usa para agendar pelo Instagram
+
 ## Etapa 24 · Premium completo
 
 Depois do lançamento, o que o Premium anuncia como "em breve".
