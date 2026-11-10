@@ -69,6 +69,7 @@ import { ResumoController } from './resumo/resumo.controller.js';
 import { ResumoService } from './resumo/resumo.service.js';
 import { MeController } from './me/me.controller.js';
 import { ResultadosController } from './resultados/resultados.controller.js';
+import { RelatorioController, RelatorioService } from './resultados/relatorio.controller.js';
 import { ResultadosService } from './resultados/resultados.service.js';
 import { ClientesController } from './clientes/clientes.controller.js';
 import { DadosClienteController } from './clientes/dados-cliente.controller.js';
@@ -155,6 +156,7 @@ export class ComumModule {}
     CaixaController,
     DespesasController,
     ResultadosController,
+    RelatorioController,
     ComissoesController,
     DesempenhoController,
     OcupacaoController,
@@ -199,6 +201,7 @@ export class ComumModule {}
     ResultadosService,
     ComissoesService,
     DesempenhoService,
+    RelatorioService,
     ResumoService,
     BancoPlataforma,
     AdminAuthService,

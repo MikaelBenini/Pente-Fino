@@ -50,6 +50,7 @@ function detalhe(p: ComInclusoes, verRegras: boolean): ProfissionalDetalhe {
     dataEntrada: dataTexto(p.dataEntrada),
     dataSaida: p.dataSaida ? dataTexto(p.dataSaida) : null,
     ativo: p.ativo,
+    custoFixoMensal: verRegras ? p.custoFixoMensal : null,
     horarios: p.horarios
       .map((h) => ({ diaSemana: h.diaSemana, inicioMin: h.inicioMin, fimMin: h.fimMin }))
       .sort((a, b) => a.diaSemana - b.diaSemana || a.inicioMin - b.inicioMin),
@@ -206,7 +207,12 @@ export class ProfissionaisService {
       const ativo = d.ativo ?? (dataSaida ? false : undefined);
       await tx.profissional.update({
         where: { id },
-        data: { dataEntrada: d.dataEntrada ? data(d.dataEntrada) : undefined, dataSaida, ativo },
+        data: {
+          dataEntrada: d.dataEntrada ? data(d.dataEntrada) : undefined,
+          dataSaida,
+          ativo,
+          custoFixoMensal: d.custoFixoMensal,
+        },
       });
       await auditar(tx, {
         entidade: 'profissional',
@@ -216,6 +222,7 @@ export class ProfissionaisService {
           dataEntrada: dataTexto(antes.dataEntrada),
           dataSaida: antes.dataSaida ? dataTexto(antes.dataSaida) : null,
           ativo: antes.ativo,
+          custoFixoMensal: antes.custoFixoMensal,
         },
         depois: d,
       });

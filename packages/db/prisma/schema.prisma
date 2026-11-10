@@ -497,6 +497,8 @@ model Profissional {
   unidadeId    String    @map("unidade_id") @db.Uuid
   dataEntrada  DateTime  @map("data_entrada") @db.Date
   dataSaida    DateTime? @map("data_saida") @db.Date
+  /// Valor fixo por mês além da comissão (salário, ajuda de custo), em centavos; entra no custo do barbeiro no relatório.
+  custoFixoMensal Int @default(0) @map("custo_fixo_mensal")
   ativo        Boolean   @default(true)
   criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)

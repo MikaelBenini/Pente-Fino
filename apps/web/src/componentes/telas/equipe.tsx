@@ -100,6 +100,7 @@ function Profissionais() {
   const [completar, setCompletar] = useState<BarbeiroSemCadastro | null>(null);
   const [horarios, setHorarios] = useState<ProfissionalDetalhe | null>(null);
   const [regra, setRegra] = useState<ProfissionalDetalhe | null>(null);
+  const [fixo, setFixo] = useState<ProfissionalDetalhe | null>(null);
   const [desligar, setDesligar] = useState<ProfissionalDetalhe | null>(null);
   const hoje = dataLocal(new Date());
   const alterar = useAcao(
@@ -210,6 +211,14 @@ function Profissionais() {
                             {textoRegra(produto)}
                           </dd>
                         </div>
+                        {p.custoFixoMensal !== null && (
+                          <div className="col-span-2">
+                            <dt className="text-tinta-suave">Valor fixo por mês</dt>
+                            <dd className="font-denso text-lg font-semibold tabular-nums">
+                              {p.custoFixoMensal ? formatarMoeda(p.custoFixoMensal) : 'Só comissão'}
+                            </dd>
+                          </div>
+                        )}
                       </dl>
                       {futuras.length > 0 && (
                         <p className="text-sm text-aviso-texto">
@@ -248,6 +257,11 @@ function Profissionais() {
                           <Botao variante="secundario" onClick={() => setRegra(p)}>
                             Mudar comissão
                           </Botao>
+                          {p.custoFixoMensal !== null && (
+                            <Botao variante="secundario" onClick={() => setFixo(p)}>
+                              Mudar valor fixo
+                            </Botao>
+                          )}
                           <Botao variante="fantasma" onClick={() => setDesligar(p)}>
                             Desligar
                           </Botao>
@@ -287,6 +301,7 @@ function Profissionais() {
             />
             <Horarios profissional={horarios} onFechar={() => setHorarios(null)} />
             <NovaRegra profissional={regra} onFechar={() => setRegra(null)} />
+            <ValorFixo profissional={fixo} onFechar={() => setFixo(null)} />
             <ModalConfirmacao
               aberto={desligar !== null}
               titulo={`Desligar ${desligar?.nome ?? ''}?`}
@@ -610,6 +625,71 @@ function Horarios({
             Salvar horários
           </Botao>
         </div>
+      </form>
+    </Dialogo>
+  );
+}
+
+/** Salário ou ajuda de custo além da comissão: entra no custo do barbeiro no relatório do mês. */
+function ValorFixo({
+  profissional,
+  onFechar,
+}: {
+  profissional: ProfissionalDetalhe | null;
+  onFechar: () => void;
+}) {
+  const [valor, setValor] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useAcao(
+    (custoFixoMensal: number) =>
+      api(`profissionais/${profissional!.id}`, { metodo: 'PATCH', corpo: { custoFixoMensal } }),
+    [chaves.profissionais],
+  );
+  const inicial = profissional?.custoFixoMensal
+    ? (profissional.custoFixoMensal / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+    : '';
+  const atual = valor ?? inicial;
+  function fechar() {
+    setValor(null);
+    setErro(null);
+    onFechar();
+  }
+  return (
+    <Dialogo
+      aberto={profissional !== null}
+      titulo={`Valor fixo de ${profissional?.nome ?? ''}`}
+      descricao="Salário, ajuda de custo ou pró-labore pago todo mês além da comissão. Entra no custo dele no relatório do mês. Deixe em branco se ele ganha só comissão."
+      onFechar={fechar}
+    >
+      <form
+        method="post"
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setErro(null);
+          const centavos = atual.trim() ? lerMoeda(atual) : 0;
+          if (centavos === null || centavos < 0) return setErro('Valor inválido.');
+          try {
+            await salvar.mutateAsync(centavos);
+            fechar();
+          } catch (er) {
+            setErro(mensagemDe(er));
+          }
+        }}
+      >
+        <Campo
+          id="valor-fixo"
+          rotulo="Valor fixo por mês (R$)"
+          inputMode="decimal"
+          placeholder="0,00"
+          value={atual}
+          onChange={(e) => setValor(e.target.value)}
+        />
+        {erro && <Aviso tom="erro">{erro}</Aviso>}
+        <Botao type="submit" carregando={salvar.isPending} className="self-start">
+          Salvar
+        </Botao>
       </form>
     </Dialogo>
   );

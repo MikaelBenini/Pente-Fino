@@ -14,6 +14,7 @@ describe('menu por papel', () => {
       'Clientes',
       'Financeiro',
       'Métricas e metas',
+      'Relatório do mês',
       'Painel da rede',
       'Equipe',
       'Serviços',
