@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (relatório do mês)
+
+- "Relatório do mês" (dono e gestor): o mês contra o anterior em números e em frases (o que
+  melhorou, o que piorou), faturamento dos últimos 12 meses, por onde os clientes chegaram,
+  quanto cada barbeiro custa e quanto rende (com pontos fortes e fracos) e quanto cada serviço e
+  produto pesa no faturamento. No mês corrente, compara com os mesmos dias do mês anterior.
+- Equipe: "Mudar valor fixo" para cadastrar salário ou ajuda de custo além da comissão.
+
 ### Adicionado (painel do dia)
 
 - Início com o bloco "Hoje": quanto entrou e quanto ainda vai entrar, atendidos, agenda ocupada,

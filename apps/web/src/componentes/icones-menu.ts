@@ -8,6 +8,7 @@ import {
   Coins,
   Contact,
   Crown,
+  FileChartColumn,
   Gauge,
   LifeBuoy,
   MessageCircle,
@@ -27,6 +28,7 @@ import {
 
 export const ICONES_MENU: Record<IdMenu, LucideIcon> = {
   inicio: Gauge,
+  relatorio: FileChartColumn,
   ajuda: LifeBuoy,
   dia: ClipboardList,
   hoje: Sun,

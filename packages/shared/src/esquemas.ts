@@ -223,6 +223,13 @@ export const profissionalParcialSchema = z.object({
   dataEntrada: dataIso.optional(),
   dataSaida: dataIso.nullable().optional(),
   ativo: z.boolean().optional(),
+  /** Valor fixo por mês além da comissão (salário, ajuda de custo), em centavos. */
+  custoFixoMensal: z
+    .number()
+    .int()
+    .min(0, { error: 'O valor fixo não pode ser negativo.' })
+    .max(10_000_000)
+    .optional(),
 });
 
 export const novaRegraComissaoSchema = z.object({
@@ -262,6 +269,8 @@ export interface ProfissionalDetalhe {
   dataEntrada: string;
   dataSaida: string | null;
   ativo: boolean;
+  /** Valor fixo por mês (centavos); null para quem não é da gestão. */
+  custoFixoMensal: number | null;
   horarios: { diaSemana: number; inicioMin: number; fimMin: number }[];
   regras: RegraComissaoDetalhe[];
 }

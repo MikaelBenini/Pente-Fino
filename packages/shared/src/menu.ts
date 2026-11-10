@@ -11,6 +11,7 @@ export type IdMenu =
   | 'caixa'
   | 'financeiro'
   | 'metricas'
+  | 'relatorio'
   | 'rede'
   | 'equipe'
   | 'clube'
@@ -60,6 +61,13 @@ export const ITENS_MENU: readonly ItemMenu[] = [
     id: 'metricas',
     rotulo: 'Métricas e metas',
     rota: '/metricas',
+    papeis: GESTAO,
+    grupo: 'Gestão',
+  },
+  {
+    id: 'relatorio',
+    rotulo: 'Relatório do mês',
+    rota: '/relatorio',
     papeis: GESTAO,
     grupo: 'Gestão',
   },
