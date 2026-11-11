@@ -7,7 +7,9 @@ import {
   formatarMoeda,
   formatarTelefone,
   NOMES_DIAS_CURTOS,
+  avisoDaTroca,
   textoTolerancia,
+  trocarDeUnidade,
   type AgendamentoPublicoCriado,
   type ClienteDoLink,
   type EsperaPublicaCriada,
@@ -15,17 +17,18 @@ import {
   type UnidadePublica,
 } from '@pente-fino/shared';
 import { Botao, Campo, Carregando, cn, EstadoVazio, Marcador } from '@pente-fino/ui';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BellRing,
   CalendarCheck,
   CalendarClock,
+  ChevronDown,
   CircleCheck,
   MapPin,
   MessageCircle,
   SearchX,
 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
@@ -140,6 +143,41 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
   const [enviando, setEnviando] = useState(false);
   const [feito, setFeito] = useState<AgendamentoPublicoCriado | null>(null);
   const dias = useMemo(() => proximosDias(14), []);
+  const consultas = useQueryClient();
+  const router = useRouter();
+  const [avisoTroca, setAvisoTroca] = useState<string | null>(null);
+  const [trocando, setTrocando] = useState(false);
+
+  /**
+   * Troca de unidade sem perder o que o cliente já fez: carrega a unidade nova antes de mudar o
+   * endereço (o formulário não some), mantém os serviços que ela faz e os dados digitados e
+   * avisa o que mudou. O barbeiro é de cada unidade; o código do link do bot também.
+   */
+  async function trocarUnidade(novo: string) {
+    setTrocando(true);
+    setErro(null);
+    try {
+      const nova = await consultas.fetchQuery({
+        queryKey: ['publico', novo],
+        queryFn: () => api<UnidadePublica>(`publico/agendamento/${novo}`),
+      });
+      const t = trocarDeUnidade(servicos, u.servicos, nova.servicos);
+      setServicos(t.mantidos);
+      setAvisoTroca(avisoDaTroca(t, nova.nome, profissional !== '', formatarMoeda));
+      setProfissional('');
+      setHorario(null);
+      if (cliente) {
+        setNome(nome);
+        setTelefone(formatarTelefone(cliente.telefone));
+        setUsarLink(false);
+      }
+      router.replace(`/agendar?u=${novo}`, { scroll: false });
+    } catch {
+      setErro('Não foi possível abrir a outra unidade. Tente de novo.');
+    } finally {
+      setTrocando(false);
+    }
+  }
 
   const livres = useQuery({
     queryKey: ['publico', slug, 'horarios', servicos.join(','), dia, profissional],
@@ -236,6 +274,15 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
 
   return (
     <Moldura u={u}>
+      {/* Quem veio pela conversa do WhatsApp já está na unidade que quer: nada a escolher. */}
+      {u.outrasUnidades.length > 0 && !token && (
+        <EscolherUnidade
+          outras={u.outrasUnidades}
+          trocando={trocando}
+          onTrocar={(novo) => void trocarUnidade(novo)}
+        />
+      )}
+      {avisoTroca && <Aviso tom="info">{avisoTroca}</Aviso>}
       {u.linkWhatsappAgendar && (
         <a
           href={u.linkWhatsappAgendar}
@@ -478,6 +525,63 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
         </Botao>
       </form>
     </Moldura>
+  );
+}
+
+/**
+ * Saída discreta para outra unidade da barbearia (em geral, em outra cidade): o link já é da
+ * unidade certa na maioria das vezes, então o cliente não precisa decidir nada para agendar.
+ */
+function EscolherUnidade({
+  outras,
+  trocando,
+  onTrocar,
+}: {
+  outras: UnidadePublica['outrasUnidades'];
+  trocando: boolean;
+  onTrocar: (slug: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <section aria-label="Outras unidades da barbearia" className="-mt-3 flex flex-col gap-2">
+      <button
+        type="button"
+        aria-expanded={aberto}
+        aria-controls="outras-unidades"
+        onClick={() => setAberto(!aberto)}
+        className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-tinta-suave underline-offset-4 hover:text-tinta hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+      >
+        Agendar em outra unidade
+        <ChevronDown
+          aria-hidden
+          className={cn('size-4 transition-transform', aberto && 'rotate-180')}
+        />
+      </button>
+      {aberto && (
+        <ul id="outras-unidades" className="flex flex-col gap-2" aria-label="Outras unidades">
+          {outras.map((o) => (
+            <li key={o.slug}>
+              <button
+                type="button"
+                disabled={trocando}
+                onClick={() => {
+                  setAberto(false);
+                  onTrocar(o.slug);
+                }}
+                className="flex min-h-11 w-full flex-col items-start rounded-md border border-borda bg-superficie px-3 py-2 text-left hover:border-borda-forte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:opacity-60"
+              >
+                <span className="font-semibold">{o.nome}</span>
+                {o.endereco && (
+                  <span className="flex items-center gap-1 text-sm text-tinta-suave">
+                    <MapPin aria-hidden className="size-3.5 shrink-0" /> {o.endereco}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

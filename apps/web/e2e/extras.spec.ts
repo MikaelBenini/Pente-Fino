@@ -65,6 +65,59 @@ test('cliente agenda pelo link público, sem login', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Remarcar' })).toHaveCount(0);
 });
 
+test('cliente troca de unidade no meio do agendamento sem perder o que fez', async ({ page }) => {
+  // Quem veio pela conversa do WhatsApp da unidade não vê a troca: já está na unidade certa.
+  await page.goto('/agendar?u=demo-centro&c=tokenDeTeste123');
+  await expect(page.getByRole('heading', { name: /Barbearia Pente Fino/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Agendar em outra unidade' })).toHaveCount(0);
+
+  await page.goto('/agendar?u=demo-centro');
+  await page.getByLabel(/^Corte · 30 min$/).check();
+  // Um barbeiro do Centro: não existe na outra unidade.
+  await page
+    .getByRole('group')
+    .filter({ has: page.getByRole('button', { name: 'Sem preferência' }) })
+    .getByRole('button')
+    .nth(1)
+    .click();
+  await page.getByLabel('Nome').fill(`Cliente Troca ${sufixo}`);
+  await page.getByLabel('WhatsApp').fill('(11) 98888-7777');
+
+  await page.getByRole('button', { name: 'Agendar em outra unidade' }).click();
+  await page
+    .getByRole('list', { name: 'Outras unidades' })
+    .getByRole('button', { name: /Jardins/ })
+    .click();
+  await page.waitForURL(/\/agendar\?u=demo-jardins$/);
+  await expect(page.getByText('Jardins', { exact: true }).first()).toBeVisible();
+  // Mantém o serviço e os dados; o barbeiro volta para "Sem preferência", com aviso.
+  await expect(page.getByLabel(/^Corte · 30 min$/)).toBeChecked();
+  await expect(page.getByLabel('Nome')).toHaveValue(`Cliente Troca ${sufixo}`);
+  await expect(page.getByLabel('WhatsApp')).toHaveValue('(11) 98888-7777');
+  await expect(page.getByRole('button', { name: 'Sem preferência' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Agora você está agendando na unidade Jardins' }),
+  ).toContainText('escolha o barbeiro de novo');
+
+  // E agenda na unidade nova.
+  await page
+    .getByRole('button', { name: /^(domingo|segunda|terça|quarta|quinta|sexta|sábado), \d+ de / })
+    .nth(diasAteProximoUtil())
+    .click();
+  await page
+    .getByRole('group', { name: /Horários livres/ })
+    .getByRole('button')
+    .first()
+    .click();
+  await page.getByLabel('WhatsApp').fill(`(11) 9${String(Date.now()).slice(-8)}`);
+  await page.getByRole('button', { name: /^Agendar \d{2}:\d{2}/ }).click();
+  await expect(page.getByRole('heading', { name: 'Horário marcado' })).toBeVisible();
+  await expect(page.getByText('Jardins', { exact: true })).toBeVisible();
+});
+
 test('link de horário que não existe explica o problema', async ({ page }) => {
   await page.goto(`/horario?t=${'x'.repeat(22)}`);
   await expect(page.getByRole('heading', { name: 'Link não encontrado' })).toBeVisible();

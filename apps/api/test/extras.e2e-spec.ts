@@ -312,6 +312,31 @@ describe('link público de agendamento', () => {
       .get(`/publico/agendamento/${slug}/horarios?data=${dia(90)}&servicoIds=${corte}`)
       .expect(400);
   });
+
+  it('com duas unidades no link, cada página oferece a outra para trocar', async () => {
+    expect((await http().get(`/publico/agendamento/${slug}`)).body.outrasUnidades).toEqual([]);
+    const slugB = `${slug}-b`;
+    await dono
+      .patch(`/unidades/${cenario.unidadeB}`, {
+        slug: slugB,
+        agendamentoPublico: true,
+        endereco: 'Rua B, 2',
+      })
+      .expect(200);
+    try {
+      const a = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body;
+      expect(a.outrasUnidades).toEqual([{ slug: slugB, nome: 'Unidade B', endereco: 'Rua B, 2' }]);
+      const b = (await http().get(`/publico/agendamento/${slugB}`).expect(200)).body;
+      // Só endereço, nome e local: nenhum id interno nem da conta.
+      expect(b.outrasUnidades).toEqual([{ slug, nome: 'Unidade A', endereco: null }]);
+      // O mesmo serviço da barbearia, sem preço na B: não aparece para agendar lá.
+      expect(b.servicos.map((x: { id: string }) => x.id)).not.toContain(corte);
+    } finally {
+      // Desligada, a unidade some da lista da outra.
+      await dono.patch(`/unidades/${cenario.unidadeB}`, { agendamentoPublico: false }).expect(200);
+    }
+    expect((await http().get(`/publico/agendamento/${slug}`)).body.outrasUnidades).toEqual([]);
+  });
 });
 
 describe('comanda impressa', () => {
