@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (serviços e administração)
+
+- Serviços: editar o serviço pelo próprio nome (com o lápis), na primeira coluna. Antes o botão
+  "Editar" ficava no fim da tabela, fora da tela no notebook, e parecia que não dava para editar.
+  Preços e durações não quebram mais em duas linhas.
+- Administração → Estender teste: a data sugerida nunca passa do limite de 60 dias.
+
 ### Adicionado (medição dos anúncios)
 
 - Conversão do cadastro com o valor do plano (com o cupom) e a moeda, só no sucesso: o Google Ads
