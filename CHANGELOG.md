@@ -7,6 +7,24 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (falhas invisíveis na administração)
+
+- E-mails que não saíram aparecem na Saúde do sistema: quando, para quem (endereço mascarado),
+  qual e-mail, o motivo do servidor de e-mail e as tentativas, com "Reenviar" e "Descartar" (com
+  motivo, na auditoria). Falha nas últimas 24 h entra no "Precisa de atenção"; se for de
+  boas-vindas ou confirmação de cadastro, como urgente.
+- WhatsApp caído há mais de 2 horas entra no "Precisa de atenção" como urgente. Antes, a Saúde
+  mostrava a queda e o Início dizia "Tudo em dia por aqui".
+- As abas da administração seguem o endereço: abrir um link com `#contas`, digitar o endereço ou
+  voltar no navegador troca a aba (antes só valia ao recarregar).
+- IP de quem acessa a administração: um jeito só de ler, sem o prefixo `::ffff:`. A Saúde do
+  sistema avisa quando os acessos chegam com IP interno (em geral, IPv6 com a rede do Docker só em
+  IPv4); o passo a passo para corrigir está em `docs/producao.md`.
+
+### Operação
+
+- CI: a instalação do navegador dos testes tenta de novo quando o espelho do Ubuntu não responde.
+
 ### Corrigido (números da administração)
 
 - "Em dia" só para conta que já pagou e não está atrasada. Conta ativa que nunca pagou aparece

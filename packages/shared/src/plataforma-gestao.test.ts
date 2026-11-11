@@ -208,4 +208,53 @@ describe('auditoria', () => {
       ),
     ).toEqual([]);
   });
+
+  // Admin R8: a Saúde mostrava "WhatsApp que caiu · desde 09/11 22:18" e o Início, "Tudo em dia".
+  it('WhatsApp caído há mais de 2 h é urgente; menos que isso, ainda não', () => {
+    const caiu = (horas: number) => ({
+      contaId: 'c1',
+      unidade: 'Centro',
+      caiuEm: new Date(agora.getTime() - horas * 3_600_000).toISOString(),
+    });
+    const pago = [{ contaId: 'c1', valor: 1, status: 'paga' as const, vencimento: '2026-11-01' }];
+    const tipos = (horas: number) =>
+      pendenciasDaPlataforma([conta({})], pago, agora, { conexoesCaidas: [caiu(horas)] });
+    expect(tipos(1)).toEqual([]);
+    expect(tipos(3)).toEqual([
+      expect.objectContaining({
+        tipo: 'whatsapp_caido',
+        prioridade: 1,
+        detalhe: 'WhatsApp da unidade Centro caído há 3 horas: o bot e os lembretes estão parados',
+      }),
+    ]);
+    expect(tipos(72)[0]!.detalhe).toContain('caído há 3 dias');
+    // De outra conta, ou de conta interna: não entra.
+    expect(
+      pendenciasDaPlataforma([conta({ interna: true })], pago, agora, {
+        conexoesCaidas: [caiu(5)],
+      }),
+    ).toEqual([]);
+  });
+
+  it('e-mail que não saiu: uma pendência do sistema, urgente se for de confirmação', () => {
+    const p = pendenciasDaPlataforma([], [], agora, {
+      falhasEmail: [{ critico: false }, { critico: true }],
+    });
+    expect(p).toEqual([
+      {
+        tipo: 'falha_email',
+        contaId: null,
+        conta: 'Sistema',
+        irPara: 'saude',
+        prioridade: 1,
+        detalhe:
+          '2 e-mails não saíram nas últimas 24 h (um é de boas-vindas ou confirmação de cadastro)',
+        acao: 'Ver o motivo na Saúde do sistema e reenviar',
+      },
+    ]);
+    expect(
+      pendenciasDaPlataforma([], [], agora, { falhasEmail: [{ critico: false }] })[0],
+    ).toMatchObject({ prioridade: 2, detalhe: '1 e-mail não saiu nas últimas 24 h' });
+    expect(pendenciasDaPlataforma([], [], agora, { falhasEmail: [] })).toEqual([]);
+  });
 });

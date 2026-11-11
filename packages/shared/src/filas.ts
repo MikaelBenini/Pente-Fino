@@ -189,6 +189,8 @@ export interface TrabalhoEmail {
   assunto: string;
   texto: string;
   html?: string;
+  /** Modelo que gerou o e-mail (chave de modelos-email.ts): a Saúde do sistema mostra o nome. */
+  modelo?: string;
 }
 
 /** Eventos de domínio (docs/documentacao-do-produto.md, seção 5). */

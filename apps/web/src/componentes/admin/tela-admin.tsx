@@ -223,6 +223,13 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     setAbaEstado(id);
     window.history.replaceState(null, '', `#${id}`);
   };
+  // Admin R10: trocar o endereço com a página aberta (link, voltar do navegador, digitar
+  // /admin#contas) também troca a aba; antes, só valia ao carregar a página.
+  useEffect(() => {
+    const seguirEndereco = () => setAbaEstado(window.location.hash.slice(1) || 'inicio');
+    window.addEventListener('hashchange', seguirEndereco);
+    return () => window.removeEventListener('hashchange', seguirEndereco);
+  }, []);
   const abas = [
     {
       id: 'inicio',

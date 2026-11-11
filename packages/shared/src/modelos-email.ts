@@ -343,14 +343,20 @@ export function emailPronto(
   opcoes: OpcoesEmail = {},
 ): TrabalhoEmail {
   const e = emailDoModelo(chave, personalizados[chave], vars);
-  return montarEmail(
-    para,
-    e.assunto,
-    e.paragrafos,
-    e.botao && link ? { texto: e.botao, link } : null,
-    opcoes,
-  );
+  return {
+    ...montarEmail(
+      para,
+      e.assunto,
+      e.paragrafos,
+      e.botao && link ? { texto: e.botao, link } : null,
+      opcoes,
+    ),
+    modelo: chave,
+  };
 }
+
+/** E-mails que, se não saem, travam a conversão (a barbearia não confirma o cadastro). */
+export const EMAILS_CRITICOS: readonly ChaveModeloEmail[] = ['boas_vindas', 'confirmar_email'];
 
 /** Como a administração vê um modelo. */
 export interface ModeloEmailNaTela extends DefinicaoModeloEmail {

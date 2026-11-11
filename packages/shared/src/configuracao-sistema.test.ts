@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { avisoGeralSchema, avisoVigente, lerConfiguracaoPublica } from './configuracao-sistema.js';
+import {
+  avisoGeralSchema,
+  avisoVigente,
+  lerConfiguracaoPublica,
+  ipInterno,
+  mascararEmail,
+  normalizarIp,
+} from './configuracao-sistema.js';
 import { DIAS_TESTE, TABELA_PADRAO, VERSAO_TERMOS } from './planos.js';
 import { NOTA_FISCAL_PADRAO } from './nota-fiscal.js';
 
@@ -57,5 +64,30 @@ describe('SMTP configurável', () => {
     expect(
       smtpEntradaSchema.parse({ host: 'smtp.x.com', porta: 465, seguro: true, remetente: 'a@b.c' }),
     ).toMatchObject({ senha: null, usuario: '' });
+  });
+});
+
+describe('falhas de e-mail e IP de quem acessa (admin R7 e R9)', () => {
+  it('destinatário mascarado: dá para reconhecer sem expor o endereço', () => {
+    expect(mascararEmail('joao.silva@gmail.com')).toBe('jo***@gmail.com');
+    expect(mascararEmail('a@b.com')).toBe('a***@b.com');
+    expect(mascararEmail('sem-arroba')).toBe('***');
+  });
+
+  it('IP interno (Docker, localhost, rede privada) não é o do visitante', () => {
+    for (const ip of [
+      '172.18.0.1',
+      '10.0.0.5',
+      '192.168.1.10',
+      '127.0.0.1',
+      '::1',
+      '::ffff:172.18.0.1',
+      'fd00::1',
+    ])
+      expect(ipInterno(ip), ip).toBe(true);
+    for (const ip of ['200.150.10.20', '172.32.0.1', '2804:14c::1', null])
+      expect(ipInterno(ip), String(ip)).toBe(false);
+    expect(normalizarIp('::ffff:200.150.10.20')).toBe('200.150.10.20');
+    expect(normalizarIp(' ')).toBeNull();
   });
 });

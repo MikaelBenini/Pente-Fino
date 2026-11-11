@@ -176,9 +176,15 @@ export function InicioAdmin({
                         {p.detalhe} · <span className="text-tinta">{p.acao}</span>
                       </span>
                     </div>
-                    <Botao variante="secundario" onClick={() => onAbrirConta(p.contaId)}>
-                      Abrir conta
-                    </Botao>
+                    {p.contaId ? (
+                      <Botao variante="secundario" onClick={() => onAbrirConta(p.contaId!)}>
+                        Abrir conta
+                      </Botao>
+                    ) : (
+                      <Botao variante="secundario" onClick={() => onIrPara(p.irPara ?? 'saude')}>
+                        Ver na Saúde do sistema
+                      </Botao>
+                    )}
                   </li>
                 ))}
               </ul>

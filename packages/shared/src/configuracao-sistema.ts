@@ -97,6 +97,60 @@ export interface SaudeDoSistema {
   limpeza: ExecucaoLimpezaNaTela[];
   /** Notas fiscais das mensalidades (admin R2). */
   notasFiscais: NotasFiscaisNaSaude;
+  /**
+   * Admin R9: acessos à administração nos últimos 7 dias que chegaram com IP interno (rede do
+   * Docker). Acima de zero, o IP real do visitante se perde antes do Caddy (em geral, IPv6).
+   */
+  ipsInternos: { acessos: number; ultimo: string | null };
+}
+
+// ─── E-mails que não saíram (admin R7) ────────────────────────────────────
+
+/** Um e-mail que falhou na fila, sem o conteúdo e com o destinatário mascarado. */
+export interface FalhaDeEmail {
+  id: string;
+  quando: string;
+  /** "jo***@gmail.com". */
+  para: string;
+  /** Nome do modelo ("Confirmação do e-mail"), ou null em e-mail antigo sem a marca. */
+  modelo: string | null;
+  assunto: string;
+  /** Resposta do servidor de e-mail (SMTP). */
+  motivo: string;
+  tentativas: number;
+  /** Boas-vindas ou confirmação: sem ele, a barbearia não confirma o cadastro. */
+  critico: boolean;
+}
+
+export const descartarEmailSchema = z.object({
+  motivo: z.string().trim().min(5, { error: 'Explique o motivo (pelo menos 5 letras).' }).max(300),
+});
+
+/** "joao.silva@gmail.com" → "jo***@gmail.com": dá para reconhecer sem expor o endereço. */
+export function mascararEmail(email: string): string {
+  const [usuario = '', dominio = ''] = email.trim().split('@');
+  if (!dominio) return '***';
+  return `${usuario.slice(0, 2)}***@${dominio}`;
+}
+
+// ─── IP de quem acessa (admin R9) ─────────────────────────────────────────
+
+/** "::ffff:203.0.113.5" → "203.0.113.5" (IPv4 dentro de IPv6, como o Node às vezes entrega). */
+export function normalizarIp(ip: string | null | undefined): string | null {
+  const v = ip?.trim();
+  if (!v) return null;
+  return v.toLowerCase().startsWith('::ffff:') && v.includes('.') ? v.slice(7) : v;
+}
+
+/** IP de rede interna (Docker, localhost, rede privada): não é o do visitante. */
+export function ipInterno(ip: string | null | undefined): boolean {
+  const v = normalizarIp(ip);
+  if (!v) return false;
+  if (v === '::1' || v.startsWith('127.')) return true;
+  if (/^(10\.|192\.168\.)/.test(v)) return true;
+  const m = /^172\.(\d{1,3})\./.exec(v);
+  if (m && Number(m[1]) >= 16 && Number(m[1]) <= 31) return true;
+  return /^f[cd][0-9a-f]{2}:/i.test(v) || /^fe80:/i.test(v);
 }
 
 // ─── E-mail (SMTP) ────────────────────────────────────────────────────────

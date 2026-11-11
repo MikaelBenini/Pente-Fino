@@ -7,7 +7,7 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import type { PapelPlataforma } from '@pente-fino/shared';
+import { normalizarIp, type PapelPlataforma } from '@pente-fino/shared';
 import type { Request } from 'express';
 import { Erros } from '../comum/erros.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
@@ -25,10 +25,13 @@ export const AdminAtual = createParamDecorator(
     ctx.switchToHttp().getRequest<ComAdmin>().admin!,
 );
 
-/** IP de quem chamou (com TRUST_PROXY, o do cliente atrás do Caddy). */
+/**
+ * IP de quem chamou (com TRUST_PROXY, o do cliente atrás do Caddy; a ponte /admin-api do web
+ * repassa o X-Forwarded-For que o Caddy montou). Um só jeito de ler, para o login e a auditoria.
+ */
 export const IpDaRequisicao = createParamDecorator(
   (_: unknown, ctx: ExecutionContext): string | null =>
-    ctx.switchToHttp().getRequest<Request>().ip ?? null,
+    normalizarIp(ctx.switchToHttp().getRequest<Request>().ip),
 );
 
 /**
