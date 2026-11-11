@@ -3,15 +3,23 @@
 import type { INestApplication } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
-import { dataLocal, DIAS_TESTE, VERSAO_TERMOS } from '@pente-fino/shared';
+import {
+  dataLocal,
+  DIAS_TESTE,
+  SEM_ORIGEM,
+  TOTAL_PASSOS_ATIVACAO,
+  VERSAO_TERMOS,
+} from '@pente-fino/shared';
 import type {
   ContaNaPlataforma,
   SaudeDoSistema,
   FichaContaPlataforma,
   MetricasDaPlataforma,
   RespostaEntrarAdmin,
+  NotaInterna,
   VendaCriada,
   VendasDoVendedor,
+  VendasPorOrigem,
 } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
@@ -532,6 +540,117 @@ describe('venda presencial', () => {
       pagas: 1,
     });
     await v.get('/admin/vendas').expect(403);
+  });
+});
+
+describe('administração mais prática (admin U2 a U5)', () => {
+  const chefe = { email: `chefe-u-${sufixo}@pentefino.dev`, senha: 'senha-do-chefe-u-1' };
+  const vend = { email: `vend-u-${sufixo}@pentefino.dev`, senha: 'senha-do-vend-u-12' };
+  let tChefe = '';
+  let tVend = '';
+  let contaU = '';
+  const com = (t: string) => ({
+    get: (url: string) => http().get(url).set('authorization', `Bearer ${t}`),
+    post: (url: string, corpo: object) =>
+      http().post(url).set('authorization', `Bearer ${t}`).send(corpo),
+  });
+
+  beforeAll(async () => {
+    await plataforma.usuarioPlataforma.createMany({
+      data: [
+        {
+          email: chefe.email,
+          nome: 'Clara Chefe',
+          papel: 'admin',
+          senhaHash: await hash(chefe.senha),
+        },
+        {
+          email: vend.email,
+          nome: 'Vado Vendas',
+          papel: 'vendedor',
+          senhaHash: await hash(vend.senha),
+        },
+      ],
+    });
+    tChefe = (await entrarComSegundoFator(chefe)).token;
+    tVend = (await entrarComSegundoFator(vend)).token;
+  });
+  afterAll(async () => {
+    await plataforma.usuarioPlataforma.updateMany({
+      where: { email: { in: [chefe.email, vend.email] } },
+      data: { ativo: false },
+    });
+    if (contaU) {
+      const app2 = criarPrisma();
+      await naConta(app2, contaU, (tx) => tx.conta.deleteMany({ where: { id: contaU } }));
+      await app2.$disconnect();
+    }
+  });
+
+  it('venda com CPF, ficha com ativação e notas da equipe, lista com origem e vendas por origem', async () => {
+    const v = com(tVend);
+    const adm = com(tChefe);
+    const venda = {
+      barbearia: `Barbearia das Notas ${sufixo}`,
+      dono: { nome: 'Nina Notas', email: `notas-${sufixo}@e2e.pentefino.dev`, telefone: null },
+      plano: 'basico',
+      ciclo: 'mensal',
+      diasTeste: 10,
+    };
+    // CPF/CNPJ é opcional, mas conferido quando vem (admin U4).
+    await v.post('/admin/contas', { ...venda, documento: '111.111.111-11' }).expect(400);
+    const r = (await v.post('/admin/contas', { ...venda, documento: '529.982.247-25' }).expect(201))
+      .body as VendaCriada;
+    contaU = r.contaId;
+
+    // Ficha (U3): documento, ativação e notas.
+    const ficha = (await adm.get(`/admin/contas/${contaU}`).expect(200))
+      .body as FichaContaPlataforma;
+    expect(ficha.documento).toBe('52998224725');
+    expect(ficha.status).toBe('teste');
+    expect(ficha.ativacao).toBeGreaterThanOrEqual(0);
+    expect(ficha.ativacao).toBeLessThanOrEqual(TOTAL_PASSOS_ATIVACAO);
+    expect(ficha.notas).toEqual([]);
+
+    // Notas: só o admin escreve; texto curto não vale; o vendedor da conta lê.
+    await adm.post(`/admin/contas/${contaU}/notas`, { texto: 'ok' }).expect(400);
+    await v.post(`/admin/contas/${contaU}/notas`, { texto: 'Vendedor não escreve' }).expect(403);
+    await adm
+      .post(`/admin/contas/${randomUUID()}/notas`, { texto: 'Conta que não existe' })
+      .expect(404);
+    const nota = (
+      await adm
+        .post(`/admin/contas/${contaU}/notas`, {
+          texto: 'Ligar na sexta para ajudar com a agenda.',
+        })
+        .expect(201)
+    ).body as NotaInterna;
+    expect(nota).toMatchObject({
+      autor: 'Clara Chefe',
+      texto: 'Ligar na sexta para ajudar com a agenda.',
+    });
+    const vista = (await v.get(`/admin/contas/${contaU}`).expect(200)).body as FichaContaPlataforma;
+    expect(vista.notas.map((n) => n.texto)).toEqual(['Ligar na sexta para ajudar com a agenda.']);
+    expect(vista.historico[0]).toMatchObject({ acao: 'nota_interna', quem: 'Clara Chefe' });
+    // Na auditoria fica só que houve nota, sem o texto.
+    expect(JSON.stringify(vista.historico)).not.toContain('Ligar na sexta');
+
+    // A aplicação das barbearias não lê as notas.
+    const app2 = criarPrisma();
+    await expect(app2.$queryRaw`SELECT texto FROM nota_interna_conta LIMIT 1`).rejects.toThrow();
+    await app2.$disconnect();
+
+    // Lista (U2): origem e ativação.
+    const lista = (await v.get('/admin/contas').expect(200)).body as ContaNaPlataforma[];
+    expect(lista.find((c) => c.id === contaU)).toMatchObject({ origem: null });
+    expect(typeof lista.find((c) => c.id === contaU)!.ativacao).toBe('number');
+
+    // Vendas por origem (U5): só o admin.
+    await v.get('/admin/vendas/origens').expect(403);
+    const origens = (await adm.get('/admin/vendas/origens').expect(200)).body as VendasPorOrigem[];
+    const direto = origens.find((o) => o.origem === SEM_ORIGEM)!;
+    expect(direto.cadastros).toBeGreaterThanOrEqual(1);
+    expect(direto.emTeste).toBeGreaterThanOrEqual(1);
   });
 });
 

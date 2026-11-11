@@ -760,7 +760,11 @@ motivo e vai para a auditoria.
 - [x] **R8** WhatsApp caído há mais de 2 h em "Precisa de atenção", urgente (`HORAS_WHATSAPP_CAIDO`). O e-mail "WhatsApp desconectado" para a barbearia já existia
 - [x] **R9** IP real (feito em 2026-11-11: `normalizarIp` no login e em toda a auditoria; a Saúde do sistema conta os acessos dos últimos 7 dias com IP interno (`ipInterno`). Causa provável do `172.18.0.1`: acesso por IPv6 com a rede do Docker só em IPv4, que perde o IP antes do Caddy. **Dono:** correção em `docs/producao.md` → "IP real na auditoria" (a rápida é tirar o registro AAAA do DNS))
 - [x] **R10** abas do `/admin` seguem o endereço (`hashchange`): link, endereço digitado e voltar do navegador
-- [ ] **U1–U9** usabilidade por aba
+- [x] **U2** lista de contas: colunas Ativação (`ativacao` em `plataforma_contas()`, os mesmos passos do tutorial, `TOTAL_PASSOS_ATIVACAO = PASSOS_INICIAIS.length`) e Origem, primeira coluna fixa, ordem "Menos configuradas" e as duas colunas no CSV (o filtro "Conta interna" já existia)
+- [x] **U3** ficha: próxima cobrança, dias de teste e ativação (`proximaCobrancaDaConta`, `diasRestantesDoTeste` em `ficha-admin.ts`), "Chamar no WhatsApp" (`whatsappDoDono`) e notas internas (`nota_interna_conta`, só a administração lê; `POST /admin/contas/:id/notas` só admin, na auditoria sem o texto). A origem já estava (F2) e "Reativar" de cancelada já veio com o R3
+- [x] **U4** nova venda: `type="tel"` com máscara (`mascararTelefone`), CPF/CNPJ opcional e conferido (`mascararDocumento`, `documentoValido`, gravado em `conta.documento`), erro por campo pelo mesmo `venderContaSchema` do servidor, dias de teste numéricos de 0 a 60 e resumo antes de criar
+- [x] **U5** vendas por origem: cadastros, em teste, pagantes, conversão (só de quem saiu do teste) e receita paga (`vendasPorOrigem`, `GET /admin/vendas/origens`, só admin)
+- [ ] **U1, U6–U9** usabilidade das outras abas
 - [ ] **F1–F9** funil de ativação, origem do cadastro (com o T2 do site), alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 24 · Premium completo

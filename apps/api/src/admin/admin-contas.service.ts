@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  ativacaoDaContaPlataforma,
   fichaDaContaPlataforma,
   aplicarSituacaoDaConta,
   marcarContaInterna,
@@ -24,6 +25,8 @@ import {
   type FichaContaPlataforma,
   type MudarPlanoContaEntrada,
   type MudarTesteContaEntrada,
+  type NotaInterna,
+  type NotaInternaEntrada,
   type RegistrarPagamentoEntrada,
 } from '@pente-fino/shared';
 import { AssinaturaGuard } from '../assinatura/assinatura.guard.js';
@@ -73,17 +76,30 @@ export class AdminContasService {
     const f = await fichaDaContaPlataforma(this.banco.prisma, contaId);
     if (!f) throw Erros.naoEncontrado('Conta não encontrada.');
     const situacao = await situacaoDaContaPlataforma(this.banco.prisma, contaId);
-    const eventos = await this.banco.prisma.auditoriaPlataforma.findMany({
-      where: { contaAfetadaId: contaId },
-      include: { usuario: { select: { nome: true } } },
-      orderBy: { criadoEm: 'desc' },
-      take: 50,
-    });
+    const [eventos, ativacao, notas] = await Promise.all([
+      this.banco.prisma.auditoriaPlataforma.findMany({
+        where: { contaAfetadaId: contaId },
+        include: { usuario: { select: { nome: true } } },
+        orderBy: { criadoEm: 'desc' },
+        take: 50,
+      }),
+      ativacaoDaContaPlataforma(this.banco.prisma, contaId),
+      this.notas(contaId),
+    ]);
     return {
       ...(f as unknown as Omit<
         FichaContaPlataforma,
-        'historico' | 'statusAnterior' | 'cortesiaAte' | 'cobrarAPartirDe' | 'interna' | 'origem'
+        | 'historico'
+        | 'statusAnterior'
+        | 'cortesiaAte'
+        | 'cobrarAPartirDe'
+        | 'interna'
+        | 'origem'
+        | 'ativacao'
+        | 'notas'
       >),
+      ativacao,
+      notas,
       statusAnterior: situacao?.statusAnterior ?? null,
       cortesiaAte: situacao?.cortesiaAte ?? null,
       cobrarAPartirDe: situacao?.cobrarAPartirDe ?? null,
@@ -98,6 +114,38 @@ export class AdminContasService {
         criadoEm: e.criadoEm.toISOString(),
       })),
     };
+  }
+
+  /** Notas da equipe sobre a conta (admin U3), das mais novas; a barbearia não vê. */
+  async notas(contaId: string): Promise<NotaInterna[]> {
+    const linhas = await this.banco.prisma.notaInternaConta.findMany({
+      where: { contaAfetadaId: contaId },
+      include: { autor: { select: { nome: true } } },
+      orderBy: { criadoEm: 'desc' },
+      take: 100,
+    });
+    return linhas.map((n) => ({
+      id: n.id,
+      texto: n.texto,
+      autor: n.autor?.nome ?? null,
+      criadoEm: n.criadoEm.toISOString(),
+    }));
+  }
+
+  async anotar(
+    contaId: string,
+    d: NotaInternaEntrada,
+    a: AdminAutenticado,
+    ip: string | null,
+  ): Promise<NotaInterna> {
+    if (!(await fichaDaContaPlataforma(this.banco.prisma, contaId)))
+      throw Erros.naoEncontrado('Conta não encontrada.');
+    const n = await this.banco.prisma.notaInternaConta.create({
+      data: { contaAfetadaId: contaId, autorId: a.id, texto: d.texto },
+    });
+    // Na auditoria fica só que houve nota; o texto está na própria nota.
+    await this.auth.auditar({ usuarioId: a.id, acao: 'nota_interna', contaId, ip });
+    return { id: n.id, texto: n.texto, autor: a.nome, criadoEm: n.criadoEm.toISOString() };
   }
 
   async mudarPlano(

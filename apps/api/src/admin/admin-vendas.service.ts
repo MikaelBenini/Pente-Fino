@@ -63,6 +63,7 @@ export class AdminVendasService {
           data: {
             id: contaId,
             nome: d.barbearia,
+            documento: d.documento ?? null,
             plano: d.plano,
             ciclo: d.ciclo,
             status: 'teste',

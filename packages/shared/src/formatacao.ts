@@ -68,6 +68,33 @@ export function formatarTelefone(telefone: string): string {
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   return telefone;
 }
+/** Máscara enquanto digita o WhatsApp: "11988887777" → "(11) 98888-7777" (no máximo 11 dígitos). */
+export function mascararTelefone(texto: string): string {
+  const d = texto
+    .replace(/\D/g, '')
+    .replace(/^55(?=\d{11})/, '')
+    .slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : '';
+  const fim = d.length === 11 ? 7 : 6;
+  if (d.length <= fim) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, fim)}-${d.slice(fim)}`;
+}
+
+/** Máscara de CPF (até 11 dígitos) ou CNPJ (12 a 14) enquanto digita. */
+export function mascararDocumento(texto: string): string {
+  const d = texto.replace(/\D/g, '').slice(0, 14);
+  if (d.length <= 11)
+    return d
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+  return d
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d)/, '.$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+}
+
 /**
  * Lê um valor digitado em reais e devolve centavos: "45", "45,5", "45,50", "1.234,56",
  * "R$ 70,00", "45.50" (ponto como decimal quando só há 1 ou 2 casas). Inválido → null.

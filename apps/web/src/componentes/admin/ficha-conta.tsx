@@ -16,12 +16,18 @@ import {
   LIMITE_TESTE_DIAS,
   NOME_PROXIMO_PASSO,
   PROXIMOS_PASSOS,
+  TOTAL_PASSOS_ATIVACAO,
+  diasRestantesDoTeste,
+  notaInternaSchema,
+  proximaCobrancaDaConta,
+  whatsappDoDono,
+  type NotaInterna,
   type AcaoConta,
   type FichaContaPlataforma,
   type ProximoPasso,
   type PapelPlataforma,
 } from '@pente-fino/shared';
-import { Botao, Campo, Dialogo, Selecao } from '@pente-fino/ui';
+import { Botao, Campo, CampoTexto, Dialogo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { ErroApi } from '@/lib/api';
@@ -42,6 +48,7 @@ const NOME_ACAO: Record<string, string> = {
   marcar_interna: 'Marcou como conta interna',
   desmarcar_interna: 'Desmarcou conta interna',
   registrar_pagamento: 'Registrou pagamento',
+  nota_interna: 'Escreveu uma nota interna',
 };
 
 const NOME_STATUS: Record<FichaContaPlataforma['status'], string> = {
@@ -263,8 +270,47 @@ function Conteudo({
   const motivoOk = (m: string) => m.trim().length >= 5;
   const base = `contas/${contaId}`;
 
+  const proxima = proximaCobrancaDaConta(f, sugerido, hoje);
+  const diasTeste = diasRestantesDoTeste(f, hoje);
+
   return (
     <div className="flex flex-col gap-6">
+      {/* Admin U3: o que importa na primeira olhada. */}
+      <dl className="grid gap-3 rounded-lg border border-borda p-3 sm:grid-cols-3">
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+            Próxima cobrança
+          </dt>
+          <dd className="font-semibold tabular-nums">{proxima.titulo}</dd>
+          {proxima.detalhe && <dd className="text-sm text-tinta-suave">{proxima.detalhe}</dd>}
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">Teste</dt>
+          <dd className="tabular-nums">
+            {diasTeste === null
+              ? 'Já passou do teste'
+              : diasTeste === 0
+                ? 'Termina hoje'
+                : `${diasTeste} ${diasTeste === 1 ? 'dia restante' : 'dias restantes'}`}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+            Ativação
+          </dt>
+          <dd className="tabular-nums">
+            {f.ativacao} de {TOTAL_PASSOS_ATIVACAO} primeiros passos
+          </dd>
+          <dd className="text-sm text-tinta-suave">
+            {f.ativacao >= TOTAL_PASSOS_ATIVACAO
+              ? 'Configurou tudo.'
+              : f.ativacao <= 2
+                ? 'Quase nada configurado: vale uma ligação.'
+                : 'No caminho.'}
+          </dd>
+        </div>
+      </dl>
+
       <dl className="grid gap-3 sm:grid-cols-3">
         <div>
           <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">Plano</dt>
@@ -330,6 +376,20 @@ function Conteudo({
                   <span key={d.email} className="block">
                     {d.nome} · {d.email}
                     {d.telefone ? ` · ${d.telefone}` : ''}
+                    {whatsappDoDono(d.telefone, d.nome) && (
+                      <>
+                        {' · '}
+                        <a
+                          href={whatsappDoDono(d.telefone, d.nome)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-acao-texto underline underline-offset-2"
+                        >
+                          Chamar no WhatsApp
+                          <span className="sr-only"> (abre em outra aba)</span>
+                        </a>
+                      </>
+                    )}
                   </span>
                 ))}
             {f.documento && (
@@ -566,6 +626,8 @@ function Conteudo({
         )}
       </div>
 
+      <Notas contaId={contaId} notas={f.notas} podeEscrever={admin} atualizar={atualizar} />
+
       <section aria-labelledby="titulo-faturas-conta" className="flex flex-col gap-2">
         <h3 id="titulo-faturas-conta" className="font-semibold">
           Cobranças
@@ -634,5 +696,78 @@ function Conteudo({
         )}
       </section>
     </div>
+  );
+}
+
+/** Notas internas da equipe sobre a conta (admin U3): a barbearia não vê. */
+function Notas({
+  contaId,
+  notas,
+  podeEscrever,
+  atualizar,
+}: {
+  contaId: string;
+  notas: NotaInterna[];
+  podeEscrever: boolean;
+  atualizar: () => Promise<void>;
+}) {
+  const [texto, setTexto] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const valido = notaInternaSchema.safeParse({ texto }).success;
+  const salvar = async () => {
+    setErro(null);
+    setEnviando(true);
+    try {
+      await adminApi(`contas/${contaId}/notas`, { metodo: 'POST', corpo: { texto } });
+      setTexto('');
+      await atualizar();
+    } catch (e) {
+      setErro(e instanceof ErroApi ? e.message : 'Não deu para salvar a nota. Tente de novo.');
+    } finally {
+      setEnviando(false);
+    }
+  };
+  return (
+    <section aria-labelledby="titulo-notas-conta" className="flex flex-col gap-2">
+      <h3 id="titulo-notas-conta" className="font-semibold">
+        Notas da equipe
+      </h3>
+      <p className="text-sm text-tinta-suave">
+        O que foi combinado, ligações, próximos passos. A barbearia não vê.
+      </p>
+      {podeEscrever && (
+        <div className="flex flex-col gap-2">
+          <CampoTexto
+            id="nota-conta"
+            rotulo="Nova nota"
+            dica="Até 2.000 letras."
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            maxLength={2000}
+          />
+          {erro && <Aviso tom="erro">{erro}</Aviso>}
+          <div>
+            <Botao onClick={salvar} disabled={!valido || enviando}>
+              {enviando ? 'Salvando…' : 'Salvar nota'}
+            </Botao>
+          </div>
+        </div>
+      )}
+      {notas.length === 0 ? (
+        <p className="text-sm text-tinta-suave">Nenhuma nota ainda.</p>
+      ) : (
+        <ul className="flex flex-col gap-2" aria-label="Notas da conta">
+          {notas.map((n) => (
+            <li key={n.id} className="rounded-lg border border-borda p-2 text-sm">
+              <p className="whitespace-pre-wrap">{n.texto}</p>
+              <p className="mt-1 text-xs text-tinta-suave tabular-nums">
+                {n.autor ?? 'Equipe'} · {formatarDataHora(n.criadoEm)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

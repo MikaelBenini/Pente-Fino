@@ -30,6 +30,10 @@ export interface LinhaContaPlataforma {
   interna: boolean;
   cortesia_ate: Date | null;
   cobrar_a_partir_de: Date | null;
+  /** De onde veio o cadastro (parâmetros de campanha), admin F2. */
+  origem: unknown;
+  /** Quantos dos 8 primeiros passos do tutorial a barbearia fez (admin U2). */
+  ativacao: number;
 }
 
 /** Todas as contas, das mais novas para as mais antigas (plataforma_contas()). */
@@ -100,6 +104,16 @@ export interface SituacaoDaContaNoBanco {
 }
 
 /** O que a regra da situação precisa saber da conta (admin R3). null = conta não existe. */
+/** Ativação de uma conta (os mesmos passos da lista de contas). */
+export async function ativacaoDaContaPlataforma(
+  prisma: PrismaClient,
+  contaId: string,
+): Promise<number> {
+  const [r] = await prisma.$queryRaw<{ ativacao: number }[]>`
+    SELECT ativacao FROM plataforma_contas() WHERE id = ${contaId}::uuid`;
+  return Number(r?.ativacao ?? 0);
+}
+
 export async function situacaoDaContaPlataforma(
   prisma: PrismaClient,
   contaId: string,

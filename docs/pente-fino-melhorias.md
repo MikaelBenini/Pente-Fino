@@ -35,7 +35,7 @@
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ✅ #157 e #158 |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ✅ `feat/site-s-t-medicao-e-seo` (S4 com as páginas N; T4 já existia) |
 | 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ✅ X1–X4, P1, P3, P4 e P6 #159; P2 (fotos e nota) e P5 com a página personalizável |
-| 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ |
+| 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ U2–U5 `feat/admin-u-usabilidade`; falta U1, U6–U9 |
 | 11 | Site | N1–N5, P3, P4, D1, D2, D4 | Conteúdo novo e ajustes finos | ⏳ |
 | 12 | Admin | F1–F9 | Recursos novos (F2 junto com o T2 do site) | ⏳ |
 | 13 | Painel | Seção "Melhorias de produto" | Backlog depois dos bugs | ⏳ |
@@ -647,6 +647,28 @@ Situação de cada item (✅ entregue, com o PR):
 - [x] T4 consentimento funcionando — já existia (Consent Mode v2)
 - [ ] Lighthouse mobile da home: Performance ≥ 90, Acessibilidade ≥ 95, SEO 100
 - [ ] Build, lint e testes passando
+
+### Anexo: comparação com a planilha da barbearia (11/11/2026)
+
+A planilha (uma aba por mês e o RESUMO) foi comparada item a item com o sistema. Já existe:
+tabela de preços com vigência, comanda (serviço, produto, desconto, "outros" fora do
+faturamento), ticket médio, atendimentos com peso (convênio = 2), ocupação, % de extras, metas
+de faturamento e por serviço, despesas por grupo com "pago" e % sobre o faturamento (investimento
+fica fora de propósito), projeção, comissões, 12 meses e clube.
+
+Decisões do dono (11/11/2026):
+
+- Comissão sobre o valor depois do desconto (como já é).
+- Comissão do assinante por atendimento, para quem atendeu (como já é).
+- **A mensalidade do clube entra no faturamento no dia em que é paga** (hoje não entra: falha
+  encontrada na comparação; o atendimento do assinante entra com valor zero e a comissão conta
+  como custo). Proposta para o dono aprovar: faturamento = serviços + produtos + mensalidades do
+  clube (linha própria); assinante conta como cliente e atendimento; ticket médio só do avulso;
+  bloco "Clube" com mensalidades pagas, atendimentos e valor por atendimento.
+
+Falta (aguardando o dono escolher): preço por barbeiro; serviço com preço livre na comanda
+(química); repetir as despesas fixas no mês seguinte; importar os meses passados da planilha;
+lançamento rápido por quantidade.
 
 ### Anexo: contexto competitivo
 

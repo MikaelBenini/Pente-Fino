@@ -7,6 +7,21 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração mais prática)
+
+- Ficha da conta: no topo, a próxima cobrança (valor, data e cupom, ou a fatura em aberto), os
+  dias que faltam do teste e a ativação ("5 de 8 primeiros passos"). Botão "Chamar no WhatsApp"
+  ao lado do telefone do dono, com saudação pronta.
+- Notas da equipe em cada conta (o que foi combinado, ligações), com autor e data. A barbearia não
+  vê; só o admin escreve, e o vendedor da conta lê.
+- Lista de contas com as colunas Ativação e Origem (também na planilha exportada), o nome da
+  barbearia preso à esquerda ao rolar para o lado e a ordem "Menos configuradas".
+- Vendas por origem: cadastros, quantos ainda estão em teste, pagantes, conversão do teste em
+  pagante e receita paga de cada origem (anúncio, campanha, site). Contas internas ficam fora.
+- Nova venda: WhatsApp e CPF/CNPJ com máscara, CPF/CNPJ conferido (opcional, o Asaas pede antes da
+  cobrança automática), erro em cada campo, dias de teste de 0 a 60 e um resumo do que vai ser
+  criado (plano, valor e quando começa a cobrança).
+
 ### Corrigido (serviços e administração)
 
 - Serviços: editar o serviço pelo próprio nome (com o lápis), na primeira coluna. Antes o botão

@@ -80,6 +80,16 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await venda.getByLabel('E-mail do dono').fill(`feira-${sufixoVenda}@e2e.pentefino.dev`);
   await venda.getByLabel('WhatsApp do dono').fill('11966665555');
   await venda.getByLabel('Dias de teste').fill('0');
+  // Admin U4: máscara, CPF conferido no campo e resumo antes de criar.
+  await expect(venda.getByLabel('WhatsApp do dono')).toHaveValue('(11) 96666-5555');
+  await venda.getByLabel('CPF ou CNPJ de quem paga').fill('11111111111');
+  await venda.getByRole('button', { name: 'Criar conta e mandar convite' }).click();
+  await expect(venda.getByText('CPF ou CNPJ inválido.')).toBeVisible();
+  await venda.getByLabel('CPF ou CNPJ de quem paga').fill('52998224725');
+  await expect(venda.getByLabel('CPF ou CNPJ de quem paga')).toHaveValue('529.982.247-25');
+  await expect(venda.getByRole('region', { name: 'Resumo' })).toContainText(
+    'Sem teste: registre o pagamento logo depois de criar.',
+  );
   await venda.getByRole('button', { name: 'Criar conta e mandar convite' }).click();
   await expect(venda.getByRole('link', { name: 'Mandar convite pelo WhatsApp' })).toHaveAttribute(
     'href',
@@ -93,9 +103,20 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(fichaVenda.getByRole('table', { name: 'Cobranças da conta' })).toContainText(
     'Manual',
   );
+  // Admin U3: próxima cobrança, ativação e notas da equipe.
+  await expect(fichaVenda.getByText('Próxima cobrança')).toBeVisible();
+  await expect(fichaVenda.getByText(/de \d primeiros passos/)).toBeVisible();
+  await fichaVenda
+    .getByLabel('Nova nota')
+    .fill('Combinado: ligar na sexta para ajudar com a agenda.');
+  await fichaVenda.getByRole('button', { name: 'Salvar nota' }).click();
+  await expect(fichaVenda.getByRole('list', { name: 'Notas da conta' })).toContainText(
+    'Combinado: ligar na sexta',
+  );
   await fichaVenda.getByRole('button', { name: 'Fechar' }).click();
   await page.getByRole('tab', { name: 'Vendas' }).click();
   await expect(page.getByRole('table', { name: 'Vendas por vendedor' })).toContainText('Ana Teste');
+  await expect(page.getByRole('table', { name: 'Vendas por origem' })).toBeVisible();
   await page.getByRole('tab', { name: 'Cobrança' }).click();
   await expect(page.getByRole('heading', { name: 'Cobrança', exact: true })).toBeVisible();
   await page.getByLabel('Ver', { exact: true }).selectOption('recebidas');
