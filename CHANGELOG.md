@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (clube no resultado do mês)
+
+- A mensalidade do clube entra no faturamento no dia em que é paga (o valor que chega na conta),
+  na linha "Clube (mensalidades)": Início, Resultados do mês, meta, projeção, Resumo do dia,
+  Financeiro, painel da rede e arquivo do contador (CSV e PDF). Antes, o assinante aparecia como
+  cliente sem receita e puxava o ticket para baixo.
+- Ticket médio agora conta só o cliente avulso (serviços + produtos ÷ clientes que pagaram na
+  hora). Novo cartão "Clube" com mensalidades, atendimentos cobertos e valor por atendimento.
+
 ### Adicionado (administração mais prática)
 
 - Ficha da conta: no topo, a próxima cobrança (valor, data e cupom, ou a fatura em aberto), os

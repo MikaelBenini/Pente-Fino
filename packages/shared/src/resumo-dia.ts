@@ -143,10 +143,18 @@ export function resumoPorDia(
   diasDeTrabalho: readonly DataISO[],
   fechadas: readonly { data: DataISO; comanda: ComandaFechada }[],
   agendamentos: readonly { data: DataISO; status: string }[],
+  /** Mensalidades do clube pelo dia do pagamento (entram no faturamento do dia). */
+  mensalidades: readonly { data: DataISO; valor: number }[] = [],
 ): DiaDoMes[] {
   const trabalho = new Set(diasDeTrabalho);
   return dias.map((data) => {
-    const i = calcularIndicadores(fechadas.filter((f) => f.data === data).map((f) => f.comanda));
+    const i = calcularIndicadores(
+      fechadas.filter((f) => f.data === data).map((f) => f.comanda),
+      [],
+      {
+        mensalidades: mensalidades.filter((m) => m.data === data).reduce((s, m) => s + m.valor, 0),
+      },
+    );
     const doDia = agendamentos.filter((a) => a.data === data);
     return {
       data,

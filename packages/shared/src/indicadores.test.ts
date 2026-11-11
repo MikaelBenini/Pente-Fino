@@ -238,3 +238,41 @@ describe('lucratividade por produto', () => {
     expect(lucratividadePorProduto([{ itens: [servico(5000)] }])).toEqual([]);
   });
 });
+
+describe('clube no resultado do mês (decisão do dono, 11/11/2026)', () => {
+  const doClube = (comissao: number): ItemFechado => ({
+    ...servico(0, false, 1, comissao),
+    cobertoClube: true,
+  });
+  const comandas = [
+    { itens: [servico(5000)] }, // avulso
+    { itens: [doClube(2000)] }, // assinante, só o que o plano cobre
+    { itens: [doClube(2000), servico(1500, true)] }, // assinante que pagou um extra
+  ];
+
+  it('a mensalidade entra no faturamento; o assinante conta como cliente e atendimento', () => {
+    const i = calcularIndicadores(comandas, [], { mensalidades: 12000 });
+    expect(i.receitaClube).toBe(12000);
+    expect(i.faturamento).toBe(5000 + 1500 + 12000);
+    expect(i.clientes).toBe(3);
+    expect(i.atendimentos).toBe(3);
+    expect(i.atendimentosClube).toBe(2);
+    expect(i.valorPorAtendimentoClube).toBe(6000);
+    // A comissão do assinante continua custo; agora com a receita do outro lado.
+    expect(i.comissoes).toBe(4000);
+    expect(i.lucro).toBe(18500 - 4000);
+  });
+
+  it('ticket médio só de quem pagou na hora: o assinante não puxa para baixo', () => {
+    const i = calcularIndicadores(comandas, [], { mensalidades: 12000 });
+    expect(i.clientesAvulsos).toBe(2);
+    expect(i.ticketMedio).toBe(Math.round((5000 + 1500) / 2));
+  });
+
+  it('sem mensalidade no período: nada muda e o valor por atendimento fica sem número', () => {
+    const i = calcularIndicadores(comandas);
+    expect(i.receitaClube).toBe(0);
+    expect(i.faturamento).toBe(6500);
+    expect(i.valorPorAtendimentoClube).toBeNull();
+  });
+});

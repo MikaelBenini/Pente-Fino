@@ -111,7 +111,11 @@ export class RelatorioService {
       const numeros = async (d: string, a: string): Promise<NumerosDoMes> => {
         const fechadas = doPeriodo(d, a);
         const despesas = await this.resultados.despesas(tx, d, a, filtro, incluiConta);
-        const ind = calcularIndicadores(fechadas, despesas);
+        const ind = calcularIndicadores(
+          fechadas,
+          despesas,
+          await this.resultados.clube(tx, d, a, filtro),
+        );
         const clientes = analisarClientes(visitas, { de: d, ate: a, hoje: a }).resumo;
         const agendamentos = await tx.agendamento.findMany({
           where: { ...filtro, inicio: { gte: inicio(d), lt: fim(a) } },
@@ -221,7 +225,11 @@ export class RelatorioService {
         const desp = verLucro
           ? await this.resultados.despesas(tx, `${m}-01`, ultimoDiaDoMes(m), filtro, incluiConta)
           : [];
-        const ind = calcularIndicadores(doMes(m), desp);
+        const ind = calcularIndicadores(
+          doMes(m),
+          desp,
+          await this.resultados.clube(tx, `${m}-01`, ultimoDiaDoMes(m), filtro),
+        );
         historico.push({
           mes: m,
           faturamento: ind.faturamento,

@@ -210,7 +210,7 @@ function ConteudoDia({
         <CartaoIndicador
           rotulo="Faturamento"
           valor={formatarMoeda(t.faturamento)}
-          origem={`Comandas fechadas no dia · ${t.clientes} clientes · ticket ${formatarMoeda(t.ticketMedio)}.`}
+          origem={`Comandas fechadas e mensalidades do clube pagas no dia · ${t.clientes} clientes · ticket ${formatarMoeda(t.ticketMedio)}.`}
         />
         <CartaoIndicador
           rotulo={passado ? 'Ficou em aberto' : 'Ainda vai entrar'}

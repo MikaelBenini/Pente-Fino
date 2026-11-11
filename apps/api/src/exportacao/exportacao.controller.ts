@@ -15,7 +15,12 @@ import { Contexto } from '../comum/contexto.js';
 import { data, dataTexto, GESTAO } from '../comum/escopo.js';
 import { Consulta } from '../comum/validacao.js';
 import { A4, LINHA, novoDocumento, SUAVE, texto } from '../pdf/pdf.js';
-import { escopoUnidades, somarDias, ultimoDiaDoMes } from '../resultados/resultados.service.js';
+import {
+  escopoUnidades,
+  ResultadosService,
+  somarDias,
+  ultimoDiaDoMes,
+} from '../resultados/resultados.service.js';
 import { emSequencia } from '../comum/sequencia.js';
 
 const consulta = z.object({
@@ -34,7 +39,10 @@ function campo(v: string): string {
 @ApiBearerAuth()
 @Controller('exportacao')
 export class ExportacaoController {
-  constructor(@Inject(BancoService) private readonly banco: BancoService) {}
+  constructor(
+    @Inject(BancoService) private readonly banco: BancoService,
+    @Inject(ResultadosService) private readonly resultados: ResultadosService,
+  ) {}
 
   @Get()
   @Papeis(...GESTAO)
@@ -68,7 +76,9 @@ export class ExportacaoController {
           orderBy: { descricao: 'asc' },
         }),
       ]);
-      return { conta, unidades, comandas, despesas };
+      // Mensalidades do clube: receita do mês pelo dia do pagamento (decisão do dono, 11/11/2026).
+      const mensalidades = await this.resultados.pagamentosClube(tx, de, ate, filtro);
+      return { conta, unidades, comandas, despesas, mensalidades };
     });
     const nomeUnidade = (id: string | null) =>
       id ? (dados.unidades.find((u) => u.id === id)?.nome ?? '') : 'Rede';
@@ -93,6 +103,20 @@ export class ExportacaoController {
               .join(';'),
           );
         }
+      }
+      for (const m of dados.mensalidades) {
+        linhas.push(
+          [
+            m.data,
+            'receita',
+            'Mensalidade do clube',
+            nomeUnidade(m.unidadeId),
+            'Clube',
+            formatarValor(m.valor),
+          ]
+            .map(campo)
+            .join(';'),
+        );
       }
       for (const d of dados.despesas) {
         linhas.push(
@@ -119,6 +143,7 @@ export class ExportacaoController {
     const ind = calcularIndicadores(
       dados.comandas,
       dados.despesas.map((d) => ({ grupo: d.categoria.grupo, valor: d.valor })),
+      { mensalidades: dados.mensalidades.reduce((s, m) => s + m.valor, 0) },
     );
     const porForma = new Map<string, number>();
     for (const p of dados.comandas.flatMap((x) => x.pagamentos))
@@ -156,6 +181,7 @@ export class ExportacaoController {
     secao('Receitas');
     linha('Serviços', formatarMoeda(ind.receitaServicos));
     linha('Produtos', formatarMoeda(ind.receitaProdutos));
+    linha('Clube (mensalidades)', formatarMoeda(ind.receitaClube));
     linha('Faturamento', formatarMoeda(ind.faturamento), true);
     linha('Receita não operacional', formatarMoeda(ind.receitaNaoOperacional));
     linha(`Comandas fechadas / clientes`, `${dados.comandas.length} / ${ind.clientes}`);
