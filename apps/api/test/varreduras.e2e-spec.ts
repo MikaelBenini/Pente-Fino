@@ -313,7 +313,8 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
     const prisma = criarPrisma();
     const caixasB = await naConta(prisma, b.contaId, (tx) => tx.caixaDia.count());
     await prisma.$disconnect();
-    expect(caixasB).toBe(0);
+    // Só os dois caixas de hoje do cenário: nada foi gravado na conta B pelas rotas da A.
+    expect(caixasB).toBe(2);
   });
 });
 

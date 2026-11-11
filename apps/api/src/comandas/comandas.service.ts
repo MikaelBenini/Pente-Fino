@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import {
   agendarPesquisa,
   regrasDaUnidade,
@@ -16,6 +16,7 @@ import {
   comissaoItem,
   dataLocal,
   faltaReceber,
+  formatarDataHora,
   formatarMoeda,
   papeisNaUnidade,
   podeAgirNaComanda,
@@ -37,7 +38,7 @@ import type { alterarItemSchema } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
-import { Erros } from '../comum/erros.js';
+import { ErroApp, Erros } from '../comum/erros.js';
 import { data, exigirUnidade } from '../comum/escopo.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { pdfComandas } from './impressao.js';
@@ -609,20 +610,41 @@ export class ComandasService {
       const { comanda, propria, papeis } = await this.carregar(tx, id);
       const antes = this.exigir('fechar', comanda, papeis, propria);
       if (comanda.itens.length === 0)
-        throw Erros.requisicaoInvalida('sem_itens', 'A comanda não tem itens.');
-      const dia = diaDaComanda(comanda);
-
-      const caixa = await tx.caixaDia.findUnique({
-        where: { unidadeId_data: { unidadeId: comanda.unidadeId, data: data(dia) } },
-      });
-      if (caixa?.fechadoEm)
-        throw Erros.conflito(
-          'O caixa deste dia já foi fechado. Peça ao gestor para reabrir o caixa.',
+        throw Erros.requisicaoInvalida(
+          'sem_itens',
+          'Sem itens. Lance um serviço ou cancele/marque falta.',
         );
+      // Comissão e preço seguem o dia do atendimento; o dinheiro entra no caixa de hoje.
+      const dia = diaDaComanda(comanda);
+      const agora = new Date();
+      const hoje = dataLocal(agora);
+      // Atendimento de outro dia, ou de hoje que nem começou: ainda não tem o que receber.
+      // (Cliente adiantado que o barbeiro já começou a atender recebe normalmente.)
+      const inicioMarcado = comanda.agendamento?.inicio;
+      if (
+        inicioMarcado &&
+        (dataLocal(inicioMarcado) > hoje ||
+          (inicioMarcado > agora && comanda.status === 'prevista'))
+      )
+        throw new ErroApp(
+          HttpStatus.CONFLICT,
+          'atendimento_futuro',
+          `O atendimento é em ${formatarDataHora(inicioMarcado)}: receba depois que ele começar.`,
+        );
+      const caixa = await tx.caixaDia.findUnique({
+        where: { unidadeId_data: { unidadeId: comanda.unidadeId, data: data(hoje) } },
+      });
+      // O caixa nunca abre sozinho: quem recebe abre (com o troco) e tenta de novo.
       if (!caixa)
-        await tx.caixaDia.create({
-          data: { unidadeId: comanda.unidadeId, data: data(dia), abertoPorId: quem.id },
-        });
+        throw new ErroApp(
+          HttpStatus.CONFLICT,
+          'caixa_nao_aberto',
+          'O caixa de hoje não foi aberto. Abra o caixa com o troco da gaveta para receber.',
+        );
+      if (caixa.fechadoEm)
+        throw Erros.conflito(
+          'O caixa de hoje já foi fechado. Peça ao gestor para reabrir o caixa.',
+        );
 
       let itens;
       try {
@@ -812,14 +834,14 @@ export class ComandasService {
     await this.banco.daConta(async (tx) => {
       const { comanda, propria, papeis } = await this.carregar(tx, id);
       this.exigir('reabrir', comanda, papeis, propria);
+      // O dinheiro saiu do caixa do dia em que foi recebido: é esse caixa que não pode estar fechado.
+      const diaDoRecebimento = dataLocal(comanda.fechadaEm ?? new Date());
       const caixa = await tx.caixaDia.findUnique({
-        where: {
-          unidadeId_data: { unidadeId: comanda.unidadeId, data: data(diaDaComanda(comanda)) },
-        },
+        where: { unidadeId_data: { unidadeId: comanda.unidadeId, data: data(diaDoRecebimento) } },
       });
       if (caixa?.fechadoEm)
         throw Erros.conflito(
-          'O caixa deste dia já foi fechado. Reabra o caixa antes de reabrir a comanda.',
+          'O caixa do dia em que a comanda foi recebida já foi fechado. Reabra esse caixa antes de reabrir a comanda.',
         );
       await tx.pagamento.deleteMany({ where: { comandaId: id } });
       await tx.itemComanda.updateMany({ where: { comandaId: id }, data: { comissaoValor: 0 } });

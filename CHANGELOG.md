@@ -7,6 +7,18 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (caixa e comanda)
+
+- O dinheiro entra no caixa do dia em que foi recebido. Antes, receber hoje uma comanda marcada
+  para amanhã jogava o valor no caixa de amanhã e abria esse caixa sozinho.
+- O caixa não abre mais sozinho: sem caixa aberto, a comanda não é recebida, e a tela oferece
+  abrir o caixa com o troco na hora.
+- Atendimento de outro dia (ou de hoje que ainda não começou) não pode ser recebido antes de
+  acontecer.
+- Comanda reaberta pode ser cancelada (com motivo), marcada como falta, remarcada, começada e
+  confirmada de novo; antes ficava presa.
+- Comanda sem itens não fecha mais com R$ 0,00.
+
 ### Adicionado (agendamento)
 
 - Link de agendamento com mais de uma unidade: "Agendar em outra unidade", discreto, abaixo do

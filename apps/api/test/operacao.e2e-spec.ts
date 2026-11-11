@@ -29,6 +29,7 @@ const dia = (n: number) => {
 const as = (d: string, hhmm: string) => `${d}T${hhmm}:00-03:00`;
 const AMANHA = dia(1);
 const ONTEM = dia(-1);
+const HOJE = dia(0);
 
 beforeAll(async () => {
   app = await criarApp();
@@ -299,6 +300,28 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
     expect(bloqueado.body.erro.mensagem).toMatch(/já confirmada/);
   });
 
+  it('A2: não recebe atendimento de outro dia; o dinheiro entra no caixa de hoje', async () => {
+    // Reprodução do briefing do painel: em 10/11, a comanda de 11/11 era recebida e abria o
+    // caixa de 11/11 sozinho.
+    const futuro = await recepcao
+      .post(`/comandas/${comanda}/fechar`, { pagamentos: [{ forma: 'pix', valor: 14500 }] })
+      .expect(409);
+    expect(futuro.body.erro.codigo).toBe('atendimento_futuro');
+    expect(
+      (await recepcao.get(`/caixa?unidadeId=${cenario.unidadeA}&data=${AMANHA}`)).body.situacao,
+    ).toBe('nao_aberto');
+    // O horário chegou (o atendimento começou há 40 minutos).
+    const prisma = criarPrisma();
+    const inicio = new Date(Date.now() - 40 * 60_000);
+    await naConta(prisma, cenario.contaId, (tx) =>
+      tx.agendamento.update({
+        where: { id: agendamento },
+        data: { inicio, fim: new Date(inicio.getTime() + 30 * 60_000) },
+      }),
+    );
+    await prisma.$disconnect();
+  });
+
   it('fechar: pagamentos precisam bater com o total (com desconto rateado)', async () => {
     const errado = await recepcao
       .post(`/comandas/${comanda}/fechar`, {
@@ -357,14 +380,15 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
   });
 
   it('caixa: entradas por forma, fechar com divergência e travar o dia', async () => {
+    // O recebido hoje está no caixa de hoje (o dia do recebimento).
     const caixa = (
-      await recepcao.get(`/caixa?unidadeId=${cenario.unidadeA}&data=${AMANHA}`).expect(200)
+      await recepcao.get(`/caixa?unidadeId=${cenario.unidadeA}&data=${HOJE}`).expect(200)
     ).body;
     expect(caixa).toMatchObject({ situacao: 'aberto', totalRecebido: 14000, fechadas: 1 });
     expect(caixa.porForma).toEqual([{ forma: 'pix', total: 14000, quantidade: 1 }]);
     const fechado = (
       await recepcao
-        .post('/caixa/fechar', { unidadeId: cenario.unidadeA, data: AMANHA, totalInformado: 500 })
+        .post('/caixa/fechar', { unidadeId: cenario.unidadeA, data: HOJE, totalInformado: 500 })
         .expect(200)
     ).body;
     expect(fechado).toMatchObject({ situacao: 'fechado', dinheiroEsperado: 0, divergencia: 500 });
@@ -414,14 +438,14 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
     await recepcao
       .post('/caixa/reabrir', {
         unidadeId: cenario.unidadeA,
-        data: AMANHA,
+        data: HOJE,
         motivo: 'Contagem errada',
       })
       .expect(403);
     await gestor
       .post('/caixa/reabrir', {
         unidadeId: cenario.unidadeA,
-        data: AMANHA,
+        data: HOJE,
         motivo: 'Contagem errada',
       })
       .expect(200);
@@ -495,6 +519,86 @@ describe('casos especiais', () => {
     await gestor
       .post(`/comandas/${r.body.id}/fechar`, { pagamentos: [{ forma: 'dinheiro', valor: 5000 }] })
       .expect(200);
+    // A1: atendimento de ontem pago hoje: o dinheiro está no caixa de hoje; o de ontem nem abriu.
+    expect(
+      (await recepcao.get(`/caixa?unidadeId=${cenario.unidadeA}&data=${ONTEM}`)).body.situacao,
+    ).toBe('nao_aberto');
+    const hoje = (await recepcao.get(`/caixa?unidadeId=${cenario.unidadeA}&data=${HOJE}`)).body;
+    expect(hoje.porForma).toContainEqual(expect.objectContaining({ forma: 'dinheiro' }));
+  });
+
+  it('A1/A2: caixa de hoje não aberto: não recebe, e não abre sozinho', async () => {
+    const r = await recepcao
+      .post('/comandas', {
+        unidadeId: cenario.unidadeA,
+        profissionalId: profOutro,
+        clienteNovo: { nome: 'Sem caixa' },
+        servicoIds: [corte],
+      })
+      .expect(201);
+    const prisma = criarPrisma();
+    await naConta(prisma, cenario.contaId, (tx) =>
+      tx.caixaDia.deleteMany({ where: { unidadeId: cenario.unidadeA, fechadoEm: null } }),
+    );
+    await prisma.$disconnect();
+    const negado = await gestor
+      .post(`/comandas/${r.body.id}/fechar`, { pagamentos: [{ forma: 'pix', valor: 5000 }] })
+      .expect(409);
+    expect(negado.body.erro.codigo).toBe('caixa_nao_aberto');
+    expect(
+      (await dono.get(`/caixa?unidadeId=${cenario.unidadeA}&data=${HOJE}`)).body.situacao,
+    ).toBe('nao_aberto');
+    await dono
+      .post('/caixa/abrir', { unidadeId: cenario.unidadeA, data: HOJE, valorAbertura: 10000 })
+      .expect(200);
+    await dono
+      .post(`/comandas/${r.body.id}/fechar`, { pagamentos: [{ forma: 'pix', valor: 5000 }] })
+      .expect(200);
+  });
+
+  it('A3: comanda reaberta pode ser cancelada (com motivo) e remarcada', async () => {
+    const r = await recepcao
+      .post('/agendamentos', {
+        unidadeId: cenario.unidadeA,
+        profissionalId: profBarbeiro,
+        clienteNovo: { nome: 'Fechada por engano' },
+        inicio: as(ONTEM, '15:00'),
+        servicoIds: [corte],
+      })
+      .expect(201);
+    await gestor
+      .post(`/comandas/${r.body.id}/fechar`, { pagamentos: [{ forma: 'pix', valor: 5000 }] })
+      .expect(200);
+    await gestor
+      .post(`/comandas/${r.body.id}/reabrir`, { motivo: 'Fechada por engano' })
+      .expect(200);
+    // Remarcar o horário de uma reaberta (estava no horário errado).
+    await recepcao
+      .patch(`/agendamentos/${r.body.agendamentoId}`, { inicio: as(ONTEM, '16:30') })
+      .expect(200);
+    const c = await recepcao
+      .post(`/comandas/${r.body.id}/cancelar`, { motivo: 'Cliente não veio, fechei errado' })
+      .expect(200);
+    expect(c.body).toMatchObject({
+      status: 'cancelada',
+      motivoCancelamento: 'Cliente não veio, fechei errado',
+    });
+  });
+
+  it('A4: comanda sem itens não fecha', async () => {
+    const r = await recepcao
+      .post('/comandas', {
+        unidadeId: cenario.unidadeA,
+        profissionalId: profBarbeiro,
+        clienteNovo: { nome: 'Vazia' },
+        servicoIds: [corte],
+      })
+      .expect(201);
+    await gestor.delete(`/comandas/${r.body.id}/itens/${r.body.itens[0].id}`).expect(200);
+    const negado = await gestor
+      .post(`/comandas/${r.body.id}/fechar`, { pagamentos: [] })
+      .expect(400);
+    expect(negado.body.erro).toMatchObject({ codigo: 'sem_itens' });
   });
 });
 

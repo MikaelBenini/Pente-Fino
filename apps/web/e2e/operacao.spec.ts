@@ -14,6 +14,24 @@ function proximoDiaUtil(): string {
   }
 }
 
+/** Agora em São Paulo: dia (AAAA-MM-DD) e hora (HH:MM). */
+function agoraSP(): { dia: string; hora: string } {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(new Date())
+      .map((x) => [x.type, x.value]),
+  );
+  return { dia: `${p.year}-${p.month}-${p.day}`, hora: `${p.hour}:${p.minute}` };
+}
+
 async function entrarComo(browser: Browser, email: string, projeto: string): Promise<Page> {
   const contexto = await browser.newContext(
     projeto === 'celular'
@@ -36,10 +54,11 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
     info.project.name === 'celular',
     'o fluxo inteiro roda uma vez; o celular é coberto pelo barbeiro abaixo',
   );
-  const dia = proximoDiaUtil();
+  const agora = agoraSP();
   const cliente = `Cliente E2E ${sufixo}`;
 
-  // 1. Recepção agenda pelo horário livre.
+  // 1. O cliente chegou agora: a recepção encaixa no horário atual (receber só depois que o
+  // atendimento acontece; horário marcado para outro dia não é recebido, ver o teste abaixo).
   const recepcao = await entrarComo(
     browser,
     'recepcao.centro@demo.pentefino.dev',
@@ -52,13 +71,17 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await dialogo.getByLabel('Nome do cliente').fill(cliente);
   await dialogo.getByRole('button', { name: 'Usar este cliente' }).click();
   await dialogo.getByLabel('Corte · 30 min').check();
-  await dialogo.getByLabel('Dia').fill(dia);
+  await dialogo.getByLabel('Dia').fill(agora.dia);
   await dialogo.getByLabel('Barbeiro').selectOption({ label: 'Rafael Moura' });
-  await dialogo
-    .getByRole('button', { name: /^\d{2}:\d{2}$/ })
-    .first()
-    .click();
-  await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
+  await dialogo.getByLabel(/^Encaixe/).check();
+  await dialogo.getByLabel('Horário do encaixe').fill(agora.hora);
+  await dialogo.getByRole('button', { name: /^Encaixar \d{2}:\d{2}$/ }).click();
+  // Fora do expediente ou em cima de outro horário (o teste roda a qualquer hora): confirma.
+  const mesmoAssim = dialogo.getByRole('button', { name: 'Encaixar mesmo assim' });
+  await Promise.race([
+    recepcao.waitForURL(/\/comandas\?id=/),
+    mesmoAssim.waitFor().then(() => mesmoAssim.click()),
+  ]);
   await recepcao.waitForURL(/\/comandas\?id=/);
   const url = recepcao.url();
   await expect(recepcao.getByRole('heading', { name: cliente })).toBeVisible();
@@ -100,6 +123,14 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
     .getByRole('dialog', { name: 'Fechar comanda de R$ 65,00?' })
     .getByRole('button', { name: 'Fechar comanda' })
     .click();
+  // O caixa nunca abre sozinho: se o de hoje não foi aberto, a tela oferece abrir com o troco.
+  const caixa = recepcao.getByRole('dialog', { name: 'O caixa de hoje não foi aberto' });
+  const fechada = recepcao.getByText('Fechada', { exact: true }).filter({ visible: true });
+  await Promise.race([fechada.waitFor(), caixa.waitFor()]);
+  if (await caixa.isVisible()) {
+    await caixa.getByLabel('Troco na gaveta (R$)').fill('100,00');
+    await caixa.getByRole('button', { name: 'Abrir o caixa e receber' }).click();
+  }
   await expect(
     recepcao.getByText('Fechada', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
@@ -125,6 +156,38 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await expect(
     gestor.getByText('Reaberta', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
+});
+
+test('A2: atendimento de outro dia não é recebido antes de acontecer', async ({
+  browser,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'balcão no computador');
+  const recepcao = await entrarComo(
+    browser,
+    'recepcao.centro@demo.pentefino.dev',
+    info.project.name,
+  );
+  await recepcao.goto('/agenda');
+  await recepcao.getByRole('button', { name: 'Novo agendamento' }).click();
+  const dialogo = recepcao.getByRole('dialog', { name: 'Novo agendamento' });
+  await dialogo.getByRole('button', { name: 'Cadastrar cliente novo' }).click();
+  await dialogo.getByLabel('Nome do cliente').fill(`Futuro E2E ${sufixo}`);
+  await dialogo.getByRole('button', { name: 'Usar este cliente' }).click();
+  await dialogo.getByLabel('Corte · 30 min').check();
+  await dialogo.getByLabel('Dia').fill(proximoDiaUtil());
+  await dialogo.getByLabel('Barbeiro').selectOption({ label: 'Rafael Moura' });
+  await dialogo
+    .getByRole('button', { name: /^\d{2}:\d{2}$/ })
+    .first()
+    .click();
+  await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
+  await recepcao.waitForURL(/\/comandas\?id=/);
+  // Quem pode receber sem a confirmação do barbeiro (gestor) vê o botão desativado e o porquê.
+  const gestor = await entrarComo(browser, 'gestor@demo.pentefino.dev', info.project.name);
+  await gestor.goto(recepcao.url().replace(/^https?:\/\/[^/]+/, ''));
+  const receber = gestor.getByRole('button', { name: 'Receber e fechar' });
+  await expect(receber).toBeDisabled();
+  await expect(gestor.getByText(/^O atendimento é em .+ às \d{2}:\d{2}\.$/)).toBeVisible();
 });
 
 test('barbeiro no celular vê só as próprias comandas', async ({ page }, info) => {
