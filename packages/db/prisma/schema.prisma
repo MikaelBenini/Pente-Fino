@@ -1439,8 +1439,10 @@ model AdesaoClube {
   @@map("adesao_clube")
 }
 
-/// Mensalidade do clube recebida no balcão (Pix da barbearia, dinheiro ou cartão). É receita do
-/// clube, separada da receita de serviço: não entra no faturamento das comandas.
+/// Mensalidade do clube recebida no balcão (Pix da barbearia, dinheiro ou cartão) ou online. É
+/// receita do clube, separada da receita de serviço: entra no faturamento do mês no dia do
+/// pagamento (repasse ?? valor), numa linha própria, mas não nas comandas nem no desempenho por
+/// barbeiro.
 model PagamentoClube {
   id              String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
   contaId         String         @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid

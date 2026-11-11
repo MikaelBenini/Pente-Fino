@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Transacao } from '@pente-fino/db';
 import {
   calcularIndicadores,
+  type ClubeNoPeriodo,
   dataLocal,
   diasDeTrabalho,
   lucratividadePorProduto,
@@ -84,6 +85,50 @@ export class ResultadosService {
     }));
   }
 
+  /**
+   * Mensalidades do clube recebidas no período (dia do pagamento), nas unidades do escopo. Entram
+   * no faturamento (decisão do dono, 11/11/2026). Online: o que chega na conta da barbearia, já sem
+   * as taxas, para bater com o extrato.
+   */
+  async clube(
+    tx: Transacao,
+    de: string,
+    ate: string,
+    filtro: Record<string, unknown>,
+  ): Promise<ClubeNoPeriodo> {
+    const pagos = await this.pagamentosClube(tx, de, ate, filtro);
+    return { mensalidades: pagos.reduce((s, p) => s + p.valor, 0) };
+  }
+
+  /** As mensalidades do período, uma por pagamento, com o dia (para o resumo dia a dia). */
+  async pagamentosClube(
+    tx: Transacao,
+    de: string,
+    ate: string,
+    filtro: Record<string, unknown>,
+  ): Promise<{ data: string; valor: number; unidadeId: string }[]> {
+    const pagos = await tx.pagamentoClube.findMany({
+      where: {
+        pagoEm: { gte: data(de), lte: data(ate) },
+        ...(filtro.unidadeId
+          ? { adesao: { itemClube: { unidadeId: filtro.unidadeId as string | { in: string[] } } } }
+          : {}),
+      },
+      select: {
+        valor: true,
+        repasse: true,
+        pagoEm: true,
+        adesao: { select: { itemClube: { select: { unidadeId: true } } } },
+      },
+      orderBy: { pagoEm: 'asc' },
+    });
+    return pagos.map((p) => ({
+      data: dataTexto(p.pagoEm),
+      valor: p.repasse ?? p.valor,
+      unidadeId: p.adesao.itemClube.unidadeId,
+    }));
+  }
+
   /** Despesas cuja competência cai nos meses do período. Despesa da conta (sem unidade) só no escopo da rede. */
   async despesas(
     tx: Transacao,
@@ -119,14 +164,18 @@ export class ResultadosService {
       const anteriores = await this.fechadas(tx, antDe, antAte, filtro);
       const despAtual = await this.despesas(tx, de, ate, filtro, incluiConta);
       const despAnterior = await this.despesas(tx, antDe, antAte, filtro, incluiConta);
-      const atual = calcularIndicadores(atuais, despAtual);
+      const atual = calcularIndicadores(atuais, despAtual, await this.clube(tx, de, ate, filtro));
       const hoje = dataLocal(new Date());
       const mesCorrente = de === `${hoje.slice(0, 7)}-01` && ate >= hoje;
       return {
         de,
         ate,
         atual,
-        anterior: calcularIndicadores(anteriores, despAnterior),
+        anterior: calcularIndicadores(
+          anteriores,
+          despAnterior,
+          await this.clube(tx, antDe, antAte, filtro),
+        ),
         projecao: mesCorrente
           ? await this.projecao(tx, hoje.slice(0, 7), hoje, filtro, atuais)
           : null,
@@ -163,11 +212,11 @@ export class ResultadosService {
         u.diasTrabalho,
         excecoes.map((e) => ({ data: dataTexto(e.data), trabalha: e.trabalha })),
       );
-      const faturamento = calcularIndicadores(
-        fechadas.filter((c) => c.unidadeId === u.id),
-      ).faturamento;
-      const p = projetar(faturamento, dias, hoje);
-      projecao += p.projecao;
+      const vendido = calcularIndicadores(fechadas.filter((c) => c.unidadeId === u.id)).faturamento;
+      const p = projetar(vendido, dias, hoje);
+      // Mensalidade do clube não segue o ritmo das comandas: entra como veio, sem projetar.
+      const { mensalidades } = await this.clube(tx, `${mes}-01`, hoje, { unidadeId: u.id });
+      projecao += p.projecao + mensalidades;
       diasDoMes += p.diasDoMes;
       diasTrabalhados += p.diasTrabalhados;
     }
@@ -222,7 +271,11 @@ export class ResultadosService {
       const daUnidade = fechadas.filter((c) => c.unidadeId === m.unidadeId);
       const atual =
         m.tipo === 'faturamento'
-          ? calcularIndicadores(daUnidade).faturamento
+          ? calcularIndicadores(
+              daUnidade,
+              [],
+              await this.clube(tx, `${mes}-01`, fim, { unidadeId: m.unidadeId }),
+            ).faturamento
           : daUnidade
               .flatMap((c) => c.itens)
               .filter((i) => i.servicoId === m.servicoId)

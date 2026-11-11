@@ -12,6 +12,8 @@ export interface ItemFechado {
   pesoAtendimento: number;
   custoUnitario: number;
   comissaoValor: number;
+  /** Coberto pelo plano do clube: entra com valor zero (a receita vem da mensalidade). */
+  cobertoClube?: boolean;
 }
 
 export interface ComandaFechada {
@@ -26,16 +28,32 @@ export interface DespesaValor {
   valor: number;
 }
 
+/** Mensalidades do clube recebidas no período (o que chegou na conta da barbearia). */
+export interface ClubeNoPeriodo {
+  mensalidades: number;
+}
+
 export interface Indicadores {
-  /** Serviços + produtos − descontos (não operacional fica fora). */
+  /**
+   * Serviços + produtos − descontos + mensalidades do clube recebidas no período (decisão do
+   * dono, 11/11/2026). Não operacional fica fora.
+   */
   faturamento: number;
   receitaServicos: number;
   receitaProdutos: number;
   receitaNaoOperacional: number;
-  /** Comandas fechadas com pelo menos um serviço. */
+  /** Mensalidades do clube recebidas no período (entram no dia em que são pagas). */
+  receitaClube: number;
+  /** Comandas fechadas com pelo menos um serviço (assinante conta: ocupou a cadeira). */
   clientes: number;
-  /** Centavos; 0 sem clientes. */
+  /** Clientes que pagaram algum serviço na hora (não só o que o plano cobre). */
+  clientesAvulsos: number;
+  /** (Serviços + produtos) ÷ clientes avulsos, em centavos: o assinante não puxa para baixo. */
   ticketMedio: number;
+  /** Atendimentos cobertos pelo plano do clube (soma do peso). */
+  atendimentosClube: number;
+  /** Mensalidades ÷ atendimentos do clube: quanto vale cada atendimento do assinante. */
+  valorPorAtendimentoClube: number | null;
   /** Soma do peso de atendimento dos serviços. */
   atendimentos: number;
   extrasQuantidade: number;
@@ -69,11 +87,14 @@ const GRUPOS: GrupoDespesa[] = [
 export function calcularIndicadores(
   comandas: readonly ComandaFechada[],
   despesas: readonly DespesaValor[] = [],
+  clube: ClubeNoPeriodo | null = null,
 ): Indicadores {
   let receitaServicos = 0;
   let receitaProdutos = 0;
   let receitaNaoOperacional = 0;
   let clientes = 0;
+  let clientesAvulsos = 0;
+  let atendimentosClube = 0;
   let atendimentos = 0;
   let extrasQuantidade = 0;
   let extrasValor = 0;
@@ -82,6 +103,7 @@ export function calcularIndicadores(
 
   for (const c of comandas) {
     if (c.itens.some((i) => i.tipo === 'servico')) clientes += 1;
+    if (c.itens.some((i) => i.tipo === 'servico' && !i.cobertoClube)) clientesAvulsos += 1;
     for (const i of c.itens) {
       const valor = valorLiquido(i);
       if (i.tipo === 'nao_operacional') {
@@ -96,6 +118,7 @@ export function calcularIndicadores(
       }
       receitaServicos += valor;
       atendimentos += i.quantidade * i.pesoAtendimento;
+      if (i.cobertoClube) atendimentosClube += i.quantidade * i.pesoAtendimento;
       if (i.ehExtra) {
         extrasQuantidade += i.quantidade;
         extrasValor += valor;
@@ -109,7 +132,9 @@ export function calcularIndicadores(
   >;
   for (const d of despesas) despesasPorGrupo[d.grupo] += d.valor;
 
-  const faturamento = receitaServicos + receitaProdutos;
+  const receitaClube = clube?.mensalidades ?? 0;
+  const vendido = receitaServicos + receitaProdutos;
+  const faturamento = vendido + receitaClube;
   const despesasOperacionais =
     despesasPorGrupo.fixa + despesasPorGrupo.variavel + despesasPorGrupo.manutencao + comissoes;
   return {
@@ -117,8 +142,15 @@ export function calcularIndicadores(
     receitaServicos,
     receitaProdutos,
     receitaNaoOperacional,
+    receitaClube,
     clientes,
-    ticketMedio: clientes > 0 ? Math.round(faturamento / clientes) : 0,
+    clientesAvulsos,
+    ticketMedio: clientesAvulsos > 0 ? Math.round(vendido / clientesAvulsos) : 0,
+    atendimentosClube,
+    valorPorAtendimentoClube:
+      atendimentosClube > 0 && receitaClube > 0
+        ? Math.round(receitaClube / atendimentosClube)
+        : null,
     atendimentos,
     extrasQuantidade,
     extrasValor,

@@ -56,13 +56,13 @@ export function PainelIndicadores({
         rotulo="Faturamento"
         valor={formatarMoeda(atual.faturamento)}
         comparacao={comparar(atual.faturamento, anterior.faturamento, rotuloAnterior)}
-        origem={`Serviços e produtos das ${origem}, menos descontos. Receita não operacional fica fora.`}
+        origem={`Serviços e produtos das ${origem}, menos descontos${atual.receitaClube ? `, mais ${formatarMoeda(atual.receitaClube)} de mensalidades do clube recebidas` : ', mais as mensalidades do clube recebidas'}. Receita não operacional fica fora.`}
       />
       {projecao && (
         <CartaoIndicador
           rotulo="Projeção do mês"
           valor={formatarMoeda(projecao.projecao)}
-          origem={`Faturamento até hoje ÷ ${projecao.diasTrabalhados} ${projecao.diasTrabalhados === 1 ? 'dia trabalhado' : 'dias trabalhados'} × ${projecao.diasDoMes} dias de trabalho no mês, pelo calendário da unidade.`}
+          origem={`Faturamento das comandas até hoje ÷ ${projecao.diasTrabalhados} ${projecao.diasTrabalhados === 1 ? 'dia trabalhado' : 'dias trabalhados'} × ${projecao.diasDoMes} dias de trabalho no mês, pelo calendário da unidade, mais as mensalidades do clube já recebidas.`}
         />
       )}
       <CartaoIndicador
@@ -81,8 +81,16 @@ export function PainelIndicadores({
         rotulo="Ticket médio"
         valor={formatarMoeda(atual.ticketMedio)}
         comparacao={comparar(atual.ticketMedio, anterior.ticketMedio, rotuloAnterior)}
-        origem="Faturamento ÷ clientes."
+        origem="Serviços e produtos ÷ clientes que pagaram na hora. O atendimento só do plano do clube não entra, para não puxar para baixo."
       />
+      {(atual.receitaClube > 0 || atual.atendimentosClube > 0) && (
+        <CartaoIndicador
+          rotulo="Clube"
+          valor={formatarMoeda(atual.receitaClube)}
+          comparacao={comparar(atual.receitaClube, anterior.receitaClube, rotuloAnterior)}
+          origem={`Mensalidades recebidas no período · ${formatarNumero(atual.atendimentosClube)} ${atual.atendimentosClube === 1 ? 'atendimento' : 'atendimentos'} de assinante${atual.valorPorAtendimentoClube !== null ? ` · ${formatarMoeda(atual.valorPorAtendimentoClube)} por atendimento` : ''}.`}
+        />
+      )}
       <CartaoIndicador
         rotulo="Atendimentos"
         valor={formatarNumero(atual.atendimentos)}
