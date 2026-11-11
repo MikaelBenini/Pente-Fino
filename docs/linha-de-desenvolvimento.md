@@ -711,7 +711,10 @@ agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 - [x] **A2** não recebe atendimento de outro dia, nem de hoje que ainda não começou (cliente adiantado que o barbeiro já começou recebe normalmente); o servidor recusa (`atendimento_futuro`) e a tela explica. Caixa de hoje não aberto: o servidor recusa (`caixa_nao_aberto`) e a tela oferece "abrir o caixa com o troco e receber"
 - [x] **A3** comanda reaberta volta a ter as ações de uma aberta: começar, confirmar, cancelar (com motivo), marcar falta e mover horário. **Limpeza em produção (dono):** cancelar a comanda reaberta de teste (`01a1c85f-…`) e fechar o caixa de 11/11 aberto indevidamente
 - [x] **A4** comanda sem itens não fecha: botão desativado com "Sem itens. Lance um serviço ou cancele/marque falta." e o servidor recusa (`sem_itens`); item do clube com valor zero continua fechando
-- [ ] **A5–A8** bot de fábrica, selo da conversa, link sem serviço e `/servicos` no celular (em andamento)
+- [x] **A5** bot escolhe a palavra-chave mais específica (frase com mais palavras, depois mais letras; empate pela ordem dos grupos): "qual o horário de funcionamento?" vai para Endereço e horário. Palavras de fábrica novas (Agendar sem "horário" solto; Endereço com horário de funcionamento, que horas abre/fecha, abre hoje/domingo, funciona), aplicadas por migração só nas contas que não mexeram nesses grupos. O editor avisa palavra de um grupo contida na frase de outro (`conflitosPalavrasChave`), sem impedir publicar
+- [x] **A6** cada conversa traz a conexão da unidade dela (`conectado`); desconectado, o selo é "Bot parado: WhatsApp desconectado" (vermelho) com "Conectar"
+- [x] **A7** o link só liga com serviço com preço e profissional com horário (`faltaParaLigarLink`; 422 `link_incompleto` com o que falta e os atalhos); página pública sem serviço ou barbeiro mostra "Agendamento online indisponível" com WhatsApp, telefone e mapa; o editor do bot avisa as unidades com o link desligado
+- [x] **A8** `/servicos` e `/produtos` passavam da largura no celular: o "Ações" só para leitor de tela (absoluto) escapava da rolagem da tabela. `relative` nos contêineres de tabela e teste de tela com todas as rotas do painel em 375 px (`e2e/largura.spec.ts`)
 - [ ] **M1–M10, X1–X4, P1–P6** (seguintes)
 
 ## Etapa 23.4 · Administração sem furos (briefing de 2026-11-10)

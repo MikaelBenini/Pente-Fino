@@ -28,7 +28,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Painel | A1–A4 | Caixa não batia; dinheiro no dia errado; comanda presa | ✅ #150 (A1 competência aguarda decisão) |
 | 2 | Site | B1–B8, P1, P2, C1–C7, D3, D5, D6 | Textos contraditórios e oferta invisível | ✅ #148 (C2/C3/C4 aguardam dados do dono) |
-| 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | 🔄 em andamento (A5 e A6 feitos, A7 e A8 a seguir) |
+| 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | ✅ branch `fix/painel-a5-a8` |
 | 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ⏳ |
 | 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ⏳ |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ⏳ |
@@ -215,10 +215,10 @@ Itens que se sobrepõem e devem ser feitos juntos:
 - [x] A2 não fecha comanda futura; pede para abrir o caixa; validação também no servidor — #150
 - [x] A3 reaberta permite cancelar, marcar falta e mover; comanda de teste limpa — #150 (limpeza em produção com o dono)
 - [x] A4 comanda vazia não fecha (front + 422 no servidor); clube com item R$ 0 ainda fecha — #150
-- [ ] A5 frases de teste do bot com as respostas esperadas; alerta de conflito de palavras no editor
-- [ ] A6 selo da conversa reflete a conexão
-- [ ] A7 não liga o link sem serviço com preço; página pública sem serviço mostra contato
-- [ ] A8 `scrollWidth === innerWidth` em 375 px em todas as rotas
+- [x] A5 frases de teste do bot com as respostas esperadas; alerta de conflito de palavras no editor — `fix/painel-a5-a8`
+- [x] A6 selo da conversa reflete a conexão — `fix/painel-a5-a8`
+- [x] A7 não liga o link sem serviço com preço; página pública sem serviço mostra contato — `fix/painel-a5-a8`
+- [x] A8 `scrollWidth === innerWidth` em 375 px em todas as rotas — `fix/painel-a5-a8`
 - [ ] M1–M10 conferidos
 - [ ] X1–X4: axe sem "serious/critical"
 - [ ] P1 prévia no WhatsApp mostra a barbearia; P3 redirect 301 funcionando
