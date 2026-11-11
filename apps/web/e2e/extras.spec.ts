@@ -66,8 +66,12 @@ test('cliente agenda pelo link público, sem login', async ({ page }) => {
 });
 
 test('cliente troca de unidade no meio do agendamento sem perder o que fez', async ({ page }) => {
+  // Quem veio pela conversa do WhatsApp da unidade não vê a troca: já está na unidade certa.
+  await page.goto('/agendar?u=demo-centro&c=tokenDeTeste123');
+  await expect(page.getByRole('heading', { name: /Barbearia Pente Fino/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Agendar em outra unidade' })).toHaveCount(0);
+
   await page.goto('/agendar?u=demo-centro');
-  await expect(page.getByRole('region', { name: 'Unidade' })).toContainText('Centro');
   await page.getByLabel(/^Corte · 30 min$/).check();
   // Um barbeiro do Centro: não existe na outra unidade.
   await page
@@ -79,13 +83,13 @@ test('cliente troca de unidade no meio do agendamento sem perder o que fez', asy
   await page.getByLabel('Nome').fill(`Cliente Troca ${sufixo}`);
   await page.getByLabel('WhatsApp').fill('(11) 98888-7777');
 
-  await page.getByRole('button', { name: 'Trocar' }).click();
+  await page.getByRole('button', { name: 'Agendar em outra unidade' }).click();
   await page
     .getByRole('list', { name: 'Outras unidades' })
     .getByRole('button', { name: /Jardins/ })
     .click();
   await page.waitForURL(/\/agendar\?u=demo-jardins$/);
-  await expect(page.getByRole('region', { name: 'Unidade' })).toContainText('Jardins');
+  await expect(page.getByText('Jardins', { exact: true }).first()).toBeVisible();
   // Mantém o serviço e os dados; o barbeiro volta para "Sem preferência", com aviso.
   await expect(page.getByLabel(/^Corte · 30 min$/)).toBeChecked();
   await expect(page.getByLabel('Nome')).toHaveValue(`Cliente Troca ${sufixo}`);

@@ -274,9 +274,9 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
 
   return (
     <Moldura u={u}>
-      {u.outrasUnidades.length > 0 && (
+      {/* Quem veio pela conversa do WhatsApp já está na unidade que quer: nada a escolher. */}
+      {u.outrasUnidades.length > 0 && !token && (
         <EscolherUnidade
-          atual={u.nome}
           outras={u.outrasUnidades}
           trocando={trocando}
           onTrocar={(novo) => void trocarUnidade(novo)}
@@ -528,42 +528,35 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
   );
 }
 
-/** "Unidade: Centro · Trocar": as outras unidades da barbearia com agendamento online. */
+/**
+ * Saída discreta para outra unidade da barbearia (em geral, em outra cidade): o link já é da
+ * unidade certa na maioria das vezes, então o cliente não precisa decidir nada para agendar.
+ */
 function EscolherUnidade({
-  atual,
   outras,
   trocando,
   onTrocar,
 }: {
-  atual: string;
   outras: UnidadePublica['outrasUnidades'];
   trocando: boolean;
   onTrocar: (slug: string) => void;
 }) {
   const [aberto, setAberto] = useState(false);
   return (
-    <section
-      aria-label="Unidade"
-      className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-3"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p>
-          Unidade: <strong>{atual}</strong>
-        </p>
-        <button
-          type="button"
-          aria-expanded={aberto}
-          aria-controls="outras-unidades"
-          onClick={() => setAberto(!aberto)}
-          className="inline-flex min-h-11 items-center gap-1 rounded-md px-2 font-semibold text-modulo-texto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
-        >
-          Trocar
-          <ChevronDown
-            aria-hidden
-            className={cn('size-4 transition-transform', aberto && 'rotate-180')}
-          />
-        </button>
-      </div>
+    <section aria-label="Outras unidades da barbearia" className="-mt-3 flex flex-col gap-2">
+      <button
+        type="button"
+        aria-expanded={aberto}
+        aria-controls="outras-unidades"
+        onClick={() => setAberto(!aberto)}
+        className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-tinta-suave underline-offset-4 hover:text-tinta hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+      >
+        Agendar em outra unidade
+        <ChevronDown
+          aria-hidden
+          className={cn('size-4 transition-transform', aberto && 'rotate-180')}
+        />
+      </button>
       {aberto && (
         <ul id="outras-unidades" className="flex flex-col gap-2" aria-label="Outras unidades">
           {outras.map((o) => (
@@ -575,7 +568,7 @@ function EscolherUnidade({
                   setAberto(false);
                   onTrocar(o.slug);
                 }}
-                className="flex min-h-11 w-full flex-col items-start rounded-md border border-borda bg-fundo px-3 py-2 text-left hover:border-borda-forte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:opacity-60"
+                className="flex min-h-11 w-full flex-col items-start rounded-md border border-borda bg-superficie px-3 py-2 text-left hover:border-borda-forte focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco disabled:opacity-60"
               >
                 <span className="font-semibold">{o.nome}</span>
                 {o.endereco && (
