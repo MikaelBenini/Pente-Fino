@@ -134,7 +134,9 @@ function Resultado({ mes }: { mes: string }) {
                 {linha('Lucro do mês', i.lucro, { forte: true })}
               </dl>
               <p className="pt-1 text-sm text-tinta-suave">
-                Despesas operacionais: {formatarFracao(i.percentualDespesas)} do faturamento.
+                Custos operacionais: {formatarFracao(i.percentualDespesas)} do faturamento
+                (comissões {formatarFracao(i.percentualComissoes)} · despesas{' '}
+                {formatarFracao(Math.max(0, i.percentualDespesas - i.percentualComissoes))}).
               </p>
             </div>
             <div className="flex flex-col self-start rounded-lg border border-borda bg-superficie px-5 py-3 text-lg">

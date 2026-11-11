@@ -119,3 +119,62 @@ export function porDiaParaMeta(
   if (falta <= 0 || restantes <= 0) return null;
   return Math.ceil(falta / restantes);
 }
+
+// ─── Metas que não são de faturamento (painel M1) ─────────────────────────
+
+export interface MetaParaResumo {
+  tipo: 'faturamento' | 'servico';
+  servico: string | null;
+  objetivo: number;
+  atual: number;
+  /** Dias trabalhados ÷ dias de trabalho do mês. */
+  fracaoDoMes: number;
+}
+
+/**
+ * Resumo das metas de serviço para o card do Início, quando não há meta de faturamento. Antes, o
+ * card dizia "Defina a meta do mês" mesmo com "Corte · 0 de 12" cadastrada. Uma meta: o nome, o
+ * andamento e o ritmo; várias: quantas estão no ritmo. null = nenhuma meta de serviço.
+ */
+export function resumoDasMetas(
+  metas: readonly MetaParaResumo[],
+): { valor: string; detalhe: string } | null {
+  const deServico = metas.filter((m) => m.tipo === 'servico' && m.objetivo > 0);
+  if (deServico.length === 0) return null;
+  const noRitmo = (m: MetaParaResumo) =>
+    m.atual >= m.objetivo || m.atual / m.objetivo >= m.fracaoDoMes;
+  if (deServico.length === 1) {
+    const m = deServico[0]!;
+    const pct = Math.min(100, Math.round((m.atual / m.objetivo) * 100));
+    const ritmo = m.atual >= m.objetivo ? 'batida' : noRitmo(m) ? 'no ritmo' : 'abaixo do ritmo';
+    return {
+      valor: `${pct}%`,
+      detalhe: `${m.servico ?? 'Serviço'} · ${m.atual} de ${m.objetivo} · ${ritmo}`,
+    };
+  }
+  const ok = deServico.filter(noRitmo).length;
+  return {
+    valor: `${ok} de ${deServico.length}`,
+    detalhe: `metas de serviço no ritmo${ok < deServico.length ? ` · ${deServico.length - ok} abaixo` : ''}`,
+  };
+}
+
+// ─── Meses do histórico (painel M2) ───────────────────────────────────────
+
+const mesAntes = (m: string) => {
+  const [a, mm] = m.split('-').map(Number) as [number, number];
+  return mm === 1 ? `${a - 1}-12` : `${a}-${String(mm - 1).padStart(2, '0')}`;
+};
+
+/**
+ * Os meses do gráfico e da tabela de 12 meses, do mais antigo ao mês escolhido, sem começar antes
+ * do mês em que a conta foi criada (uma conta de novembro não mostra onze meses vazios).
+ */
+export function mesesDoHistorico(mes: string, mesDaCriacao: string | null, quantos = 12): string[] {
+  const meses: string[] = [];
+  for (let m = mes, i = 0; i < quantos; i++, m = mesAntes(m)) {
+    if (mesDaCriacao && m < mesDaCriacao) break;
+    meses.unshift(m);
+  }
+  return meses;
+}

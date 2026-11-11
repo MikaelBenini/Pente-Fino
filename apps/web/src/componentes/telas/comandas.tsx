@@ -84,6 +84,8 @@ function ListaComandas() {
   const [aba, setAba] = useState('abertas');
   const [nova, setNova] = useState(false);
   const balcao = papeis.some((p) => p !== 'barbeiro');
+  // A impressão leva as comandas do dia que não foram canceladas (igual ao PDF).
+  const paraImprimir = (comandas.data ?? []).filter((c) => c.status !== 'cancelada').length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,18 +112,30 @@ function ListaComandas() {
           />
         </div>
         {balcao && unidadeId && (
-          <div className="flex flex-wrap gap-2">
-            {[4, 6].map((n) => (
-              <a
-                key={n}
-                href={`/api/comandas/impressao?unidadeId=${unidadeId}&data=${dia}&porFolha=${n}`}
-                target="_blank"
-                rel="noopener"
-                className="inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3 focus-visible:outline-2 focus-visible:outline-foco"
-              >
-                <Printer aria-hidden className="size-4" /> Imprimir {n} por folha
-              </a>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {[4, 6].map((n) =>
+              paraImprimir > 0 ? (
+                <a
+                  key={n}
+                  href={`/api/comandas/impressao?unidadeId=${unidadeId}&data=${dia}&porFolha=${n}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3 focus-visible:outline-2 focus-visible:outline-foco"
+                >
+                  <Printer aria-hidden className="size-4" /> Imprimir {n} por folha
+                </a>
+              ) : (
+                // Painel M8: com 0 comandas, o PDF sairia em branco.
+                <Botao key={n} variante="secundario" disabled aria-describedby="sem-impressao">
+                  <Printer aria-hidden className="size-4" /> Imprimir {n} por folha
+                </Botao>
+              ),
+            )}
+            {paraImprimir === 0 && comandas.data && (
+              <span id="sem-impressao" className="text-sm text-tinta-suave">
+                Nenhuma comanda neste dia para imprimir.
+              </span>
+            )}
           </div>
         )}
       </div>

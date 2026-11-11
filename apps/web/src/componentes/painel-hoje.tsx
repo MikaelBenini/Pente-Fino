@@ -11,6 +11,7 @@ import {
   formatarNumero,
   pendenciasDoDia,
   porDiaParaMeta,
+  resumoDasMetas,
   type ItemDoDia,
   type TomPendencia,
 } from '@pente-fino/shared';
@@ -91,6 +92,8 @@ export function PainelHoje() {
 
   // Meta de faturamento do mês (somada quando são várias unidades).
   const metasFat = (metas.data ?? []).filter((m) => m.tipo === 'faturamento');
+  // Painel M1: sem meta de faturamento, o card mostra as metas de serviço que existem.
+  const outrasMetas = resumoDasMetas(metas.data ?? []);
   const diasDeTrabalho = resumoMes.data?.dias.filter((d) => d.trabalha).length ?? 0;
   const porDia =
     metasFat.length > 0 && diasDeTrabalho > 0
@@ -140,17 +143,21 @@ export function PainelHoje() {
           valor={formatarFracao(t.ocupacao.fracao, 0)}
           detalhe={`${Math.round(t.ocupacao.agendadoMin / 60)} h marcadas de ${Math.round(t.ocupacao.disponivelMin / 60)} h`}
         />
-        <Cartao
-          rotulo="Para bater a meta"
-          valor={porDia !== null ? formatarMoeda(porDia) : metasFat.length ? 'Batida' : '—'}
-          detalhe={
-            porDia !== null
-              ? 'por dia, em cada dia de trabalho que sobra no mês'
-              : metasFat.length
-                ? 'A meta de faturamento do mês já foi alcançada.'
-                : 'Defina a meta do mês em Resultados do mês.'
-          }
-        />
+        {metasFat.length === 0 && outrasMetas ? (
+          <Cartao rotulo="Metas do mês" valor={outrasMetas.valor} detalhe={outrasMetas.detalhe} />
+        ) : (
+          <Cartao
+            rotulo="Para bater a meta"
+            valor={porDia !== null ? formatarMoeda(porDia) : metasFat.length ? 'Batida' : '—'}
+            detalhe={
+              porDia !== null
+                ? 'por dia, em cada dia de trabalho que sobra no mês'
+                : metasFat.length
+                  ? 'A meta de faturamento do mês já foi alcançada.'
+                  : 'Defina a meta do mês em Resultados do mês.'
+            }
+          />
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

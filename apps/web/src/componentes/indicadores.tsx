@@ -102,7 +102,7 @@ export function PainelIndicadores({
         origem={`${atual.extrasQuantidade} extras (${formatarMoeda(atual.extrasValor)}) ÷ ${atual.clientes} clientes.`}
       />
       <CartaoIndicador
-        rotulo="Despesas sobre o faturamento"
+        rotulo="Custos sobre o faturamento"
         valor={formatarFracao(atual.percentualDespesas)}
         comparacao={comparar(
           atual.percentualDespesas,
@@ -111,7 +111,7 @@ export function PainelIndicadores({
           false,
           'pontos',
         )}
-        origem="(Fixas + comissões + manutenção + variáveis) ÷ faturamento. Investimento, retirada do dono e cartão ficam fora."
+        origem={`Comissões ${formatarFracao(atual.percentualComissoes)} + despesas ${formatarFracao(Math.max(0, atual.percentualDespesas - atual.percentualComissoes))} (fixas, variáveis e manutenção) ÷ faturamento. Investimento, retirada do dono e cartão ficam fora.`}
       />
     </div>
   );

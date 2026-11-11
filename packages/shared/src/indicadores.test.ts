@@ -99,7 +99,16 @@ describe('calcularIndicadores', () => {
       ticketMedio: 0,
       percentualExtras: 0,
       percentualDespesas: 0,
+      percentualComissoes: 0,
     });
+  });
+
+  // Painel M5: "Despesas operacionais: 40%" com despesas zeradas; os 40% eram a comissão.
+  it('a parte da comissão nos custos sai separada', () => {
+    const i = calcularIndicadores([{ itens: [servico(4500, false, 1, 1800)] }], []);
+    expect(i.percentualDespesas).toBe(0.4);
+    expect(i.percentualComissoes).toBe(0.4);
+    expect(i.percentualDespesas - i.percentualComissoes).toBe(0);
   });
 });
 
