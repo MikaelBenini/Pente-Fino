@@ -81,12 +81,16 @@ export type TipoPendencia =
   | 'nao_configurada'
   | 'cobranca_a_vencer'
   | 'ativa_sem_cobranca'
-  | 'teste_longo';
+  | 'teste_longo'
+  | 'whatsapp_caido'
+  | 'falha_email';
 
 export interface Pendencia {
   tipo: TipoPendencia;
-  contaId: string;
+  /** null = pendência do sistema (não de uma conta): a tela abre a aba de `irPara`. */
+  contaId: string | null;
   conta: string;
+  irPara?: 'saude';
   /** 1 = urgente, 2 = importante, 3 = acompanhar. */
   prioridade: 1 | 2 | 3;
   detalhe: string;
@@ -103,7 +107,20 @@ export const ROTULO_PENDENCIA: Readonly<Record<TipoPendencia, string>> = {
   cobranca_a_vencer: 'Vence em breve',
   ativa_sem_cobranca: 'Ativa sem cobrança',
   teste_longo: 'Teste longo',
+  whatsapp_caido: 'WhatsApp caído',
+  falha_email: 'E-mail que não saiu',
 };
+
+/** WhatsApp caído há mais que isso entra em "Precisa de atenção" (admin R8). */
+export const HORAS_WHATSAPP_CAIDO = 2;
+
+/** O que a lista do dia recebe além das contas e cobranças. */
+export interface ExtrasDasPendencias {
+  /** Conexões de WhatsApp que caíram sozinhas (sem o dono desconectar). */
+  conexoesCaidas?: readonly { contaId: string; unidade: string; caiuEm: string }[];
+  /** E-mails que falharam nas últimas 24 h. */
+  falhasEmail?: readonly { critico: boolean }[];
+}
 
 const reais = (centavos: number) =>
   (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -117,6 +134,7 @@ export function pendenciasDaPlataforma(
   contas: readonly ContaNaPlataforma[],
   cobrancas: readonly Pick<CobrancaNaPlataforma, 'contaId' | 'valor' | 'status' | 'vencimento'>[],
   agora: Date,
+  extras: ExtrasDasPendencias = {},
 ): Pendencia[] {
   const hoje = agora.toISOString().slice(0, 10);
   const r: Pendencia[] = [];
@@ -131,6 +149,19 @@ export function pendenciasDaPlataforma(
     // Conta interna (da própria equipe) não pede atenção comercial (admin R5).
     if (conta.status === 'cancelada' || conta.interna) continue;
     const base = { contaId: conta.id, conta: conta.nome };
+    // Admin R8: a Saúde mostrava o WhatsApp caído e o Início dizia "Tudo em dia por aqui".
+    for (const c of extras.conexoesCaidas ?? []) {
+      if (c.contaId !== conta.id) continue;
+      const horas = Math.floor((agora.getTime() - Date.parse(c.caiuEm)) / 3_600_000);
+      if (horas < HORAS_WHATSAPP_CAIDO) continue;
+      r.push({
+        ...base,
+        tipo: 'whatsapp_caido',
+        prioridade: 1,
+        detalhe: `WhatsApp da unidade ${c.unidade} caído há ${horas >= 48 ? plural(Math.floor(horas / 24), 'dia', 'dias') : plural(horas, 'hora', 'horas')}: o bot e os lembretes estão parados`,
+        acao: 'Falar com o dono e ajudar a reconectar pelo QR Code',
+      });
+    }
     // Admin R5: ativa, nunca pagou, sem cortesia, sem data para começar a cobrar e sem cobrança
     // em aberto: está usando de graça sem ninguém ter decidido isso.
     const emCortesia = !!conta.cortesiaAte && conta.cortesiaAte >= hoje;
@@ -223,6 +254,20 @@ export function pendenciasDaPlataforma(
           acao: 'Ligar: risco de cancelamento',
         });
     }
+  }
+  // Admin R7: falha de e-mail não era vista (a Saúde mostrava "Falhas guardadas: 4" e mais nada).
+  const falhas = extras.falhasEmail ?? [];
+  if (falhas.length > 0) {
+    const criticas = falhas.filter((f) => f.critico).length;
+    r.push({
+      tipo: 'falha_email',
+      contaId: null,
+      conta: 'Sistema',
+      irPara: 'saude',
+      prioridade: criticas > 0 ? 1 : 2,
+      detalhe: `${plural(falhas.length, 'e-mail não saiu', 'e-mails não saíram')} nas últimas 24 h${criticas > 0 ? ` (${criticas === 1 ? 'um é' : `${criticas} são`} de boas-vindas ou confirmação de cadastro)` : ''}`,
+      acao: 'Ver o motivo na Saúde do sistema e reenviar',
+    });
   }
   return r.sort((a, b) => a.prioridade - b.prioridade || a.conta.localeCompare(b.conta, 'pt-BR'));
 }

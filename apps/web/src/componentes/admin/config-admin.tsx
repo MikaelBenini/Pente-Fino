@@ -3,6 +3,7 @@
 import {
   formatarDataHora,
   type ConfiguracaoPublica,
+  type FalhaDeEmail,
   type SaudeDoSistema,
   type ResultadoTesteSmtp,
   type SmtpNaTela,
@@ -270,6 +271,18 @@ export function SaudeAdmin() {
                 {d.banco === 'ok' ? 'No ar' : 'Falha'}
               </Ficha>
             </p>
+            {d.ipsInternos.acessos > 0 && (
+              <Aviso tom="aviso">
+                {d.ipsInternos.acessos} acesso(s) à administração nos últimos 7 dias chegaram com IP
+                interno (rede do Docker)
+                {d.ipsInternos.ultimo
+                  ? `, o último em ${formatarDataHora(d.ipsInternos.ultimo)}`
+                  : ''}
+                : a auditoria não guarda o IP real de quem entrou. Em geral, é acesso por IPv6 com a
+                rede do Docker só em IPv4. Veja &quot;IP real na auditoria&quot; em
+                docs/producao.md.
+              </Aviso>
+            )}
             <Tabela rotulo="Filas">
               <thead>
                 <tr className="border-b border-borda">
@@ -341,6 +354,7 @@ export function SaudeAdmin() {
                 </ul>
               )}
             </section>
+            <EmailsQueNaoSairam />
             <NotasNaSaude n={d.notasFiscais} />
             <LimpezaNaSaude execucoes={d.limpeza} />
           </div>
@@ -985,6 +999,140 @@ export function CuponsAdmin() {
           }}
         />
       </form>
+    </section>
+  );
+}
+
+/**
+ * Admin R7: os e-mails que falharam, com o motivo do servidor de e-mail. Reenviar volta para a
+ * fila; descartar pede o motivo (os dois ficam na auditoria). Sem conteúdo nem endereço inteiro.
+ */
+function EmailsQueNaoSairam() {
+  const cliente = useQueryClient();
+  const q = useQuery({
+    queryKey: ['admin', 'saude', 'emails'],
+    queryFn: () => adminApi<FalhaDeEmail[]>('saude/emails'),
+  });
+  const [descartando, setDescartando] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState('');
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  async function agir(id: string, f: () => Promise<unknown>, feito: string) {
+    setOcupado(id);
+    setErro(null);
+    setOk(null);
+    try {
+      await f();
+      setOk(feito);
+      setDescartando(null);
+      setMotivo('');
+      await cliente.invalidateQueries({ queryKey: ['admin', 'saude'] });
+      await cliente.invalidateQueries({ queryKey: ['admin', 'pendencias'] });
+    } catch (e) {
+      setErro(
+        e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.',
+      );
+    } finally {
+      setOcupado(null);
+    }
+  }
+
+  return (
+    <section aria-labelledby="titulo-emails-falhos" className="flex flex-col gap-2">
+      <h2 id="titulo-emails-falhos" className="text-lg font-semibold">
+        E-mails que não saíram
+      </h2>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {ok && (
+        <p role="status" className="text-sm text-acao-texto">
+          {ok}
+        </p>
+      )}
+      <Estado consulta={q}>
+        {() =>
+          q.data!.length === 0 ? (
+            <p className="text-sm text-tinta-suave">Nenhum e-mail com falha.</p>
+          ) : (
+            <ul className="flex flex-col gap-2" aria-label="E-mails que não saíram">
+              {q.data!.map((f) => (
+                <li
+                  key={f.id}
+                  className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-3 text-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      <strong>{f.modelo ?? f.assunto}</strong> · {f.para} ·{' '}
+                      <span className="tabular-nums text-tinta-suave">
+                        {formatarDataHora(f.quando)}
+                      </span>
+                      {f.critico && (
+                        <span className="ml-2">
+                          <Ficha tom="perigo">Cadastro</Ficha>
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex flex-wrap gap-2">
+                      <Botao
+                        variante="secundario"
+                        carregando={ocupado === f.id && descartando !== f.id}
+                        onClick={() =>
+                          agir(
+                            f.id,
+                            () => adminApi(`saude/emails/${f.id}/reenviar`, { metodo: 'POST' }),
+                            `Reenviado para ${f.para}.`,
+                          )
+                        }
+                      >
+                        Reenviar
+                      </Botao>
+                      <Botao variante="fantasma" onClick={() => setDescartando(f.id)}>
+                        Descartar
+                      </Botao>
+                    </span>
+                  </div>
+                  <span className="text-perigo-texto">{f.motivo}</span>
+                  <span className="text-tinta-suave">
+                    {f.tentativas} tentativa{f.tentativas === 1 ? '' : 's'}
+                  </span>
+                  {descartando === f.id && (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <div className="min-w-56 flex-1">
+                        <Campo
+                          id={`descartar-${f.id}`}
+                          rotulo="Motivo para descartar"
+                          dica='Ex.: "e-mail digitado errado; o dono já entrou".'
+                          value={motivo}
+                          onChange={(e) => setMotivo(e.target.value)}
+                        />
+                      </div>
+                      <Botao
+                        variante="perigo"
+                        disabled={motivo.trim().length < 5}
+                        carregando={ocupado === f.id}
+                        onClick={() =>
+                          agir(
+                            f.id,
+                            () =>
+                              adminApi(`saude/emails/${f.id}/descartar`, {
+                                metodo: 'POST',
+                                corpo: { motivo },
+                              }),
+                            'Descartado. Ficou registrado na auditoria.',
+                          )
+                        }
+                      >
+                        Descartar e-mail
+                      </Botao>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </Estado>
     </section>
   );
 }

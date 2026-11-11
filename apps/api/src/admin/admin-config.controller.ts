@@ -58,6 +58,12 @@ import {
   type SaudeDoSistema,
   type ExecucaoLimpezaNaTela,
   lerConfigNotaFiscal,
+  descartarEmailSchema,
+  EMAILS_CRITICOS,
+  ipInterno,
+  mascararEmail,
+  type FalhaDeEmail,
+  type TrabalhoEmail,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { z } from 'zod';
@@ -130,10 +136,12 @@ export class SaudeService implements OnModuleDestroy {
       take: 7,
     });
     const notasFiscais = await this.notasFiscais();
+    const ipsInternos = await this.ipsInternos();
     return {
       banco,
       filas,
       notasFiscais,
+      ipsInternos,
       conexoesCaidas: caidas.map((x) => ({
         contaId: x.conta_id,
         conta: x.conta,
@@ -150,6 +158,66 @@ export class SaudeService implements OnModuleDestroy {
         erro: e.erro,
       })),
     };
+  }
+
+  /** Admin R9: acessos à administração dos últimos 7 dias que chegaram com IP interno. */
+  private async ipsInternos(): Promise<SaudeDoSistema['ipsInternos']> {
+    const eventos = await this.banco.prisma.auditoriaPlataforma.findMany({
+      where: { criadoEm: { gte: new Date(Date.now() - 7 * DIA_MS) }, ip: { not: null } },
+      select: { ip: true, criadoEm: true },
+      orderBy: { criadoEm: 'desc' },
+      take: 2000,
+    });
+    const internos = eventos.filter((e) => ipInterno(e.ip));
+    return {
+      acessos: internos.length,
+      ultimo: internos[0]?.criadoEm.toISOString() ?? null,
+    };
+  }
+
+  /**
+   * Admin R7: e-mails que falharam na fila, sem o conteúdo e com o destinatário mascarado.
+   * `desde` = só os que falharam depois (para o "Precisa de atenção").
+   */
+  async falhasDeEmail(desde?: number): Promise<FalhaDeEmail[]> {
+    const jobs = await this.filas.emails.getFailed(0, 199);
+    return jobs
+      .filter((j) => !desde || (j.finishedOn ?? 0) >= desde)
+      .map((j) => {
+        const e = (j.data ?? {}) as Partial<TrabalhoEmail>;
+        const chave = e.modelo as ChaveModeloEmail | undefined;
+        return {
+          id: String(j.id),
+          quando: new Date(j.finishedOn ?? j.timestamp).toISOString(),
+          para: mascararEmail(e.para ?? ''),
+          modelo: chave && MODELOS_EMAIL[chave] ? MODELOS_EMAIL[chave].nome : null,
+          assunto: (e.assunto ?? '').slice(0, 200),
+          motivo: (j.failedReason ?? 'Sem motivo informado').slice(0, 300),
+          tentativas: j.attemptsMade,
+          critico: !!chave && EMAILS_CRITICOS.includes(chave),
+        };
+      })
+      .sort((a, b) => b.quando.localeCompare(a.quando));
+  }
+
+  /** Reenvia (volta para a fila com as tentativas zeradas); devolve o destinatário mascarado. */
+  async reenviarEmail(id: string): Promise<{ para: string; modelo: string | null }> {
+    const j = await this.filas.emails.getJob(id);
+    if (!j || !(await j.isFailed()))
+      throw Erros.naoEncontrado('Este e-mail não está mais entre as falhas.');
+    const e = (j.data ?? {}) as Partial<TrabalhoEmail>;
+    await j.retry('failed', { resetAttemptsMade: true });
+    return { para: mascararEmail(e.para ?? ''), modelo: e.modelo ?? null };
+  }
+
+  /** Tira das falhas sem enviar (o motivo vai para a auditoria). */
+  async descartarEmail(id: string): Promise<{ para: string; modelo: string | null }> {
+    const j = await this.filas.emails.getJob(id);
+    if (!j || !(await j.isFailed()))
+      throw Erros.naoEncontrado('Este e-mail não está mais entre as falhas.');
+    const e = (j.data ?? {}) as Partial<TrabalhoEmail>;
+    await j.remove();
+    return { para: mascararEmail(e.para ?? ''), modelo: e.modelo ?? null };
   }
 
   /** Nota fiscal das mensalidades: ligada?, a última emitida e as que não saíram em 30 dias. */
@@ -481,6 +549,43 @@ export class AdminConfigController {
   ): Promise<void> {
     const outros = lerCupons(await this.valor('cupons')).filter((x) => x.codigo !== c.codigo);
     await this.gravar('cupons', [...outros, c], a, ip);
+  }
+
+  @Get('saude/emails')
+  @ApiOperation({ summary: 'E-mails que não saíram (destinatário mascarado, motivo do SMTP)' })
+  emailsFalhos(): Promise<FalhaDeEmail[]> {
+    return this.saudeServico.falhasDeEmail();
+  }
+
+  @Post('saude/emails/:id/reenviar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Reenviar um e-mail que falhou' })
+  async reenviarEmail(
+    @Param('id') id: string,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    const e = await this.saudeServico.reenviarEmail(id.slice(0, 64));
+    await this.auth.auditar({ usuarioId: a.id, acao: 'reenviar_email', depois: e, ip });
+  }
+
+  @Post('saude/emails/:id/descartar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Descartar um e-mail que falhou, com o motivo' })
+  async descartarEmail(
+    @Param('id') id: string,
+    @Corpo(descartarEmailSchema) d: z.infer<typeof descartarEmailSchema>,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    const e = await this.saudeServico.descartarEmail(id.slice(0, 64));
+    await this.auth.auditar({
+      usuarioId: a.id,
+      acao: 'descartar_email',
+      depois: e,
+      motivo: d.motivo,
+      ip,
+    });
   }
 
   @Get('saude')

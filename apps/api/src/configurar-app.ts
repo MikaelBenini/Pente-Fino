@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
+import { normalizarIp } from '@pente-fino/shared';
 import { Contexto } from './comum/contexto.js';
 import { CONFIGURACAO, type Configuracao } from './config/configuracao.js';
 
@@ -19,7 +20,12 @@ function contextoDaRequisicao(req: Request, res: Response, next: NextFunction): 
   (req as Request & { id: string }).id = requestId;
   res.setHeader('x-request-id', requestId);
   Contexto.executar(
-    { requestId, ip: req.ip, userAgent: req.get('user-agent')?.slice(0, 300), auditorias: 0 },
+    {
+      requestId,
+      ip: normalizarIp(req.ip) ?? undefined,
+      userAgent: req.get('user-agent')?.slice(0, 300),
+      auditorias: 0,
+    },
     next,
   );
 }

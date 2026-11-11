@@ -195,6 +195,14 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   );
   await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
   await expect(page.getByRole('table', { name: 'Filas' })).toContainText('E-mails');
+  await expect(page.getByRole('heading', { name: 'E-mails que não saíram' })).toBeVisible();
+  // Admin R10: mudar o endereço com a página aberta troca a aba (antes ficava em Saúde).
+  await page.evaluate(() => {
+    window.location.hash = 'contas';
+  });
+  await expect(page.getByRole('heading', { name: 'Contas', level: 1 })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('table', { name: 'Filas' })).toBeVisible();
   await expect(
     page.getByRole('region', { name: 'Nota fiscal das mensalidades' }).getByText(/Emissão/),
   ).toBeVisible();

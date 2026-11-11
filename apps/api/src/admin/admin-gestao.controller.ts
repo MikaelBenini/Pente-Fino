@@ -14,7 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { contasDaPlataforma, faturasDaPlataforma } from '@pente-fino/db';
+import { conexoesCaidasPlataforma, contasDaPlataforma, faturasDaPlataforma } from '@pente-fino/db';
 import {
   dataLocal,
   filtroAuditoriaSchema,
@@ -37,6 +37,7 @@ import { Publico } from '../auth/decoradores.js';
 import { gerarHashSenha } from '../auth/senhas.js';
 import { Erros } from '../comum/erros.js';
 import { Corpo } from '../comum/validacao.js';
+import { SaudeService } from './admin-config.controller.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
 import { BancoPlataforma } from './banco-plataforma.js';
@@ -53,6 +54,7 @@ export class AdminGestaoController {
   constructor(
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
     @Inject(AdminAuthService) private readonly auth: AdminAuthService,
+    @Inject(SaudeService) private readonly saude: SaudeService,
   ) {}
 
   /** Contas e cobranças que quem está logado pode ver (vendedor: só as que vendeu). */
@@ -82,10 +84,25 @@ export class AdminGestaoController {
   }
 
   @Get('pendencias')
-  @ApiOperation({ summary: 'O que precisa de atenção hoje (cobrança, teste, uso, ativação)' })
+  @ApiOperation({
+    summary:
+      'O que precisa de atenção hoje (cobrança, teste, uso, ativação, WhatsApp caído, e-mail que não saiu)',
+  })
   async pendencias(@AdminAtual() a: AdminAutenticado): Promise<Pendencia[]> {
     const { contas, cobrancas } = await this.contasECobrancas(a);
-    return pendenciasDaPlataforma(contas, cobrancas, new Date());
+    const agora = new Date();
+    const caidas = await conexoesCaidasPlataforma(this.banco.prisma);
+    // E-mail é do sistema, não de uma conta: só o admin vê (o vendedor vê as contas dele).
+    const falhasEmail =
+      a.papel === 'admin' ? await this.saude.falhasDeEmail(agora.getTime() - 86_400_000) : [];
+    return pendenciasDaPlataforma(contas, cobrancas, agora, {
+      conexoesCaidas: caidas.map((c) => ({
+        contaId: c.conta_id,
+        unidade: c.unidade,
+        caiuEm: c.caiu_em.toISOString(),
+      })),
+      falhasEmail,
+    });
   }
 
   @Get('cobrancas')
