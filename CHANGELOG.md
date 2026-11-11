@@ -14,6 +14,8 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
   ("horário de funcionamento" ganha de "horário"). As palavras de fábrica de Agendar e Endereço
   mudaram, inclusive nas contas que não tinham mexido nelas.
 - O editor do bot avisa quando uma palavra de um grupo está dentro da frase de outro grupo.
+- Conversas: com o WhatsApp da unidade desconectado, a conversa mostra "Bot parado: WhatsApp
+  desconectado" (vermelho) e o link "Conectar", em vez de "Bot respondendo".
 
 ### Corrigido (caixa e comanda)
 

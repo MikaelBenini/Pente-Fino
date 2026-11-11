@@ -35,6 +35,8 @@ function FichaSituacao({ c }: { c: ConversaResumo }) {
   if (c.situacao === 'aguardando')
     return <Ficha tom="aviso">Esperando {c.aguardandoDesde && haQuanto(c.aguardandoDesde)}</Ficha>;
   if (c.situacao === 'atendimento') return <Ficha tom="acao">Com a equipe</Ficha>;
+  // O selo segue a conexão real da unidade: desconectado, o bot não responde ninguém.
+  if (!c.conectado) return <Ficha tom="perigo">Bot parado: WhatsApp desconectado</Ficha>;
   return <Ficha tom="neutro">Bot respondendo</Ficha>;
 }
 
@@ -108,7 +110,8 @@ export function TelaConversas() {
                     <Conversa
                       key={atual.id}
                       c={atual}
-                      conectado={conectado}
+                      conectado={atual.conectado}
+                      gestao={gestao}
                       onVoltar={() => setAberta(null)}
                     />
                   ) : (
@@ -197,10 +200,12 @@ function GrupoConversas({
 function Conversa({
   c,
   conectado,
+  gestao,
   onVoltar,
 }: {
   c: ConversaResumo;
   conectado: boolean;
+  gestao: boolean;
   onVoltar: () => void;
 }) {
   const mensagens = useMensagensConversa(c.id);
@@ -261,6 +266,11 @@ function Conversa({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <FichaSituacao c={c} />
+          {!conectado && gestao && (
+            <Link href="/bot?aba=conexao" className="text-sm font-semibold underline">
+              Conectar
+            </Link>
+          )}
           {c.situacao !== 'atendimento' && (
             <Botao
               carregando={assumir.isPending}

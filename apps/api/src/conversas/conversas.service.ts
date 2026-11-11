@@ -62,7 +62,7 @@ export class ConversasService {
           take: LIMITE_LISTA,
           include: { cliente: { select: { nome: true } } },
         }),
-        tx.botConexao.findMany({ where: escopo, select: { status: true } }),
+        tx.botConexao.findMany({ where: escopo, select: { unidadeId: true, status: true } }),
       ]);
       const sessoes = [...primeiro, ...recentes];
       const ultimas = sessoes.length
@@ -75,6 +75,9 @@ export class ConversasService {
             select: { unidadeId: true, telefone: true, texto: true, direcao: true, criadoEm: true },
           })
         : [];
+      const conectadas = new Set(
+        conexoes.filter((c) => c.status === 'conectado').map((c) => c.unidadeId),
+      );
       const ultimaDe = new Map(ultimas.map((m) => [`${m.unidadeId}:${m.telefone}`, m]));
       const conversas: ConversaResumo[] = sessoes.map((s) => {
         const sessao = lerSessao(s.sessao);
@@ -87,6 +90,7 @@ export class ConversasService {
           cliente: s.cliente?.nome ?? null,
           situacao: s.atendenteDesde ? 'aguardando' : sessao.comAtendente ? 'atendimento' : 'bot',
           aguardandoDesde: s.atendenteDesde?.toISOString() ?? null,
+          conectado: conectadas.has(s.unidadeId),
           ultimaMensagem: m
             ? { texto: m.texto, direcao: m.direcao, criadoEm: m.criadoEm.toISOString() }
             : null,
@@ -96,7 +100,7 @@ export class ConversasService {
       return {
         conversas,
         aguardando,
-        conectado: conexoes.some((c) => c.status === 'conectado'),
+        conectado: conectadas.size > 0,
       };
     });
   }
