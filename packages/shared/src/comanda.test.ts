@@ -154,3 +154,12 @@ describe('horariosLivres', () => {
     expect(horariosLivres({ expediente, ocupados: [], duracaoMin: 240 })).toEqual([]);
   });
 });
+
+describe('comanda reaberta (briefing do painel, A3)', () => {
+  it('volta a ter as ações de uma comanda em aberto', () => {
+    for (const acao of ['iniciar', 'confirmar', 'cancelar', 'nao_veio', 'fechar'] as const)
+      expect(podeAgirNaComanda(acao, 'reaberta', ['gestor'], false).permitido).toBe(true);
+    // Reabrir de novo só depois de fechar.
+    expect(podeAgirNaComanda('reabrir', 'reaberta', ['gestor'], false).permitido).toBe(false);
+  });
+});

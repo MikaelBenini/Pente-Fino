@@ -699,6 +699,21 @@ opção padrão do briefing, numa constante fácil de trocar.
 - [ ] **N1–N5** páginas por intenção de busca, comparativos (só fatos com data e fonte), calculadoras em URL própria, blog e Sobre/Contato
 - [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
 
+## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)
+
+Fonte: [pente-fino-melhorias-painel.md](pente-fino-melhorias-painel.md) (auditoria com um
+agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
+
+**Grupo A — dinheiro e dados**
+
+- [x] **A1** dinheiro pela data do **recebimento**: o caixa do dia soma o que foi recebido no dia (`fechadaEm`), não o que estava agendado para ele; "a receber" continua sendo os atendimentos do dia em aberto. O caixa **nunca abre sozinho** (antes, fechar abria o caixa do dia do atendimento). Reabrir comanda confere o caixa do dia em que ela foi recebida. Início, Caixa, Clientes, Resultados e Financeiro passam a usar a mesma data para o dinheiro
+- [ ] **A1 (competência)** [DECISÃO DO DONO] faturamento, lucro e "última visita" pela data do **atendimento**. Hoje usam a data do fechamento em todas as telas (concordam entre si); com o A2, só diverge quando a comanda é fechada em outro dia. Mudar exige guardar a data do atendimento na comanda (migração) e recalcula meses já passados — aguarda a decisão
+- [x] **A2** não recebe atendimento de outro dia, nem de hoje que ainda não começou (cliente adiantado que o barbeiro já começou recebe normalmente); o servidor recusa (`atendimento_futuro`) e a tela explica. Caixa de hoje não aberto: o servidor recusa (`caixa_nao_aberto`) e a tela oferece "abrir o caixa com o troco e receber"
+- [x] **A3** comanda reaberta volta a ter as ações de uma aberta: começar, confirmar, cancelar (com motivo), marcar falta e mover horário. **Limpeza em produção (dono):** cancelar a comanda reaberta de teste (`01a1c85f-…`) e fechar o caixa de 11/11 aberto indevidamente
+- [x] **A4** comanda sem itens não fecha: botão desativado com "Sem itens. Lance um serviço ou cancele/marque falta." e o servidor recusa (`sem_itens`); item do clube com valor zero continua fechando
+- [ ] **A5–A8** bot de fábrica, selo da conversa, link sem serviço e `/servicos` no celular (próximo PR)
+- [ ] **M1–M10, X1–X4, P1–P6** (seguintes)
+
 ## Etapa 24 · Premium completo
 
 Depois do lançamento, o que o Premium anuncia como "em breve".

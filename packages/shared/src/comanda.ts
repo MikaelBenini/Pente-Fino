@@ -29,17 +29,21 @@ const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'barbeiro'];
 
 /** De quais estados cada ação parte, e quem pode fazê-la. */
 const REGRAS: Record<AcaoComanda, { de: readonly StatusComanda[]; papeis: readonly Papel[] }> = {
-  iniciar: { de: ['prevista', 'pendente'], papeis: TODOS },
-  confirmar: { de: ['prevista', 'em_atendimento', 'pendente'], papeis: TODOS },
+  // Reaberta volta a ser uma comanda em aberto: começa, confirma, cancela ou marca falta de novo.
+  iniciar: { de: ['prevista', 'pendente', 'reaberta'], papeis: TODOS },
+  confirmar: { de: ['prevista', 'em_atendimento', 'pendente', 'reaberta'], papeis: TODOS },
   // Recepção fecha o que o barbeiro confirmou; sem confirmação (pendente), só dono ou gestor.
   fechar: {
     de: ['confirmada', 'reaberta', 'pendente', 'em_atendimento', 'prevista'],
     papeis: BALCAO,
   },
-  cancelar: { de: ['prevista', 'em_atendimento', 'confirmada', 'pendente'], papeis: BALCAO },
+  cancelar: {
+    de: ['prevista', 'em_atendimento', 'confirmada', 'pendente', 'reaberta'],
+    papeis: BALCAO,
+  },
   reabrir: { de: ['fechada'], papeis: GESTAO },
   // Pendente = o horário acabou e nada aconteceu: o barbeiro ainda pode confirmar que não veio.
-  nao_veio: { de: ['prevista', 'pendente'], papeis: TODOS },
+  nao_veio: { de: ['prevista', 'pendente', 'reaberta'], papeis: TODOS },
   editar_itens: {
     de: ['prevista', 'em_atendimento', 'confirmada', 'pendente', 'reaberta'],
     papeis: TODOS,

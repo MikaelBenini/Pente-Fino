@@ -160,10 +160,11 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     papeis: BALCAO,
     rota: '/caixa',
     passos: [
-      'Abra Caixa do dia: aparecem as entradas por forma de pagamento.',
-      'Informe o troco que ficou na gaveta e o dinheiro contado.',
-      'Feche o caixa. Diferença entre o contado e o lançado gera aviso para o dono e o gestor.',
+      'No começo do dia, abra o caixa com o troco da gaveta. Sem caixa aberto, a comanda não é recebida (o sistema oferece abrir na hora).',
+      'Cada pagamento entra no caixa do dia em que foi recebido: comanda de ontem paga hoje entra no caixa de hoje.',
+      'No fim do dia, informe o dinheiro contado e feche o caixa. Diferença entre o contado e o lançado gera aviso para o dono e o gestor.',
     ],
+    dica: 'Atendimento marcado para outro dia só é recebido quando acontecer: assim o caixa e o faturamento ficam no dia certo.',
   },
   {
     id: 'lucro-e-indicadores',

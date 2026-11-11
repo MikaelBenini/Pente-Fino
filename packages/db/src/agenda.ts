@@ -358,7 +358,8 @@ export async function moverAgendamento(
     include: { comanda: true },
   });
   if (!ag) throw new ErroAgenda('nao_encontrado', 'Agendamento não encontrado.');
-  if (!ag.comanda || ag.comanda.status !== 'prevista')
+  // Prevista ou reaberta (fechada por engano e reaberta): ainda dá para acertar o horário.
+  if (!ag.comanda || !['prevista', 'reaberta'].includes(ag.comanda.status))
     throw new ErroAgenda('conflito', 'Só dá para remarcar antes de o atendimento começar.');
   const fim = new Date(inicio.getTime() + (ag.fim.getTime() - ag.inicio.getTime()));
   const prof = profissionalId ?? ag.profissionalId;

@@ -320,8 +320,9 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
   const [reabrir, setReabrir] = useState(false);
   const [mover, setMover] = useState(false);
   const movimento = useMoverHorario();
+  // Reaberta (fechada por engano) também remarca: o horário pode ter sido o erro.
   const podeMover =
-    c.status === 'prevista' &&
+    (c.status === 'prevista' || c.status === 'reaberta') &&
     !!c.agendamentoId &&
     !!c.inicio &&
     papeis.some((p) => p === 'dono' || p === 'gestor' || p === 'recepcao');
@@ -336,15 +337,35 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
     chave,
   );
 
+  // O caixa de hoje não foi aberto: oferece abrir com o troco e tenta receber de novo.
+  const [caixaPendente, setCaixaPendente] = useState<unknown>(null);
   async function executar(caminho: string, corpo?: unknown, metodo?: string) {
     setErro(null);
     setAviso(null);
     try {
       await acao.mutateAsync({ caminho, corpo, metodo });
     } catch (e) {
+      if (caminho === 'fechar' && e instanceof ErroApi && e.codigo === 'caixa_nao_aberto') {
+        setCaixaPendente(corpo ?? {});
+        return;
+      }
       setErro(mensagemDe(e));
     }
   }
+  // Receber e fechar: sem itens não há o que receber; atendimento de outro dia (ou de hoje que
+  // nem começou) ainda não aconteceu. O servidor confere o mesmo.
+  const agora = new Date();
+  const futuro =
+    !!c.inicio &&
+    !!c.agendamentoId &&
+    (dataLocal(new Date(c.inicio)) > dataLocal(agora) ||
+      (new Date(c.inicio) > agora && c.status === 'prevista'));
+  const motivoNaoFecha =
+    c.itens.length === 0
+      ? 'Sem itens. Lance um serviço ou cancele/marque falta.'
+      : futuro
+        ? `O atendimento é em ${formatarDiaPorExtenso(c.inicio!)} às ${formatarHora(c.inicio!)}.`
+        : null;
 
   /** Lançar item: sem internet, guarda no aparelho e envia depois. */
   async function lancar(
@@ -534,7 +555,7 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
 
       <aside className="flex flex-col gap-4" aria-label="Ações da comanda">
         <div className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-4">
-          {pode('iniciar') && c.status === 'prevista' && (
+          {pode('iniciar') && (c.status === 'prevista' || c.status === 'reaberta') && (
             <Botao
               variante="secundario"
               onClick={() => executar('iniciar')}
@@ -548,7 +569,22 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
               Confirmar atendimento
             </Botao>
           )}
-          {pode('fechar') && <Botao onClick={() => setFechar(true)}>Receber e fechar</Botao>}
+          {pode('fechar') && (
+            <>
+              <Botao
+                onClick={() => setFechar(true)}
+                disabled={!!motivoNaoFecha}
+                aria-describedby={motivoNaoFecha ? 'motivo-nao-fecha' : undefined}
+              >
+                Receber e fechar
+              </Botao>
+              {motivoNaoFecha && (
+                <p id="motivo-nao-fecha" className="text-sm text-tinta-suave">
+                  {motivoNaoFecha}
+                </p>
+              )}
+            </>
+          )}
           {pode('reabrir') && (
             <Botao variante="secundario" onClick={() => setReabrir(true)}>
               Reabrir comanda
@@ -589,6 +625,16 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
         aberto={fechar}
         onFechar={() => setFechar(false)}
         onConcluir={(corpo) => executar('fechar', corpo)}
+      />
+      <AbrirCaixa
+        unidadeId={c.unidadeId}
+        aberto={caixaPendente !== null}
+        onFechar={() => setCaixaPendente(null)}
+        onAberto={async () => {
+          const corpo = caixaPendente;
+          setCaixaPendente(null);
+          await executar('fechar', corpo);
+        }}
       />
       <Cancelamento
         aberto={cancelar}
@@ -688,6 +734,75 @@ function LancarItens({
             })),
         )}
     </div>
+  );
+}
+
+/**
+ * "O caixa de hoje não foi aberto": abre com o troco da gaveta e já recebe (briefing do painel,
+ * A2). O caixa nunca abre sozinho; quem recebe decide o troco.
+ */
+function AbrirCaixa({
+  unidadeId,
+  aberto,
+  onFechar,
+  onAberto,
+}: {
+  unidadeId: string;
+  aberto: boolean;
+  onFechar: () => void;
+  onAberto: () => Promise<void>;
+}) {
+  const [troco, setTroco] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [abrindo, setAbrindo] = useState(false);
+  const valor = troco.trim() ? lerMoeda(troco) : 0;
+  return (
+    <Dialogo
+      aberto={aberto}
+      titulo="O caixa de hoje não foi aberto"
+      descricao="Abra agora com o troco que está na gaveta. Depois, o pagamento é registrado."
+      onFechar={onFechar}
+    >
+      <form
+        method="post"
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (valor === null || valor < 0) return setErro('Informe o troco. Ex.: 100,00');
+          setErro(null);
+          setAbrindo(true);
+          try {
+            await api('caixa/abrir', {
+              corpo: { unidadeId, data: dataLocal(new Date()), valorAbertura: valor },
+            });
+            await onAberto();
+          } catch (er) {
+            setErro(mensagemDe(er));
+          } finally {
+            setAbrindo(false);
+          }
+        }}
+      >
+        {erro && <Aviso tom="erro">{erro}</Aviso>}
+        <Campo
+          id="abrir-caixa-troco"
+          rotulo="Troco na gaveta (R$)"
+          inputMode="decimal"
+          placeholder="0,00"
+          value={troco}
+          onChange={(e) => setTroco(e.target.value)}
+        />
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Botao variante="secundario" onClick={onFechar}>
+            Agora não
+          </Botao>
+          <Botao type="submit" carregando={abrindo}>
+            Abrir o caixa e receber
+          </Botao>
+        </div>
+      </form>
+    </Dialogo>
   );
 }
 

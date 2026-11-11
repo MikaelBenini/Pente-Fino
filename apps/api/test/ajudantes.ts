@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { hash } from '@node-rs/argon2';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
-import { FILA_EMAILS, type TrabalhoEmail } from '@pente-fino/shared';
+import { dataLocal, FILA_EMAILS, type TrabalhoEmail } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
@@ -60,6 +60,15 @@ export async function criarCenario(): Promise<Cenario> {
     await criar('Gestor Teste', emails.gestor, 'gestor', a.id);
     await criar('Barbeiro Teste', emails.barbeiro, 'barbeiro', a.id);
     await criar('Recepção Teste', emails.recepcao, 'recepcao', a.id);
+    // Como numa barbearia de verdade, o caixa de hoje está aberto: fechar comanda não o abre
+    // sozinho (o dinheiro entra no caixa do dia em que é recebido).
+    const hoje = new Date(`${dataLocal(new Date())}T00:00:00.000Z`);
+    await tx.caixaDia.createMany({
+      data: [
+        { unidadeId: a.id, data: hoje },
+        { unidadeId: b.id, data: hoje },
+      ],
+    });
     return { unidadeA: a.id, unidadeB: b.id };
   });
 

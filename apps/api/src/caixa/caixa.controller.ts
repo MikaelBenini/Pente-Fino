@@ -49,6 +49,13 @@ export class CaixaController {
   private async montar(tx: Transacao, unidadeId: string, dia: string): Promise<CaixaDia> {
     const inicio = new Date(`${dia}T00:00:00-03:00`);
     const fim = new Date(inicio.getTime() + 86_400_000);
+    // Dinheiro do dia = o que foi recebido no dia (fechadaEm), não o que estava agendado para ele.
+    const recebidasNoDia = {
+      unidadeId,
+      status: 'fechada' as const,
+      fechadaEm: { gte: inicio, lt: fim },
+    };
+    // A receber = atendimentos do dia ainda em aberto.
     const doDia = {
       unidadeId,
       OR: [
@@ -58,11 +65,11 @@ export class CaixaController {
     };
     if (!(await tx.unidade.findUnique({ where: { id: unidadeId } })))
       throw Erros.naoEncontrado('Unidade não encontrada.');
-    const [caixa, comandas] = await emSequencia([
+    const [caixa, comandas, fechadas] = await emSequencia([
       tx.caixaDia.findUnique({ where: { unidadeId_data: { unidadeId, data: data(dia) } } }),
       tx.comanda.findMany({ where: doDia, include: { pagamentos: true, agendamento: true } }),
+      tx.comanda.findMany({ where: recebidasNoDia, include: { pagamentos: true } }),
     ]);
-    const fechadas = comandas.filter((c) => c.status === 'fechada');
     const pagamentos = fechadas.flatMap((c) => c.pagamentos);
     const porForma = FORMAS.map((forma) => {
       const desta = pagamentos.filter((p) => p.forma === forma);
