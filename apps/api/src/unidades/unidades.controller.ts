@@ -12,9 +12,11 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { Prisma } from '@pente-fino/db';
+import { precoServicoVigente, type Prisma } from '@pente-fino/db';
 import {
+  dataLocal,
   diaCalendarioSchema,
+  faltaParaLigarLink,
   lerRegrasAgendamento,
   regrasAgendamentoSchema,
   type RegrasAgendamento,
@@ -31,7 +33,7 @@ import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
-import { Erros } from '../comum/erros.js';
+import { ErroApp, Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade, GESTAO, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 
@@ -174,6 +176,18 @@ export class UnidadesController {
           },
         ]);
       }
+      // Painel A7: link ligado sem serviço com preço ou sem barbeiro com horário deixa o
+      // cliente numa página sem saída. Só confere ao ligar (desligar e mudar o endereço, livres).
+      if (dados.agendamentoPublico === true && !antes.agendamentoPublico) {
+        const falta = await this.faltaParaOLink(tx, unidadeId);
+        if (falta.length > 0)
+          throw new ErroApp(
+            HttpStatus.UNPROCESSABLE_ENTITY,
+            'link_incompleto',
+            `Para ligar o link, falta: ${falta.map((f) => f.mensagem).join(' ')}`,
+            falta.map((f) => ({ campo: f.item, mensagem: f.mensagem })),
+          );
+      }
       const depois = await tx.unidade.update({
         where: { id: unidadeId },
         data: dados,
@@ -188,6 +202,22 @@ export class UnidadesController {
       });
       return depois;
     });
+  }
+
+  private async faltaParaOLink(tx: Prisma.TransactionClient, unidadeId: string) {
+    const hoje = dataLocal(new Date());
+    const servicos = await tx.servico.findMany({ where: { ativo: true }, select: { id: true } });
+    const profissionaisComHorario = await tx.profissional.count({
+      where: { unidadeId, ativo: true, horarios: { some: {} } },
+    });
+    let servicosComPreco = 0;
+    for (const s of servicos) {
+      if ((await precoServicoVigente(tx, s.id, unidadeId, hoje)) !== undefined) {
+        servicosComPreco = 1;
+        break;
+      }
+    }
+    return faltaParaLigarLink({ servicosComPreco, profissionaisComHorario });
   }
 
   @Get(':unidadeId/calendario')

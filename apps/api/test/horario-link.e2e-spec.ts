@@ -58,7 +58,6 @@ beforeAll(async () => {
       diasTrabalho: [0, 1, 2, 3, 4, 5, 6],
       telefone: '(11) 3000-0000',
       slug,
-      agendamentoPublico: true,
     })
     .expect(200);
   const usuarios = (await dono.get('/usuarios')).body as { id: string; email: string }[];
@@ -90,6 +89,8 @@ beforeAll(async () => {
       precos: [{ servicoId: corte, unidadeId: a.unidadeA, valor: 5000 }],
     })
     .expect(201);
+  // Com barbeiro e preço cadastrados (sem isso o link não liga).
+  await dono.patch(`/unidades/${a.unidadeA}`, { agendamentoPublico: true }).expect(200);
 });
 
 afterAll(async () => {

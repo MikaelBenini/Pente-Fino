@@ -99,7 +99,8 @@ describe('lista', () => {
       situacao: 'aguardando',
       ultimaMensagem: { texto: '4', direcao: 'entrada' },
     });
-    expect(r.conversas[1]?.situacao).toBe('bot');
+    // Painel A6: sem conexão, a conversa não diz "Bot respondendo".
+    expect(r.conversas[1]).toMatchObject({ situacao: 'bot', conectado: false });
   });
 
   it('dono vê todas; barbeiro não entra; outra conta não enxerga nada', async () => {
@@ -183,6 +184,7 @@ describe('responder e devolver', () => {
       .body as ListaConversas;
     expect(lista.conversas.find((c) => c.id === sessaoId)).toMatchObject({
       situacao: 'bot',
+      conectado: true,
       ultimaMensagem: { texto: MENSAGENS_BOT_PADRAO.encerramento, direcao: 'saida' },
     });
     const s = await naConta(prisma, a.contaId, (tx) =>

@@ -287,7 +287,6 @@ export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
       acao: 'ver_precos',
     },
     {
-      // Antes de "agendar": "meu horário" também contém "horário".
       id: 'kw-meus-horarios',
       palavras: [
         'meus horários',
@@ -302,13 +301,24 @@ export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
     },
     {
       id: 'kw-agendar',
-      palavras: ['agendar', 'marcar', 'horário', 'agenda'],
+      palavras: ['agendar', 'marcar', 'agenda', 'marcar horário', 'agendar horário', 'tem horário'],
       resposta: 'Para agendar, escolha o serviço, o barbeiro e o horário por aqui:',
       acao: 'agendar',
     },
     {
       id: 'kw-endereco',
-      palavras: ['endereço', 'onde fica', 'localização', 'como chegar'],
+      palavras: [
+        'endereço',
+        'onde fica',
+        'localização',
+        'como chegar',
+        'horário de funcionamento',
+        'que horas abre',
+        'que horas fecha',
+        'abre hoje',
+        'abre domingo',
+        'funciona',
+      ],
       resposta: 'Estamos em {endereco}.\n{mapa}\nFuncionamos {horario}.',
       acao: 'endereco',
     },
@@ -623,10 +633,74 @@ export function opcaoEscolhida(
   return combinam.length === 1 ? combinam[0]! : null;
 }
 
+/**
+ * O grupo mais específico que o texto (já normalizado) cita. Vence a frase casada com mais
+ * palavras ("horário de funcionamento" ganha de "horário"), depois a com mais letras, depois o
+ * grupo com mais palavras casadas; no empate, a ordem dos grupos.
+ */
+function grupoMaisEspecifico(m: MenuBot, texto: string): GrupoPalavrasChave | null {
+  let melhor: { g: GrupoPalavrasChave; nota: [number, number, number] } | null = null;
+  for (const g of m.palavrasChave) {
+    const casadas = g.palavras.map(normalizar).filter((p) => contem(texto, p));
+    if (casadas.length === 0) continue;
+    const nota: [number, number, number] = [
+      Math.max(...casadas.map((p) => p.split(' ').length)),
+      Math.max(...casadas.map((p) => p.length)),
+      casadas.length,
+    ];
+    const ganha =
+      !melhor ||
+      nota[0] > melhor.nota[0] ||
+      (nota[0] === melhor.nota[0] &&
+        (nota[1] > melhor.nota[1] || (nota[1] === melhor.nota[1] && nota[2] > melhor.nota[2])));
+    if (ganha) melhor = { g, nota };
+  }
+  return melhor?.g ?? null;
+}
+
 /** O grupo de palavras-chave que a mensagem cita (ou null): "atendente", "preço", "menu"… */
 export function grupoDaPalavraChave(m: MenuBot, entrada: string): GrupoPalavrasChave | null {
-  const texto = normalizar(entrada);
-  return m.palavrasChave.find((g) => g.palavras.some((p) => contem(texto, p))) ?? null;
+  return grupoMaisEspecifico(m, normalizar(entrada));
+}
+
+export interface ConflitoPalavraChave {
+  palavra: string;
+  /** Índices (0, 1…) dos dois grupos envolvidos. */
+  grupos: [number, number];
+  mensagem: string;
+}
+
+/**
+ * Avisos (não impedem publicar): uma palavra de um grupo dentro de uma frase de outro grupo
+ * ("horário" em Agendar e "horário de funcionamento" em Endereço). O bot escolhe a frase mais
+ * longa, mas o dono deve saber que a palavra solta só vale quando a frase não aparece.
+ * A mesma palavra em dois grupos já é erro em `validarMenu`.
+ */
+export function conflitosPalavrasChave(m: MenuBot): ConflitoPalavraChave[] {
+  const nome = (i: number) => {
+    const g = m.palavrasChave[i]!;
+    return g.acao ? NOME_ACAO_BOT[g.acao] : `o grupo ${i + 1}`;
+  };
+  const conflitos: ConflitoPalavraChave[] = [];
+  m.palavrasChave.forEach((a, i) => {
+    for (const pa of a.palavras) {
+      const na = normalizar(pa);
+      if (!na) continue;
+      m.palavrasChave.forEach((b, j) => {
+        if (i === j) return;
+        for (const pb of b.palavras) {
+          const nb = normalizar(pb);
+          if (!nb || nb === na || !contem(nb, na)) continue;
+          conflitos.push({
+            palavra: pa.trim(),
+            grupos: [i, j],
+            mensagem: `Conflito: "${pa.trim()}" (${nome(i)}) aparece em "${pb.trim()}" (${nome(j)}). Quando a frase inteira vier, vale ${nome(j)}.`,
+          });
+        }
+      });
+    }
+  });
+  return conflitos;
 }
 
 /**
@@ -814,7 +888,7 @@ export function responder(
   };
 
   // Palavra-chave em qualquer ponto da conversa.
-  const grupo = m.palavrasChave.find((g) => g.palavras.some((p) => contem(texto, p)));
+  const grupo = grupoMaisEspecifico(m, texto);
   if (grupo) return comConvite(executar(grupo.resposta, grupo.acao));
 
   // Conversa nova sem palavra-chave: abertura, menu e (se for o caso) o convite.

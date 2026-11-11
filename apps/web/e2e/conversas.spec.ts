@@ -96,5 +96,6 @@ test('recepção assume uma conversa do bot e devolve; avisos ligam e desligam n
   await expect(conversa.getByText('Com a equipe')).toBeVisible();
   await conversa.getByRole('button', { name: 'Devolver ao bot' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Devolver ao bot' }).click();
-  await expect(conversa.getByText('Bot respondendo')).toBeVisible();
+  // A demonstração não tem WhatsApp conectado: o selo diz a verdade (painel A6).
+  await expect(conversa.getByText('Bot parado: WhatsApp desconectado')).toBeVisible();
 });

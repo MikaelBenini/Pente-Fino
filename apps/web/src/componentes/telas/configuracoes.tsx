@@ -42,10 +42,16 @@ import { ImportarPlanilha, LinkAgendamento } from './link-e-importacao';
 
 export function TelaConfiguracoes() {
   const { papeis } = useApp();
-  // O aviso de assinatura do painel abre direto na aba (?aba=assinatura).
+  // Avisos do painel abrem direto na aba (?aba=assinatura, ?aba=link).
   const abaDoLink = useSearchParams().get('aba');
   const ehDono = papeis.includes('dono');
-  const [aba, setAba] = useState(abaDoLink === 'assinatura' && ehDono ? 'assinatura' : 'barbearia');
+  const [aba, setAba] = useState(
+    abaDoLink === 'assinatura' && ehDono
+      ? 'assinatura'
+      : abaDoLink === 'link'
+        ? 'link'
+        : 'barbearia',
+  );
   return (
     <div className="flex flex-col gap-8">
       <CabecalhoPagina titulo="Configurações" pergunta="Como a barbearia funciona?" />

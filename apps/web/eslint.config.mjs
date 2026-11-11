@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     'next-env.d.ts',
     // Sobras da gravação do vídeo (fora do Git).
     'video-tmp/**',
+    // Rastros dos testes de tela (Playwright, fora do Git).
+    'test-results/**',
+    'playwright-report/**',
   ]),
 ]);
 

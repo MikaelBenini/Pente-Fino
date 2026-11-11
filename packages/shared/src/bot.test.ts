@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  conflitosPalavrasChave,
   dentroDoHorario,
   descreverHorario,
   ehSaudacao,
@@ -103,6 +104,39 @@ describe('conversa', () => {
     const primeira = fala(null, 'qual o preço do corte?');
     expect(primeira.respostas[0]).toBe('Olá, João! Aqui é a Barbearia Navalha.');
     expect(primeira.acao).toBe('ver_precos');
+  });
+
+  // Painel A5: "qual o horário de funcionamento?" começava o agendamento ("horário" em Agendar).
+  it.each([
+    ['qual o horário de funcionamento?', 'endereco'],
+    ['que horas abre no sábado?', 'endereco'],
+    ['abre domingo?', 'endereco'],
+    ['onde fica?', 'endereco'],
+    ['quero mudar meu horário', 'meus_horarios'],
+    ['preciso remarcar', 'meus_horarios'],
+    ['tem horário amanhã?', 'agendar'],
+    ['quero marcar um corte', 'agendar'],
+    ['quanto custa a barba?', 'ver_precos'],
+  ] as const)('palavra-chave de fábrica: "%s" → %s', (frase, acao) => {
+    const s = fala(null, 'oi').sessao;
+    expect(fala(s, frase).acao).toBe(acao);
+  });
+
+  it('a frase mais específica vence a palavra solta; no empate, a ordem dos grupos', () => {
+    const m: MenuBot = {
+      ...MENU_BOT_PADRAO,
+      palavrasChave: [
+        { id: 'a', palavras: ['horário'], resposta: '', acao: 'agendar' },
+        { id: 'b', palavras: ['horário de funcionamento'], resposta: 'x', acao: 'endereco' },
+        { id: 'c', palavras: ['corte'], resposta: 'c', acao: null },
+        { id: 'd', palavras: ['barba'], resposta: 'd', acao: null },
+      ],
+    };
+    const s = fala(null, 'oi', ctx(), m).sessao;
+    expect(fala(s, 'qual o horario de funcionamento', ctx(), m).acao).toBe('endereco');
+    expect(fala(s, 'tem horario?', ctx(), m).acao).toBe('agendar');
+    // Mesmo tamanho ("corte" e "barba"): vale o grupo que vem antes.
+    expect(fala(s, 'barba e corte', ctx(), m).respostas).toContain('c');
   });
 
   it('não entendeu: uma mensagem só, com as opções uma por linha (legível no celular)', () => {
@@ -337,6 +371,27 @@ describe('validarMenu', () => {
         },
       ]),
     );
+  });
+
+  it('avisa palavra de um grupo dentro da frase de outro (não impede publicar)', () => {
+    const m: MenuBot = {
+      ...MENU_BOT_PADRAO,
+      palavrasChave: [
+        { id: 'a', palavras: ['horário', 'marcar'], resposta: '', acao: 'agendar' },
+        { id: 'b', palavras: ['Horário de funcionamento'], resposta: 'x', acao: 'endereco' },
+        { id: 'c', palavras: ['desmarcar'], resposta: 'x', acao: null },
+      ],
+    };
+    const c = conflitosPalavrasChave(m);
+    expect(c).toHaveLength(1);
+    expect(c[0]).toMatchObject({ palavra: 'horário', grupos: [0, 1] });
+    expect(c[0]!.mensagem).toMatch(/^Conflito: "horário" \(Agendar horário\) aparece em/);
+    expect(validarMenu(m)).toEqual([]);
+  });
+
+  it('o menu de fábrica não tem conflito de palavras', () => {
+    expect(conflitosPalavrasChave(MENU_BOT_PADRAO)).toEqual([]);
+    expect(validarMenu(MENU_BOT_PADRAO)).toEqual([]);
   });
 
   it('limite de opções por menu', () => {

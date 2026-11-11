@@ -68,8 +68,15 @@ export function Tabela({
   children: ReactNode;
   className?: string;
 }) {
+  // `relative`: o texto só para leitor de tela (sr-only, absoluto) fica preso aqui dentro; sem
+  // isso ele escapa da rolagem e alarga a página no celular (painel A8: /servicos com 748 px).
   return (
-    <div className={cn('overflow-x-auto rounded-lg border border-borda bg-superficie', className)}>
+    <div
+      className={cn(
+        'relative overflow-x-auto rounded-lg border border-borda bg-superficie',
+        className,
+      )}
+    >
       <table className="tabela-dados w-full border-collapse text-left">
         <caption className="sr-only">{rotulo}</caption>
         {children}

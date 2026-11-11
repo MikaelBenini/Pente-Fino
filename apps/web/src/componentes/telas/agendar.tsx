@@ -6,6 +6,7 @@ import {
   formatarHora,
   formatarMoeda,
   formatarTelefone,
+  linkWhatsapp,
   NOMES_DIAS_CURTOS,
   avisoDaTroca,
   textoTolerancia,
@@ -26,6 +27,7 @@ import {
   CircleCheck,
   MapPin,
   MessageCircle,
+  Phone,
   SearchX,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -117,6 +119,57 @@ export function Moldura({
         <IconeMarca className="size-5" /> Agendamento pelo Pente Fino
       </footer>
     </div>
+  );
+}
+
+/**
+ * Unidade sem serviço com preço ou sem barbeiro (painel A7): em vez de um formulário que não
+ * agenda, o jeito de falar com a barbearia.
+ */
+function SemAgendamentoOnline({ u }: { u: UnidadePublica }) {
+  const whatsapp =
+    u.linkWhatsappAgendar ?? linkWhatsapp(u.telefone, `Olá! Quero marcar um horário na ${u.nome}.`);
+  const mapa = u.endereco
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(u.endereco)}`
+    : null;
+  const classeLink =
+    'inline-flex min-h-11 items-center gap-2 font-semibold text-modulo-texto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco';
+  return (
+    <section
+      aria-labelledby="sem-agendamento"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 id="sem-agendamento" className="text-lg font-semibold">
+        Agendamento online indisponível
+      </h2>
+      <p className="text-tinta-suave">Fale com a barbearia para marcar o seu horário:</p>
+      <ul className="flex flex-col gap-1">
+        {whatsapp && (
+          <li>
+            <a href={whatsapp} target="_blank" rel="noopener noreferrer" className={classeLink}>
+              <MessageCircle aria-hidden className="size-5" /> WhatsApp
+            </a>
+          </li>
+        )}
+        {u.telefone && (
+          <li>
+            <a href={`tel:${u.telefone.replace(/\D/g, '')}`} className={classeLink}>
+              <Phone aria-hidden className="size-5" /> {formatarTelefone(u.telefone)}
+            </a>
+          </li>
+        )}
+        {mapa && (
+          <li>
+            <a href={mapa} target="_blank" rel="noopener noreferrer" className={classeLink}>
+              <MapPin aria-hidden className="size-5" /> Ver no mapa
+            </a>
+          </li>
+        )}
+      </ul>
+      {!whatsapp && !u.telefone && !mapa && (
+        <p className="text-tinta-suave">A barbearia ainda não cadastrou um contato.</p>
+      )}
+    </section>
   );
 }
 
@@ -283,247 +336,254 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
         />
       )}
       {avisoTroca && <Aviso tom="info">{avisoTroca}</Aviso>}
-      {u.linkWhatsappAgendar && (
-        <a
-          href={u.linkWhatsappAgendar}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center gap-2 self-start font-semibold text-modulo-texto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
-        >
-          <MessageCircle aria-hidden className="size-5" /> Prefere marcar pelo WhatsApp?
-        </a>
-      )}
-      <form
-        method="post"
-        noValidate
-        className="flex flex-col gap-8"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setErro(null);
-          if (!horario) return setErro('Escolha um horário.');
-          setEnviando(true);
-          try {
-            setFeito(
-              await api<AgendamentoPublicoCriado>(`publico/agendamento/${slug}`, {
-                corpo: {
-                  nome,
-                  telefone,
-                  servicoIds: servicos,
-                  profissionalId: horario.profissionalId,
-                  inicio: horario.inicio,
-                  lembretes: u.lembretesWhatsapp && lembretes,
-                  ...(cliente ? { c: token } : {}),
-                },
-              }),
-            );
-          } catch (er) {
-            setErro(
-              er instanceof ErroApi
-                ? (er.campos[0]?.mensagem ?? er.message)
-                : 'Não foi possível agendar. Tente de novo.',
-            );
-            void livres.refetch();
-          } finally {
-            setEnviando(false);
-          }
-        }}
-      >
-        <fieldset className="min-w-0">
-          <legend className="mb-2 text-lg font-semibold">1. O que você vai fazer?</legend>
-          <div className="flex flex-col gap-2">
-            {u.servicos.length === 0 && (
-              <p className="text-tinta-suave">Nenhum serviço disponível pelo link agora.</p>
-            )}
-            {u.servicos.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between gap-3 rounded-md border border-borda bg-superficie px-3"
-              >
-                <Marcador
-                  id={`servico-${s.id}`}
-                  rotulo={`${s.nome} · ${s.duracaoMin} min`}
-                  checked={servicos.includes(s.id)}
-                  onChange={(e) => {
-                    setHorario(null);
-                    setServicos(
-                      e.target.checked ? [...servicos, s.id] : servicos.filter((x) => x !== s.id),
-                    );
-                  }}
-                />
-                <span className="font-denso text-lg tabular-nums">
-                  {s.preco !== null ? formatarMoeda(s.preco) : ''}
-                </span>
-              </div>
-            ))}
-          </div>
-        </fieldset>
-
-        <fieldset className="min-w-0">
-          <legend className="mb-2 text-lg font-semibold">2. Com quem?</legend>
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap gap-2">
-              {[{ id: '', nome: 'Sem preferência' }, ...u.profissionais].map((p) => (
-                <button
-                  key={p.id || 'qualquer'}
-                  type="button"
-                  aria-pressed={profissional === p.id}
-                  className={chip(profissional === p.id)}
-                  onClick={() => {
-                    setProfissional(p.id);
-                    setHorario(null);
-                  }}
-                >
-                  {p.nome}
-                </button>
-              ))}
-            </div>
-          </div>
-        </fieldset>
-
-        <fieldset className="min-w-0">
-          <legend className="mb-2 text-lg font-semibold">3. Quando?</legend>
-          <div className="flex flex-col gap-3">
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-              {dias.map((d) => {
-                const x = new Date(`${d}T12:00:00Z`);
-                return (
-                  <button
-                    key={d}
-                    type="button"
-                    aria-pressed={dia === d}
-                    aria-label={formatarDiaPorExtenso(`${d}T12:00:00Z`)}
-                    className={cn(
-                      chip(dia === d),
-                      'flex min-w-14 shrink-0 flex-col items-center py-1 leading-tight',
-                    )}
-                    onClick={() => {
-                      setDia(d);
-                      setHorario(null);
-                    }}
-                  >
-                    <span className="text-xs uppercase">{NOMES_DIAS_CURTOS[x.getUTCDay()]}</span>
-                    <span className="font-denso text-xl tabular-nums">{x.getUTCDate()}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {servicos.length === 0 ? (
-              <p className="text-tinta-suave">Escolha o serviço para ver os horários.</p>
-            ) : livres.isPending ? (
-              <p className="text-tinta-suave">Procurando horários…</p>
-            ) : opcoes.length === 0 ? (
-              <div className="flex flex-col gap-2">
-                <p className="flex items-center gap-2 text-tinta-suave">
-                  <CalendarCheck aria-hidden className="size-5" /> Sem horário livre neste dia.
-                  Tente outro dia{profissional ? ' ou outro barbeiro' : ''}
-                  {u.listaEspera ? ', ou peça para ser avisado.' : '.'}
-                </p>
-                {u.listaEspera && (
-                  <AvisarSeVagar
-                    slug={slug}
-                    corpo={{
-                      nome: cliente?.nome ?? nome,
-                      telefone: cliente?.telefone ?? telefone,
+      {u.servicos.length === 0 || u.profissionais.length === 0 ? (
+        <SemAgendamentoOnline u={u} />
+      ) : (
+        <>
+          {u.linkWhatsappAgendar && (
+            <a
+              href={u.linkWhatsappAgendar}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 self-start font-semibold text-modulo-texto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+            >
+              <MessageCircle aria-hidden className="size-5" /> Prefere marcar pelo WhatsApp?
+            </a>
+          )}
+          <form
+            method="post"
+            noValidate
+            className="flex flex-col gap-8"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setErro(null);
+              if (!horario) return setErro('Escolha um horário.');
+              setEnviando(true);
+              try {
+                setFeito(
+                  await api<AgendamentoPublicoCriado>(`publico/agendamento/${slug}`, {
+                    corpo: {
+                      nome,
+                      telefone,
                       servicoIds: servicos,
-                      profissionalId: profissional || null,
-                      dia,
+                      profissionalId: horario.profissionalId,
+                      inicio: horario.inicio,
+                      lembretes: u.lembretesWhatsapp && lembretes,
                       ...(cliente ? { c: token } : {}),
-                    }}
+                    },
+                  }),
+                );
+              } catch (er) {
+                setErro(
+                  er instanceof ErroApi
+                    ? (er.campos[0]?.mensagem ?? er.message)
+                    : 'Não foi possível agendar. Tente de novo.',
+                );
+                void livres.refetch();
+              } finally {
+                setEnviando(false);
+              }
+            }}
+          >
+            <fieldset className="min-w-0">
+              <legend className="mb-2 text-lg font-semibold">1. O que você vai fazer?</legend>
+              <div className="flex flex-col gap-2">
+                {u.servicos.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between gap-3 rounded-md border border-borda bg-superficie px-3"
+                  >
+                    <Marcador
+                      id={`servico-${s.id}`}
+                      rotulo={`${s.nome} · ${s.duracaoMin} min`}
+                      checked={servicos.includes(s.id)}
+                      onChange={(e) => {
+                        setHorario(null);
+                        setServicos(
+                          e.target.checked
+                            ? [...servicos, s.id]
+                            : servicos.filter((x) => x !== s.id),
+                        );
+                      }}
+                    />
+                    <span className="font-denso text-lg tabular-nums">
+                      {s.preco !== null ? formatarMoeda(s.preco) : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="min-w-0">
+              <legend className="mb-2 text-lg font-semibold">2. Com quem?</legend>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {[{ id: '', nome: 'Sem preferência' }, ...u.profissionais].map((p) => (
+                    <button
+                      key={p.id || 'qualquer'}
+                      type="button"
+                      aria-pressed={profissional === p.id}
+                      className={chip(profissional === p.id)}
+                      onClick={() => {
+                        setProfissional(p.id);
+                        setHorario(null);
+                      }}
+                    >
+                      {p.nome}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset className="min-w-0">
+              <legend className="mb-2 text-lg font-semibold">3. Quando?</legend>
+              <div className="flex flex-col gap-3">
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {dias.map((d) => {
+                    const x = new Date(`${d}T12:00:00Z`);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={dia === d}
+                        aria-label={formatarDiaPorExtenso(`${d}T12:00:00Z`)}
+                        className={cn(
+                          chip(dia === d),
+                          'flex min-w-14 shrink-0 flex-col items-center py-1 leading-tight',
+                        )}
+                        onClick={() => {
+                          setDia(d);
+                          setHorario(null);
+                        }}
+                      >
+                        <span className="text-xs uppercase">
+                          {NOMES_DIAS_CURTOS[x.getUTCDay()]}
+                        </span>
+                        <span className="font-denso text-xl tabular-nums">{x.getUTCDate()}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {servicos.length === 0 ? (
+                  <p className="text-tinta-suave">Escolha o serviço para ver os horários.</p>
+                ) : livres.isPending ? (
+                  <p className="text-tinta-suave">Procurando horários…</p>
+                ) : opcoes.length === 0 ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="flex items-center gap-2 text-tinta-suave">
+                      <CalendarCheck aria-hidden className="size-5" /> Sem horário livre neste dia.
+                      Tente outro dia{profissional ? ' ou outro barbeiro' : ''}
+                      {u.listaEspera ? ', ou peça para ser avisado.' : '.'}
+                    </p>
+                    {u.listaEspera && (
+                      <AvisarSeVagar
+                        slug={slug}
+                        corpo={{
+                          nome: cliente?.nome ?? nome,
+                          telefone: cliente?.telefone ?? telefone,
+                          servicoIds: servicos,
+                          profissionalId: profissional || null,
+                          dia,
+                          ...(cliente ? { c: token } : {}),
+                        }}
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="flex flex-wrap gap-2"
+                    role="group"
+                    aria-label={`Horários livres (${duracao} min)`}
+                  >
+                    {opcoes.map(([inicio, profissionalId]) => (
+                      <button
+                        key={inicio}
+                        type="button"
+                        aria-pressed={horario?.inicio === inicio}
+                        className={cn(
+                          chip(horario?.inicio === inicio),
+                          'min-w-18 font-denso text-lg tabular-nums',
+                        )}
+                        onClick={() => setHorario({ inicio, profissionalId })}
+                      >
+                        {formatarHora(inicio)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </fieldset>
+
+            <fieldset className="min-w-0">
+              <legend className="mb-2 text-lg font-semibold">4. Seus dados</legend>
+              <div className="flex flex-col gap-4">
+                <Campo
+                  id="agendar-nome"
+                  rotulo="Nome"
+                  autoComplete="name"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                />
+                {cliente ? (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium">WhatsApp</p>
+                    <p className="flex flex-wrap items-center gap-x-3 font-denso text-lg tabular-nums">
+                      {formatarTelefone(cliente.telefone)}
+                      <button
+                        type="button"
+                        className="min-h-11 font-sans text-sm font-semibold text-modulo-texto underline-offset-4 hover:underline"
+                        onClick={() => {
+                          setUsarLink(false);
+                          setNome('');
+                        }}
+                      >
+                        Não é você?
+                      </button>
+                    </p>
+                  </div>
+                ) : (
+                  <Campo
+                    id="agendar-telefone"
+                    rotulo="WhatsApp"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    dica="Com DDD. A barbearia usa para confirmar o horário."
+                    value={telefone}
+                    onChange={(e) => setTelefone(e.target.value)}
+                  />
+                )}
+                {u.lembretesWhatsapp && (
+                  <Marcador
+                    id="agendar-lembretes"
+                    rotulo="Quero receber lembrete do horário pelo WhatsApp"
+                    checked={lembretes}
+                    onChange={(e) => setLembretes(e.target.checked)}
                   />
                 )}
               </div>
-            ) : (
-              <div
-                className="flex flex-wrap gap-2"
-                role="group"
-                aria-label={`Horários livres (${duracao} min)`}
-              >
-                {opcoes.map(([inicio, profissionalId]) => (
-                  <button
-                    key={inicio}
-                    type="button"
-                    aria-pressed={horario?.inicio === inicio}
-                    className={cn(
-                      chip(horario?.inicio === inicio),
-                      'min-w-18 font-denso text-lg tabular-nums',
-                    )}
-                    onClick={() => setHorario({ inicio, profissionalId })}
-                  >
-                    {formatarHora(inicio)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </fieldset>
+            </fieldset>
 
-        <fieldset className="min-w-0">
-          <legend className="mb-2 text-lg font-semibold">4. Seus dados</legend>
-          <div className="flex flex-col gap-4">
-            <Campo
-              id="agendar-nome"
-              rotulo="Nome"
-              autoComplete="name"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-            />
-            {cliente ? (
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">WhatsApp</p>
-                <p className="flex flex-wrap items-center gap-x-3 font-denso text-lg tabular-nums">
-                  {formatarTelefone(cliente.telefone)}
-                  <button
-                    type="button"
-                    className="min-h-11 font-sans text-sm font-semibold text-modulo-texto underline-offset-4 hover:underline"
-                    onClick={() => {
-                      setUsarLink(false);
-                      setNome('');
-                    }}
-                  >
-                    Não é você?
-                  </button>
-                </p>
-              </div>
-            ) : (
-              <Campo
-                id="agendar-telefone"
-                rotulo="WhatsApp"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                dica="Com DDD. A barbearia usa para confirmar o horário."
-                value={telefone}
-                onChange={(e) => setTelefone(e.target.value)}
-              />
-            )}
-            {u.lembretesWhatsapp && (
-              <Marcador
-                id="agendar-lembretes"
-                rotulo="Quero receber lembrete do horário pelo WhatsApp"
-                checked={lembretes}
-                onChange={(e) => setLembretes(e.target.checked)}
-              />
-            )}
-          </div>
-        </fieldset>
-
-        {erro && <Aviso tom="erro">{erro}</Aviso>}
-        <Botao
-          type="submit"
-          larguraTotal
-          className="min-h-12 text-lg"
-          carregando={enviando}
-          disabled={
-            !horario ||
-            nome.trim().length < 2 ||
-            (!cliente && telefone.replace(/\D/g, '').length < 10)
-          }
-        >
-          {horario
-            ? `Agendar ${formatarHora(horario.inicio)} · ${formatarMoeda(total)}`
-            : 'Agendar'}
-        </Botao>
-      </form>
+            {erro && <Aviso tom="erro">{erro}</Aviso>}
+            <Botao
+              type="submit"
+              larguraTotal
+              className="min-h-12 text-lg"
+              carregando={enviando}
+              disabled={
+                !horario ||
+                nome.trim().length < 2 ||
+                (!cliente && telefone.replace(/\D/g, '').length < 10)
+              }
+            >
+              {horario
+                ? `Agendar ${formatarHora(horario.inicio)} · ${formatarMoeda(total)}`
+                : 'Agendar'}
+            </Botao>
+          </form>
+        </>
+      )}
     </Moldura>
   );
 }

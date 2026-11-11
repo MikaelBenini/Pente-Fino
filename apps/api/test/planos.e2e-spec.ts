@@ -74,7 +74,10 @@ describe('recursos por plano', () => {
   it('Básico: o site não oferece nem aceita lista de espera', async () => {
     const slug = `planos-${a.contaId.slice(0, 8)}`;
     await dono.patch(`/unidades/${a.unidadeA}`, { endereco: 'Rua A, 1' }).expect(200);
-    await dono.patch(`/unidades/${a.unidadeA}`, { slug, agendamentoPublico: true }).expect(200);
+    // Aqui só importa o plano: liga o link no banco, sem cadastrar preço e barbeiro (painel A7).
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.unidade.update({ where: { id: a.unidadeA }, data: { slug, agendamentoPublico: true } }),
+    );
     const u = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body as UnidadePublica;
     expect(u.listaEspera).toBe(false);
     const corte = (

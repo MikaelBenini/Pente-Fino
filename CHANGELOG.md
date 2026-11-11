@@ -7,6 +7,16 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (bot do WhatsApp)
+
+- "Qual o horário de funcionamento?" responde com o endereço e o horário; antes, o bot começava
+  um agendamento. Quando a mensagem cita palavras de dois grupos, vale a frase mais longa
+  ("horário de funcionamento" ganha de "horário"). As palavras de fábrica de Agendar e Endereço
+  mudaram, inclusive nas contas que não tinham mexido nelas.
+- O editor do bot avisa quando uma palavra de um grupo está dentro da frase de outro grupo.
+- Conversas: com o WhatsApp da unidade desconectado, a conversa mostra "Bot parado: WhatsApp
+  desconectado" (vermelho) e o link "Conectar", em vez de "Bot respondendo".
+
 ### Corrigido (caixa e comanda)
 
 - O dinheiro entra no caixa do dia em que foi recebido. Antes, receber hoje uma comanda marcada
@@ -18,6 +28,20 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - Comanda reaberta pode ser cancelada (com motivo), marcada como falta, remarcada, começada e
   confirmada de novo; antes ficava presa.
 - Comanda sem itens não fecha mais com R$ 0,00.
+
+### Corrigido (celular)
+
+- Serviços e Produtos não passam mais da largura do celular: a barra de baixo ficava larga demais
+  e saía da tela. Todas as telas do painel são conferidas em 375 px.
+
+### Corrigido (link de agendamento)
+
+- O link de agendamento só liga com pelo menos um serviço com preço e um profissional com
+  horário na unidade; a tela diz o que falta, com o atalho para cadastrar.
+- Página de agendamento sem serviço disponível: em vez do formulário que não agenda, "Agendamento
+  online indisponível" com o WhatsApp, o telefone e o mapa da barbearia.
+- O editor do bot avisa quando o link está desligado numa unidade ("Agendar" passaria para um
+  atendente quando o bot não consegue marcar pela conversa).
 
 ### Adicionado (agendamento)
 

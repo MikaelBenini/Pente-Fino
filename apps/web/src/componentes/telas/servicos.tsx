@@ -23,6 +23,7 @@ import {
   type LinhaEditavel,
 } from '@pente-fino/ui';
 import { Plus, Scissors } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
@@ -36,7 +37,9 @@ import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 export function TelaServicos() {
   const { papeis } = useApp();
   const ehDono = papeis.includes('dono');
-  const [aba, setAba] = useState('catalogo');
+  // "Falta preço" (ligar o link de agendamento) abre direto na tabela de preços.
+  const abaInicial = useSearchParams().get('aba') === 'precos' ? 'precos' : 'catalogo';
+  const [aba, setAba] = useState(abaInicial);
   return (
     <div className="flex flex-col gap-8">
       <CabecalhoPagina

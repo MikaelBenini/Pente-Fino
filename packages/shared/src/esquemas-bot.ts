@@ -189,6 +189,8 @@ export interface ConversaResumo {
   situacao: 'bot' | 'aguardando' | 'atendimento';
   /** Desde quando espera resposta da equipe (ISO). */
   aguardandoDesde: string | null;
+  /** O WhatsApp da unidade desta conversa está conectado (sem isso, o bot não responde). */
+  conectado: boolean;
   ultimaMensagem: { texto: string; direcao: 'entrada' | 'saida'; criadoEm: string } | null;
   atualizadoEm: string;
 }

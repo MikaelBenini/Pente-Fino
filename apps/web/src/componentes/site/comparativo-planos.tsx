@@ -9,7 +9,7 @@ const LIMITES = [
 /** Tabela de recursos por plano. O que ainda está em construção aparece como "em breve". */
 export function ComparativoPlanos() {
   return (
-    <div className="overflow-x-auto rounded-xl border border-borda">
+    <div className="relative overflow-x-auto rounded-xl border border-borda">
       <table className="w-full min-w-[22rem] border-collapse text-left">
         <caption className="sr-only">Recursos de cada plano</caption>
         <thead className="bg-superficie-2">
