@@ -4,7 +4,11 @@ import { z } from 'zod';
 import { lerModelosEmail, type ChaveModeloEmail, type TextoModeloEmail } from './modelos-email.js';
 import { DIAS_TESTE, lerTabelasPreco, VERSAO_TERMOS, type TabelaPrecosPlanos } from './planos.js';
 import { lerConfigClubeOnline, type ConfigClubeOnline } from './clube-online.js';
-import { lerConfigNotaFiscal, type ConfigNotaFiscal } from './nota-fiscal.js';
+import {
+  lerConfigNotaFiscal,
+  type ConfigNotaFiscal,
+  type NotasFiscaisNaSaude,
+} from './nota-fiscal.js';
 import type { ExecucaoLimpezaNaTela } from './limpeza.js';
 
 export const avisoGeralSchema = z
@@ -91,6 +95,8 @@ export interface SaudeDoSistema {
   errosRecentes: { fila: string; tipo: string; motivo: string; quando: string }[];
   /** Últimas execuções da limpeza de dados (a mais recente primeiro). */
   limpeza: ExecucaoLimpezaNaTela[];
+  /** Notas fiscais das mensalidades (admin R2). */
+  notasFiscais: NotasFiscaisNaSaude;
 }
 
 // ─── E-mail (SMTP) ────────────────────────────────────────────────────────

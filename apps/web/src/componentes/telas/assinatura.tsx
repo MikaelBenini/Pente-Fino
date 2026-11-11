@@ -18,6 +18,7 @@ import {
   type PreviaTrocaPlano,
   type TabelaPrecosPlanos,
   type SituacaoAssinatura,
+  NOME_STATUS_NOTA_FISCAL,
 } from '@pente-fino/shared';
 import { Botao, Campo, cn, EstadoVazio, ModalConfirmacao, Selecao } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
@@ -64,6 +65,7 @@ export function Assinatura() {
     <Estado consulta={a}>
       {() => {
         const d = a.data!;
+        const comNota = d.faturas.some((f) => f.notaFiscal !== null);
         const { estado, pendente } = d;
         return (
           <div className="flex max-w-4xl flex-col gap-6">
@@ -195,6 +197,7 @@ export function Assinatura() {
                 />
               ) : (
                 <Tabela rotulo="Faturas da assinatura">
+                  {/* A coluna só aparece quando já há nota: sem emissão, a tela fica igual. */}
                   <thead className="bg-superficie-2">
                     <tr>
                       <th className={th}>Vencimento</th>
@@ -202,6 +205,7 @@ export function Assinatura() {
                       <th className={`${th} text-right`}>Valor</th>
                       <th className={th}>Situação</th>
                       <th className={th}>Pagamento</th>
+                      {comNota && <th className={th}>Nota fiscal</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -241,6 +245,11 @@ export function Assinatura() {
                             '—'
                           )}
                         </td>
+                        {comNota && (
+                          <td className={`${td} text-sm`}>
+                            <NotaDaFaturaNaTela f={f} />
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -278,6 +287,27 @@ function AcaoPagar({
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? e.message : 'Não foi possível concluir. Tente de novo.';
+
+/** Nota fiscal da mensalidade: baixar quando emitida; a situação enquanto não sai. */
+function NotaDaFaturaNaTela({ f }: { f: FaturaDetalhe }) {
+  const n = f.notaFiscal;
+  if (!n) return <span className="text-tinta-suave">—</span>;
+  if (n.status === 'emitida' && n.pdfUrl)
+    return (
+      <a
+        href={n.pdfUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex min-h-11 items-center gap-1 font-semibold text-acao-texto underline"
+      >
+        Baixar{n.numero ? ` nº ${n.numero}` : ''}
+        <ExternalLink aria-hidden className="size-4" />
+      </a>
+    );
+  // Erro: a barbearia não precisa fazer nada; o Pente Fino resolve com o Asaas.
+  if (n.status === 'erro') return <span className="text-tinta-suave">Em emissão</span>;
+  return <span className="text-tinta-suave">{NOME_STATUS_NOTA_FISCAL[n.status]}</span>;
+}
 
 /**
  * Assinar pela cobrança automática: plano, ciclo e CPF ou CNPJ de quem paga. A página de

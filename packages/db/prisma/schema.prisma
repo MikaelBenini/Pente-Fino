@@ -309,6 +309,7 @@ model Conta {
   tokenAcessos         TokenAcesso[]
   avaliacoes           Avaliacao[]
   faturas              FaturaAssinatura[]
+  notasFiscais         NotaFiscalMensalidade[]
   assistentes          AssistenteEquipe[]
   linksHorario         LinkHorario[]
   tokensAgendamento    TokenAgendamento[]
@@ -491,17 +492,17 @@ model TokenAcesso {
 
 /// Barbeiro é cadastro, não coluna: um usuário pode atender em mais de uma unidade.
 model Profissional {
-  id           String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contaId      String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
-  usuarioId    String    @map("usuario_id") @db.Uuid
-  unidadeId    String    @map("unidade_id") @db.Uuid
-  dataEntrada  DateTime  @map("data_entrada") @db.Date
-  dataSaida    DateTime? @map("data_saida") @db.Date
+  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId         String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  usuarioId       String    @map("usuario_id") @db.Uuid
+  unidadeId       String    @map("unidade_id") @db.Uuid
+  dataEntrada     DateTime  @map("data_entrada") @db.Date
+  dataSaida       DateTime? @map("data_saida") @db.Date
   /// Valor fixo por mês além da comissão (salário, ajuda de custo), em centavos; entra no custo do barbeiro no relatório.
-  custoFixoMensal Int @default(0) @map("custo_fixo_mensal")
-  ativo        Boolean   @default(true)
-  criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
-  atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+  custoFixoMensal Int       @default(0) @map("custo_fixo_mensal")
+  ativo           Boolean   @default(true)
+  criadoEm        DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm    DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   conta              Conta                 @relation(fields: [contaId], references: [id], onDelete: Cascade)
   usuario            Usuario               @relation(fields: [usuarioId], references: [id], onDelete: NoAction)
@@ -1218,6 +1219,46 @@ model FaturaAssinatura {
   @@unique([origem, idExterno])
   @@index([contaId, vencimento])
   @@map("fatura_assinatura")
+}
+
+enum StatusNotaFiscal {
+  agendada
+  /// Enviada à prefeitura, esperando a autorização.
+  enviada
+  emitida
+  /// A prefeitura ou o Asaas recusou (mensagem em mensagem).
+  erro
+  cancelando
+  cancelada
+
+  @@map("status_nota_fiscal")
+}
+
+/// Nota fiscal (NFS-e) de uma mensalidade do Pente Fino, emitida pelo Asaas e acompanhada pelo
+/// webhook (admin R2). Liga com a fatura pelo pagamento do Asaas (fatura_assinatura.id_externo).
+model NotaFiscalMensalidade {
+  id           String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String           @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  /// Id da nota no Asaas (inv_…).
+  idExterno    String           @unique @map("id_externo")
+  /// Pagamento do Asaas que a nota cobre (pay_…).
+  pagamentoId  String?          @map("pagamento_id")
+  status       StatusNotaFiscal
+  numero       String?
+  /// Centavos.
+  valor        Int?
+  pdfUrl       String?          @map("pdf_url")
+  xmlUrl       String?          @map("xml_url")
+  /// O que o Asaas ou a prefeitura disse quando a nota não saiu.
+  mensagem     String?
+  emitidaEm    DateTime?        @map("emitida_em") @db.Timestamptz(3)
+  criadoEm     DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime         @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta Conta @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  @@index([contaId, pagamentoId])
+  @@map("nota_fiscal_mensalidade")
 }
 
 /// Assistente da equipe no WhatsApp (Etapa 11): o profissional confirma o próprio número

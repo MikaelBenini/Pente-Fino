@@ -7,6 +7,18 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (nota fiscal das mensalidades)
+
+- A emissão da nota fiscal só liga com os dados fiscais da empresa conferidos no Asaas: sem
+  dados fiscais, com inscrição municipal de exemplo (como 123456) ou sem o acesso à prefeitura,
+  a tela diz exatamente o que falta (inclusive qual acesso a prefeitura exige, por exemplo o
+  certificado digital) e a emissão continua desligada. Dá para deixar tudo preenchido e salvo
+  com a emissão desligada; enquanto isso, as mensalidades seguem cobradas como sempre.
+- Barbearia: com a emissão ligada, a nota de cada mensalidade aparece na fatura (Configurações
+  → Assinatura), com "Baixar" quando emitida.
+- Administração: Saúde do sistema mostra se a emissão está ligada, a última nota emitida, as
+  que estão a caminho da prefeitura e as que não saíram, com o motivo.
+
 ### Corrigido (bot do WhatsApp)
 
 - "Qual o horário de funcionamento?" responde com o endereço e o horário; antes, o bot começava

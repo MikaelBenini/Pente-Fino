@@ -16,6 +16,8 @@ import {
   type PlanoConta,
   type PreviaTrocaPlano,
   type UsoDaConta,
+  aceitaStatusNota,
+  statusDaNotaAsaas,
 } from '@pente-fino/shared';
 import { AssinaturaGuard } from '../assinatura/assinatura.guard.js';
 import { PlanoGuard } from '../assinatura/plano.guard.js';
@@ -43,6 +45,23 @@ const menosUmDia = (data: string) =>
 const dataBanco = (d: string) => new Date(`${d}T00:00:00.000Z`);
 
 /** Pagamento como chega no webhook do Asaas (só o que usamos). */
+/** Nota fiscal no webhook do Asaas (eventos INVOICE_*, objeto em "invoice"). */
+export interface NotaWebhook {
+  id: string;
+  customer?: string | null;
+  payment?: string | null;
+  status?: string;
+  statusDescription?: string | null;
+  number?: string | null;
+  value?: number | null;
+  pdfUrl?: string | null;
+  xmlUrl?: string | null;
+}
+
+/** Só endereço https vira link na tela da barbearia. */
+const linkSeguro = (u: string | null | undefined) =>
+  u && /^https:\/\/[^\s]+$/.test(u) ? u.slice(0, 1000) : null;
+
 export interface PagamentoWebhook {
   id: string;
   customer: string;
@@ -325,6 +344,46 @@ export class CobrancaService {
     if (pago) await this.avisarPagamento(pago);
     this.trava.esquecer(conta.id);
     return 'aplicado';
+  }
+
+  /**
+   * Nota fiscal de uma mensalidade (admin R2): grava a situação que o Asaas avisa, sem voltar
+   * atrás com aviso atrasado ou repetido. Nota de cliente que não é conta do Pente Fino (por
+   * exemplo, de subconta do clube) é ignorada.
+   */
+  async webhookNota(evento: string, n: NotaWebhook): Promise<'aplicado' | 'ignorado'> {
+    const status = statusDaNotaAsaas(evento, n.status);
+    if (!status || !n.id || !n.customer) return 'ignorado';
+    const conta = await this.banco.semConta({ clienteAsaas: n.customer }, (tx) =>
+      tx.conta.findFirst({ select: { id: true } }),
+    );
+    if (!conta) return 'ignorado';
+    return this.banco.naConta(conta.id, async (tx) => {
+      const atual = await tx.notaFiscalMensalidade.findUnique({ where: { idExterno: n.id } });
+      if (atual && !aceitaStatusNota(atual.status, status)) return 'ignorado';
+      const dados = {
+        status,
+        pagamentoId: n.payment || atual?.pagamentoId || null,
+        numero: n.number || atual?.numero || null,
+        valor: typeof n.value === 'number' ? Math.round(n.value * 100) : (atual?.valor ?? null),
+        pdfUrl: linkSeguro(n.pdfUrl) ?? atual?.pdfUrl ?? null,
+        xmlUrl: linkSeguro(n.xmlUrl) ?? atual?.xmlUrl ?? null,
+        mensagem:
+          status === 'erro'
+            ? n.statusDescription?.trim().slice(0, 500) ||
+              'O Asaas não informou o motivo. Confira a nota no painel do Asaas.'
+            : null,
+        emitidaEm:
+          status === 'emitida' ? (atual?.emitidaEm ?? new Date()) : (atual?.emitidaEm ?? null),
+      };
+      await tx.notaFiscalMensalidade.upsert({
+        where: { idExterno: n.id },
+        create: { idExterno: n.id, ...dados },
+        update: dados,
+      });
+      if (status === 'erro') this.log.warn(`Nota fiscal ${n.id} não emitida: ${dados.mensagem}`);
+      return 'aplicado';
+    });
   }
 
   /** Cria ou atualiza a fatura da cobrança; paga tira a conta do teste. */

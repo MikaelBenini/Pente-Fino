@@ -1,6 +1,7 @@
 // Assinatura do Pente Fino pela barbearia (Etapa 10.1, lado do dono): em que situação a conta
 // está e se o sistema fica só para consulta. Bloqueio suave: nunca apaga dado.
 import { dataLocal } from './datas.js';
+import type { NotaDaFatura } from './nota-fiscal.js';
 import { z } from 'zod';
 import {
   aplicarDesconto,
@@ -137,6 +138,8 @@ export interface FaturaDetalhe {
   pagaEm: string | null;
   motivoRecusa: string | null;
   linkPagamento: string | null;
+  /** Nota fiscal desta mensalidade (null = a emissão não estava ligada ou a nota não chegou). */
+  notaFiscal: NotaDaFatura | null;
 }
 
 /** Aba Assinatura (só o dono). */

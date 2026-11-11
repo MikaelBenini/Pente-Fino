@@ -3,6 +3,7 @@
 import { Logger } from '@nestjs/common';
 import {
   configuracaoNotaAsaas,
+  tipoAcessoDoAsaas,
   type CobrancaExterna,
   type ConfigNotaFiscal,
   type DadosRecebimento,
@@ -161,7 +162,21 @@ export class ProvedorAsaas implements ProvedorCobranca {
     );
   }
 
+  /** O que a prefeitura exige (certificado, token ou senha); sem resposta, não se sabe. */
+  private async tipoAcesso() {
+    try {
+      const o = await this.pedir<{ authenticationType?: string }>(
+        'GET',
+        '/fiscalInfo/municipalOptions',
+      );
+      return tipoAcessoDoAsaas(o.authenticationType);
+    } catch {
+      return null;
+    }
+  }
+
   async situacaoFiscal(): Promise<SituacaoFiscalAsaas> {
+    const tipoAcesso = await this.tipoAcesso();
     try {
       const f = await this.pedir<{
         municipalInscription?: string | null;
@@ -175,6 +190,7 @@ export class ProvedorAsaas implements ProvedorCobranca {
         inscricaoMunicipal: f.municipalInscription || null,
         simplesNacional: f.simplesNacional ?? null,
         acessoPrefeitura: Boolean(f.passwordSent || f.accessTokenSent || f.certificateSent),
+        tipoAcesso,
       };
     } catch (e) {
       // Sem dados fiscais o Asaas responde 404 (sem corpo de erro).
@@ -184,6 +200,7 @@ export class ProvedorAsaas implements ProvedorCobranca {
           inscricaoMunicipal: null,
           simplesNacional: null,
           acessoPrefeitura: false,
+          tipoAcesso,
         };
       throw e;
     }
@@ -349,13 +366,16 @@ export class ProvedorCobrancaFalso implements ProvedorCobranca {
     this.notas.set(assinatura, c);
   }
 
+  /** Teste: dados fiscais da conta no "Asaas" (troque para simular o que falta). */
+  situacao: SituacaoFiscalAsaas = {
+    configurada: true,
+    inscricaoMunicipal: '4.821.390-7',
+    simplesNacional: true,
+    acessoPrefeitura: true,
+  };
+
   async situacaoFiscal(): Promise<SituacaoFiscalAsaas> {
-    return {
-      configurada: true,
-      inscricaoMunicipal: '123456',
-      simplesNacional: true,
-      acessoPrefeitura: true,
-    };
+    return { ...this.situacao };
   }
 
   async servicosMunicipais(busca: string) {

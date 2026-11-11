@@ -15,7 +15,7 @@ import { Publico } from '../auth/decoradores.js';
 import { Erros } from '../comum/erros.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { ClubeOnlineService } from '../clube/clube-online.service.js';
-import { CobrancaService, type PagamentoWebhook } from './cobranca.service.js';
+import { CobrancaService, type NotaWebhook, type PagamentoWebhook } from './cobranca.service.js';
 
 const iguais = (a: string, b: string) => {
   const x = Buffer.from(a);
@@ -44,12 +44,22 @@ export class WebhookAsaasController {
   @SkipThrottle({ padrao: true })
   @HttpCode(HttpStatus.OK)
   async asaas(
-    @Body() corpo: { event?: string; payment?: PagamentoWebhook },
+    @Body() corpo: { event?: string; payment?: PagamentoWebhook; invoice?: NotaWebhook },
     @Headers('asaas-access-token') token: string | undefined,
   ): Promise<{ ok: true; resultado: string }> {
     const esperado = this.config.cobranca.webhookToken;
     if (!esperado || !token || !iguais(token, esperado))
       throw Erros.naoAutenticado('Token do webhook inválido.');
+    // Nota fiscal da mensalidade (INVOICE_*): o objeto vem em "invoice", não em "payment".
+    const nota = corpo?.invoice;
+    if (corpo?.event?.startsWith('INVOICE_') && nota?.id) {
+      try {
+        return { ok: true, resultado: await this.cobranca.webhookNota(corpo.event, nota) };
+      } catch (e) {
+        this.log.error(`Falhou ao aplicar ${corpo.event} (${nota.id}): ${(e as Error).message}`);
+        return { ok: true, resultado: 'erro' };
+      }
+    }
     const p = corpo?.payment;
     if (!corpo?.event || !p?.id || !p.customer) return { ok: true, resultado: 'ignorado' };
     try {

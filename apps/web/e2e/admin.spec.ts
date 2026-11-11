@@ -181,6 +181,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(cupons.getByRole('row', { name: new RegExp(codigoCupom) })).toContainText(
     'Desativado',
   );
+  // Nota fiscal (admin R2): o Asaas de teste tem os dados fiscais completos.
+  const nota = page.getByRole('region', { name: 'Nota fiscal das mensalidades' });
+  await expect(nota.getByText('Tudo conferido: a emissão pode ser ligada.')).toBeVisible();
+  await expect(nota.getByRole('button', { name: 'Conferir de novo no Asaas' })).toBeVisible();
   const modelos = page.getByRole('region', { name: 'Modelos de e-mail' });
   await modelos.getByLabel('E-mail', { exact: true }).selectOption('pagamento_recebido');
   await modelos.getByLabel('Assunto').fill('Pagamento da {{conta}} recebido');
@@ -189,6 +193,9 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   );
   await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
   await expect(page.getByRole('table', { name: 'Filas' })).toContainText('E-mails');
+  await expect(
+    page.getByRole('region', { name: 'Nota fiscal das mensalidades' }).getByText(/Emissão/),
+  ).toBeVisible();
   await page.getByRole('tab', { name: 'Início' }).click();
 
   // A sessão da barbearia não existe aqui, e a da administração não abre o painel.
