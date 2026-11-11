@@ -98,6 +98,24 @@ privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os va
   colar também em Editar página → CSS personalizado).
 - Backup: ver docs/restaurar.md.
 
+## IP real na auditoria
+
+A auditoria e o login guardam o IP de quem acessou. O Caddy manda o IP do visitante para o web e
+para a API (`X-Forwarded-For`, com `TRUST_PROXY=true`). Se o acesso chega por **IPv6** e a rede do
+Docker é só IPv4, o Docker repassa a conexão e o Caddy vê o IP da própria rede (`172.18.0.1`): o IP
+real se perde antes de chegar ao sistema.
+
+- **Como saber:** Saúde do sistema avisa "acessos com IP interno" quando isso acontece. Para
+  confirmar, `dig AAAA seudominio +short`: se responde um endereço, o domínio aceita IPv6.
+- **Correção rápida, sem mexer no servidor:** apagar o registro **AAAA** do domínio (e de `www`,
+  `api`, `wa` e `status`) no painel de DNS. Todos passam a chegar por IPv4, com o IP certo. Vale em
+  minutos a algumas horas, conforme o TTL.
+- **Para manter o IPv6:** ligar o IPv6 no Docker (`/etc/docker/daemon.json` com `"ipv6": true`,
+  `"fixed-cidr-v6": "fd00:1::/64"` e `"ip6tables": true`, depois `systemctl restart docker`) e na
+  rede do projeto (`enable_ipv6: true` na rede padrão do `docker-compose.prod.yml`). A rede precisa
+  ser recriada (`docker compose down` e `up -d`), então faça numa janela de manutenção e confira o
+  site e o WhatsApp em seguida.
+
 ## Comandos úteis
 
 ```bash

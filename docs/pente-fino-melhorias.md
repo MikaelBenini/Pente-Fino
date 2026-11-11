@@ -31,7 +31,7 @@
 | 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | ✅ branch `fix/painel-a5-a8` |
 | 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ✅ R2 #152; R1 #153 |
 | 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ✅ R3, R4 e R6 #154; R5 `fix/admin-r5-indicadores-e-conta-interna` |
-| 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ⏳ |
+| 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ✅ `fix/admin-r7-r10-falhas-ip-e-abas` (R9: correção do DNS com o dono) |
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ⏳ |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ⏳ (T4 já existia) |
 | 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ⏳ |
@@ -93,6 +93,8 @@ Itens que se sobrepõem e devem ser feitos juntos:
 - **Depoimentos (site C4):** pelo menos dois reais e autorizados.
 - **Suporte (painel M10):** WhatsApp de suporte e horário de atendimento.
 - **Sobre (site N5):** quem faz o Pente Fino, por que existe, cidade.
+- **IP real na auditoria (admin R9):** se a Saúde do sistema avisar acessos com IP interno, tirar
+  o registro AAAA do DNS (ou ligar o IPv6 no Docker), conforme `docs/producao.md`.
 - **Conferência em produção (site B4):** passar a página no Rich Results Test.
 
 ## Parte 1 · Painel da barbearia (área logada e `/agendar`)
@@ -322,10 +324,10 @@ Separação de dados das barbearias, autenticador obrigatório, auditoria imutá
 - [x] R4 cobrança manual gera cobrança prevista por ciclo, também para quem nunca pagou (#154)
 - [x] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR (`fix/admin-r5-indicadores-e-conta-interna`)
 - [x] R6 teste com limite; acima disso só cortesia (#154)
-- [ ] R7 falhas de e-mail listáveis, reenviáveis e alertadas
-- [ ] R8 WhatsApp caído em Precisa de atenção
-- [ ] R9 IP real na auditoria atrás do proxy
-- [ ] R10 abas respondem ao hash (ou rotas reais)
+- [x] R7 falhas de e-mail listáveis, reenviáveis e alertadas
+- [x] R8 WhatsApp caído em Precisa de atenção
+- [x] R9 IP real na auditoria atrás do proxy (a Saúde avisa IP interno; tirar o AAAA do DNS ou ligar IPv6 no Docker: `docs/producao.md`)
+- [x] R10 abas respondem ao hash
 - [ ] U1–U9 conferidos
 - [ ] F2 origem gravada num cadastro de teste vindo de `?utm_source=google&gclid=teste`
 - [ ] Build, lint e testes passando
