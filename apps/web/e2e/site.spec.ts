@@ -89,3 +89,87 @@ for (const rota of ['/', '/planos', '/termos', '/privacidade']) {
     expect(sobra).toBeLessThanOrEqual(0);
   });
 }
+
+// ─── Briefing do site (docs/pente-fino-melhorias-site.md) ──────────────────
+
+test('B1: endereço que não existe responde 404; tela do sistema ainda pede login', async ({
+  page,
+  request,
+}) => {
+  const r = await request.get('/pagina-que-nao-existe', { maxRedirects: 0 });
+  expect(r.status()).toBe(404);
+  await page.goto('/pagina-que-nao-existe');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Página não encontrada' }),
+  ).toBeVisible();
+  await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1);
+  await page.goto('/agenda');
+  await expect(page).toHaveURL(/\/entrar\?voltar=%2Fagenda$/);
+});
+
+test('B2, B4 e B6: bot sem "em construção", preços certos para o Google e economia calculada', async ({
+  page,
+}) => {
+  await page.goto('/planos');
+  await expect(page.getByText(/bot está em construção/)).toHaveCount(0);
+  await expect(page.getByText('Está incluso no Pro e no Premium, sem custo extra.')).toBeAttached();
+  await expect(page.getByText('economize até R$ 504/ano').first()).toBeVisible();
+  const ld = JSON.parse(
+    (await page.locator('script[type="application/ld+json"]').first().textContent())!,
+  ) as { offers: { '@type': string; lowPrice: string; highPrice: string; offerCount: number } };
+  expect(ld.offers).toMatchObject({
+    '@type': 'AggregateOffer',
+    lowPrice: '66.90',
+    highPrice: '249.90',
+    offerCount: 3,
+  });
+});
+
+test('B3: o cupom do link já mostra o desconto; cupom inválido avisa', async ({ page }) => {
+  await page.goto('/cadastro?cupom=LANCAMENTO&plano=pro&ciclo=mensal');
+  await expect(page.getByText('30% de desconto para sempre aplicado (LANCAMENTO).')).toBeVisible();
+  const pro = page.getByRole('radio', { name: /^Pro/ }).locator('..');
+  await expect(pro.locator('s')).toHaveText(/R\$ 149,90/);
+  await expect(pro).toContainText('R$ 104,93/mês');
+  await page.goto('/cadastro?cupom=INVALIDO');
+  await expect(page.getByText('Cupom não encontrado.')).toBeVisible();
+});
+
+test('B8: WhatsApp opcional com máscara no cadastro', async ({ page }) => {
+  await page.goto('/cadastro');
+  const campo = page.getByLabel('WhatsApp (opcional)');
+  await campo.pressSequentially('11988887777');
+  await expect(campo).toHaveValue('(11) 98888-7777');
+  await expect(page.getByLabel('Seu nome')).toHaveAttribute('aria-required', 'true');
+  await page.getByRole('button', { name: 'Mostrar senha' }).click();
+  await expect(page.getByLabel('Senha')).toHaveAttribute('type', 'text');
+});
+
+test('C1 e P1: faixa da oferta leva ao cupom; promessas parciais com o selo do plano', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const faixa = page.getByRole('region', { name: 'Oferta de lançamento' });
+  await expect(faixa.getByRole('link', { name: 'Ativar desconto' })).toHaveAttribute(
+    'href',
+    '/cadastro?cupom=LANCAMENTO',
+  );
+  await expect(
+    page.getByRole('heading', { name: /O que dá lucro, e o que só dá trabalho/ }),
+  ).toContainText('Premium');
+  await expect(page.getByRole('heading', { name: /WhatsApp que agenda sozinho/ })).toContainText(
+    'Pro e Premium',
+  );
+  // Fechada, a faixa não volta neste navegador.
+  await faixa.getByRole('button', { name: 'Fechar a faixa da oferta' }).click();
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Oferta de lançamento' })).toHaveCount(0);
+});
+
+test('B7: "Planos" aparece no topo também no celular', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  const nav = page.getByRole('navigation', { name: 'Site' });
+  for (const nome of ['Planos', 'Entrar', 'Testar grátis'])
+    await expect(nav.getByRole('link', { name: nome })).toBeVisible();
+});

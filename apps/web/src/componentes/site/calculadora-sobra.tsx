@@ -1,10 +1,12 @@
 'use client';
 
-import { formatarMoeda } from '@pente-fino/shared';
-import { useId, useState } from 'react';
+import { formatarMoeda, lerMoeda } from '@pente-fino/shared';
+import { useId, useRef, useState } from 'react';
+import { BotaoTesteOferta } from './oferta-lancamento';
+import { eventoGoogle } from './tag-google';
 
-/** Número digitado em reais ("45", "45,90") para centavos; inválido vira 0. */
-const centavos = (t: string) => Math.max(0, Math.round((Number(t.replace(',', '.')) || 0) * 100));
+/** Valor digitado em reais ("45", "45,90", "1.234,56") para centavos; inválido vira 0. */
+const centavos = (t: string) => Math.max(0, lerMoeda(t) ?? 0);
 const inteiro = (t: string) => Math.max(0, Math.round(Number(t.replace(',', '.')) || 0));
 
 function Campo({
@@ -53,6 +55,15 @@ export function CalculadoraSobra() {
   const [comissao, setComissao] = useState('45');
   const [produto, setProduto] = useState('3,50');
   const [quantos, setQuantos] = useState('400');
+  // Medição (briefing do site, T3): a primeira vez que o visitante mexe na conta.
+  const mediu = useRef(false);
+  const usar = (f: (v: string) => void) => (v: string) => {
+    if (!mediu.current) {
+      mediu.current = true;
+      eventoGoogle('use_calculadora');
+    }
+    f(v);
+  };
 
   const p = centavos(preco);
   const c = Math.round((p * Math.min(100, inteiro(comissao))) / 100);
@@ -64,16 +75,21 @@ export function CalculadoraSobra() {
   return (
     <div className="grid gap-8 rounded-2xl border border-borda bg-superficie p-5 sm:p-8 lg:grid-cols-[1fr_1.1fr]">
       <form className="grid gap-4 sm:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
-        <Campo rotulo="Preço do corte" prefixo="R$" valor={preco} onChange={setPreco} />
-        <Campo rotulo="Comissão do barbeiro" sufixo="%" valor={comissao} onChange={setComissao} />
+        <Campo rotulo="Preço do corte" prefixo="R$" valor={preco} onChange={usar(setPreco)} />
+        <Campo
+          rotulo="Comissão do barbeiro"
+          sufixo="%"
+          valor={comissao}
+          onChange={usar(setComissao)}
+        />
         <Campo
           rotulo="Produto usado"
           prefixo="R$"
           valor={produto}
-          onChange={setProduto}
+          onChange={usar(setProduto)}
           dica="Pomada, lâmina, toalha…"
         />
-        <Campo rotulo="Cortes no mês" valor={quantos} onChange={setQuantos} />
+        <Campo rotulo="Cortes no mês" valor={quantos} onChange={usar(setQuantos)} />
       </form>
 
       <div className="flex flex-col gap-5" aria-live="polite">
@@ -118,6 +134,7 @@ export function CalculadoraSobra() {
           O Pente Fino faz essa conta sozinho em cada comanda, para cada serviço, barbeiro e
           unidade, e ainda desconta as despesas do mês.
         </p>
+        <BotaoTesteOferta extra="origem=calculadora" className="self-start" />
       </div>
     </div>
   );

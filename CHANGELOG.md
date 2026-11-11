@@ -7,6 +7,24 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (site)
+
+- Oferta de lançamento visível em todo o site (faixa no topo, fechável) e nos botões de teste;
+  some sozinha depois de 31/01/2027 ou quando as vagas acabam.
+- Cadastro com o cupom do link já aplicado: preço cheio riscado e preço com desconto; cupom
+  inválido avisa. Campo de WhatsApp opcional, "Mostrar senha" e campos obrigatórios marcados.
+- Cada promessa que não vem em todos os planos mostra o selo "Pro e Premium" ou "Premium".
+- "Economize até R$ 504/ano" (calculado) no lugar de "2 meses grátis", que não batia com a conta.
+- "Planos" no topo também no celular; "Ver em 1 minuto" já dá o play no vídeo; a calculadora
+  aceita "1.234,56" e leva ao teste.
+- Endereço que não existe mostra "Página não encontrada" (404) em vez da tela de login.
+
+### Corrigido (site)
+
+- /planos dizia que o bot de WhatsApp estava "em construção": ele já funciona no Pro e no
+  Premium.
+- Preços para o Google (dados estruturados) batem com os da página.
+
 ### Alterado (resultados do mês)
 
 - **Resultados do mês** no lugar de Métricas e metas, Relatório do mês e Painel da rede: cada

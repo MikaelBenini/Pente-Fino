@@ -13,13 +13,16 @@ import {
   type PlanoConta,
   aplicarDesconto,
   formatarPercentualBp,
+  OFERTA_LANCAMENTO,
   precoPorMes,
+  textoEconomiaAnual,
   type CadastroContaEntrada,
 } from '@pente-fino/shared';
 import { Botao, Campo, cn } from '@pente-fino/ui';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import { api, ErroApi } from '@/lib/api';
@@ -35,6 +38,18 @@ function limitePlano(p: PlanoConta) {
   return `${l.unidades} unidade · até ${l.profissionais} profissionais`;
 }
 
+/** "(11) 98888-7777" enquanto digita; aceita colar com +55. */
+function mascaraWhatsapp(v: string): string {
+  const d = v
+    .replace(/\D/g, '')
+    .replace(/^55(?=\d{10,11}$)/, '')
+    .slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : '';
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 /** Plano e ciclo vindos da página de planos (?plano=pro&ciclo=anual); valor estranho é ignorado. */
 function daUrl<T extends string>(valor: string | null, aceitos: readonly T[], padrao: T): T {
   return aceitos.includes(valor as T) ? (valor as T) : padrao;
@@ -44,7 +59,10 @@ export function FormularioCadastro() {
   const tabela = useTabelaPrecos();
   const [cupom, setCupom] = useState<{ codigo: string; descontoBp: number } | null>(null);
   const [erroCupom, setErroCupom] = useState<string | null>(null);
+  // Depois que a pessoa mexe no campo, vale o que ela digitou; antes, o cupom que veio no link.
+  const [tocouCupom, setTocouCupom] = useState(false);
   async function conferirCupom(codigo: string) {
+    setTocouCupom(true);
     setErroCupom(null);
     setCupom(null);
     if (!codigo.trim()) return;
@@ -62,6 +80,7 @@ export function FormularioCadastro() {
       );
     }
   }
+  const [verSenha, setVerSenha] = useState(false);
   const router = useRouter();
   const params = useSearchParams();
   const hidratado = useHidratado();
@@ -78,8 +97,35 @@ export function FormularioCadastro() {
       plano: daUrl(params.get('plano'), PLANOS, 'pro'),
       ciclo: daUrl(params.get('ciclo'), CICLOS, 'mensal'),
       cupom: params.get('cupom')?.slice(0, 30) ?? '',
+      whatsapp: '',
     },
   });
+  // Cupom vindo do link (ex.: anúncio "30% off"): confere ao abrir, para o desconto aparecer já.
+  const cupomDoLink = params.get('cupom')?.trim().slice(0, 30) ?? '';
+  const doLink = useQuery({
+    queryKey: ['cupom', cupomDoLink],
+    queryFn: () =>
+      api<{ codigo: string; descontoBp: number }>(
+        `publico/cupom/${encodeURIComponent(cupomDoLink)}`,
+      ),
+    enabled: cupomDoLink !== '',
+    retry: false,
+    staleTime: Infinity,
+  });
+  // A oferta de lançamento acabou e o visitante veio por um link antigo: o cupom some em silêncio.
+  const ofertaDoLinkAcabou =
+    doLink.isError && cupomDoLink.toUpperCase() === OFERTA_LANCAMENTO.codigo;
+  useEffect(() => {
+    if (ofertaDoLinkAcabou) setValue('cupom', '');
+  }, [ofertaDoLinkAcabou, setValue]);
+  const cupomAtivo = tocouCupom ? cupom : (doLink.data ?? null);
+  const erroDoCupom = tocouCupom
+    ? erroCupom
+    : doLink.isError && !ofertaDoLinkAcabou
+      ? doLink.error instanceof ErroApi
+        ? (doLink.error.campos[0]?.mensagem ?? doLink.error.message)
+        : 'Não deu para conferir o cupom.'
+      : null;
   const plano = useWatch({ control, name: 'plano' });
   const ciclo: Ciclo = useWatch({ control, name: 'ciclo' }) ?? 'mensal';
 
@@ -121,6 +167,8 @@ export function FormularioCadastro() {
         id="cadastro-barbearia"
         rotulo="Nome da barbearia"
         autoComplete="organization"
+        required
+        aria-required
         erro={formState.errors.barbearia?.message}
         {...register('barbearia')}
       />
@@ -128,6 +176,8 @@ export function FormularioCadastro() {
         id="cadastro-nome"
         rotulo="Seu nome"
         autoComplete="name"
+        required
+        aria-required
         erro={formState.errors.nome?.message}
         {...register('nome')}
       />
@@ -137,17 +187,45 @@ export function FormularioCadastro() {
         type="email"
         autoComplete="email"
         inputMode="email"
+        required
+        aria-required
         erro={formState.errors.email?.message}
         {...register('email')}
       />
+      <div className="flex flex-col gap-1">
+        <Campo
+          id="cadastro-senha"
+          rotulo="Senha"
+          type={verSenha ? 'text' : 'password'}
+          autoComplete="new-password"
+          dica="Pelo menos 8 caracteres."
+          required
+          aria-required
+          erro={formState.errors.senha?.message}
+          {...register('senha')}
+        />
+        <button
+          type="button"
+          aria-controls="cadastro-senha"
+          aria-pressed={verSenha}
+          onClick={() => setVerSenha(!verSenha)}
+          className="inline-flex min-h-11 items-center self-start text-sm font-medium text-tinta-suave underline-offset-4 hover:text-tinta hover:underline focus-visible:outline-2 focus-visible:outline-foco"
+        >
+          {verSenha ? 'Esconder senha' : 'Mostrar senha'}
+        </button>
+      </div>
       <Campo
-        id="cadastro-senha"
-        rotulo="Senha"
-        type="password"
-        autoComplete="new-password"
-        dica="Pelo menos 8 caracteres."
-        erro={formState.errors.senha?.message}
-        {...register('senha')}
+        id="cadastro-whatsapp"
+        rotulo="WhatsApp (opcional)"
+        type="tel"
+        inputMode="tel"
+        autoComplete="tel"
+        placeholder="(00) 00000-0000"
+        dica="Para ajudar na configuração. Não enviamos spam."
+        erro={formState.errors.whatsapp?.message}
+        {...register('whatsapp', {
+          onChange: (e) => setValue('whatsapp', mascaraWhatsapp(e.target.value)),
+        })}
       />
       <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-medium">Pagamento depois do teste</legend>
@@ -168,10 +246,11 @@ export function FormularioCadastro() {
                 className="size-5 accent-[var(--modulo)]"
                 name="ciclo"
               />
-              <span className="font-medium">{c === 'mensal' ? 'Mensal' : 'Anual (-2 meses)'}</span>
+              <span className="font-medium">{c === 'mensal' ? 'Mensal' : 'Anual'}</span>
             </label>
           ))}
         </div>
+        <p className="mt-1.5 text-sm text-acao-texto">No anual, {textoEconomiaAnual(tabela)}.</p>
       </fieldset>
       <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-medium">Plano</legend>
@@ -195,9 +274,16 @@ export function FormularioCadastro() {
               <span className="flex flex-1 flex-col">
                 <span className="font-semibold">
                   {NOME_PLANO[p]} ·{' '}
+                  {cupomAtivo && (
+                    <s className="font-denso font-normal text-tinta-suave tabular-nums">
+                      <span className="sr-only">de </span>
+                      {formatarMoeda(precoPorMes(p, ciclo, 1, tabela))}
+                    </s>
+                  )}{' '}
                   <span className="font-denso tabular-nums">
+                    {cupomAtivo && <span className="sr-only">por </span>}
                     {formatarMoeda(
-                      aplicarDesconto(precoPorMes(p, ciclo, 1, tabela), cupom?.descontoBp),
+                      aplicarDesconto(precoPorMes(p, ciclo, 1, tabela), cupomAtivo?.descontoBp),
                     )}
                     /mês
                   </span>
@@ -213,11 +299,11 @@ export function FormularioCadastro() {
         rotulo="Cupom de desconto (opcional)"
         autoComplete="off"
         dica={
-          cupom
-            ? `${formatarPercentualBp(cupom.descontoBp)} de desconto enquanto a assinatura existir.`
+          cupomAtivo
+            ? `${formatarPercentualBp(cupomAtivo.descontoBp)} de desconto para sempre aplicado (${cupomAtivo.codigo}).`
             : undefined
         }
-        erro={formState.errors.cupom?.message ?? erroCupom ?? undefined}
+        erro={formState.errors.cupom?.message ?? erroDoCupom ?? undefined}
         {...register('cupom', { onBlur: (e) => conferirCupom(e.target.value) })}
       />
       <label className="flex min-h-11 items-start gap-3">

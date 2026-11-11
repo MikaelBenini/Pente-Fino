@@ -11,22 +11,24 @@ export function CabecalhoSite() {
           aria-label="Pente Fino, página inicial"
           className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-foco"
         >
-          <Marca compacta />
+          <Marca compacta nomeSoNoComputador />
         </Link>
         <nav aria-label="Site" className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/planos"
-            className="hidden min-h-11 items-center rounded-md px-3 font-medium text-tinta-suave hover:text-tinta sm:inline-flex"
+            className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-tinta-suave hover:text-tinta sm:px-3"
           >
             Planos
           </Link>
           <Link
             href="/entrar"
-            className="inline-flex min-h-11 items-center rounded-md px-3 font-medium text-tinta-suave hover:text-tinta"
+            className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-tinta-suave hover:text-tinta sm:px-3"
           >
             Entrar
           </Link>
-          <LinkBotao href="/cadastro">Testar grátis</LinkBotao>
+          <LinkBotao href="/cadastro" className="px-3 whitespace-nowrap sm:px-5">
+            Testar grátis
+          </LinkBotao>
         </nav>
       </div>
     </header>

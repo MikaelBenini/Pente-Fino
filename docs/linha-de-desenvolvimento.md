@@ -659,6 +659,42 @@ temos bot de WhatsApp, lucro real, comanda única e preço menor). Ordem de cons
 - [ ] **Migração assistida**: importar clientes, serviços e equipe exportados de outros sistemas (planilhas do BestBarbers, Cash Barber, Trinks, AppBarber) com o mapeamento de colunas automático e a conferência antes de gravar
 - [ ] **Pronto quando:** o dono abre o sistema e entende o dia numa tela, compara o mês com o anterior sem calcular nada, sabe quanto cada barbeiro custa e rende, e a barbearia tem uma página própria que o cliente usa para agendar pelo Instagram
 
+## Etapa 23.2 · Site que vende (briefing de 2026-11-10)
+
+Fonte: [pente-fino-melhorias-site.md](pente-fino-melhorias-site.md) (auditoria do site em 10/11/2026,
+com comparação com AppBarber, Trinks, Booksy, ZapCorte e EiBarber). Itens [DECISÃO DO DONO] usam a
+opção padrão do briefing, numa constante fácil de trocar.
+
+**1ª e 2ª prioridade (feito em 2026-11-11)**
+
+- [x] **B1** 404 de verdade: só as telas do sistema (`lib/rotas.ts`, conferida contra as pastas por teste) mandam para o login; o resto responde 404 com `app/not-found.tsx` (noindex do próprio Next)
+- [x] **B2** /planos não diz mais que o bot está "em construção"
+- [x] **B3** cupom do link conferido ao abrir o cadastro: preço cheio riscado, preço com desconto e "30% de desconto para sempre aplicado (LANCAMENTO)"; cupom inválido avisa; a oferta vencida some em silêncio
+- [x] **B4** JSON-LD com `AggregateOffer` (R$ 66,90 a R$ 249,90) e cada plano com mensal e anual, da mesma tabela da página (`ofertasJsonLd`)
+- [x] **B5** vídeo: já havia MP4 (H.264, faststart) de reserva; o WebM declara `codecs="vp9"` para o Safari antigo ir direto ao MP4
+- [x] **B6** "economize até R$ 504/ano" calculado (`textoEconomiaAnual`) no lugar de "2 meses grátis"
+- [x] **B7** "Planos" no topo também no celular (a marca mostra só o ícone em tela estreita)
+- [x] **B8** WhatsApp opcional no cadastro, com máscara, gravado no usuário dono (`usuario.telefone`, sem migração); política de privacidade atualizada (versão 2026-11-11)
+- [x] **P1** `SeloPlano` ("Pro e Premium" / "Premium") em cada promessa parcial da home e do cadastro, lido de `RECURSOS` — a mesma regra que libera o recurso na API
+- [x] **P2** [DECISÃO DO DONO] `LUCRO_POR_SERVICO_NO_PRO = false` (opção B: lucro por serviço só no Premium e a home diz isso). Trocar para `true` libera no Pro o produto, a tabela de /planos e os selos de uma vez
+- [x] **C1** faixa da oferta no topo do site (fechável), oferta repetida acima dos preços da home e botões levando o cupom; tudo some depois de 31/01/2027 ou sem vagas
+- [x] **C2/C3** estrutura do WhatsApp flutuante e do rodapé com razão social, CNPJ, cidade e redes em `lib/contato.ts`; nada aparece enquanto vazio. **Falta o dono passar os dados reais**
+- [x] **C4** depoimentos só com 2 ou mais reais (`DEPOIMENTOS`); **falta o dono trazer depoimentos autorizados**
+- [x] **C5** "Configuração guiada · atende no mesmo dia · importamos sua planilha" perto dos botões; `DIAS_TESTE` continua a fonte única
+- [x] **C6** "Ver em 1 minuto" rola até o vídeo e dá o play; chamada de teste no fim dos recursos e da calculadora
+- [x] **C7** calculadora aceita "1.234,56" e leva ao cadastro com `origem=calculadora`
+- [x] **D3** ✓/✗ da tabela comparativa com texto para leitor de tela e legenda "em parte" com o ícone
+- [x] **D5** cadastro com campos obrigatórios marcados (`aria-required`), erros ligados ao campo e "Mostrar senha"
+- [x] **D6** "Ver em 1 minuto" e "14 dias grátis, sem cartão" padronizados; bot sempre "Pro e Premium"
+
+**3ª e 4ª prioridade (próximos PRs)**
+
+- [ ] **P3** [DECISÃO DO DONO] Básico mais competitivo (preço menor ou bot no Básico)
+- [ ] **S1–S6** sitemap com todas as páginas, metadados e OG por página, BreadcrumbList/Article/FAQPage, links internos no rodapé, `www`→raiz e `http`→`https` com 301 no Caddy, robots sem `Allow` redundante
+- [ ] **T1–T3** `sign_up` com valor só no sucesso, gclid/gbraid/wbraid/UTM guardados por 90 dias e enviados no cadastro, eventos do funil (`view_planos`, `toggle_ciclo`, `click_cta`, `begin_sign_up`); **T4** consentimento já existe (Consent Mode v2, negado até aceitar)
+- [ ] **N1–N5** páginas por intenção de busca, comparativos (só fatos com data e fonte), calculadoras em URL própria, blog e Sobre/Contato
+- [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
+
 ## Etapa 24 · Premium completo
 
 Depois do lançamento, o que o Premium anuncia como "em breve".

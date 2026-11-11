@@ -33,7 +33,10 @@ const SECOES: readonly SecaoLegal[] = [
     titulo: 'Quais dados tratamos',
     conteudo: (
       <ul>
-        <li>Conta: nome da barbearia, nome, e-mail e senha (guardada só como hash).</li>
+        <li>
+          Conta: nome da barbearia, nome, e-mail, senha (guardada só como hash) e, se informado, o
+          WhatsApp do dono, usado só para ajudar na configuração e no suporte.
+        </li>
         <li>Operação: agenda, comandas, pagamentos, comissões, despesas e metas.</li>
         <li>Clientes da barbearia: nome, telefone e, se informados, e-mail e aniversário.</li>
         <li>Segurança: registro de acessos, endereço IP e ações sensíveis (auditoria).</li>

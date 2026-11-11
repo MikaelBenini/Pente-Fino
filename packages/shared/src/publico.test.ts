@@ -111,3 +111,24 @@ describe('esquemas de cadastro: casos de borda', () => {
     expect(r.success).toBe(true);
   });
 });
+
+describe('cadastro de conta: WhatsApp opcional (briefing do site, B8)', () => {
+  const base = {
+    barbearia: 'Barbearia do João',
+    nome: 'João Silva',
+    email: 'joao@exemplo.com',
+    senha: 'umaSenhaBoa123',
+    aceite: true as const,
+  };
+  it('sem o campo ou vazio: segue sem telefone', () => {
+    expect(cadastroContaSchema.parse(base).whatsapp).toBeUndefined();
+    expect(cadastroContaSchema.parse({ ...base, whatsapp: '' }).whatsapp).toBeNull();
+    expect(cadastroContaSchema.parse({ ...base, whatsapp: null }).whatsapp).toBeNull();
+  });
+  it('com DDD vira 55 + número; incompleto é recusado', () => {
+    expect(cadastroContaSchema.parse({ ...base, whatsapp: '(11) 98888-7777' }).whatsapp).toBe(
+      '5511988887777',
+    );
+    expect(cadastroContaSchema.safeParse({ ...base, whatsapp: '98888-7777' }).success).toBe(false);
+  });
+});

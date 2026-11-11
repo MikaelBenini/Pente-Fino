@@ -1,4 +1,10 @@
-import { DIAS_TESTE } from '@pente-fino/shared';
+import {
+  DIAS_TESTE,
+  LUCRO_POR_SERVICO_NO_PRO,
+  textoEconomiaAnual,
+  type PlanoConta,
+  type Recurso,
+} from '@pente-fino/shared';
 import {
   BellRing,
   Building2,
@@ -25,12 +31,18 @@ import Link from 'next/link';
 import { ComandaExemplo } from '@/componentes/comanda-exemplo';
 import { CalculadoraSobra } from '@/componentes/site/calculadora-sobra';
 import { CartoesPlanos } from '@/componentes/site/cartoes-planos';
+import { BotaoVideo } from '@/componentes/site/botao-video';
 import { Depoimentos } from '@/componentes/site/depoimentos';
-import { LinkBotao } from '@/componentes/site/link-botao';
+import {
+  BotaoTesteOferta,
+  LinkCadastro,
+  OfertaLancamento,
+} from '@/componentes/site/oferta-lancamento';
+import { SeloPlano } from '@/componentes/site/selo-plano';
 import { type Pergunta, Perguntas } from '@/componentes/site/perguntas';
 import { VideoApresentacao } from '@/componentes/site/video-apresentacao';
 import { Celular, ConversaWhatsapp, Janela, TELAS, Vitrine } from '@/componentes/site/vitrine';
-import { URL_SITE } from '@/lib/site';
+import { ofertasJsonLd, URL_SITE } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: { absolute: 'Pente Fino · Gestão de barbearia que mostra o lucro real' },
@@ -41,10 +53,13 @@ export const metadata: Metadata = {
 
 const SELOS = [
   `${DIAS_TESTE} dias grátis, sem cartão`,
-  'WhatsApp incluso, sem custo por mensagem',
+  'WhatsApp no Pro e no Premium, sem custo por mensagem',
   'Sem cobrança por barbeiro',
   'Funciona no celular, sem baixar app',
 ] as const;
+
+/** Perto de cada botão de teste (briefing do site, C5): só o que o produto já cumpre. */
+const IMPLANTACAO = 'Configuração guiada · atende no mesmo dia · importamos sua planilha';
 
 const ANTES = [
   'Comanda de papel que some ou chega rasgada no caixa',
@@ -59,19 +74,57 @@ const DEPOIS = [
   'Lucro do mês e de cada serviço, sem planilha',
 ] as const;
 
-const EXTRAS = [
-  { icone: BellRing, titulo: 'Lembretes automáticos', texto: '24 h e 2 h antes, com confirmação.' },
-  { icone: ListOrdered, titulo: 'Lista de espera', texto: 'Vagou? O bot oferece na ordem.' },
-  { icone: Star, titulo: 'Avaliação no WhatsApp', texto: 'Nota baixa avisa você na hora.' },
-  { icone: Crown, titulo: 'Clube de assinatura', texto: 'A comanda reconhece o assinante.' },
+const EXTRAS: {
+  icone: typeof BellRing;
+  titulo: string;
+  texto: string;
+  recurso?: Recurso;
+  plano?: PlanoConta;
+}[] = [
+  {
+    icone: BellRing,
+    titulo: 'Lembretes automáticos',
+    texto: '24 h e 2 h antes, com confirmação.',
+    recurso: 'bot',
+  },
+  {
+    icone: ListOrdered,
+    titulo: 'Lista de espera',
+    texto: 'Vagou? O bot oferece na ordem.',
+    recurso: 'listaEspera',
+  },
+  {
+    icone: Star,
+    titulo: 'Avaliação no WhatsApp',
+    texto: 'Nota baixa avisa você na hora.',
+    recurso: 'avaliacoes',
+  },
+  {
+    icone: Crown,
+    titulo: 'Clube de assinatura',
+    texto: 'A comanda reconhece o assinante.',
+    recurso: 'clube',
+  },
   { icone: Wallet, titulo: 'Caixa do dia', texto: 'Divergência apontada no fechamento.' },
-  { icone: Building2, titulo: 'Várias unidades', texto: 'Painel da rede e preço por unidade.' },
+  {
+    icone: Building2,
+    titulo: 'Várias unidades',
+    texto: 'Unidades lado a lado e preço por unidade.',
+    recurso: 'rede',
+  },
   { icone: Printer, titulo: 'Comanda impressa', texto: 'PDF com QR code, 4 ou 6 por folha.' },
   { icone: FileSpreadsheet, titulo: 'Relatório do contador', texto: 'Planilha e PDF do mês.' },
-] as const;
+];
 
 type Celula = boolean | 'parcial';
-const COMPARATIVO: { recurso: string; nos: Celula; agenda: Celula; planilha: Celula }[] = [
+const COMPARATIVO: {
+  recurso: string;
+  nos: Celula;
+  agenda: Celula;
+  planilha: Celula;
+  /** No Pente Fino, depende do plano. */
+  plano?: Recurso;
+}[] = [
   {
     recurso: 'Agenda online e link para o cliente marcar',
     nos: true,
@@ -81,6 +134,7 @@ const COMPARATIVO: { recurso: string; nos: Celula; agenda: Celula; planilha: Cel
   {
     recurso: 'Bot de WhatsApp que agenda, incluso no plano',
     nos: true,
+    plano: 'bot',
     agenda: 'parcial',
     planilha: false,
   },
@@ -93,12 +147,14 @@ const COMPARATIVO: { recurso: string; nos: Celula; agenda: Celula; planilha: Cel
   {
     recurso: 'Comissão calculada item a item, com vigência',
     nos: true,
+    plano: 'comissoes',
     agenda: 'parcial',
     planilha: 'parcial',
   },
   {
     recurso: 'Lucro do mês e margem de cada serviço e produto',
     nos: true,
+    plano: 'lucroReal',
     agenda: false,
     planilha: 'parcial',
   },
@@ -111,36 +167,50 @@ const COMPARATIVO: { recurso: string; nos: Celula; agenda: Celula; planilha: Cel
   {
     recurso: 'Barbeiro vê só a própria comissão, no celular',
     nos: true,
+    plano: 'comissoes',
     agenda: 'parcial',
     planilha: false,
   },
   { recurso: 'Sem cobrança extra por barbeiro', nos: true, agenda: false, planilha: true },
 ];
 
-const PAPEIS = [
+const PAPEIS: {
+  icone: typeof UserCog;
+  titulo: string;
+  pergunta: string;
+  itens: { texto: string; recurso?: Recurso }[];
+}[] = [
   {
     icone: UserCog,
     titulo: 'Dono',
     pergunta: 'Quanto sobrou?',
     itens: [
-      'Lucro real e projeção do mês',
-      'Margem por serviço e produto',
-      'Metas e painel da rede',
+      { texto: 'Lucro do mês e projeção' },
+      { texto: 'Margem por serviço e produto', recurso: 'lucroReal' },
+      { texto: 'Metas e resultados do mês', recurso: 'metas' },
     ],
   },
   {
     icone: Store,
     titulo: 'Recepção',
     pergunta: 'Quem é o próximo?',
-    itens: ['Agenda de todos e encaixes', 'Fechamento em segundos', 'Caixa do dia que bate'],
+    itens: [
+      { texto: 'Agenda de todos e encaixes' },
+      { texto: 'Fechamento em segundos' },
+      { texto: 'Caixa do dia que bate' },
+    ],
   },
   {
     icone: Users,
     titulo: 'Barbeiro',
     pergunta: 'Quanto ganhei hoje?',
-    itens: ['Agenda e comandas no celular', 'Comissão em tempo real', 'Só os próprios dados'],
+    itens: [
+      { texto: 'Agenda e comandas no celular' },
+      { texto: 'Comissão em tempo real', recurso: 'comissoes' },
+      { texto: 'Só os próprios dados' },
+    ],
   },
-] as const;
+];
 
 const PERGUNTAS: readonly Pergunta[] = [
   {
@@ -191,7 +261,7 @@ function jsonLd() {
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web, Android, iOS',
       url: URL_SITE,
-      offers: { '@type': 'Offer', price: '79.90', priceCurrency: 'BRL' },
+      offers: ofertasJsonLd(),
     },
     {
       '@context': 'https://schema.org',
@@ -215,18 +285,21 @@ function Marca({ valor }: { valor: Celula }) {
   if (valor === true)
     return (
       <span className="inline-flex size-7 items-center justify-center rounded-full bg-acao/15 text-acao-texto">
-        <Check aria-label="Sim" className="size-4" />
+        <Check aria-hidden className="size-4" />
+        <span className="sr-only">Sim</span>
       </span>
     );
   if (valor === 'parcial')
     return (
       <span className="inline-flex size-7 items-center justify-center rounded-full bg-superficie-3 text-tinta-suave">
-        <Minus aria-label="Em parte ou pago à parte" className="size-4" />
+        <Minus aria-hidden className="size-4" />
+        <span className="sr-only">Em parte ou pago à parte</span>
       </span>
     );
   return (
     <span className="inline-flex size-7 items-center justify-center text-tinta-fraca">
-      <X aria-label="Não" className="size-4" />
+      <X aria-hidden className="size-4" />
+      <span className="sr-only">Não</span>
     </span>
   );
 }
@@ -252,18 +325,15 @@ export default function Pagina() {
               Saiba quanto sobra, <span className="text-modulo-texto">não só quanto entrou.</span>
             </h1>
             <p className="max-w-xl text-lg text-tinta-suave">
-              Agenda, comanda, caixa, comissão e WhatsApp num lugar só. O barbeiro lança uma vez no
-              celular, a recepção fecha e você vê o lucro real por serviço, por barbeiro e por
-              unidade.
+              {LUCRO_POR_SERVICO_NO_PRO
+                ? 'Agenda, comanda, caixa, comissão e WhatsApp num lugar só. O barbeiro lança uma vez no celular, a recepção fecha e você vê o lucro real por serviço, por barbeiro e por unidade.'
+                : 'Agenda, comanda, caixa, comissão e WhatsApp num lugar só. O barbeiro lança uma vez no celular, a recepção fecha e você vê quanto sobrou no mês. No Premium, o lucro real por serviço, por barbeiro e por unidade.'}
             </p>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <LinkBotao href="/cadastro" grande>
-                Testar {DIAS_TESTE} dias grátis
-              </LinkBotao>
-              <LinkBotao href="#video" variante="contorno" grande>
-                Ver em 1 minuto
-              </LinkBotao>
+              <LinkCadastro grande>Testar {DIAS_TESTE} dias grátis</LinkCadastro>
+              <BotaoVideo>Ver em 1 minuto</BotaoVideo>
             </div>
+            <p className="text-sm text-tinta-suave">{IMPLANTACAO}</p>
             <ul className="grid gap-x-6 gap-y-2 text-sm text-tinta-suave sm:grid-cols-2">
               {SELOS.map((s) => (
                 <li key={s} className="flex items-center gap-2">
@@ -324,7 +394,7 @@ export default function Pagina() {
       <section aria-labelledby="video" className="scroll-mt-24 border-y border-borda bg-superficie">
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 md:py-24">
           <div className="mb-8 flex flex-col items-start gap-3">
-            <Sobretitulo>Veja em 1 minuto</Sobretitulo>
+            <Sobretitulo>Ver em 1 minuto</Sobretitulo>
             <h2
               id="video"
               className="max-w-3xl font-denso text-4xl font-bold uppercase sm:text-5xl"
@@ -372,7 +442,8 @@ export default function Pagina() {
               <h3 className="text-2xl font-semibold">O barbeiro lança no celular</h3>
               <p className="text-tinta-suave">
                 Barba, sobrancelha ou pomada em um toque e confirma. A recepção já vê pronta para
-                receber, e ele acompanha a própria comissão em tempo real.
+                receber, e ele acompanha a própria comissão em tempo real{' '}
+                <SeloPlano recurso="comissoes" />
               </p>
             </div>
             <div className="flex justify-center gap-4">
@@ -392,7 +463,9 @@ export default function Pagina() {
           <article className="revelar flex flex-col gap-5 rounded-2xl border border-modulo/40 bg-superficie p-6 lg:col-span-12 lg:flex-row lg:items-center lg:gap-10">
             <div className="flex flex-col gap-3 lg:w-[38%]">
               <ClipboardCheck aria-hidden className="size-7 text-modulo-texto" />
-              <h3 className="text-2xl font-semibold">O que dá lucro, e o que só dá trabalho</h3>
+              <h3 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
+                O que dá lucro, e o que só dá trabalho <SeloPlano recurso="lucroReal" />
+              </h3>
               <p className="text-tinta-suave">
                 Lucro e margem de cada serviço e produto, com o que fazer: investir, divulgar ou
                 rever o preço. Comissão e custo de produto já descontados, item a item.
@@ -412,7 +485,9 @@ export default function Pagina() {
           <article className="revelar flex flex-col gap-5 rounded-2xl border border-borda bg-superficie p-6 lg:col-span-5">
             <div className="flex flex-col gap-2">
               <MessageCircle aria-hidden className="size-7 text-modulo-texto" />
-              <h3 className="text-2xl font-semibold">WhatsApp que agenda sozinho</h3>
+              <h3 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
+                WhatsApp que agenda sozinho <SeloPlano recurso="bot" />
+              </h3>
               <p className="text-tinta-suave">
                 O cliente marca, soma serviços, remarca e cancela pela conversa, 24 horas. Sem
                 inteligência artificial inventando resposta e sem custo por mensagem.
@@ -446,12 +521,15 @@ export default function Pagina() {
             >
               <e.icone aria-hidden className="mt-0.5 size-5 shrink-0 text-modulo-texto" />
               <span>
-                <span className="block font-semibold">{e.titulo}</span>
+                <span className="flex flex-wrap items-center gap-2 font-semibold">
+                  {e.titulo} <SeloPlano recurso={e.recurso} plano={e.plano} />
+                </span>
                 <span className="text-sm text-tinta-suave">{e.texto}</span>
               </span>
             </li>
           ))}
         </ul>
+        <ChamadaTeste />
       </section>
 
       {/* A conta que o sistema faz sozinho. */}
@@ -471,6 +549,7 @@ export default function Pagina() {
             </p>
           </div>
           <CalculadoraSobra />
+          <ChamadaTeste />
         </div>
       </section>
 
@@ -516,7 +595,10 @@ export default function Pagina() {
                     {l.recurso}
                   </th>
                   <td className="bg-modulo/5 px-4 py-3 text-center">
-                    <Marca valor={l.nos} />
+                    <span className="inline-flex flex-col items-center gap-1">
+                      <Marca valor={l.nos} />
+                      {l.plano && <SeloPlano recurso={l.plano} />}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <Marca valor={l.agenda} />
@@ -529,9 +611,14 @@ export default function Pagina() {
             </tbody>
           </table>
         </div>
-        <p className="mt-3 text-sm text-tinta-suave">
-          <Minus aria-hidden className="mr-1 inline size-3.5" />= em parte, depende do plano ou é
-          pago à parte.
+        <p className="mt-3 flex items-center gap-2 text-sm text-tinta-suave">
+          <span
+            aria-hidden
+            className="inline-flex size-6 items-center justify-center rounded-full bg-superficie-3"
+          >
+            <Minus className="size-3.5" />
+          </span>
+          Em parte, depende do plano ou é pago à parte. No Pente Fino, o selo mostra o plano.
         </p>
       </section>
 
@@ -558,9 +645,13 @@ export default function Pagina() {
                 </span>
                 <ul className="flex flex-col gap-2">
                   {p.itens.map((i) => (
-                    <li key={i} className="flex items-center gap-2 text-tinta-suave">
+                    <li
+                      key={i.texto}
+                      className="flex flex-wrap items-center gap-2 text-tinta-suave"
+                    >
                       <Check aria-hidden className="size-4 shrink-0 text-acao-texto" />
-                      {i}
+                      {i.texto}
+                      <SeloPlano recurso={i.recurso} />
                     </li>
                   ))}
                 </ul>
@@ -579,7 +670,8 @@ export default function Pagina() {
             Preço justo, sem cobrar por barbeiro
           </h2>
           <p className="max-w-2xl text-tinta-suave">
-            WhatsApp incluso no Pro e no Premium, sem custo por mensagem. Anual com 2 meses grátis.{' '}
+            WhatsApp incluso no Pro e no Premium, sem custo por mensagem. No anual,{' '}
+            {textoEconomiaAnual()}.{' '}
             <Link href="/planos" className="text-tinta underline underline-offset-4">
               Compare tudo o que vem em cada plano
             </Link>
@@ -589,6 +681,7 @@ export default function Pagina() {
           <CartoesPlanos compacto />
         </div>
       </section>
+      <OfertaLancamento />
 
       <section aria-labelledby="faq" className="mx-auto max-w-4xl px-4 pb-16 sm:px-6">
         <h2 id="faq" className="mb-6 font-denso text-4xl font-bold uppercase">
@@ -610,11 +703,19 @@ export default function Pagina() {
             {DIAS_TESTE} dias grátis, sem cartão. Configuração guiada e importação da sua planilha:
             dá para atender no mesmo dia.
           </p>
-          <LinkBotao href="/cadastro" grande>
-            Criar conta grátis
-          </LinkBotao>
+          <LinkCadastro grande>Criar conta grátis</LinkCadastro>
         </div>
       </section>
     </>
+  );
+}
+
+/** Chamada no fim dos blocos longos (briefing do site, C6). */
+function ChamadaTeste() {
+  return (
+    <div className="mt-10 flex flex-col items-center gap-2 text-center">
+      <BotaoTesteOferta extra="origem=meio-da-pagina" />
+      <p className="text-sm text-tinta-suave">{IMPLANTACAO}</p>
+    </div>
   );
 }

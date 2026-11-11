@@ -1,5 +1,6 @@
 import { cacheLife } from 'next/cache';
 import Link from 'next/link';
+import { EMPRESA, linkWhatsappComercial } from '@/lib/contato';
 import { EMAIL_CONTATO } from '@/lib/site';
 import { Marca } from '../marca';
 
@@ -26,6 +27,7 @@ export function RodapeSite() {
           >
             {EMAIL_CONTATO}
           </a>
+          <Contato />
         </div>
         <nav aria-label="Rodapé">
           <ul className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-1">
@@ -43,7 +45,9 @@ export function RodapeSite() {
         </nav>
       </div>
       <p className="mx-auto max-w-6xl px-4 pb-8 text-xs text-tinta-fraca sm:px-6">
-        © <Ano /> Pente Fino. Preços em reais, por conta.
+        © <Ano /> Pente Fino{EMPRESA.razaoSocial ? ` · ${EMPRESA.razaoSocial}` : ''}
+        {EMPRESA.cnpj ? ` · CNPJ ${EMPRESA.cnpj}` : ''}
+        {EMPRESA.cidade ? ` · ${EMPRESA.cidade}` : ''}. Preços em reais, por conta.
       </p>
     </footer>
   );
@@ -54,4 +58,42 @@ async function Ano() {
   'use cache';
   cacheLife('days');
   return new Date().getFullYear();
+}
+
+/** WhatsApp e redes (briefing do site, C3): só o que o dono preencheu em lib/contato.ts. */
+function Contato() {
+  const whatsapp = linkWhatsappComercial();
+  const redes = [
+    { rotulo: 'Instagram', href: EMPRESA.instagram },
+    { rotulo: 'YouTube', href: EMPRESA.youtube },
+  ].filter((r) => r.href);
+  if (!whatsapp && redes.length === 0) return null;
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+      {whatsapp && (
+        <li>
+          <a
+            href={whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-9 items-center text-tinta underline underline-offset-4"
+          >
+            WhatsApp
+          </a>
+        </li>
+      )}
+      {redes.map((r) => (
+        <li key={r.rotulo}>
+          <a
+            href={r.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-9 items-center text-tinta-suave hover:text-tinta"
+          >
+            {r.rotulo}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
 }

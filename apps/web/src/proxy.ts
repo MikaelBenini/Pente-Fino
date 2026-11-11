@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { ehRotaDoApp } from './lib/rotas';
 
 /** Telas sem login. Convite e redefinição abrem mesmo com sessão (o link vem por e-mail). */
 const PUBLICAS = [
@@ -34,7 +35,8 @@ export function proxy(req: NextRequest) {
   }
   const publica = PUBLICAS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  if (!publica && !temSessao) {
+  // Só as telas do sistema pedem login; endereço que não existe vira 404 (não o login com 200).
+  if (!publica && !temSessao && ehRotaDoApp(pathname)) {
     const url = new URL('/entrar', req.url);
     if (pathname !== '/app') url.searchParams.set('voltar', `${pathname}${search}`);
     return NextResponse.redirect(url);

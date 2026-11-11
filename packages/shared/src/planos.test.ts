@@ -231,3 +231,34 @@ describe('oferta de lançamento', () => {
     expect(textoVagasOferta(0)).toBeNull();
   });
 });
+
+describe('briefing do site: oferta, economia anual e lucro por plano', () => {
+  it('a oferta vale até o fim do último dia', async () => {
+    const { ofertaVigente, OFERTA_LANCAMENTO } = await import('./planos.js');
+    expect(OFERTA_LANCAMENTO.ate).toBe('2027-01-31');
+    expect(ofertaVigente('2027-01-31')).toBe(true);
+    expect(ofertaVigente('2027-02-01')).toBe(false);
+  });
+
+  it('a economia do anual é calculada: até R$ 504 (Premium), não "2 meses"', async () => {
+    const { textoEconomiaAnual } = await import('./planos.js');
+    expect(resumoAnual('basico').economia).toBe(15_600);
+    expect(textoEconomiaAnual()).toBe('economize até R$ 504/ano');
+  });
+
+  it('com 30% de cupom, os preços do briefing (B3) batem com a cobrança', () => {
+    const com = (p: 'basico' | 'pro' | 'premium', c: 'mensal' | 'anual') =>
+      aplicarDesconto(precoPorMes(p, c), 3000);
+    expect([com('basico', 'mensal'), com('pro', 'mensal'), com('premium', 'mensal')]).toEqual([
+      5593, 10493, 17493,
+    ]);
+    expect([com('basico', 'anual'), com('pro', 'anual'), com('premium', 'anual')]).toEqual([
+      4683, 8743, 14553,
+    ]);
+  });
+
+  it('lucro por serviço segue a constante do plano (padrão: só no Premium)', async () => {
+    const { LUCRO_POR_SERVICO_NO_PRO } = await import('./planos.js');
+    expect(RECURSOS.lucroReal.desde).toBe(LUCRO_POR_SERVICO_NO_PRO ? 'pro' : 'premium');
+  });
+});
