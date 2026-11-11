@@ -60,8 +60,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await tabela.getByRole('button', { name: 'Barbearia Plano Básico' }).click();
   const ficha = page.getByRole('dialog', { name: 'Barbearia Plano Básico' });
   await expect(ficha).toContainText('basico@demo.pentefino.dev');
-  const estender = ficha.getByRole('form', { name: 'Estender teste ou dar cortesia' });
+  const estender = ficha.getByRole('form', { name: 'Estender teste' });
   await expect(estender.getByRole('button', { name: 'Salvar data' })).toBeDisabled();
+  // O campo já vem dentro do limite de 60 dias (admin R6) e explica a cortesia.
+  await expect(estender.getByText(/No máximo 60 dias a partir de hoje/)).toBeVisible();
   await estender.getByLabel('Motivo').fill('Cortesia do teste de navegador');
   await estender.getByRole('button', { name: 'Salvar data' }).click();
   await expect(estender.getByRole('status')).toHaveText('Feito. Ficou registrado no histórico.');

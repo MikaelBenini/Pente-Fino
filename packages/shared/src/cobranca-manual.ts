@@ -22,8 +22,12 @@ export interface CobrancaManualNova {
 }
 
 /**
- * A próxima cobrança da conta manual, se já é hora de criá-la: o período pago acaba em até
- * AVISO_COBRANCA_MANUAL_DIAS dias e ainda não há cobrança em aberto. null = nada a fazer.
+ * A próxima cobrança da conta manual, se já é hora de criá-la (admin R4). Vence no dia seguinte
+ * ao fim do último período pago ou na data em que a administração mandou começar a cobrar
+ * (reativação ou fim da cortesia), o que vier depois; nunca dentro da cortesia. Nasce
+ * AVISO_COBRANCA_MANUAL_DIAS dias antes e só se não houver outra em aberto. null = nada a fazer:
+ * nunca pagou e sem data de início (conta em teste ou "ativa sem cobrança", que a administração
+ * vê em "Precisa de atenção").
  */
 export function proximaCobrancaManual(d: {
   faturas: readonly { status: 'aberta' | 'paga' | 'recusada' | 'cancelada'; periodoFim: string }[];
@@ -34,15 +38,25 @@ export function proximaCobrancaManual(d: {
   /** Tabela que a conta contratou (o preço novo da administração não muda quem já assina). */
   tabela?: TabelaPrecosPlanos;
   descontoBp?: number;
+  /** A administração mandou começar a cobrar nesta data. */
+  cobrarAPartirDe?: string | null;
+  /** Sem cobrança até esta data (inclusive). */
+  cortesiaAte?: string | null;
 }): CobrancaManualNova | null {
   if (d.faturas.some((f) => f.status === 'aberta' || f.status === 'recusada')) return null;
-  const pagas = d.faturas
+  const fimPago = d.faturas
     .filter((f) => f.status === 'paga')
     .map((f) => f.periodoFim)
-    .sort();
-  const fimPago = pagas.at(-1);
-  if (!fimPago) return null; // nunca pagou: quem cuida é o fim do teste
-  const vencimento = somarDias(fimPago, 1);
+    .sort()
+    .at(-1);
+  const candidatas = [
+    fimPago ? somarDias(fimPago, 1) : null,
+    d.cobrarAPartirDe ?? null,
+    d.cortesiaAte ? somarDias(d.cortesiaAte, 1) : null,
+  ].filter((x): x is string => x !== null);
+  // Nunca pagou e sem data de início: quem cuida é o fim do teste (ou a administração).
+  if (!fimPago && !d.cobrarAPartirDe) return null;
+  const vencimento = candidatas.sort().at(-1)!;
   if (vencimento > somarDias(d.hoje, AVISO_COBRANCA_MANUAL_DIAS)) return null;
   return {
     vencimento,

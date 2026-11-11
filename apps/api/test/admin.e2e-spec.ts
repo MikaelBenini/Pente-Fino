@@ -17,6 +17,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { codigoDoPasso, passoDe } from '../src/admin/totp.js';
+import { PROVEDOR_COBRANCA, type ProvedorCobrancaFalso } from '../src/cobranca/provedor.js';
 import {
   como,
   criarApp,
@@ -210,9 +211,13 @@ describe('ações da administração numa conta', () => {
       .expect(204);
     await dono.post('/clientes', { nome: 'Grava De Novo' }).expect(201);
 
-    // Cortesia: teste até uma data.
-    const ate = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
-    await adm.put(`${url}/teste`, { ate, motivo: 'Cortesia da feira' }).expect(204);
+    // Estender o teste: até 60 dias (admin R6; a auditoria achou um teste até 2028).
+    const dia = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    const longe = await adm
+      .put(`${url}/teste`, { ate: '2028-04-29', motivo: 'Implantação demorada' })
+      .expect(400);
+    expect(longe.body.erro.campos[0].mensagem).toMatch(/cortesia/);
+    await adm.put(`${url}/teste`, { ate: dia(10), motivo: 'Teste da feira' }).expect(204);
     expect(((await adm.get(url).expect(200)).body as FichaContaPlataforma).status).toBe('teste');
 
     // Pagamento manual: fatura paga do período e a conta ativa.
@@ -264,13 +269,92 @@ describe('ações da administração numa conta', () => {
       motivo: 'Fechou a barbearia',
     });
 
-    // Volta como estava para o resto do arquivo.
-    await adm
+    // Admin R3 (auditoria de 10/11): cancelada não "desbloqueia" para ativa sem cobrança.
+    const errado = await adm
       .put(`${url}/situacao`, { acao: 'desbloquear', motivo: 'Fim do teste e2e' })
+      .expect(400);
+    expect(errado.body.erro.campos[0].mensagem).toMatch(/Reativar/);
+    await adm.put(`${url}/situacao`, { acao: 'reativar', motivo: 'Voltou a abrir' }).expect(400); // sem o próximo passo
+    // Reativar com cortesia: ativa sem cobrança até a data; a cobrança começa no dia seguinte.
+    await adm
+      .put(`${url}/situacao`, {
+        acao: 'reativar',
+        proximo: 'cortesia',
+        data: dia(30),
+        motivo: 'Parceria de divulgação',
+      })
+      .expect(204);
+    const reativada = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+    expect(reativada).toMatchObject({
+      status: 'ativa',
+      cortesiaAte: dia(30),
+      cobrarAPartirDe: dia(31),
+      motivoCancelamento: null,
+      canceladaEm: null,
+    });
+    expect((await dono.get('/conta/situacao').expect(200)).body.mensagem).toMatch(
+      /^Cortesia do Pente Fino até /,
+    );
+    await dono.post('/clientes', { nome: 'Grava Na Cortesia' }).expect(201);
+
+    // Bloquear guarda o que era; desbloquear volta exatamente a isso.
+    await adm
+      .put(`${url}/situacao`, { acao: 'bloquear', motivo: 'Conferir pagamento' })
+      .expect(204);
+    expect(((await adm.get(url).expect(200)).body as FichaContaPlataforma).statusAnterior).toBe(
+      'ativa',
+    );
+    await adm.put(`${url}/situacao`, { acao: 'desbloquear', motivo: 'Conferido' }).expect(204);
+
+    // Volta como estava para o resto do arquivo: ativa, cobrando a partir de hoje.
+    await adm
+      .put(`${url}/situacao`, { acao: 'cobrar', data: hoje, motivo: 'Fim do teste e2e' })
       .expect(204);
     await adm
       .put(`${url}/plano`, { plano: 'premium', ciclo: 'mensal', motivo: 'Fim do teste e2e' })
       .expect(200);
+  });
+
+  // Admin R3: cancelar só mudava a situação, e o Asaas seguia cobrando a barbearia cancelada.
+  it('cancelar para a cobrança automática no Asaas; cortesia não vale enquanto ela existe', async () => {
+    const c = await criarCenario();
+    try {
+      const provedor = app.get<ProvedorCobrancaFalso>(PROVEDOR_COBRANCA);
+      const dono = await como(app, c.emails.dono);
+      const assinou = await dono.post('/conta/assinatura', {
+        plano: 'premium',
+        ciclo: 'mensal',
+        documento: '529.982.247-25',
+      });
+      expect(assinou.status, JSON.stringify(assinou.body)).toBe(201);
+      const adm = comoAdmin();
+      const url = `/admin/contas/${c.contaId}`;
+      const antes = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+      expect(antes.cobrancaAutomatica).toBe(true);
+      const ate = new Date(Date.now() + 20 * 86_400_000).toISOString().slice(0, 10);
+      const r = await adm
+        .put(`${url}/situacao`, { acao: 'cortesia', data: ate, motivo: 'Parceria da feira' })
+        .expect(400);
+      expect(r.body.erro.campos[0].mensagem).toMatch(/cobrança automática/);
+
+      const assinatura = await naConta(criarPrisma(), c.contaId, (tx) =>
+        tx.conta.findUniqueOrThrow({
+          where: { id: c.contaId },
+          select: { asaasAssinaturaId: true },
+        }),
+      );
+      await adm.put(`${url}/situacao`, { acao: 'cancelar', motivo: 'Pediu para sair' }).expect(204);
+      expect(provedor.canceladas.has(assinatura.asaasAssinaturaId!)).toBe(true);
+      const depois = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+      expect(depois).toMatchObject({ status: 'cancelada', cobrancaAutomatica: false });
+      // A auditoria guarda que a cobrança automática foi parada.
+      expect(depois.historico[0]).toMatchObject({
+        acao: 'cancelar',
+        depois: expect.objectContaining({ pararCobrancaAutomatica: true }),
+      });
+    } finally {
+      await c.remover();
+    }
   });
 
   it('conta que não existe: 404; sem sessão: 401', async () => {

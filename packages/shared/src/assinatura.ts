@@ -55,7 +55,12 @@ const dias = (de: DataISO, ate: DataISO) =>
  * - suspensa e cancelada: decididas pela administração → só consulta.
  */
 export function situacaoAssinatura(
-  conta: { status: 'teste' | 'ativa' | 'suspensa' | 'cancelada'; testeAte: Date | null },
+  conta: {
+    status: 'teste' | 'ativa' | 'suspensa' | 'cancelada';
+    testeAte: Date | null;
+    /** Cortesia do Pente Fino até este dia (AAAA-MM-DD ou data do banco). */
+    cortesiaAte?: Date | string | null;
+  },
   faturas: readonly FaturaParaSituacao[],
   agora: Date,
 ): EstadoAssinatura {
@@ -104,8 +109,20 @@ export function situacaoAssinatura(
   const atrasadas = faturas
     .filter((f) => (f.status === 'aberta' || f.status === 'recusada') && f.vencimento < hoje)
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
-  if (atrasadas.length === 0)
+  if (atrasadas.length === 0) {
+    const cortesia =
+      conta.cortesiaAte instanceof Date
+        ? conta.cortesiaAte.toISOString().slice(0, 10)
+        : (conta.cortesiaAte ?? null);
+    if (cortesia && cortesia >= hoje)
+      return {
+        ...base,
+        situacao: 'ativa',
+        somenteLeitura: false,
+        mensagem: `Cortesia do Pente Fino até ${cortesia.slice(8, 10)}/${cortesia.slice(5, 7)}/${cortesia.slice(0, 4)}.`,
+      };
     return { ...base, situacao: 'ativa', somenteLeitura: false, mensagem: 'Assinatura em dia.' };
+  }
   const atraso = dias(atrasadas[0]!.vencimento, hoje);
   if (atraso > TOLERANCIA_ATRASO_DIAS)
     return {

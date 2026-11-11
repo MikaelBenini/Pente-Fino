@@ -318,10 +318,10 @@ Separação de dados das barbearias, autenticador obrigatório, auditoria imutá
 
 - [x] R1 cupom sem limite e mensagem clara de esgotado (`fix/admin-r1-cupom-sem-limite`; o alerta de cupom perto de esgotar fica com o F3)
 - [x] R2 emissão de NF bloqueada com dados de exemplo (`fix/admin-r2-nota-fiscal`). **Dados reais: com o dono** (inscrição, regime e certificado no Asaas; serviço e ISS com o contador)
-- [ ] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo
-- [ ] R4 cobrança manual gera cobrança prevista por ciclo
+- [x] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo; cancelar para a cobrança no Asaas (`fix/admin-r3-r4-r6-situacao-da-conta`)
+- [x] R4 cobrança manual gera cobrança prevista por ciclo, também para quem nunca pagou (`fix/admin-r3-r4-r6-situacao-da-conta`)
 - [ ] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR
-- [ ] R6 teste com limite; acima disso só cortesia
+- [x] R6 teste com limite; acima disso só cortesia (`fix/admin-r3-r4-r6-situacao-da-conta`)
 - [ ] R7 falhas de e-mail listáveis, reenviáveis e alertadas
 - [ ] R8 WhatsApp caído em Precisa de atenção
 - [ ] R9 IP real na auditoria atrás do proxy

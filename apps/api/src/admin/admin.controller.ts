@@ -16,7 +16,7 @@ import { contasDaPlataforma, faturasDaPlataforma } from '@pente-fino/db';
 import {
   entrarAdminSchema,
   mudarPlanoContaSchema,
-  mudarSituacaoContaSchema,
+  acaoContaSchema,
   mudarTesteContaSchema,
   registrarPagamentoSchema,
   venderContaSchema,
@@ -25,7 +25,7 @@ import {
   type VenderContaEntrada,
   type FichaContaPlataforma,
   type MudarPlanoContaEntrada,
-  type MudarSituacaoContaEntrada,
+  type AcaoContaEntrada,
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
@@ -180,10 +180,13 @@ export class AdminController {
   @Put('contas/:id/situacao')
   @PapeisPlataforma('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Bloquear, desbloquear ou cancelar (só consulta, nada se apaga)' })
+  @ApiOperation({
+    summary:
+      'Bloquear, desbloquear, cancelar, reativar (com o próximo passo), cortesia ou início da cobrança',
+  })
   mudarSituacao(
     @Param('id', ParseUUIDPipe) id: string,
-    @Corpo(mudarSituacaoContaSchema) d: MudarSituacaoContaEntrada,
+    @Corpo(acaoContaSchema) d: AcaoContaEntrada,
     @AdminAtual() a: AdminAutenticado,
     @IpDaRequisicao() ip: string | null,
   ): Promise<void> {

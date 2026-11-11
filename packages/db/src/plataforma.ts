@@ -83,14 +83,35 @@ export async function mudarTesteDaConta(
   return r!.antes;
 }
 
-export async function mudarSituacaoDaConta(
+export interface SituacaoDaContaNoBanco {
+  status: 'teste' | 'ativa' | 'suspensa' | 'cancelada';
+  statusAnterior: 'teste' | 'ativa' | 'suspensa' | 'cancelada' | null;
+  testeAte: string | null;
+  cortesiaAte: string | null;
+  cobrarAPartirDe: string | null;
+  canceladaEm: string | null;
+  asaasAssinaturaId: string | null;
+}
+
+/** O que a regra da situação precisa saber da conta (admin R3). null = conta não existe. */
+export async function situacaoDaContaPlataforma(
   prisma: PrismaClient,
   contaId: string,
-  status: 'ativa' | 'suspensa' | 'cancelada',
+): Promise<SituacaoDaContaNoBanco | null> {
+  const [r] = await prisma.$queryRaw<{ s: SituacaoDaContaNoBanco | null }[]>`
+    SELECT plataforma_conta_situacao(${contaId}::uuid) AS s`;
+  return r?.s ?? null;
+}
+
+/** Grava a mudança que a regra (transicaoDaConta) decidiu; devolve como estava. */
+export async function aplicarSituacaoDaConta(
+  prisma: PrismaClient,
+  contaId: string,
+  mudanca: object,
   motivo: string,
-): Promise<{ status: string; testeAte: string | null; canceladaEm: string | null }> {
-  const [r] = await prisma.$queryRaw<{ antes: never }[]>`
-    SELECT plataforma_mudar_situacao(${contaId}::uuid, ${status}::status_conta, ${motivo}) AS antes`;
+): Promise<SituacaoDaContaNoBanco> {
+  const [r] = await prisma.$queryRaw<{ antes: SituacaoDaContaNoBanco }[]>`
+    SELECT plataforma_aplicar_situacao(${contaId}::uuid, ${JSON.stringify(mudanca)}::jsonb, ${motivo}) AS antes`;
   return r!.antes;
 }
 
