@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   fichaDaContaPlataforma,
   aplicarSituacaoDaConta,
+  marcarContaInterna,
   mudarPlanoDaConta,
   mudarTesteDaConta,
   situacaoDaContaPlataforma,
@@ -17,6 +18,7 @@ import {
   transicaoDaConta,
   valorDaCobranca,
   type AcaoContaEntrada,
+  type ContaInternaEntrada,
   type FichaContaPlataforma,
   type MudarPlanoContaEntrada,
   type MudarTesteContaEntrada,
@@ -78,11 +80,12 @@ export class AdminContasService {
     return {
       ...(f as unknown as Omit<
         FichaContaPlataforma,
-        'historico' | 'statusAnterior' | 'cortesiaAte' | 'cobrarAPartirDe'
+        'historico' | 'statusAnterior' | 'cortesiaAte' | 'cobrarAPartirDe' | 'interna'
       >),
       statusAnterior: situacao?.statusAnterior ?? null,
       cortesiaAte: situacao?.cortesiaAte ?? null,
       cobrarAPartirDe: situacao?.cobrarAPartirDe ?? null,
+      interna: situacao?.interna ?? false,
       historico: eventos.map((e) => ({
         acao: e.acao,
         quem: e.usuario?.nome ?? null,
@@ -210,6 +213,26 @@ export class AdminContasService {
       contaId,
       antes,
       depois: { ...r.mudanca, proximo: d.proximo ?? null },
+      motivo: d.motivo,
+      ip,
+    });
+    this.valeNaHora(contaId);
+  }
+
+  /** Admin R5: conta da própria equipe sai das métricas, do "Precisa de atenção" e da cobrança. */
+  async marcarInterna(
+    contaId: string,
+    d: ContaInternaEntrada,
+    a: AdminAutenticado,
+    ip: string | null,
+  ) {
+    const antes = await marcarContaInterna(this.banco.prisma, contaId, d.interna).catch(traduzir);
+    await this.auth.auditar({
+      usuarioId: a.id,
+      acao: d.interna ? 'marcar_interna' : 'desmarcar_interna',
+      contaId,
+      antes: { interna: antes },
+      depois: { interna: d.interna },
       motivo: d.motivo,
       ip,
     });

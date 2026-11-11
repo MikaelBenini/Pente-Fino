@@ -270,6 +270,9 @@ model Conta {
   vendedorId              String?       @map("vendedor_id") @db.Uuid
   /// Data da tabela de preços contratada (assinatura ou última troca de plano); null = a do lançamento.
   precosDesde             DateTime?     @map("precos_desde") @db.Date
+  /// Conta da própria equipe (testes, demonstração, implantação): fora do MRR, das métricas,
+  /// do "Precisa de atenção" e da cobrança manual (admin R5).
+  interna                 Boolean       @default(false)
   /// O que a conta era antes de a administração bloquear (desbloquear volta exatamente a isso).
   statusAnterior          StatusConta?  @map("status_anterior")
   /// Cortesia: ativa sem cobrança até esta data (inclusive), com motivo na auditoria.

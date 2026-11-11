@@ -26,6 +26,10 @@ export interface LinhaContaPlataforma {
   ultima_fechada_em: Date | null;
   /** Última renovação de sessão de alguém da conta (uso do app). */
   ultimo_acesso_em: Date | null;
+  /** Conta da própria equipe: fora das métricas e da cobrança (admin R5). */
+  interna: boolean;
+  cortesia_ate: Date | null;
+  cobrar_a_partir_de: Date | null;
 }
 
 /** Todas as contas, das mais novas para as mais antigas (plataforma_contas()). */
@@ -91,6 +95,7 @@ export interface SituacaoDaContaNoBanco {
   cobrarAPartirDe: string | null;
   canceladaEm: string | null;
   asaasAssinaturaId: string | null;
+  interna: boolean;
 }
 
 /** O que a regra da situação precisa saber da conta (admin R3). null = conta não existe. */
@@ -101,6 +106,17 @@ export async function situacaoDaContaPlataforma(
   const [r] = await prisma.$queryRaw<{ s: SituacaoDaContaNoBanco | null }[]>`
     SELECT plataforma_conta_situacao(${contaId}::uuid) AS s`;
   return r?.s ?? null;
+}
+
+/** Marca ou desmarca a conta como interna; devolve como era. */
+export async function marcarContaInterna(
+  prisma: PrismaClient,
+  contaId: string,
+  interna: boolean,
+): Promise<boolean> {
+  const [r] = await prisma.$queryRaw<{ antes: boolean }[]>`
+    SELECT plataforma_marcar_interna(${contaId}::uuid, ${interna}) AS antes`;
+  return r!.antes;
 }
 
 /** Grava a mudança que a regra (transicaoDaConta) decidiu; devolve como estava. */

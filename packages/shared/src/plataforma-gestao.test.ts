@@ -28,6 +28,9 @@ const conta = (o: Partial<ContaNaPlataforma>): ContaNaPlataforma => ({
   fechadas7Dias: 10,
   ultimaFechadaEm: '2026-11-19T12:00:00Z',
   ultimoAcessoEm: '2026-11-19T12:00:00Z',
+  interna: false,
+  cortesiaAte: null,
+  cobrarAPartirDe: null,
   ...o,
 });
 
@@ -129,7 +132,13 @@ describe('precisa de atenção', () => {
           ultimoAcessoEm: null,
         }),
       ],
-      [],
+      // As ativas já pagaram (senão também seriam "ativa sem cobrança").
+      ['v', 'n', 's'].map((contaId) => ({
+        contaId,
+        valor: 14990,
+        status: 'paga' as const,
+        vencimento: '2026-11-01',
+      })),
       agora,
     );
     expect(p.map((x) => x.tipo).sort()).toEqual(
@@ -155,5 +164,48 @@ describe('auditoria', () => {
     );
     expect(resumoDaMudanca(null, { email: 'a@b.c' })).toBe('email: a@b.c');
     expect(resumoDaMudanca({ a: 1 }, { a: 1 })).toBeNull();
+  });
+
+  // Admin R5: a auditoria de 10/11 viu uma conta ativa, sem cobrança, e "Tudo em dia por aqui".
+  it('ativa sem cobrança pede atenção; cortesia, data para cobrar ou cobrança aberta, não', () => {
+    const tipos = (
+      o: Partial<ContaNaPlataforma>,
+      cobrancas: Parameters<typeof pendenciasDaPlataforma>[1] = [],
+    ) => pendenciasDaPlataforma([conta(o)], cobrancas, agora).map((x) => x.tipo);
+    expect(tipos({})).toEqual(['ativa_sem_cobranca']);
+    expect(pendenciasDaPlataforma([conta({})], [], agora)[0]).toMatchObject({ prioridade: 1 });
+    expect(tipos({ cortesiaAte: '2026-12-31' })).toEqual([]);
+    expect(tipos({ cortesiaAte: '2026-11-19' })).toEqual(['ativa_sem_cobranca']); // já acabou
+    expect(tipos({ cobrarAPartirDe: '2026-11-25' })).toEqual([]);
+    expect(
+      tipos({}, [{ contaId: 'c1', valor: 14990, status: 'aberta', vencimento: '2026-11-25' }]),
+    ).toEqual(['cobranca_a_vencer']);
+  });
+
+  it('teste com mais de 60 dias pede atenção (a auditoria viu um até 2028)', () => {
+    const p = pendenciasDaPlataforma(
+      [conta({ status: 'teste', testeAte: '2028-04-29T23:59:59-03:00' })],
+      [],
+      agora,
+    );
+    expect(p).toEqual([
+      expect.objectContaining({
+        tipo: 'teste_longo',
+        detalhe: 'Teste até 29/04/2028 (mais de 60 dias)',
+      }),
+    ]);
+  });
+
+  it('conta interna não aparece em nada', () => {
+    expect(
+      pendenciasDaPlataforma(
+        [
+          conta({ interna: true }),
+          conta({ interna: true, status: 'teste', testeAte: '2028-04-29T12:00:00Z' }),
+        ],
+        [],
+        agora,
+      ),
+    ).toEqual([]);
   });
 });

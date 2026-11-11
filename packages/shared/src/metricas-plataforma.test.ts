@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   metricasDaPlataforma,
+  situacaoNaPlataforma,
   type ContaParaMetricas,
   type FaturaParaMetricas,
 } from './metricas-plataforma.js';
@@ -60,7 +61,7 @@ describe('métricas da plataforma', () => {
   it('contas por situação e novas', () => {
     expect(m.contas.total).toBe(6);
     expect(m.contas.porSituacao).toMatchObject({
-      ativa: 2,
+      em_dia: 2,
       teste: 2,
       teste_vencido: 1,
       cancelada: 1,
@@ -93,5 +94,50 @@ describe('métricas da plataforma', () => {
       motivos: [{ motivo: 'Achou caro', contas: 1 }],
     });
     expect(m.renovaram).toBe(1);
+  });
+
+  // Admin R5: a auditoria de 10/11 viu MRR R$ 0, "0 pagantes" e "Em dia 1" ao mesmo tempo.
+  it('"em dia" só com pagamento; ativa que nunca pagou é "ativa sem cobrança"; cortesia à parte', () => {
+    const ativa = { status: 'ativa' as const, testeAte: null };
+    expect(situacaoNaPlataforma(ativa, [], agora)).toBe('ativa_sem_cobranca');
+    expect(situacaoNaPlataforma(ativa, [{ status: 'paga', vencimento: '2026-11-05' }], agora)).toBe(
+      'em_dia',
+    );
+    expect(situacaoNaPlataforma({ ...ativa, cortesiaAte: '2026-12-31' }, [], agora)).toBe(
+      'cortesia',
+    );
+    // Cortesia acabou e ainda não pagou: volta a ser "ativa sem cobrança".
+    expect(situacaoNaPlataforma({ ...ativa, cortesiaAte: '2026-11-19' }, [], agora)).toBe(
+      'ativa_sem_cobranca',
+    );
+    const r = metricasDaPlataforma({
+      agora,
+      contas: [
+        conta('sem', { testeAte: null }),
+        conta('cortesia', { testeAte: null, cortesiaAte: '2026-12-31' }),
+      ],
+      faturas: [],
+    });
+    expect(r.contas.porSituacao).toMatchObject({ ativa_sem_cobranca: 1, cortesia: 1, em_dia: 0 });
+    expect(r.receita).toMatchObject({ mrr: 0, pagantes: 0 });
+  });
+
+  it('conta interna fica fora de tudo (MRR, contas, novas, conversão) e é contada à parte', () => {
+    const base = metricasDaPlataforma({ contas, faturas, agora });
+    const interna = conta('equipe', { interna: true, criadaEm: agora, testeAte: null });
+    const com = metricasDaPlataforma({
+      contas: [...contas, interna],
+      faturas: [
+        ...faturas,
+        { contaId: 'equipe', status: 'paga', vencimento: '2026-11-01', valor: 14990 },
+      ],
+      agora,
+    });
+    expect(com.contas.internas).toBe(1);
+    expect(com.contas.total).toBe(base.contas.total);
+    expect(com.receita).toEqual(base.receita);
+    expect(com.novas).toEqual(base.novas);
+    expect(com.conversao).toEqual(base.conversao);
+    expect(com.renovaram).toBe(base.renovaram);
   });
 });

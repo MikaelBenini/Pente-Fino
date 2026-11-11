@@ -39,6 +39,8 @@ const NOME_ACAO: Record<string, string> = {
   reativar: 'Reativou',
   cortesia: 'Deu cortesia',
   cobrar: 'Marcou o início da cobrança',
+  marcar_interna: 'Marcou como conta interna',
+  desmarcar_interna: 'Desmarcou conta interna',
   registrar_pagamento: 'Registrou pagamento',
 };
 
@@ -237,6 +239,7 @@ function Conteudo({
   const [proximo, setProximo] = useState<ProximoPasso>('teste');
   const [dataSituacao, setDataSituacao] = useState(() => somarDias(hoje, 14));
   const [motivoSituacao, setMotivoSituacao] = useState('');
+  const [motivoInterna, setMotivoInterna] = useState('');
   // Ação que leva data: cortesia, início da cobrança e reativar.
   const pedeData = acao === 'cortesia' || acao === 'cobrar' || acao === 'reativar';
   const rotuloData =
@@ -294,6 +297,11 @@ function Conteudo({
             {f.cobrarAPartirDe && !f.cobrancaAutomatica && f.status === 'ativa' && (
               <span className="block text-sm text-tinta-suave">
                 Cobrança a partir de {formatarData(`${f.cobrarAPartirDe}T12:00:00Z`)}
+              </span>
+            )}
+            {f.interna && (
+              <span className="ml-2">
+                <Ficha tom="neutro">Conta interna</Ficha>
               </span>
             )}
             {f.motivoCancelamento && (
@@ -524,6 +532,30 @@ function Conteudo({
               Bloqueada ou cancelada, a barbearia continua lendo tudo e exportando os dados; só não
               grava.
             </p>
+          </Acao>
+        )}
+
+        {admin && (
+          <Acao
+            titulo="Conta interna"
+            textoBotao={f.interna ? 'Desmarcar conta interna' : 'Marcar como conta interna'}
+            tom="acao"
+            podeEnviar={motivoOk(motivoInterna)}
+            enviar={async () => {
+              await adminApi(`${base}/interna`, {
+                metodo: 'PUT',
+                corpo: { interna: !f.interna, motivo: motivoInterna },
+              });
+              setMotivoInterna('');
+              await atualizar();
+            }}
+          >
+            <p className="text-sm text-tinta-suave">
+              {f.interna
+                ? 'Esta conta é da própria equipe: fica fora do MRR, dos números, do "Precisa de atenção" e da cobrança manual.'
+                : 'Para contas da própria equipe (testes, demonstração, implantação): saem do MRR, dos números, do "Precisa de atenção" e da cobrança manual. A barbearia não vê diferença.'}
+            </p>
+            <CampoMotivo id="motivo-interna" valor={motivoInterna} onMudar={setMotivoInterna} />
           </Acao>
         )}
       </div>

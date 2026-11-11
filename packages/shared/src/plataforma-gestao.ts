@@ -1,5 +1,6 @@
 // Administração prática (Etapa 15.2): o que precisa de atenção hoje, cobranças em aberto de todas
 // as contas, equipe da plataforma e auditoria. Regras puras, usadas pela API e testadas aqui.
+import { LIMITE_TESTE_DIAS } from './situacao-conta.js';
 import { z } from 'zod';
 import type { ContaNaPlataforma, PapelPlataforma } from './plataforma.js';
 
@@ -78,7 +79,9 @@ export type TipoPendencia =
   | 'sem_uso'
   | 'dono_nao_ativou'
   | 'nao_configurada'
-  | 'cobranca_a_vencer';
+  | 'cobranca_a_vencer'
+  | 'ativa_sem_cobranca'
+  | 'teste_longo';
 
 export interface Pendencia {
   tipo: TipoPendencia;
@@ -98,6 +101,8 @@ export const ROTULO_PENDENCIA: Readonly<Record<TipoPendencia, string>> = {
   dono_nao_ativou: 'Dono não ativou',
   nao_configurada: 'Não configurada',
   cobranca_a_vencer: 'Vence em breve',
+  ativa_sem_cobranca: 'Ativa sem cobrança',
+  teste_longo: 'Teste longo',
 };
 
 const reais = (centavos: number) =>
@@ -123,8 +128,38 @@ export function pendenciasDaPlataforma(
   const dias = (iso: string) => Math.floor((agora.getTime() - Date.parse(iso)) / DIA_MS);
 
   for (const conta of contas) {
-    if (conta.status === 'cancelada') continue;
+    // Conta interna (da própria equipe) não pede atenção comercial (admin R5).
+    if (conta.status === 'cancelada' || conta.interna) continue;
     const base = { contaId: conta.id, conta: conta.nome };
+    // Admin R5: ativa, nunca pagou, sem cortesia, sem data para começar a cobrar e sem cobrança
+    // em aberto: está usando de graça sem ninguém ter decidido isso.
+    const emCortesia = !!conta.cortesiaAte && conta.cortesiaAte >= hoje;
+    if (
+      conta.status === 'ativa' &&
+      !pagou.has(conta.id) &&
+      !emCortesia &&
+      !conta.cobrarAPartirDe &&
+      !abertas.has(conta.id)
+    )
+      r.push({
+        ...base,
+        tipo: 'ativa_sem_cobranca',
+        prioridade: 1,
+        detalhe: 'Ativa sem nenhuma cobrança paga, sem cortesia e sem data para cobrar',
+        acao: 'Registrar o pagamento, dar cortesia, começar a cobrar ou marcar como interna',
+      });
+    // Admin R6: teste que vai além de 60 dias a partir de hoje (antes não havia limite).
+    if (conta.status === 'teste' && conta.testeAte) {
+      const faltam = Math.ceil((Date.parse(conta.testeAte) - agora.getTime()) / DIA_MS);
+      if (faltam > LIMITE_TESTE_DIAS)
+        r.push({
+          ...base,
+          tipo: 'teste_longo',
+          prioridade: 2,
+          detalhe: `Teste até ${conta.testeAte.slice(0, 10).split('-').reverse().join('/')} (mais de ${LIMITE_TESTE_DIAS} dias)`,
+          acao: 'Dar cortesia com o motivo, encurtar o teste ou marcar como interna',
+        });
+    }
     for (const f of abertas.get(conta.id) ?? []) {
       const atraso = diasDeAtraso(f.vencimento, hoje);
       if (f.vencimento < hoje)

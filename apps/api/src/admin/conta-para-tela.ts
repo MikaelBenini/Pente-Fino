@@ -2,6 +2,7 @@ import type { LinhaContaPlataforma } from '@pente-fino/db';
 import type { ContaNaPlataforma } from '@pente-fino/shared';
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
+const dia = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
 
 /** Linha de plataforma_contas() como a administração mostra (sem dado de cliente). */
 export function contaParaTela(c: LinhaContaPlataforma): ContaNaPlataforma {
@@ -25,5 +26,8 @@ export function contaParaTela(c: LinhaContaPlataforma): ContaNaPlataforma {
     fechadas7Dias: c.fechadas_7_dias,
     ultimaFechadaEm: iso(c.ultima_fechada_em),
     ultimoAcessoEm: iso(c.ultimo_acesso_em),
+    interna: c.interna,
+    cortesiaAte: dia(c.cortesia_ate),
+    cobrarAPartirDe: dia(c.cobrar_a_partir_de),
   };
 }

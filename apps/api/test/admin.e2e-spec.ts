@@ -357,6 +357,56 @@ describe('ações da administração numa conta', () => {
     }
   });
 
+  // Admin R5: a conta "Teste" ativa sem cobrança aparecia "Em dia" e não pedia atenção.
+  it('ativa sem cobrança pede atenção; marcada como interna, sai dos números e da atenção', async () => {
+    const c = await criarCenario();
+    try {
+      const adm = comoAdmin();
+      const url = `/admin/contas/${c.contaId}`;
+      const pendencias = async () =>
+        (
+          (await adm.get('/admin/pendencias').expect(200)).body as {
+            contaId: string;
+            tipo: string;
+          }[]
+        )
+          .filter((p) => p.contaId === c.contaId)
+          .map((p) => p.tipo);
+      const metricas = async () =>
+        (await adm.get('/admin/metricas').expect(200)).body as MetricasDaPlataforma;
+      expect(await pendencias()).toContain('ativa_sem_cobranca');
+      const antes = await metricas();
+
+      await adm.put(`${url}/interna`, { interna: true, motivo: 'ok' }).expect(400);
+      await adm
+        .put(`${url}/interna`, { interna: true, motivo: 'Conta de teste da equipe' })
+        .expect(204);
+      expect(await pendencias()).toEqual([]);
+      const depois = await metricas();
+      expect(depois.contas.internas).toBe(antes.contas.internas + 1);
+      expect(depois.contas.total).toBe(antes.contas.total - 1);
+      expect(depois.contas.porSituacao.ativa_sem_cobranca).toBe(
+        antes.contas.porSituacao.ativa_sem_cobranca - 1,
+      );
+      const ficha = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+      expect(ficha.interna).toBe(true);
+      expect(ficha.historico[0]).toMatchObject({
+        acao: 'marcar_interna',
+        motivo: 'Conta de teste da equipe',
+      });
+      const lista = (await adm.get('/admin/contas').expect(200)).body as {
+        id: string;
+        interna: boolean;
+      }[];
+      expect(lista.find((x) => x.id === c.contaId)?.interna).toBe(true);
+      // A barbearia não vê diferença nenhuma.
+      const dono = await como(app, c.emails.dono);
+      expect((await dono.get('/conta/situacao').expect(200)).body.somenteLeitura).toBe(false);
+    } finally {
+      await c.remover();
+    }
+  });
+
   it('conta que não existe: 404; sem sessão: 401', async () => {
     await comoAdmin().get(`/admin/contas/${randomUUID()}`).expect(404);
     await http().put(`/admin/contas/${a.contaId}/plano`).send({}).expect(401);

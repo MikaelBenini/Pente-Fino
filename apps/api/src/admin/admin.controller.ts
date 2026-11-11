@@ -17,6 +17,7 @@ import {
   entrarAdminSchema,
   mudarPlanoContaSchema,
   acaoContaSchema,
+  contaInternaSchema,
   mudarTesteContaSchema,
   registrarPagamentoSchema,
   venderContaSchema,
@@ -26,6 +27,7 @@ import {
   type FichaContaPlataforma,
   type MudarPlanoContaEntrada,
   type AcaoContaEntrada,
+  type ContaInternaEntrada,
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
@@ -119,6 +121,8 @@ export class AdminController {
         unidades: c.unidades,
         precosDesde: c.precos_desde?.toISOString().slice(0, 10) ?? null,
         descontoBp: c.desconto_bp,
+        interna: c.interna,
+        cortesiaAte: c.cortesia_ate?.toISOString().slice(0, 10) ?? null,
       })),
       tabelas: await this.precos.tabelas(),
       faturas: faturas.map((f) => ({
@@ -191,6 +195,21 @@ export class AdminController {
     @IpDaRequisicao() ip: string | null,
   ): Promise<void> {
     return this.contasServico.mudarSituacao(id, d, a, ip);
+  }
+
+  @Put('contas/:id/interna')
+  @PapeisPlataforma('admin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Marcar como conta interna (fora das métricas e da cobrança) ou desmarcar',
+  })
+  marcarInterna(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(contaInternaSchema) d: ContaInternaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    return this.contasServico.marcarInterna(id, d, a, ip);
   }
 
   @Post('contas/:id/pagamentos')
