@@ -29,6 +29,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
   confirmada de novo; antes ficava presa.
 - Comanda sem itens não fecha mais com R$ 0,00.
 
+### Corrigido (link de agendamento)
+
+- O link de agendamento só liga com pelo menos um serviço com preço e um profissional com
+  horário na unidade; a tela diz o que falta, com o atalho para cadastrar.
+- Página de agendamento sem serviço disponível: em vez do formulário que não agenda, "Agendamento
+  online indisponível" com o WhatsApp, o telefone e o mapa da barbearia.
+- O editor do bot avisa quando o link está desligado numa unidade ("Agendar" passaria para um
+  atendente quando o bot não consegue marcar pela conversa).
+
 ### Adicionado (agendamento)
 
 - Link de agendamento com mais de uma unidade: "Agendar em outra unidade", discreto, abaixo do

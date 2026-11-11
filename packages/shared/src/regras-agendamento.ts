@@ -74,3 +74,36 @@ export function lerRegrasAgendamento(valor: unknown): RegrasAgendamento {
   const r = regrasAgendamentoSchema.partial().safeParse(valor);
   return r.success ? { ...base, ...r.data } : base;
 }
+
+// ─── Ligar o link público (painel A7) ─────────────────────────────────────
+
+export interface ProntidaoDoLink {
+  /** Serviços ativos com preço vigente na unidade. */
+  servicosComPreco: number;
+  /** Profissionais ativos da unidade com ao menos um turno na semana. */
+  profissionaisComHorario: number;
+}
+
+export interface FaltaParaOLink {
+  item: 'servico' | 'profissional';
+  mensagem: string;
+}
+
+/**
+ * O que falta para o link público servir para alguma coisa. Sem serviço com preço ou sem
+ * profissional com horário, o cliente abre a página e não tem como marcar. Lista vazia = pode ligar.
+ */
+export function faltaParaLigarLink(p: ProntidaoDoLink): FaltaParaOLink[] {
+  const falta: FaltaParaOLink[] = [];
+  if (p.servicosComPreco === 0)
+    falta.push({
+      item: 'servico',
+      mensagem: 'Cadastre o preço de pelo menos um serviço nesta unidade.',
+    });
+  if (p.profissionaisComHorario === 0)
+    falta.push({
+      item: 'profissional',
+      mensagem: 'Cadastre pelo menos um profissional com horário de trabalho nesta unidade.',
+    });
+  return falta;
+}

@@ -260,6 +260,20 @@ describe('link público de agendamento', () => {
     await dono.patch(`/unidades/${cenario.unidadeB}`, { slug }).expect(409);
   });
 
+  it('não liga o link sem serviço com preço e sem profissional com horário (painel A7)', async () => {
+    const r = await dono
+      .patch(`/unidades/${cenario.unidadeB}`, { slug: `${slug}-b`, agendamentoPublico: true })
+      .expect(422);
+    expect(r.body.erro.codigo).toBe('link_incompleto');
+    expect(r.body.erro.campos.map((c: { campo: string }) => c.campo)).toEqual([
+      'servico',
+      'profissional',
+    ]);
+    await http().get(`/publico/agendamento/${slug}-b`).expect(404);
+    // Desligar ou só trocar o endereço continua livre.
+    await dono.patch(`/unidades/${cenario.unidadeB}`, { agendamentoPublico: false }).expect(200);
+  });
+
   it('mostra serviços com preço e barbeiros, sem dados internos', async () => {
     const r = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body;
     expect(r).toMatchObject({ nome: 'Unidade A', telefone: '551130000000' });
@@ -337,13 +351,19 @@ describe('link público de agendamento', () => {
   it('com duas unidades no link, cada página oferece a outra para trocar', async () => {
     expect((await http().get(`/publico/agendamento/${slug}`)).body.outrasUnidades).toEqual([]);
     const slugB = `${slug}-b`;
-    await dono
-      .patch(`/unidades/${cenario.unidadeB}`, {
-        slug: slugB,
-        agendamentoPublico: true,
-        endereco: 'Rua B, 2',
-      })
-      .expect(200);
+    // A B fica sem preço de propósito (o serviço não pode aparecer lá). A API não liga o link
+    // assim (painel A7); liga no banco, como uma unidade ligada antes dessa regra.
+    const prisma = criarPrisma();
+    try {
+      await naConta(prisma, cenario.contaId, (tx) =>
+        tx.unidade.update({
+          where: { id: cenario.unidadeB },
+          data: { slug: slugB, agendamentoPublico: true, endereco: 'Rua B, 2' },
+        }),
+      );
+    } finally {
+      await prisma.$disconnect();
+    }
     try {
       const a = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body;
       expect(a.outrasUnidades).toEqual([{ slug: slugB, nome: 'Unidade B', endereco: 'Rua B, 2' }]);

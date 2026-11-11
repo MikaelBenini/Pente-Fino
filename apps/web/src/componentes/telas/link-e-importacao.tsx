@@ -12,6 +12,7 @@ import {
 } from '@pente-fino/shared';
 import { Botao, Campo, Marcador, Selecao } from '@pente-fino/ui';
 import { Copy, Download, ExternalLink, FileUp } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { chaves, chavesOperacao, useAcao, useUnidadesDetalhe } from '@/lib/consultas';
@@ -23,6 +24,11 @@ const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
 
 // ─── Link de agendamento ──────────────────────────────────────────────────
+
+const LINK_DA_FALTA: Record<string, string> = {
+  servico: '/servicos?aba=precos',
+  profissional: '/equipe',
+};
 
 export function LinkAgendamento() {
   const unidades = useUnidadesDetalhe();
@@ -50,6 +56,8 @@ export function LinkAgendamento() {
 function LinkUnidade({ u, podeEditar }: { u: UnidadeDetalhe; podeEditar: boolean }) {
   const [slug, setSlug] = useState(u.slug ?? gerarSlug(u.nome));
   const [erro, setErro] = useState<string | null>(null);
+  /** Ligar recusado (painel A7): o que falta, cada um com o link para cadastrar. */
+  const [falta, setFalta] = useState<{ campo: string; mensagem: string }[]>([]);
   const [copiado, setCopiado] = useState(false);
   const salvar = useAcao(
     (corpo: object) => api(`unidades/${u.id}`, { metodo: 'PATCH', corpo }),
@@ -62,10 +70,12 @@ function LinkUnidade({ u, podeEditar }: { u: UnidadeDetalhe; podeEditar: boolean
 
   async function enviar(corpo: object) {
     setErro(null);
+    setFalta([]);
     try {
       await salvar.mutateAsync(corpo);
     } catch (e) {
-      setErro(mensagemDe(e));
+      if (e instanceof ErroApi && e.codigo === 'link_incompleto') setFalta(e.campos);
+      else setErro(mensagemDe(e));
     }
   }
 
@@ -83,6 +93,26 @@ function LinkUnidade({ u, podeEditar }: { u: UnidadeDetalhe; podeEditar: boolean
         )}
       </div>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {falta.length > 0 && (
+        <Aviso tom="aviso">
+          <p className="font-semibold">
+            O link continua desligado: o cliente abriria a página e não teria como marcar.
+          </p>
+          <ul className="mt-1 list-disc pl-5">
+            {falta.map((f) => (
+              <li key={f.campo}>
+                {f.mensagem}{' '}
+                <Link
+                  href={LINK_DA_FALTA[f.campo] ?? '/configuracoes'}
+                  className="font-semibold underline"
+                >
+                  {f.campo === 'servico' ? 'Cadastrar preços' : 'Abrir a equipe'}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Aviso>
+      )}
       {link && u.agendamentoPublico && (
         <div className="flex flex-wrap items-center gap-2">
           <code className="min-w-0 flex-1 truncate rounded-md bg-fundo px-3 py-2.5 font-denso text-base">

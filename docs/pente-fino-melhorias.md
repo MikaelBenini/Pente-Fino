@@ -28,7 +28,7 @@
 | --- | --- | --- | --- | --- |
 | 1 | Painel | A1–A4 | Caixa não batia; dinheiro no dia errado; comanda presa | ✅ #150 (A1 competência aguarda decisão) |
 | 2 | Site | B1–B8, P1, P2, C1–C7, D3, D5, D6 | Textos contraditórios e oferta invisível | ✅ #148 (C2/C3/C4 aguardam dados do dono) |
-| 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | 🔄 em andamento (A5) |
+| 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | 🔄 em andamento (A5 e A6 feitos, A7 e A8 a seguir) |
 | 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ⏳ |
 | 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ⏳ |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ⏳ |
@@ -39,6 +39,23 @@
 | 11 | Site | N1–N5, P3, P4, D1, D2, D4 | Conteúdo novo e ajustes finos | ⏳ |
 | 12 | Admin | F1–F9 | Recursos novos (F2 junto com o T2 do site) | ⏳ |
 | 13 | Painel | Seção "Melhorias de produto" | Backlog depois dos bugs | ⏳ |
+
+Já existia antes dos briefings (conferido no `CHANGELOG.md`), só falta completar:
+
+- **Site S5:** `www` e `app.` já redirecionam para o domínio principal (07/11). Falta conferir
+  `http` → `https` com 301.
+- **Site T1:** o evento `cadastro_concluido` já dispara no sucesso do cadastro. Falta mandar o
+  valor do plano para lances por valor.
+- **Site T4:** aviso de cookies com Consent Mode já existe.
+- **Admin R1:** o contador de vagas do cupom só aparece quando restam 5 ou menos e a oferta some ao
+  esgotar. Falta a decisão sobre as 20 vagas e o aviso aos admins.
+- **Admin R2:** a configuração da nota fiscal existe (`/admin` → Configurações). Falta a trava
+  contra dados de exemplo.
+- **Admin R8:** a barbearia já recebe aviso e e-mail quando o WhatsApp cai. Falta o filtro em
+  "Precisa de atenção" do admin.
+
+**Publicação:** o `CHANGELOG.md` tem tudo desde 08/11 em "Não publicado". Conferir se a produção
+está no `main` antes de validar itens no site real.
 
 Itens que se sobrepõem e devem ser feitos juntos:
 

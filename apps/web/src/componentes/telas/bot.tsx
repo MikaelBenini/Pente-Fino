@@ -46,10 +46,11 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ErroApi } from '@/lib/api';
-import { chaveBot, useAcao, useBot, useConexaoBot } from '@/lib/consultas';
+import { chaveBot, useAcao, useBot, useConexaoBot, useUnidadesDetalhe } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { Automacoes } from './automacoes';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
@@ -120,6 +121,13 @@ export function TelaBot() {
 
 // ─── Editor do menu ───────────────────────────────────────────────────────
 
+/** Alguma opção (em qualquer nível) ou palavra-chave leva a "Agendar". */
+function usaAgendar(m: MenuBot): boolean {
+  const noMenu = (menu: MenuBot['menu']): boolean =>
+    menu.opcoes.some((o) => o.acao === 'agendar' || (o.submenu ? noMenu(o.submenu) : false));
+  return noMenu(m.menu) || m.palavrasChave.some((g) => g.acao === 'agendar');
+}
+
 type OQueFaz = 'texto' | 'submenu' | AcaoBot;
 const OPCOES_O_QUE_FAZ = (comSubmenu: boolean) => [
   { valor: 'texto', rotulo: 'Responder com o texto abaixo' },
@@ -162,6 +170,12 @@ function EditorDoBot({
   const naoSalvo = !iguais(menu, base);
   const problemas = validarMenu(menu);
   const conflitos = conflitosPalavrasChave(menu);
+  // Painel A7: "Agendar" manda o link quando não dá para marcar pela conversa; desligado, o
+  // cliente cai no atendente. Avisa quais unidades estão assim.
+  const unidades = useUnidadesDetalhe();
+  const semLink = usaAgendar(menu)
+    ? (unidades.data ?? []).filter((u) => u.ativa && !u.agendamentoPublico)
+    : [];
   const salvar = useAcao((m: MenuBot) => api('bot/menu', { metodo: 'PUT', corpo: m }), [chaveBot]);
   const publicar = useAcao(
     async (m: MenuBot) => {
@@ -262,6 +276,16 @@ function EditorDoBot({
         )}
       </div>
       {retorno && <Aviso tom={retorno.tom}>{retorno.texto}</Aviso>}
+      {semLink.length > 0 && !leitura && (
+        <Aviso tom="aviso">
+          O link de agendamento está desligado em {semLink.map((u) => u.nome).join(', ')}. Quando o
+          bot não consegue marcar pela conversa (sem serviço com preço ou profissional), “Agendar”
+          manda o link; sem ele, passa para um atendente.{' '}
+          <Link href="/configuracoes?aba=link" className="font-semibold underline">
+            Ligar o link
+          </Link>
+        </Aviso>
+      )}
       {problemas.length > 0 && !leitura && (
         <Aviso tom="aviso">
           <p className="font-semibold">Corrija antes de publicar:</p>

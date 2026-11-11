@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bloqueadoPorFaltas,
+  faltaParaLigarLink,
   lerRegrasAgendamento,
   REGRAS_AGENDAMENTO_PADRAO,
   regrasAgendamentoSchema,
@@ -47,5 +48,20 @@ describe('regras de agendamento', () => {
         lembretesHoras: [24, 2, 1],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('faltaParaLigarLink (painel A7)', () => {
+  it('pronto com serviço com preço e profissional com horário', () => {
+    expect(faltaParaLigarLink({ servicosComPreco: 1, profissionaisComHorario: 1 })).toEqual([]);
+  });
+
+  it('lista o que falta, um item por coisa', () => {
+    expect(
+      faltaParaLigarLink({ servicosComPreco: 0, profissionaisComHorario: 0 }).map((f) => f.item),
+    ).toEqual(['servico', 'profissional']);
+    expect(faltaParaLigarLink({ servicosComPreco: 0, profissionaisComHorario: 2 })).toEqual([
+      { item: 'servico', mensagem: 'Cadastre o preço de pelo menos um serviço nesta unidade.' },
+    ]);
   });
 });
