@@ -138,3 +138,46 @@ describe('cadastro de conta: WhatsApp opcional (briefing do site, B8)', () => {
     expect(cadastroContaSchema.safeParse({ ...base, whatsapp: '98888-7777' }).success).toBe(false);
   });
 });
+
+describe('trocar de unidade no link de agendamento', () => {
+  const s = (id: string, nome: string, preco: number | null) => ({
+    id,
+    nome,
+    duracaoMin: 30,
+    preco,
+    ehExtra: false,
+  });
+  const centro = [
+    s('corte', 'Corte', 5000),
+    s('barba', 'Barba', 3000),
+    s('pigm', 'Pigmentação', 4000),
+  ];
+  const jardins = [
+    s('corte', 'Corte', 6000),
+    s('barba', 'Barba', 3000),
+    s('pigm', 'Pigmentação', null),
+  ];
+  const real = (c: number) => `R$ ${(c / 100).toFixed(2).replace('.', ',')}`;
+
+  it('mantém o que a outra unidade faz, tira o que ela não faz e avisa o preço novo', () => {
+    const t = trocarDeUnidade(['corte', 'barba', 'pigm'], centro, jardins);
+    expect(t).toEqual({
+      mantidos: ['corte', 'barba'],
+      removidos: ['Pigmentação'],
+      precoMudou: [{ nome: 'Corte', de: 5000, para: 6000 }],
+    });
+    expect(avisoDaTroca(t, 'Jardins', true, real)).toBe(
+      'Agora você está agendando na unidade Jardins: Pigmentação não está disponível nesta unidade pelo link; Corte aqui custa R$ 60,00 (era R$ 50,00); escolha o barbeiro de novo, a equipe é outra.',
+    );
+  });
+
+  it('nada mudou: sem aviso; vários removidos no plural', () => {
+    const t = trocarDeUnidade(['barba'], centro, jardins);
+    expect(avisoDaTroca(t, 'Jardins', false, real)).toBeNull();
+    const sem = trocarDeUnidade(['corte', 'barba'], centro, []);
+    expect(sem.mantidos).toEqual([]);
+    expect(avisoDaTroca(sem, 'Jardins', false, real)).toBe(
+      'Agora você está agendando na unidade Jardins: Corte, Barba não estão disponíveis nesta unidade pelo link.',
+    );
+  });
+});
