@@ -30,7 +30,7 @@
 | 2 | Site | B1–B8, P1, P2, C1–C7, D3, D5, D6 | Textos contraditórios e oferta invisível | ✅ #148 (C2/C3/C4 aguardam dados do dono) |
 | 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | ✅ branch `fix/painel-a5-a8` |
 | 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | 🔄 R2 feito (`fix/admin-r2-nota-fiscal`); R1 aguarda decisão |
-| 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ⏳ |
+| 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | 🔄 R3, R4 e R6 em `fix/admin-r3-r4-r6-situacao-da-conta`; R5 a seguir |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ⏳ |
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ⏳ |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ⏳ (T4 já existia) |
@@ -74,7 +74,7 @@ Itens que se sobrepõem e devem ser feitos juntos:
 | Painel M6 | Depois de agendar, ficar na Agenda com aviso | Ficar na Agenda, configurável |
 | Painel P4 | Indexar páginas de barbearia que ligarem "Aparecer no Google" | Só com a opção ligada; as demais `noindex` |
 | Admin R1 | Cupom LANCAMENTO sem limite de vagas | Sem limite |
-| Admin R3 | Conta "Teste" reativada indevidamente | Cortesia interna ou voltar ao teste |
+| Admin R3 | Conta "Teste" reativada indevidamente | A tela agora oferece "Cortesia" ou "Começar a cobrar": escolha no `/admin` |
 | Admin R6 | Máximo de dias de teste | 60 |
 | Site P2 | Lucro por serviço no Pro | Só no Premium (`LUCRO_POR_SERVICO_NO_PRO = false`) |
 | Site P3 | Básico mais competitivo (preço menor ou bot no Básico) | Sem mudança |
@@ -318,10 +318,10 @@ Separação de dados das barbearias, autenticador obrigatório, auditoria imutá
 
 - [ ] R1 cupom sem limite (ou status público com vagas) e mensagem clara de esgotado
 - [x] R2 emissão de NF bloqueada com dados de exemplo (`fix/admin-r2-nota-fiscal`). **Dados reais: com o dono** (inscrição, regime e certificado no Asaas; serviço e ISS com o contador)
-- [ ] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo
-- [ ] R4 cobrança manual gera cobrança prevista por ciclo
+- [x] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo; cancelar para a cobrança no Asaas (`fix/admin-r3-r4-r6-situacao-da-conta`)
+- [x] R4 cobrança manual gera cobrança prevista por ciclo, também para quem nunca pagou (`fix/admin-r3-r4-r6-situacao-da-conta`)
 - [ ] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR
-- [ ] R6 teste com limite; acima disso só cortesia
+- [x] R6 teste com limite; acima disso só cortesia (`fix/admin-r3-r4-r6-situacao-da-conta`)
 - [ ] R7 falhas de e-mail listáveis, reenviáveis e alertadas
 - [ ] R8 WhatsApp caído em Precisa de atenção
 - [ ] R9 IP real na auditoria atrás do proxy
