@@ -67,6 +67,66 @@ export interface UnidadePublica {
   linkWhatsappAgendar: string | null;
   /** O plano da barbearia tem lista de espera: mostra "Avise-me se vagar". */
   listaEspera: boolean;
+  /**
+   * Outras unidades da mesma barbearia com o agendamento online ligado, para o cliente trocar
+   * sem sair da página (vazio com uma unidade só). Sem nenhum dado interno.
+   */
+  outrasUnidades: { slug: string; nome: string; endereco: string | null }[];
+}
+
+type ServicoPublico = UnidadePublica['servicos'][number];
+
+export interface TrocaDeUnidade {
+  /** Serviços escolhidos que a unidade nova também faz (com preço lá). */
+  mantidos: string[];
+  /** Nomes dos escolhidos que a unidade nova não faz pelo link. */
+  removidos: string[];
+  /** Escolhidos que custam diferente na unidade nova. */
+  precoMudou: { nome: string; de: number; para: number }[];
+}
+
+/**
+ * O que acontece com a escolha do cliente ao trocar de unidade no link: os serviços são da
+ * barbearia inteira (o mesmo id), mas cada unidade tem o próprio preço e pode não fazer algum.
+ * O barbeiro é de cada unidade e não passa de uma para outra.
+ */
+export function trocarDeUnidade(
+  escolhidos: readonly string[],
+  antes: readonly ServicoPublico[],
+  depois: readonly ServicoPublico[],
+): TrocaDeUnidade {
+  const r: TrocaDeUnidade = { mantidos: [], removidos: [], precoMudou: [] };
+  for (const id of escolhidos) {
+    const a = antes.find((s) => s.id === id);
+    const d = depois.find((s) => s.id === id);
+    if (!d || d.preco === null) {
+      if (a) r.removidos.push(a.nome);
+      continue;
+    }
+    r.mantidos.push(id);
+    if (a && a.preco !== null && a.preco !== d.preco)
+      r.precoMudou.push({ nome: d.nome, de: a.preco, para: d.preco });
+  }
+  return r;
+}
+
+/** Aviso para o cliente depois da troca; null quando nada do que ele escolheu mudou. */
+export function avisoDaTroca(
+  t: TrocaDeUnidade,
+  unidade: string,
+  tinhaBarbeiro: boolean,
+  formatar: (centavos: number) => string,
+): string | null {
+  const partes: string[] = [];
+  if (t.removidos.length)
+    partes.push(
+      `${t.removidos.join(', ')} não ${t.removidos.length === 1 ? 'está disponível' : 'estão disponíveis'} nesta unidade pelo link`,
+    );
+  for (const p of t.precoMudou)
+    partes.push(`${p.nome} aqui custa ${formatar(p.para)} (era ${formatar(p.de)})`);
+  if (tinhaBarbeiro) partes.push('escolha o barbeiro de novo, a equipe é outra');
+  if (!partes.length) return null;
+  return `Agora você está agendando na unidade ${unidade}: ${partes.join('; ')}.`;
 }
 
 /** Quem chegou pelo link do bot: nome e telefone para preencher o formulário. */

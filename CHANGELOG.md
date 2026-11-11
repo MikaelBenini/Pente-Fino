@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (agendamento)
+
+- Link de agendamento com mais de uma unidade: "Unidade: Centro · Trocar" no topo. O cliente
+  troca sem perder o que já escolheu (serviços que a outra unidade faz, nome e WhatsApp) e é
+  avisado do que mudou: serviço que lá não tem, preço diferente e barbeiro a escolher de novo.
+
 ### Alterado (resultados do mês)
 
 - **Resultados do mês** no lugar de Métricas e metas, Relatório do mês e Painel da rede: cada
