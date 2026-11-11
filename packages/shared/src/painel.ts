@@ -168,7 +168,8 @@ const mesAntes = (m: string) => {
 
 /**
  * Os meses do gráfico e da tabela de 12 meses, do mais antigo ao mês escolhido, sem começar antes
- * do mês em que a conta foi criada (uma conta de novembro não mostra onze meses vazios).
+ * de `inicio` (uma conta de novembro não mostra onze meses vazios). Quem chama passa o mês de
+ * criação da conta ou o primeiro mês com atendimento, o que vier antes (histórico importado).
  */
 export function mesesDoHistorico(mes: string, mesDaCriacao: string | null, quantos = 12): string[] {
   const meses: string[] = [];
