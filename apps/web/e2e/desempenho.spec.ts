@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Etapa 9: ranking da equipe e ficha do profissional, com o que cada papel pode ver.
+// Etapa 9: barbeiros em Resultados do mês e a ficha do profissional, com o que cada papel vê.
 const SENHA = 'pentefino123';
 
 async function entrar(page: Page, email: string) {
@@ -11,16 +11,24 @@ async function entrar(page: Page, email: string) {
   await page.waitForURL(/inicio|agenda|hoje/);
 }
 
-test('dono vai do ranking da equipe à ficha completa do barbeiro', async ({ page }) => {
+/** Abre a ficha do primeiro barbeiro pela aba Barbeiros de Resultados do mês. */
+async function abrirFicha(page: Page) {
+  await page.goto('/resultados?aba=barbeiros');
+  await page
+    .getByRole('region', { name: 'Quanto cada barbeiro custa e quanto rende' })
+    .getByRole('link')
+    .first()
+    .click();
+  await page.waitForURL(/\/equipe\/ficha\?id=/);
+}
+
+test('dono vai dos barbeiros do mês à ficha completa e volta', async ({ page }) => {
   await entrar(page, 'dono@demo.pentefino.dev');
-  await page.goto('/equipe');
-  const ranking = page
-    .getByRole('table', { name: 'Desempenho da equipe' })
-    .filter({ visible: true });
-  await expect(ranking).toBeVisible();
-  await expect(ranking.getByRole('link', { name: /Rafael Moura/ })).toBeVisible();
-  await page.getByLabel('Ordenar por').filter({ visible: true }).selectOption('taxaRetorno');
-  await ranking.getByRole('link', { name: /Rafael Moura/ }).click();
+  await page.goto('/resultados?aba=barbeiros');
+  const barbeiros = page.getByRole('region', { name: 'Quanto cada barbeiro custa e quanto rende' });
+  await expect(barbeiros.getByRole('link', { name: 'Rafael Moura' })).toBeVisible();
+  await barbeiros.getByLabel('Ordenar por').selectOption('retorno');
+  await barbeiros.getByRole('link', { name: 'Rafael Moura' }).click();
 
   await page.waitForURL(/\/equipe\/ficha\?id=/);
   const visivel = (nome: string | RegExp, papel: 'heading' | 'table' = 'heading') =>
@@ -40,8 +48,25 @@ test('dono vai do ranking da equipe à ficha completa do barbeiro', async ({ pag
   await expect(
     visivel('Serviços feitos no período', 'table').getByRole('columnheader', { name: 'Lucro' }),
   ).toBeVisible();
-  // Comandas atendidas abrem a comanda.
-  const comandas = visivel('Comandas atendidas no período', 'table');
+  // Volta para os barbeiros, no mesmo mês.
+  await page
+    .locator('#conteudo')
+    .getByRole('link', { name: 'Resultados do mês' })
+    .filter({ visible: true })
+    .click();
+  await page.waitForURL(/\/resultados\?mes=\d{4}-\d{2}&aba=barbeiros/);
+  await expect(page.getByRole('tab', { name: 'Barbeiros' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+});
+
+test('a ficha abre as comandas atendidas', async ({ page }) => {
+  await entrar(page, 'gestor@demo.pentefino.dev');
+  await abrirFicha(page);
+  const comandas = page
+    .getByRole('table', { name: 'Comandas atendidas no período' })
+    .filter({ visible: true });
   await expect(comandas).toBeVisible();
   await comandas.getByRole('link').first().click();
   await page.waitForURL(/\/comandas\?id=/);
@@ -50,14 +75,7 @@ test('dono vai do ranking da equipe à ficha completa do barbeiro', async ({ pag
 test('mês passado pela ficha muda o endereço e os números', async ({ page }) => {
   // Gestor: o dono já entra em muitos testes e o login tem limite por minuto.
   await entrar(page, 'gestor@demo.pentefino.dev');
-  await page.goto('/equipe');
-  await page
-    .getByRole('table', { name: 'Desempenho da equipe' })
-    .filter({ visible: true })
-    .getByRole('link')
-    .first()
-    .click();
-  await page.waitForURL(/\/equipe\/ficha\?id=/);
+  await abrirFicha(page);
   await page.getByRole('button', { name: 'Mês anterior' }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/mes=\d{4}-\d{2}/);
   await expect(
@@ -68,14 +86,7 @@ test('mês passado pela ficha muda o endereço e os números', async ({ page }) 
 test('gestor vê a ficha sem margem; barbeiro vê só a própria', async ({ browser }) => {
   const gestor = await (await browser.newContext()).newPage();
   await entrar(gestor, 'gestor@demo.pentefino.dev');
-  await gestor.goto('/equipe');
-  await gestor
-    .getByRole('table', { name: 'Desempenho da equipe' })
-    .filter({ visible: true })
-    .getByRole('link')
-    .first()
-    .click();
-  await gestor.waitForURL(/\/equipe\/ficha\?id=/);
+  await abrirFicha(gestor);
   const servicos = gestor
     .getByRole('table', { name: 'Serviços feitos no período' })
     .filter({ visible: true });

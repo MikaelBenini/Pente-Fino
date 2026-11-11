@@ -1,7 +1,10 @@
 'use client';
 
-// Relatório do mês (Etapa 23.1): o mês contra o anterior em números e em frases, os últimos 12
-// meses, canais, barbeiros (custo, lucro, pontos fortes e fracos) e o mix de serviços e produtos.
+// Resultados do mês (dono e gestor): o único lugar com os números do mês. Junta o que antes
+// estava espalhado em Métricas e metas, Relatório do mês e Painel da rede, com uma só base de
+// comparação (o mês anterior; no mês corrente, os mesmos dias). Abas: visão geral (metas,
+// números, frases, 12 meses, unidades e o mês dia a dia), barbeiros, serviços e produtos,
+// canais e agenda com avaliações. Baixa tudo em PDF ou planilha.
 import {
   compararMeses,
   custoELucroDoBarbeiro,
@@ -10,22 +13,34 @@ import {
   formatarNumero,
   frasesDoMes,
   mesAnteriorDe,
-  mixDoMes,
-  NOME_CANAL,
-  CANAIS,
   pontosDoBarbeiro,
+  type BarbeiroDoMes,
   type FormatoIndicador,
   type LinhaComparativo,
   type RelatorioDoMes,
 } from '@pente-fino/shared';
-import { cn } from '@pente-fino/ui';
+import { Abas, cn, Selecao } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Minus } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+  FileText,
+  Minus,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { api } from '@/lib/api';
-import { mesAtual, nomeDoMes } from '@/lib/periodo';
+import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
-import { CabecalhoPagina, Estado, Tabela, td, th } from '../pagina';
+import { SoNoPlano } from '../convite-plano';
+import { CabecalhoPagina, Estado } from '../pagina';
+import { UnidadesDaRede } from '../unidades-da-rede';
+import { AgendaEAvaliacoes, Canais, MetasDoMes, ServicosEProdutos } from './resultados-detalhes';
+import { DiaADia } from './resumo-dia';
 
 const maiuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -80,9 +95,33 @@ function Variacao({ l }: { l: LinhaComparativo }) {
   );
 }
 
-export function TelaRelatorio() {
-  const { unidadeAtiva } = useApp();
-  const [mes, setMes] = useState(mesAtual());
+const ABAS = ['geral', 'barbeiros', 'itens', 'canais', 'agenda'] as const;
+type IdAba = (typeof ABAS)[number];
+const MES = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+export function TelaResultados() {
+  const { unidadeAtiva, unidades } = useApp();
+  const params = useSearchParams();
+  const router = useRouter();
+  const pedidoMes = params.get('mes');
+  const pedidoAba = params.get('aba') as IdAba | null;
+  const [mes, setMesEstado] = useState(() =>
+    pedidoMes && MES.test(pedidoMes) && pedidoMes <= mesAtual() ? pedidoMes : mesAtual(),
+  );
+  const [aba, setAbaEstado] = useState<IdAba>(() =>
+    pedidoAba && ABAS.includes(pedidoAba) ? pedidoAba : 'geral',
+  );
+  // O endereço guarda o mês e a aba: dá para voltar da ficha do barbeiro no mesmo lugar.
+  const guardar = (m: string, a: IdAba) =>
+    router.replace(`/resultados?mes=${m}${a === 'geral' ? '' : `&aba=${a}`}`, { scroll: false });
+  const setMes = (m: string) => {
+    setMesEstado(m);
+    guardar(m, aba);
+  };
+  const setAba = (a: string) => {
+    setAbaEstado(a as IdAba);
+    guardar(mes, a as IdAba);
+  };
   const unidade = unidadeAtiva && unidadeAtiva !== 'todas' ? unidadeAtiva : null;
   const relatorio = useQuery({
     queryKey: ['relatorio', mes, unidade],
@@ -90,19 +129,21 @@ export function TelaRelatorio() {
       api<RelatorioDoMes>(`relatorio/mes?mes=${mes}${unidade ? `&unidadeId=${unidade}` : ''}`),
   });
   const ehAtual = mes === mesAtual();
+  const [de, ate] = limitesDoMes(mes);
+  const variasUnidades = !unidade && unidades.filter((u) => u.ativa).length > 1;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <CabecalhoPagina
-        titulo="Relatório do mês"
-        pergunta={`${nomeDoMes(mes)} comparado com ${nomeDoMes(mesAnteriorDe(mes))}`}
+        titulo="Resultados do mês"
+        pergunta={`${maiuscula(nomeDoMes(mes))} comparado com ${nomeDoMes(mesAnteriorDe(mes))}`}
         acao={
           <div className="flex items-center gap-1">
             <button
               type="button"
               aria-label="Mês anterior"
               onClick={() => setMes(mesAnteriorDe(mes))}
-              className="grid size-11 place-items-center rounded-md border border-borda hover:bg-superficie-2"
+              className="grid size-11 place-items-center rounded-md border border-borda hover:bg-superficie-2 focus-visible:outline-2 focus-visible:outline-foco"
             >
               <ChevronLeft aria-hidden className="size-5" />
             </button>
@@ -112,36 +153,120 @@ export function TelaRelatorio() {
               aria-label="Mês seguinte"
               disabled={ehAtual}
               onClick={() => setMes(proximoMes(mes))}
-              className="grid size-11 place-items-center rounded-md border border-borda hover:bg-superficie-2 disabled:opacity-40"
+              className="grid size-11 place-items-center rounded-md border border-borda hover:bg-superficie-2 focus-visible:outline-2 focus-visible:outline-foco disabled:opacity-40"
             >
               <ChevronRight aria-hidden className="size-5" />
             </button>
           </div>
         }
       />
-      <Estado consulta={relatorio}>
-        {() => <Conteudo r={relatorio.data!} ehAtual={ehAtual} />}
-      </Estado>
+      <Baixar mes={mes} unidade={unidade} />
+      {ehAtual && relatorio.data && (
+        <p className="text-sm text-tinta-suave">
+          O mês ainda não acabou: a comparação é com os mesmos dias do mês anterior (até o dia{' '}
+          {Number(relatorio.data.periodoAnterior.ate.slice(8, 10))}).
+        </p>
+      )}
+      <Abas
+        rotulo="Resultados do mês"
+        atual={aba}
+        onTrocar={setAba}
+        abas={[
+          {
+            id: 'geral',
+            rotulo: 'Visão geral',
+            conteudo: (
+              <div className="flex flex-col gap-8">
+                <MetasDoMes mes={mes} />
+                <Estado consulta={relatorio}>{() => <VisaoGeral r={relatorio.data!} />}</Estado>
+                {variasUnidades && (
+                  <SoNoPlano recurso="rede">
+                    <UnidadesDaRede de={de} ate={ate} />
+                  </SoNoPlano>
+                )}
+                <DiaADia mes={mes} />
+              </div>
+            ),
+          },
+          {
+            id: 'barbeiros',
+            rotulo: 'Barbeiros',
+            conteudo: (
+              <SoNoPlano recurso="fichaProfissional">
+                <Estado consulta={relatorio}>{() => <Barbeiros r={relatorio.data!} />}</Estado>
+              </SoNoPlano>
+            ),
+          },
+          {
+            id: 'itens',
+            rotulo: 'Serviços e produtos',
+            conteudo: (
+              <Estado consulta={relatorio}>
+                {() => <ServicosEProdutos r={relatorio.data!} de={de} ate={ate} />}
+              </Estado>
+            ),
+          },
+          {
+            id: 'canais',
+            rotulo: 'Canais',
+            conteudo: (
+              <Estado consulta={relatorio}>
+                {() => <Canais r={relatorio.data!} de={de} ate={ate} />}
+              </Estado>
+            ),
+          },
+          {
+            id: 'agenda',
+            rotulo: 'Agenda e avaliações',
+            conteudo: <AgendaEAvaliacoes de={de} ate={ate} />,
+          },
+        ]}
+      />
     </div>
   );
 }
 
-function Conteudo({ r, ehAtual }: { r: RelatorioDoMes; ehAtual: boolean }) {
+/** O mesmo relatório em arquivo, para guardar ou mandar ao sócio e ao contador. */
+function Baixar({ mes, unidade }: { mes: string; unidade: string | null }) {
+  const base = `/api/relatorio/mes/arquivo?mes=${mes}${unidade ? `&unidadeId=${unidade}` : ''}`;
+  const classe =
+    'inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3 focus-visible:outline-2 focus-visible:outline-foco';
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-sm text-tinta-suave">Baixar este relatório:</span>
+      <a href={`${base}&formato=pdf`} className={classe} download>
+        <FileText aria-hidden className="size-4" /> PDF
+      </a>
+      <a href={`${base}&formato=csv`} className={classe} download>
+        <FileSpreadsheet aria-hidden className="size-4" /> Planilha (CSV)
+      </a>
+    </div>
+  );
+}
+
+function VisaoGeral({ r }: { r: RelatorioDoMes }) {
   const linhas = compararMeses(r.atual, r.anterior);
   const frases = frasesDoMes(linhas);
   return (
     <>
-      {ehAtual && (
-        <p className="text-sm text-tinta-suave">
-          O mês ainda não acabou: a comparação é com os mesmos dias do mês anterior (até o dia{' '}
-          {Number(r.periodoAnterior.ate.slice(8, 10))}).
-        </p>
-      )}
       <section aria-labelledby="rel-numeros" className="flex flex-col gap-3">
         <h2 id="rel-numeros" className="text-lg font-semibold">
           O mês em números
         </h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+          {r.projecao && (
+            <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-modulo/50 bg-superficie p-3 sm:p-4">
+              <span className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+                Projeção do mês
+              </span>
+              <span className="font-denso text-2xl font-bold tabular-nums">
+                {formatarMoeda(r.projecao.projecao)}
+              </span>
+              <span className="text-sm text-tinta-suave">
+                Se o ritmo dos dias trabalhados seguir até o fim do mês
+              </span>
+            </div>
+          )}
           {linhas.map((l) => (
             <div
               key={l.chave}
@@ -177,9 +302,6 @@ function Conteudo({ r, ehAtual }: { r: RelatorioDoMes; ehAtual: boolean }) {
       </div>
 
       <Historico r={r} />
-      <Canais r={r} />
-      <Barbeiros r={r} />
-      <Mix r={r} />
     </>
   );
 }
@@ -294,58 +416,44 @@ function Historico({ r }: { r: RelatorioDoMes }) {
   );
 }
 
-function Canais({ r }: { r: RelatorioDoMes }) {
-  const canais = CANAIS.filter(
-    (c) => (r.atual.porCanal[c] ?? 0) + (r.anterior.porCanal[c] ?? 0) > 0,
-  );
-  if (canais.length === 0) return null;
-  const total = canais.reduce((s, c) => s + (r.atual.porCanal[c] ?? 0), 0);
-  return (
-    <section aria-labelledby="rel-canais" className="flex flex-col gap-3">
-      <h2 id="rel-canais" className="text-lg font-semibold">
-        Por onde os clientes chegaram
-      </h2>
-      <Tabela rotulo="Atendimentos por canal">
-        <thead>
-          <tr className="border-b border-borda">
-            {['Canal', 'Atendidos', 'Parte', 'Mês anterior'].map((c) => (
-              <th key={c} scope="col" className={th}>
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {canais.map((c) => (
-            <tr key={c} className="border-b border-borda">
-              <th scope="row" className={`${td} font-semibold`}>
-                {NOME_CANAL[c]}
-              </th>
-              <td className={`${td} whitespace-nowrap tabular-nums`}>
-                {formatarNumero(r.atual.porCanal[c] ?? 0)}
-              </td>
-              <td className={`${td} whitespace-nowrap tabular-nums`}>
-                {total > 0 ? formatarFracao((r.atual.porCanal[c] ?? 0) / total, 0) : '—'}
-              </td>
-              <td className={`${td} tabular-nums text-tinta-suave`}>
-                {formatarNumero(r.anterior.porCanal[c] ?? 0)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Tabela>
-    </section>
-  );
-}
+const ORDENS_BARBEIRO = {
+  faturamento: { rotulo: 'Faturamento', valor: (b: BarbeiroDoMes) => b.faturamento },
+  lucro: { rotulo: 'Lucro que gera', valor: (b: BarbeiroDoMes) => custoELucroDoBarbeiro(b).lucro },
+  ticket: { rotulo: 'Ticket médio', valor: (b: BarbeiroDoMes) => b.ticketMedio },
+  extras: { rotulo: 'Extras', valor: (b: BarbeiroDoMes) => b.percentualExtras },
+  retorno: { rotulo: 'Clientes que voltam', valor: (b: BarbeiroDoMes) => b.taxaRetorno },
+  ocupacao: { rotulo: 'Agenda ocupada', valor: (b: BarbeiroDoMes) => b.ocupacao },
+  nota: { rotulo: 'Nota dos clientes', valor: (b: BarbeiroDoMes) => b.notaMedia ?? -1 },
+} as const;
+type OrdemBarbeiro = keyof typeof ORDENS_BARBEIRO;
 
+/** Cada barbeiro no mês: quanto custa, quanto rende, como atende e onde melhorar. */
 function Barbeiros({ r }: { r: RelatorioDoMes }) {
-  const lista = r.barbeiros.filter((b) => b.clientes > 0 || b.faturamentoAnterior > 0);
-  if (lista.length === 0) return null;
+  const [ordem, setOrdem] = useState<OrdemBarbeiro>('faturamento');
+  const lista = r.barbeiros
+    .filter((b) => b.clientes > 0 || b.faturamentoAnterior > 0)
+    .sort((a, b) => ORDENS_BARBEIRO[ordem].valor(b) - ORDENS_BARBEIRO[ordem].valor(a));
+  if (lista.length === 0)
+    return <p className="text-tinta-suave">Nenhum barbeiro atendeu neste mês.</p>;
   return (
     <section aria-labelledby="rel-barbeiros" className="flex flex-col gap-3">
-      <h2 id="rel-barbeiros" className="text-lg font-semibold">
-        Barbeiros: quanto custam e quanto rendem
-      </h2>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 id="rel-barbeiros" className="text-lg font-semibold">
+          Quanto cada barbeiro custa e quanto rende
+        </h2>
+        {lista.length > 1 && (
+          <Selecao
+            id="barbeiros-ordem"
+            rotulo="Ordenar por"
+            value={ordem}
+            onChange={(e) => setOrdem(e.target.value as OrdemBarbeiro)}
+            opcoes={(Object.keys(ORDENS_BARBEIRO) as OrdemBarbeiro[])
+              .filter((o) => o !== 'lucro' || r.verLucro)
+              .map((o) => ({ valor: o, rotulo: ORDENS_BARBEIRO[o].rotulo }))}
+            className="max-w-xs"
+          />
+        )}
+      </div>
       <ul className="grid gap-3 lg:grid-cols-2">
         {lista.map((b) => {
           const { custo, lucro } = custoELucroDoBarbeiro(b);
@@ -360,7 +468,14 @@ function Barbeiros({ r }: { r: RelatorioDoMes }) {
               className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="text-lg font-semibold">{b.nome}</h3>
+                <h3 className="text-lg font-semibold">
+                  <Link
+                    href={`/equipe/ficha?id=${b.profissionalId}&mes=${r.mes}&voltar=resultados`}
+                    className="underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-foco"
+                  >
+                    {b.nome}
+                  </Link>
+                </h3>
                 <span className="text-sm text-tinta-suave">
                   {formatarMoeda(b.faturamento)}
                   {variacao !== null && (
@@ -400,6 +515,8 @@ function Barbeiros({ r }: { r: RelatorioDoMes }) {
                   }
                 />
                 <Dado rotulo="Faltas" valor={formatarNumero(b.faltas)} />
+                <Dado rotulo="Agenda ocupada" valor={formatarFracao(b.ocupacao, 0)} />
+                <Dado rotulo="Confirmou no prazo" valor={formatarFracao(b.percentualNoPrazo, 0)} />
               </dl>
               {b.servicosMaisFeitos.length > 0 && (
                 <p className="text-sm text-tinta-suave">
@@ -467,78 +584,5 @@ function Dado({
         {valor}
       </dd>
     </div>
-  );
-}
-
-function Mix({ r }: { r: RelatorioDoMes }) {
-  const linhas = mixDoMes(r.mixAtual, r.mixAnterior);
-  if (linhas.length === 0) return null;
-  const colunas = [
-    'Item',
-    'Quantidade',
-    '% da quantidade',
-    'Receita',
-    '% da receita',
-    'vs. mês anterior',
-  ];
-  if (r.verLucro) colunas.push('Lucro');
-  return (
-    <section aria-labelledby="rel-mix" className="flex flex-col gap-3">
-      <h2 id="rel-mix" className="text-lg font-semibold">
-        Serviços e produtos: quanto cada um pesa
-      </h2>
-      <Tabela rotulo="Participação de cada serviço e produto">
-        <thead>
-          <tr className="border-b border-borda">
-            {colunas.map((c) => (
-              <th key={c} scope="col" className={th}>
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {linhas.map((l) => (
-            <tr key={`${l.tipo}-${l.id}`} className="border-b border-borda">
-              <th scope="row" className={`${td} font-semibold`}>
-                {l.nome}
-                <span className="ml-2 text-xs font-normal uppercase text-tinta-suave">
-                  {l.tipo === 'servico' ? 'serviço' : 'produto'}
-                </span>
-              </th>
-              <td className={`${td} whitespace-nowrap tabular-nums`}>
-                {formatarNumero(l.quantidade)}
-              </td>
-              <td className={`${td} whitespace-nowrap tabular-nums`}>
-                {formatarFracao(l.fatiaQuantidade, 0)}
-              </td>
-              <td className={`${td} whitespace-nowrap tabular-nums`}>{formatarMoeda(l.receita)}</td>
-              <td className={`${td} whitespace-nowrap tabular-nums`}>
-                {formatarFracao(l.fatiaReceita, 0)}
-              </td>
-              <td
-                className={cn(
-                  `${td} tabular-nums`,
-                  l.variacaoReceita === null
-                    ? 'text-tinta-suave'
-                    : l.variacaoReceita >= 0
-                      ? 'text-acao-texto'
-                      : 'text-perigo-texto',
-                )}
-              >
-                {l.variacaoReceita === null
-                  ? 'novo'
-                  : `${l.variacaoReceita >= 0 ? '+' : ''}${Math.round(l.variacaoReceita * 100)}%`}
-              </td>
-              {r.verLucro && (
-                <td className={cn(`${td} tabular-nums`, (l.lucro ?? 0) < 0 && 'text-perigo-texto')}>
-                  {l.lucro !== null ? formatarMoeda(l.lucro) : '—'}
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </Tabela>
-    </section>
   );
 }

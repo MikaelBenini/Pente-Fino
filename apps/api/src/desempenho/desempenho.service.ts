@@ -228,6 +228,34 @@ export class DesempenhoService {
     });
   }
 
+  /**
+   * Ocupação somada das unidades do filtro (uma, as permitidas ou a rede), contada até hoje:
+   * minutos marcados ÷ minutos disponíveis. null quando não houve expediente no período.
+   */
+  async ocupacaoDoPeriodo(
+    tx: Transacao,
+    filtro: Record<string, unknown>,
+    de: string,
+    ate: string,
+  ): Promise<number | null> {
+    const alvo = filtro.unidadeId;
+    const unidades = await tx.unidade.findMany({
+      where: {
+        ativa: true,
+        ...(typeof alvo === 'string' ? { id: alvo } : alvo ? { id: alvo as object } : {}),
+      },
+      select: { id: true, capacidade: true },
+    });
+    let disponivel = 0;
+    let marcado = 0;
+    for (const u of unidades) {
+      const { mapa } = await this.mapaDaUnidade(tx, u, de, ate);
+      disponivel += mapa.total.disponivelMin;
+      marcado += mapa.total.agendadoMin;
+    }
+    return disponivel > 0 ? marcado / disponivel : null;
+  }
+
   /** Mapa de ocupação de uma unidade, contado até hoje. */
   private async mapaDaUnidade(
     tx: Transacao,

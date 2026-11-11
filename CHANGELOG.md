@@ -7,12 +7,34 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (resultados do mês)
+
+- **Resultados do mês** no lugar de Métricas e metas, Relatório do mês e Painel da rede: cada
+  número do mês num lugar só, em abas (Visão geral, Barbeiros, Serviços e produtos, Canais,
+  Agenda e avaliações). Os endereços antigos levam para a página nova.
+- O mês sempre comparado do mesmo jeito: no mês corrente, com os mesmos dias do mês anterior
+  (o Início comparava com "os 30 dias antes" e mostrava números diferentes do relatório).
+- Início mais curto: o dia, as metas e o resumo do mês, com "Ver resultados do mês".
+- Resumo do dia só com o dia; a tabela do mês dia a dia está em Resultados do mês e abre o dia.
+- Equipe só com profissionais e acessos; o desempenho de cada barbeiro está em Resultados do
+  mês → Barbeiros, com a agenda ocupada, a confirmação no prazo e o link para a ficha.
+- Barbeiro: as metas ficam em "Hoje" (o item "Metas" saiu do menu).
+- Mapa da agenda hora a hora acompanha o mês escolhido (antes, sempre as últimas 4 semanas).
+
+### Corrigido (resultados do mês)
+
+- Lucro negativo que piorou aparecia como alta (de −R$ 10.648 para −R$ 13.732 mostrava
+  "+29%" em verde).
+
 ### Adicionado (relatório do mês)
 
 - "Relatório do mês" (dono e gestor): o mês contra o anterior em números e em frases (o que
   melhorou, o que piorou), faturamento dos últimos 12 meses, por onde os clientes chegaram,
   quanto cada barbeiro custa e quanto rende (com pontos fortes e fracos) e quanto cada serviço e
   produto pesa no faturamento. No mês corrente, compara com os mesmos dias do mês anterior.
+- Relatório do mês: "Agenda ocupada" entre os números comparados com o mês anterior, e "Baixar
+  este relatório" em PDF (para imprimir ou mandar ao sócio) e em planilha (CSV, abre no Excel),
+  com o mesmo conteúdo da tela.
 - Equipe: "Mudar valor fixo" para cadastrar salário ou ajuda de custo além da comissão.
 
 ### Adicionado (painel do dia)

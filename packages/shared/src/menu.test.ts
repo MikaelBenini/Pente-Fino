@@ -12,10 +12,8 @@ describe('menu por papel', () => {
       'Comandas',
       'Caixa do dia',
       'Clientes',
+      'Resultados do mês',
       'Financeiro',
-      'Métricas e metas',
-      'Relatório do mês',
-      'Painel da rede',
       'Equipe',
       'Serviços',
       'Produtos',
@@ -67,7 +65,6 @@ describe('menu por papel', () => {
       'Clientes',
       'Desempenho',
       'Comissões',
-      'Metas',
       'Perfil',
       'Ajuda',
     ]);
@@ -78,6 +75,13 @@ describe('menu por papel', () => {
     expect(menu.filter((r) => r === 'Comandas')).toHaveLength(1);
     expect(menu).toContain('Caixa do dia');
     expect(menu).toContain('Hoje');
+  });
+
+  it('cada número do mês num lugar só: sem as páginas que repetiam os resultados', () => {
+    const rotas = menuPara(['dono', 'barbeiro']).map((i) => i.rota);
+    for (const antiga of ['/metricas', '/relatorio', '/rede', '/metas'])
+      expect(rotas).not.toContain(antiga);
+    expect(rotas.filter((r) => r === '/resultados')).toHaveLength(1);
   });
 
   it('acha o item pela rota, inclusive subrotas', () => {

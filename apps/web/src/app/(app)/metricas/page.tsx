@@ -1,8 +1,6 @@
-import type { Metadata } from 'next';
-import { TelaMetricas } from '@/componentes/telas/metricas';
-
-export const metadata: Metadata = { title: 'Métricas e metas' };
+// Métricas e metas virou parte de Resultados do mês (sem páginas que repetem números).
+import { permanentRedirect } from 'next/navigation';
 
 export default function Pagina() {
-  return <TelaMetricas />;
+  permanentRedirect('/resultados');
 }

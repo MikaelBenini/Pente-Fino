@@ -6,6 +6,7 @@ import {
   diasDeTrabalho,
   lucratividadePorProduto,
   lucratividadePorServico,
+  periodoAnterior,
   projetar,
   unidadesPermitidas,
   type ComandaFechada,
@@ -109,9 +110,8 @@ export class ResultadosService {
     if (diasEntre(de, ate) > 366)
       throw Erros.validacao([{ campo: 'ate', mensagem: 'Período de até um ano.' }]);
     const { filtro, incluiConta } = escopoUnidades(unidadeId, ['dono', 'gestor']);
-    const n = diasEntre(de, ate);
-    const antDe = somarDias(de, -n);
-    const antAte = somarDias(de, -1);
+    // Mesma base de comparação do sistema inteiro (mês corrente: os mesmos dias do anterior).
+    const { de: antDe, ate: antAte } = periodoAnterior(de, ate, dataLocal(new Date()));
     return this.banco.daConta(async (tx) => {
       if (unidadeId && !(await tx.unidade.findUnique({ where: { id: unidadeId } })))
         throw Erros.naoEncontrado('Unidade não encontrada.');

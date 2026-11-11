@@ -1,7 +1,7 @@
 // Relatório do mês comparado com o mês anterior (Etapa 23.1): indicadores da barbearia, clientes
 // novos e retorno, faltas, canais e nota; custo e lucro de cada barbeiro; mix de serviços e
 // produtos; e os últimos 12 meses. As comparações e frases saem de packages/shared/src/relatorio.ts.
-import { Controller, Get, Inject, Injectable } from '@nestjs/common';
+import { Controller, Get, Inject, Injectable, Res, StreamableFile } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   analisarClientes,
@@ -10,7 +10,10 @@ import {
   lucratividadePorProduto,
   lucratividadePorServico,
   mesAnteriorDe,
+  periodoAnterior,
   porCanal,
+  relatorioEmArquivo,
+  relatorioEmCsv,
   temRecurso,
   type BarbeiroDoMes,
   type ComandaFechada,
@@ -18,6 +21,7 @@ import {
   type NumerosDoMes,
   type RelatorioDoMes,
 } from '@pente-fino/shared';
+import type { Response } from 'express';
 import { z } from 'zod';
 import { Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -25,6 +29,7 @@ import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { Consulta } from '../comum/validacao.js';
 import { DesempenhoService } from '../desempenho/desempenho.service.js';
+import { relatorioEmPdf } from '../pdf/relatorio-pdf.js';
 import {
   escopoUnidades,
   ResultadosService,
@@ -35,6 +40,10 @@ import {
 const consultaRelatorio = z.object({
   mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, { error: 'Mês no formato AAAA-MM.' }),
   unidadeId: z.uuid().optional(),
+});
+
+const consultaArquivo = consultaRelatorio.extend({
+  formato: z.enum(['csv', 'pdf'], { error: 'Formato: csv ou pdf.' }),
 });
 
 const inicio = (d: string) => new Date(`${d}T00:00:00-03:00`);
@@ -66,16 +75,14 @@ export class RelatorioService {
     const anterior = mesAnteriorDe(mes);
     const de = `${mes}-01`;
     const ate = ultimoDiaDoMes(mes);
-    const deAnt = `${anterior}-01`;
-    const fimAnt = ultimoDiaDoMes(anterior);
     // Mês corrente: compara com os mesmos dias do mês anterior (1 a hoje), não com o mês inteiro.
+    const { de: deAnt, ate: ateAnt } = periodoAnterior(de, ate, hoje);
     const parcial = mes === hoje.slice(0, 7);
-    const mesmoDia = `${anterior}-${hoje.slice(8, 10)}`;
-    const ateAnt = parcial && mesmoDia < fimAnt ? mesmoDia : fimAnt;
 
     const r = await this.banco.daConta(async (tx) => {
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: Contexto.usuario().contaId } });
       const verLucro = temRecurso(conta.plano, 'lucroReal');
+      const verBarbeiros = temRecurso(conta.plano, 'fichaProfissional');
       // Todas as visitas até o fim do mês: "novo" é quem veio pela primeira vez na vida.
       const visitas = (
         await tx.comanda.findMany({
@@ -155,6 +162,7 @@ export class RelatorioService {
           faltas,
           taxaFaltas: validos > 0 ? faltas / validos : null,
           notaMedia: notas._count.notaAtendimento > 0 ? Number(notas._avg.notaAtendimento) : null,
+          ocupacao: await this.desempenho.ocupacaoDoPeriodo(tx, filtro, d, a),
           porCanal: Object.fromEntries(canais.map((c) => [c.canal, c.atendidos])),
         };
       };
@@ -256,8 +264,12 @@ export class RelatorioService {
 
       return {
         verLucro,
+        verBarbeiros,
         atual: await numeros(de, ate),
         anteriorNumeros: await numeros(deAnt, ateAnt),
+        projecao: parcial
+          ? await this.resultados.projecao(tx, mes, hoje, filtro, doPeriodo(de, hoje))
+          : null,
         mixAtual: await mix(atuais),
         mixAnterior: await mix(doPeriodo(deAnt, ateAnt)),
         historico,
@@ -265,10 +277,13 @@ export class RelatorioService {
       };
     });
 
-    const [rankAtual, rankAnterior] = [
-      await this.desempenho.ranking(unidadeId, de, ate),
-      await this.desempenho.ranking(unidadeId, deAnt, ateAnt),
-    ];
+    // Sem "Ficha e ranking dos barbeiros" no plano, o relatório não traz os barbeiros.
+    const [rankAtual, rankAnterior] = r.verBarbeiros
+      ? [
+          await this.desempenho.ranking(unidadeId, de, ate),
+          await this.desempenho.ranking(unidadeId, deAnt, ateAnt),
+        ]
+      : [[], []];
     const barbeiros: BarbeiroDoMes[] = rankAtual
       .filter((l) => l.clientes > 0 || l.ativo)
       .map((l) => {
@@ -287,6 +302,8 @@ export class RelatorioService {
           taxaRetorno: l.taxaRetorno,
           notaMedia: l.notaMedia,
           faltas: x?.faltas ?? 0,
+          ocupacao: l.ocupacao,
+          percentualNoPrazo: l.percentualNoPrazo,
           servicosMaisFeitos: x?.servicosMaisFeitos ?? [],
           faturamentoAnterior:
             rankAnterior.find((a) => a.profissionalId === l.profissionalId)?.faturamento ?? 0,
@@ -304,7 +321,42 @@ export class RelatorioService {
       periodoAnterior: { de: deAnt, ate: ateAnt },
       historico: r.historico,
       verLucro: r.verLucro,
+      verBarbeiros: r.verBarbeiros,
+      projecao: r.projecao,
     };
+  }
+
+  /** O relatório do mês em planilha (CSV) ou PDF, com o mesmo conteúdo da tela. */
+  async arquivo(
+    unidadeId: string | undefined,
+    mes: string,
+    formato: 'csv' | 'pdf',
+  ): Promise<{ nome: string; tipo: string; conteudo: Buffer }> {
+    const r = await this.mes(unidadeId, mes);
+    const { barbearia, unidade } = await this.banco.daConta(async (tx) => ({
+      barbearia: (await tx.conta.findUniqueOrThrow({ where: { id: Contexto.usuario().contaId } }))
+        .nome,
+      unidade: unidadeId
+        ? ((await tx.unidade.findUnique({ where: { id: unidadeId } }))?.nome ?? null)
+        : null,
+    }));
+    const conteudo = relatorioEmArquivo(r, {
+      barbearia,
+      unidade,
+      parcial: mes === dataLocal(new Date()).slice(0, 7),
+    });
+    const nome = `relatorio-${mes}`;
+    return formato === 'csv'
+      ? {
+          nome: `${nome}.csv`,
+          tipo: 'text/csv; charset=utf-8',
+          conteudo: Buffer.from(relatorioEmCsv(conteudo), 'utf-8'),
+        }
+      : {
+          nome: `${nome}.pdf`,
+          tipo: 'application/pdf',
+          conteudo: Buffer.from(await relatorioEmPdf(conteudo, new Date())),
+        };
   }
 }
 
@@ -322,5 +374,21 @@ export class RelatorioController {
   })
   mes(@Consulta(consultaRelatorio) c: z.infer<typeof consultaRelatorio>): Promise<RelatorioDoMes> {
     return this.servico.mes(c.unidadeId, c.mes);
+  }
+
+  @Get('mes/arquivo')
+  @Papeis('dono', 'gestor')
+  @ApiOperation({ summary: 'Relatório do mês para baixar: planilha (CSV) ou PDF' })
+  async arquivo(
+    @Consulta(consultaArquivo) c: z.infer<typeof consultaArquivo>,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const a = await this.servico.arquivo(c.unidadeId, c.mes, c.formato);
+    res.set({
+      'Content-Type': a.tipo,
+      'Content-Disposition': `attachment; filename="${a.nome}"`,
+      'Cache-Control': 'no-store',
+    });
+    return new StreamableFile(a.conteudo);
   }
 }

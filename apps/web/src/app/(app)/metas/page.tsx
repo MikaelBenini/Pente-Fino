@@ -1,8 +1,6 @@
-import type { Metadata } from 'next';
-import { TelaMetasBarbeiro } from '@/componentes/telas/barbeiro';
-
-export const metadata: Metadata = { title: 'Metas' };
+// As metas do barbeiro já aparecem em Hoje.
+import { permanentRedirect } from 'next/navigation';
 
 export default function Pagina() {
-  return <TelaMetasBarbeiro />;
+  permanentRedirect('/hoje');
 }

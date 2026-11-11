@@ -1,13 +1,6 @@
-import type { Metadata } from 'next';
-import { SoNoPlano } from '@/componentes/convite-plano';
-import { TelaRede } from '@/componentes/telas/rede';
-
-export const metadata: Metadata = { title: 'Painel da rede' };
+// Painel da rede virou o bloco "Unidades lado a lado" de Resultados do mês.
+import { permanentRedirect } from 'next/navigation';
 
 export default function Pagina() {
-  return (
-    <SoNoPlano recurso="rede">
-      <TelaRede />
-    </SoNoPlano>
-  );
+  permanentRedirect('/resultados');
 }

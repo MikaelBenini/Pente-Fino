@@ -109,7 +109,7 @@ export function mereceConviteGoogle(notaAtendimento: number | null, notaBarbeari
   return (notaBarbearia ?? notaAtendimento) === 5 && (notaAtendimento ?? 5) > NOTA_BAIXA;
 }
 
-/** Avaliações da barbearia no período (Métricas e Início). */
+/** Avaliações da barbearia no período (Resultados do mês). */
 export interface ResumoAvaliacoes {
   pesquisaAtiva: boolean;
   atendimento: NotasDoPeriodo;

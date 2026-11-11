@@ -22,6 +22,7 @@ const mes = (x: Partial<NumerosDoMes> = {}): NumerosDoMes => ({
   faltas: 10,
   taxaFaltas: 0.05,
   notaMedia: 4.6,
+  ocupacao: 0.6,
   porCanal: {},
   ...x,
 });
@@ -39,6 +40,20 @@ describe('relatório do mês', () => {
     expect(de('taxaFaltas').variacao).toBeCloseTo(0.03); // em pontos
     expect(de('ticketMedio').tendencia).toBe('igual'); // +0,8%
     expect(de('notaMedia').tendencia).toBe('piorou');
+  });
+
+  it('ocupação da agenda: subir é melhor; sem expediente fica sem dado', () => {
+    const subiu = compararMeses(mes({ ocupacao: 0.72 }), mes()).find(
+      (x) => x.chave === 'ocupacao',
+    )!;
+    expect(subiu).toMatchObject({ tendencia: 'melhorou', formato: 'fracao' });
+    expect(subiu.variacao).toBeCloseTo(0.12);
+    expect(
+      compararMeses(mes({ ocupacao: null }), mes()).find((x) => x.chave === 'ocupacao'),
+    ).toMatchObject({ tendencia: 'igual', variacao: null });
+    expect(frasesDoMes(compararMeses(mes({ ocupacao: 0.4 }), mes())).piorou).toContain(
+      'A ocupação da agenda caiu 20 pontos',
+    );
   });
 
   it('sem lucro real no plano, a linha de lucro some', () => {
@@ -71,6 +86,8 @@ describe('relatório do mês', () => {
       taxaRetorno: 0.5,
       notaMedia: 4.5,
       faltas: 2,
+      ocupacao: 0.6,
+      percentualNoPrazo: 0.9,
       servicosMaisFeitos: [],
       faturamentoAnterior: 500_000,
       ...x,

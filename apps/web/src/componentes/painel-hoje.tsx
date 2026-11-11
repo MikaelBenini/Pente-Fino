@@ -148,7 +148,7 @@ export function PainelHoje() {
               ? 'por dia, em cada dia de trabalho que sobra no mês'
               : metasFat.length
                 ? 'A meta de faturamento do mês já foi alcançada.'
-                : 'Defina a meta do mês em Métricas e metas.'
+                : 'Defina a meta do mês em Resultados do mês.'
           }
         />
       </div>

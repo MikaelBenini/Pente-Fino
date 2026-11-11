@@ -45,7 +45,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
       'Em Bot, conecte o WhatsApp da barbearia lendo o QR Code com o celular da unidade.',
       'Na Agenda, marque o primeiro horário. A comanda nasce sozinha com o serviço e o preço.',
       'No fim do atendimento, o barbeiro confirma a comanda e a recepção toca em "Receber e fechar".',
-      'Em Métricas e metas, defina a meta do mês: o Início passa a mostrar quanto falta.',
+      'Em Resultados do mês, defina a meta do mês: o Início passa a mostrar quanto falta.',
     ],
     dica: 'O cartão "Primeiros passos" no Início marca cada etapa sozinho, conforme você usa o sistema.',
   },
@@ -171,10 +171,10 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     resumo: 'Quanto sobra de cada serviço, barbeiro e unidade.',
     categoria: 'Dinheiro',
     papeis: GESTAO,
-    rota: '/metricas',
+    rota: '/resultados',
     passos: [
       'No Início, veja faturamento, atendimentos, ticket médio e a projeção do mês.',
-      'Em Métricas e metas, "Lucro por serviço" mostra receita menos custo de produto e comissão.',
+      'Em Resultados do mês, cada número vem com o mês anterior; a aba "Serviços e produtos" mostra o lucro de cada um (receita menos custo de produto e comissão).',
       'Em Financeiro, lance as despesas (fixas, variáveis, retirada do dono) para chegar ao lucro do mês.',
       'Defina a meta do mês de faturamento ou de um serviço: a barra mostra se o ritmo vai bater.',
     ],
@@ -188,7 +188,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     papeis: ['dono', 'gestor', 'barbeiro'],
     rota: null,
     passos: [
-      'Dono e gestor: em Equipe, abra o profissional; o barbeiro vê a própria ficha em Desempenho.',
+      'Dono e gestor: em Resultados do mês → Barbeiros (ou em Equipe), toque no nome do profissional; o barbeiro vê a própria ficha em Desempenho.',
       'Atendimentos e faturamento do período, com a comparação com o período anterior.',
       '% de extras: quanto dos atendimentos teve sobrancelha, hidratação ou produto.',
       'Nota média dos clientes na pesquisa pós-atendimento e os comentários.',
@@ -308,7 +308,7 @@ export const PERGUNTAS_AJUDA: readonly PerguntaAjuda[] = [
   {
     pergunta: 'Posso usar em mais de uma unidade?',
     resposta:
-      'Sim, no plano Premium: cada unidade tem a agenda, a equipe, o caixa e o WhatsApp dela, e o Painel da rede mostra tudo junto.',
+      'Sim, no plano Premium: cada unidade tem a agenda, a equipe, o caixa e o WhatsApp dela, e Resultados do mês mostra as unidades lado a lado.',
   },
   {
     pergunta: 'O que acontece se eu não pagar a mensalidade?',
@@ -434,7 +434,7 @@ export const DEFINICAO_PASSOS: Readonly<Record<PassoInicial, DefinicaoPasso>> = 
   meta: {
     titulo: 'Definir a meta do mês',
     porque: 'O Início mostra se o ritmo vai bater.',
-    rota: '/metricas',
+    rota: '/resultados',
     artigo: 'lucro-e-indicadores',
   },
   notificacoes: {

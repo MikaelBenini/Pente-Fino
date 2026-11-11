@@ -13,15 +13,7 @@ import {
   type ResumoDoDia,
   type SituacaoDia,
 } from '@pente-fino/shared';
-import {
-  Abas,
-  Botao,
-  CartaoIndicador,
-  cn,
-  EstadoVazio,
-  EtiquetaEstado,
-  Selecao,
-} from '@pente-fino/ui';
+import { Botao, CartaoIndicador, cn, EstadoVazio, EtiquetaEstado, Selecao } from '@pente-fino/ui';
 import {
   CalendarClock,
   ChevronLeft,
@@ -34,11 +26,11 @@ import {
   UserX,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { useProfissionais, useResumoDia, useResumoMes } from '@/lib/consultas';
-import { mesAtual, nomeDoMes } from '@/lib/periodo';
+import { nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
-import { SeletorMes } from '../indicadores';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 
 const somarDias = (d: string, n: number) => {
@@ -74,37 +66,19 @@ function useOpcoesBarbeiro() {
 }
 
 export function TelaResumoDia() {
-  const [aba, setAba] = useState('dia');
-  const [dia, setDia] = useState(() => dataLocal(new Date()));
+  const params = useSearchParams();
+  const pedido = params.get('dia');
+  const [dia, setDia] = useState(() =>
+    pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido) ? pedido : dataLocal(new Date()),
+  );
   const [barbeiro, setBarbeiro] = useState('');
-  const abrirDia = (d: string) => {
-    setDia(d);
-    setAba('dia');
-    window.scrollTo({ top: 0 });
-  };
   return (
     <div className="flex flex-col gap-8">
       <CabecalhoPagina
         titulo="Resumo do dia"
         pergunta="O que tem para hoje e o que já foi feito?"
       />
-      <Abas
-        rotulo="Resumo"
-        atual={aba}
-        onTrocar={setAba}
-        abas={[
-          {
-            id: 'dia',
-            rotulo: 'Dia',
-            conteudo: <Dia dia={dia} onDia={setDia} barbeiro={barbeiro} onBarbeiro={setBarbeiro} />,
-          },
-          {
-            id: 'mes',
-            rotulo: 'Mês dia a dia',
-            conteudo: <Mes barbeiro={barbeiro} onBarbeiro={setBarbeiro} onAbrirDia={abrirDia} />,
-          },
-        ]}
-      />
+      <Dia dia={dia} onDia={setDia} barbeiro={barbeiro} onBarbeiro={setBarbeiro} />
     </div>
   );
 }
@@ -401,77 +375,53 @@ function LinhaDoDia({ i }: { i: ItemDoDia }) {
 
 const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
-function Mes({
-  barbeiro,
-  onBarbeiro,
-  onAbrirDia,
-}: {
-  barbeiro: string;
-  onBarbeiro: (id: string) => void;
-  onAbrirDia: (d: string) => void;
-}) {
+/**
+ * O mês dia a dia (em Resultados do mês): agendados, faltas, clientes, faturamento, ticket e
+ * comissão de cada dia; o dia abre no Resumo do dia.
+ */
+export function DiaADia({ mes }: { mes: string }) {
   const { unidadeAtiva } = useApp();
   const opcoes = useOpcoesBarbeiro();
-  const [mes, setMes] = useState(mesAtual());
+  const [barbeiro, setBarbeiro] = useState('');
   const [soTrabalho, setSoTrabalho] = useState(true);
   const resumo = useResumoMes(unidadeAtiva, mes, barbeiro || null);
   const hoje = dataLocal(new Date());
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end gap-3">
-        <SeletorMes mes={mes} onMudar={setMes} />
-        <Selecao
-          id="mes-barbeiro"
-          rotulo="Barbeiro"
-          value={barbeiro}
-          onChange={(e) => onBarbeiro(e.target.value)}
-          opcoes={opcoes}
-          className="min-w-48"
-        />
-        <label className="flex min-h-11 items-center gap-2">
-          <input
-            type="checkbox"
-            checked={soTrabalho}
-            onChange={(e) => setSoTrabalho(e.target.checked)}
-            className="size-5 accent-[var(--modulo)]"
+    <section aria-labelledby="res-dia-a-dia" className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h2 id="res-dia-a-dia" className="text-lg font-semibold">
+          O mês dia a dia
+        </h2>
+        <div className="flex flex-wrap items-end gap-3">
+          <Selecao
+            id="mes-barbeiro"
+            rotulo="Barbeiro"
+            value={barbeiro}
+            onChange={(e) => setBarbeiro(e.target.value)}
+            opcoes={opcoes}
+            className="min-w-48"
           />
-          Só dias de trabalho
-        </label>
+          <label className="flex min-h-11 items-center gap-2">
+            <input
+              type="checkbox"
+              checked={soTrabalho}
+              onChange={(e) => setSoTrabalho(e.target.checked)}
+              className="size-5 accent-[var(--modulo)]"
+            />
+            Só dias de trabalho
+          </label>
+        </div>
       </div>
       <Estado consulta={resumo}>
         {() => {
           const r = resumo.data!;
-          const t = r.totais;
           const maximo = Math.max(...r.dias.map((d) => d.faturamento), 1);
-          const dias = r.dias.filter((d) => !soTrabalho || d.trabalha || d.faturamento > 0);
+          // O que ainda não chegou fica de fora: só dias até hoje (os horários marcados estão na Agenda).
+          const dias = r.dias.filter(
+            (d) => d.data <= hoje && (!soTrabalho || d.trabalha || d.faturamento > 0),
+          );
           return (
             <>
-              <div className="animar-escalonado grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <CartaoIndicador
-                  rotulo="Faturamento"
-                  valor={formatarMoeda(t.faturamento)}
-                  origem={`${t.diasTrabalhados} dias trabalhados até hoje em ${nomeDoMes(mes)}.`}
-                />
-                <CartaoIndicador
-                  rotulo="Clientes"
-                  valor={formatarNumero(t.clientes)}
-                  origem={`Ticket médio ${formatarMoeda(t.ticketMedio)}.`}
-                />
-                <CartaoIndicador
-                  rotulo="Agendados"
-                  valor={formatarNumero(t.agendados)}
-                  origem={`${t.cancelados} cancelados fora da conta.`}
-                />
-                <CartaoIndicador
-                  rotulo="Faltas"
-                  valor={formatarNumero(t.faltas)}
-                  origem={
-                    t.agendados
-                      ? `${formatarFracao(t.faltas / t.agendados, 0)} dos agendados não vieram.`
-                      : 'Nenhum agendamento no mês.'
-                  }
-                />
-              </div>
               <Tabela rotulo={`${nomeDoMes(mes)} dia a dia`}>
                 <thead>
                   <tr>
@@ -494,9 +444,8 @@ function Mes({
                       )}
                     >
                       <th scope="row" className={`${td} text-left font-medium whitespace-nowrap`}>
-                        <button
-                          type="button"
-                          onClick={() => onAbrirDia(d.data)}
+                        <Link
+                          href={`/dia?dia=${d.data}`}
                           aria-label={`Abrir ${diaLongo(d.data)}`}
                           className="inline-flex min-h-11 items-center gap-2 rounded-md underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-foco"
                         >
@@ -505,7 +454,7 @@ function Mes({
                           </span>
                           {d.data.slice(8)}
                           {!d.trabalha && <span className="text-sm font-normal">fechado</span>}
-                        </button>
+                        </Link>
                       </th>
                       <td className={`${td} text-right`}>{d.agendados || '—'}</td>
                       <td className={cn(td, 'text-right', d.faltas > 0 && 'text-perigo-texto')}>
@@ -539,6 +488,6 @@ function Mes({
           );
         }}
       </Estado>
-    </div>
+    </section>
   );
 }
