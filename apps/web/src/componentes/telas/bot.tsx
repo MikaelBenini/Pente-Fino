@@ -2,6 +2,7 @@
 
 import {
   ACOES_BOT,
+  conflitosPalavrasChave,
   formatarDataHora,
   formatarTelefone,
   MAXIMO_OPCOES,
@@ -160,6 +161,7 @@ function EditorDoBot({
   const leitura = !e.podeEditar;
   const naoSalvo = !iguais(menu, base);
   const problemas = validarMenu(menu);
+  const conflitos = conflitosPalavrasChave(menu);
   const salvar = useAcao((m: MenuBot) => api('bot/menu', { metodo: 'PUT', corpo: m }), [chaveBot]);
   const publicar = useAcao(
     async (m: MenuBot) => {
@@ -298,7 +300,8 @@ function EditorDoBot({
             </h2>
             <p className="text-tinta-suave">
               Valem em qualquer ponto da conversa, sem diferença de acento e maiúscula. Ex.: quem
-              escreve “quanto custa a barba?” recebe a tabela de preços.
+              escreve “quanto custa a barba?” recebe a tabela de preços. Quando a mensagem cita dois
+              grupos, vale a frase mais longa: “horário de funcionamento” ganha de “horário”.
             </p>
           </div>
           <ul className="animar-escalonado flex flex-col gap-3">
@@ -323,6 +326,19 @@ function EditorDoBot({
               </li>
             ))}
           </ul>
+          {conflitos.length > 0 && !leitura && (
+            <Aviso tom="aviso">
+              <ul className="flex flex-col gap-1">
+                {conflitos.map((c) => (
+                  <li key={c.mensagem}>{c.mensagem}</li>
+                ))}
+              </ul>
+              <p className="mt-1 text-sm">
+                O bot escolhe sempre a frase mais longa. Pode publicar assim, mas confira se é o que
+                você quer.
+              </p>
+            </Aviso>
+          )}
           {!leitura && (
             <Botao
               variante="secundario"

@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (bot do WhatsApp)
+
+- "Qual o horário de funcionamento?" responde com o endereço e o horário; antes, o bot começava
+  um agendamento. Quando a mensagem cita palavras de dois grupos, vale a frase mais longa
+  ("horário de funcionamento" ganha de "horário"). As palavras de fábrica de Agendar e Endereço
+  mudaram, inclusive nas contas que não tinham mexido nelas.
+- O editor do bot avisa quando uma palavra de um grupo está dentro da frase de outro grupo.
+
 ### Corrigido (caixa e comanda)
 
 - O dinheiro entra no caixa do dia em que foi recebido. Antes, receber hoje uma comanda marcada
