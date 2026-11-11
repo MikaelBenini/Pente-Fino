@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (oferta de lançamento)
+
+- O cupom `LANCAMENTO` não tem mais limite de vagas: vale para toda barbearia que assinar até
+  31/01/2027, como o site e os anúncios prometem. Desconto, prazo e quem já usa continuam iguais.
+- Cupom que esgota (os criados com vagas na administração) diz "Este cupom esgotou: as vagas
+  acabaram." no cadastro e na assinatura.
+
 ### Alterado (nota fiscal das mensalidades)
 
 - A emissão da nota fiscal só liga com os dados fiscais da empresa conferidos no Asaas: sem
