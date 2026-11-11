@@ -14,6 +14,7 @@ import {
   oferecerVaga,
   remarcacaoPorAtraso,
   contasParaAvisos,
+  lembretesPerdidos,
   rotinaDosAvisos,
   contasParaAvisosDaAssinatura,
   rotinaAvisosDaAssinatura,
@@ -44,6 +45,7 @@ import {
   FILA_EMAILS,
   type TrabalhoEmail,
   NOTA_BAIXA_ESPERA_MIN,
+  TENTATIVAS_REPETIVEIS,
   proximoEnvio,
   type TrabalhoNotificacao,
   type TrabalhoWhatsappEntrada,
@@ -53,6 +55,7 @@ import { ProvedorEvolution, ProvedorFalso, type ProvedorWhatsApp } from '@pente-
 import { type Job, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { Banco } from './banco.js';
+import { Batimento, rotinaDoTrabalho } from './batimento.js';
 import { CONFIGURACAO_WORKER, type ConfiguracaoWorker } from './config.js';
 
 /** Onde a próxima mensagem de cada número da barbearia pode sair (ms). */
@@ -134,6 +137,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
   constructor(
     @Inject(CONFIGURACAO_WORKER) private readonly config: ConfiguracaoWorker,
     @Inject(Banco) private readonly banco: Banco,
+    @Inject(Batimento) private readonly batimento: Batimento,
   ) {}
 
   onModuleInit(): void {
@@ -341,6 +345,19 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             } catch (e) {
               this.logger.error(`Avisos da conta ${contaId}: ${(e as Error).message}`);
             }
+            // V4: lembrete que não entrou na fila (Redis fora na hora de marcar) entra agora. O
+            // id fixo não duplica, e o worker confere na hora se o lembrete já saiu.
+            try {
+              for (const l of await lembretesPerdidos(this.banco.prisma, contaId, new Date())) {
+                await filaEntrada.add(l.dados.tipo, l.dados, {
+                  delay: l.atrasoMs,
+                  jobId: l.jobId,
+                  ...TENTATIVAS_REPETIVEIS,
+                });
+              }
+            } catch (e) {
+              this.logger.error(`Lembretes da conta ${contaId}: ${(e as Error).message}`);
+            }
           }
           return `avisos: ${total} notificações`;
         }
@@ -429,7 +446,11 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
             lembretesDoAgendamento(tx, r.contaId, r.agendamento!.id),
           );
           for (const l of trabalhos)
-            await filaEntrada.add(l.dados.tipo, l.dados, { delay: l.atrasoMs, jobId: l.jobId });
+            await filaEntrada.add(l.dados.tipo, l.dados, {
+              delay: l.atrasoMs,
+              jobId: l.jobId,
+              ...(l.dados.tipo === 'lembrete' ? TENTATIVAS_REPETIVEIS : {}),
+            });
         }
         if (r.notificacao) await filaNotificacoes.add('push', r.notificacao);
         // Vagou um horário pela conversa: oferecer para a lista de espera.
@@ -477,6 +498,10 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
       },
       { connection, concurrency: 1 },
     );
+    this.entrada.on('completed', (job, resultado) => {
+      const rotina = rotinaDoTrabalho(job.data.tipo);
+      if (rotina) void this.batimento.registrarRotina(rotina, resultado);
+    });
     this.entrada.on('failed', (job, erro) =>
       this.logger.error(`Mensagem recebida falhou (job ${job?.id}): ${erro.message}`),
     );

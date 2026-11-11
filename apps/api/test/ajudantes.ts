@@ -8,6 +8,11 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
+import type {
+  NotaWebhook,
+  PagamentoWebhook,
+  ProvedorCobrancaFalso,
+} from '../src/cobranca/provedor.js';
 import { configurarApp } from '../src/configurar-app.js';
 
 export const SENHA = 'senha-de-teste-1';
@@ -143,4 +148,14 @@ export function tokenDoLink(texto: string): string {
   const achado = /token=([\w-]+)/.exec(texto);
   if (!achado?.[1]) throw new Error(`link com token não encontrado em: ${texto}`);
   return achado[1];
+}
+
+/**
+ * Simula o Asaas: o webhook busca a cobrança e a nota no Asaas pelo id (segurança W1). Registra
+ * no provedor falso o que o teste manda, como se fosse o estado atual lá.
+ */
+export function noAsaas(provedor: ProvedorCobrancaFalso, corpo: object): void {
+  const c = corpo as { payment?: PagamentoWebhook; invoice?: NotaWebhook };
+  if (c.payment?.id) provedor.pagamentosAsaas.set(c.payment.id, c.payment);
+  if (c.invoice?.id) provedor.notasAsaas.set(c.invoice.id, c.invoice);
 }

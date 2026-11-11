@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   calcularLivres,
   criarAgendamentoNoBanco,
@@ -25,6 +25,7 @@ import {
   deveAvisarClienteDoMovimento,
   DESFAZER_MOVER_S,
   type HorarioMudou,
+  TENTATIVAS_REPETIVEIS,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -67,6 +68,8 @@ export async function traduzir<T>(fn: () => Promise<T>): Promise<T> {
 
 @Injectable()
 export class AgendaService {
+  private readonly logger = new Logger('Agenda');
+
   constructor(
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(ComandasService) private readonly comandas: ComandasService,
@@ -85,8 +88,15 @@ export class AgendaService {
     });
     for (const l of trabalhos)
       await this.filas.whatsappEntrada
-        .add(l.dados.tipo, l.dados, { delay: l.atrasoMs, jobId: l.jobId })
-        .catch(() => undefined);
+        .add(l.dados.tipo, l.dados, {
+          delay: l.atrasoMs,
+          jobId: l.jobId,
+          ...(l.dados.tipo === 'lembrete' ? TENTATIVAS_REPETIVEIS : {}),
+        })
+        // V4: o horário vale mesmo sem a fila; a rotina de 15 min põe o lembrete de novo.
+        .catch((e: Error) =>
+          this.logger.warn(`Lembrete ${l.jobId} fora da fila (a rotina repõe): ${e.message}`),
+        );
   }
 
   /** Agenda da unidade no período. Barbeiro vê só a própria coluna. */

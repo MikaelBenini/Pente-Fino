@@ -64,6 +64,10 @@ import {
   mascararEmail,
   type FalhaDeEmail,
   type TrabalhoEmail,
+  BATIMENTO_WORKER_MAX_S,
+  CHAVE_BATIMENTO_WORKER,
+  CHAVE_ROTINAS_WORKER,
+  ROTINAS_WORKER,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { z } from 'zod';
@@ -73,7 +77,9 @@ import { Corpo } from '../comum/validacao.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { EmailsService } from '../emails/emails.service.js';
 import { PrecosService } from '../comum/precos.service.js';
-import { Filas } from '../filas/filas.module.js';
+import { Filas, REDIS } from '../filas/filas.module.js';
+import { WebhooksRecusados } from '../comum/webhooks-recusados.js';
+import type { Redis } from 'ioredis';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
 import { AdminAtual, AdminGuard, IpDaRequisicao, PapeisPlataforma } from './admin.guard.js';
 import { BancoPlataforma } from './banco-plataforma.js';
@@ -91,7 +97,49 @@ export class SaudeService implements OnModuleDestroy {
     @Inject(Filas) private readonly filas: Filas,
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(REDIS) private readonly redis: Redis,
+    @Inject(WebhooksRecusados) private readonly recusas: WebhooksRecusados,
   ) {}
+
+  /** V3: último batimento do worker e última execução de cada rotina agendada. */
+  private async worker(agora = Date.now()): Promise<Pick<SaudeDoSistema, 'worker' | 'rotinas'>> {
+    let batimento: string | null = null;
+    let execucoes: Record<string, string> = {};
+    try {
+      if (this.redis.status === 'wait') await this.redis.connect();
+      batimento = await this.redis.get(CHAVE_BATIMENTO_WORKER);
+      execucoes = await this.redis.hgetall(CHAVE_ROTINAS_WORKER);
+    } catch {
+      // Sem Redis, o worker também não anda: aparece como parado.
+    }
+    const parado = !batimento || agora - Date.parse(batimento) > BATIMENTO_WORKER_MAX_S * 1000;
+    const rotinas = ROTINAS_WORKER.map((r) => {
+      let ultima: string | null = null;
+      let resultado: string | null = null;
+      try {
+        const e = JSON.parse(execucoes[r.rotina] ?? 'null') as {
+          quando?: string;
+          resultado?: string;
+        } | null;
+        ultima = e?.quando ?? null;
+        resultado = e?.resultado ?? null;
+      } catch {
+        // Valor estranho no Redis: trata como nunca rodou.
+      }
+      const atrasada = !!ultima && agora - Date.parse(ultima) > r.prazoMin * 60_000;
+      return { rotina: r.rotina, nome: r.nome, ultima, resultado, atrasada };
+    });
+    return { worker: { ultimoBatimento: batimento, parado }, rotinas };
+  }
+
+  /** W4: segredo de webhook curto (menos de 32 caracteres) vira aviso, sem derrubar a API. */
+  private segredosCurtos(): string[] {
+    const curtos: string[] = [];
+    if (this.config.cobranca.webhookToken && this.config.cobranca.webhookToken.length < 32)
+      curtos.push('ASAAS_WEBHOOK_TOKEN');
+    if (this.config.whatsapp.webhookSegredo.length < 32) curtos.push('WHATSAPP_WEBHOOK_SEGREDO');
+    return curtos;
+  }
 
   private filasLidas(): [string, Queue][] {
     this.saida ??= new Queue(FILA_WHATSAPP_SAIDA, { connection: { url: this.config.redisUrl } });
@@ -142,6 +190,9 @@ export class SaudeService implements OnModuleDestroy {
       filas,
       notasFiscais,
       ipsInternos,
+      ...(await this.worker()),
+      webhooksRecusados: await this.recusas.resumo(),
+      segredosCurtos: this.segredosCurtos(),
       conexoesCaidas: caidas.map((x) => ({
         contaId: x.conta_id,
         conta: x.conta,

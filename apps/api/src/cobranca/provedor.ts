@@ -14,6 +14,40 @@ import {
 } from '@pente-fino/shared';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 
+/** Cobrança como o Asaas devolve (no webhook e em GET /payments/{id}), em reais. */
+export interface PagamentoWebhook {
+  id: string;
+  customer: string;
+  subscription?: string | null;
+  status: string;
+  value: number;
+  dueDate: string;
+  invoiceUrl?: string | null;
+  billingType?: string | null;
+  paymentDate?: string | null;
+  confirmedDate?: string | null;
+  clientPaymentDate?: string | null;
+  /** Valor depois da taxa do Asaas (o split usa este). */
+  netValue?: number | null;
+  /** Quando o Asaas prevê o crédito na conta. */
+  estimatedCreditDate?: string | null;
+  /** Split da cobrança (clube online): quanto foi para cada carteira, em reais. */
+  split?: { walletId?: string; totalValue?: number | null }[] | null;
+}
+
+/** Nota fiscal como o Asaas devolve (no webhook e em GET /invoices/{id}). */
+export interface NotaWebhook {
+  id: string;
+  customer?: string | null;
+  payment?: string | null;
+  status?: string;
+  statusDescription?: string | null;
+  number?: string | null;
+  value?: number | null;
+  pdfUrl?: string | null;
+  xmlUrl?: string | null;
+}
+
 export interface ProvedorCobranca {
   readonly nome: 'asaas' | 'falso';
   criarCliente(d: {
@@ -34,6 +68,13 @@ export interface ProvedorCobranca {
     split?: { walletId: string; percentual: number };
   }): Promise<{ id: string }>;
   cobrancasDaAssinatura(assinatura: string): Promise<CobrancaExterna[]>;
+  /**
+   * A cobrança como está agora no Asaas; null se não existe. O webhook usa isto em vez do corpo
+   * recebido (segurança W1): nem com o token vazado dá para inventar pagamento.
+   */
+  pagamento(id: string): Promise<PagamentoWebhook | null>;
+  /** A nota fiscal como está agora no Asaas; null se não existe. */
+  nota(id: string): Promise<NotaWebhook | null>;
   cancelarAssinatura(assinatura: string): Promise<void>;
   // ─── Subconta da barbearia (clube online) ───
   criarSubconta(d: DadosRecebimento): Promise<{ id: string; walletId: string; apiKey: string }>;
@@ -283,6 +324,24 @@ export class ProvedorAsaas implements ProvedorCobranca {
     );
     return r.data.map(cobrancaDoAsaas);
   }
+
+  /** GET que devolve null quando o Asaas responde 404 (não existe nesta conta). */
+  private async buscar<T>(caminho: string): Promise<T | null> {
+    try {
+      return await this.pedir<T>('GET', caminho);
+    } catch (e) {
+      if (e instanceof ErroCobranca && e.status === 404) return null;
+      throw e;
+    }
+  }
+
+  async pagamento(id: string) {
+    return this.buscar<PagamentoWebhook>(`/payments/${encodeURIComponent(id)}`);
+  }
+
+  async nota(id: string) {
+    return this.buscar<NotaWebhook>(`/invoices/${encodeURIComponent(id)}`);
+  }
 }
 
 /** Para os testes: guarda tudo na memória; `pagar` simula o pagamento. */
@@ -316,6 +375,18 @@ export class ProvedorCobrancaFalso implements ProvedorCobranca {
 
   async cobrancasDaAssinatura(assinatura: string) {
     return this.assinaturas.get(assinatura) ?? [];
+  }
+
+  /** Teste: o que o "Asaas" devolve em GET /payments/{id} e GET /invoices/{id}. */
+  readonly pagamentosAsaas = new Map<string, PagamentoWebhook>();
+  readonly notasAsaas = new Map<string, NotaWebhook>();
+
+  async pagamento(id: string) {
+    return this.pagamentosAsaas.get(id) ?? null;
+  }
+
+  async nota(id: string) {
+    return this.notasAsaas.get(id) ?? null;
   }
 
   async atualizarAssinatura(assinatura: string, d: { valor: number; descricao: string }) {

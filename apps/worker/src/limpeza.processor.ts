@@ -33,6 +33,7 @@ import {
 } from '@pente-fino/shared';
 import { Queue, Worker } from 'bullmq';
 import { Banco } from './banco.js';
+import { Batimento } from './batimento.js';
 import { CONFIGURACAO_WORKER, type ConfiguracaoWorker } from './config.js';
 
 type Apagados = Partial<Record<TipoLimpeza, number>>;
@@ -134,6 +135,7 @@ export class LimpezaProcessor implements OnModuleInit, OnApplicationShutdown {
   constructor(
     @Inject(CONFIGURACAO_WORKER) private readonly config: ConfiguracaoWorker,
     @Inject(Banco) private readonly banco: Banco,
+    @Inject(Batimento) private readonly batimento: Batimento,
   ) {}
 
   onModuleInit(): void {
@@ -190,6 +192,7 @@ export class LimpezaProcessor implements OnModuleInit, OnApplicationShutdown {
       { connection, concurrency: 1 },
     );
     this.worker.on('failed', (_job, erro) => this.logger.error(`Limpeza falhou: ${erro.message}`));
+    this.worker.on('completed', (_job, r) => void this.batimento.registrarRotina('limpeza', r));
   }
 
   async onApplicationShutdown(): Promise<void> {

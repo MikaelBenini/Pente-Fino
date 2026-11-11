@@ -5,6 +5,8 @@ import type { INestApplication } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
 import {
+  CHAVE_BATIMENTO_WORKER,
+  CHAVE_ROTINAS_WORKER,
   FILA_EMAILS,
   type FalhaDeEmail,
   type Pendencia,
@@ -12,10 +14,12 @@ import {
   type SaudeDoSistema,
 } from '@pente-fino/shared';
 import { Queue, Worker } from 'bullmq';
+import { Redis } from 'ioredis';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { codigoDoPasso, passoDe } from '../src/admin/totp.js';
+import { LIMITE_RECUSAS_POR_IP } from '../src/comum/webhooks-recusados.js';
 import { criarApp, criarCenario, type Cenario } from './ajudantes.js';
 
 let app: INestApplication<App>;
@@ -184,5 +188,64 @@ describe('IP de quem acessa (admin R9)', () => {
     const saude = (await adm.get('/admin/saude').expect(200)).body as SaudeDoSistema;
     expect(saude.ipsInternos.acessos).toBeGreaterThan(0);
     expect(saude.ipsInternos.ultimo).not.toBeNull();
+  });
+});
+
+describe('worker, rotinas e webhooks recusados (V3, W3, W4)', () => {
+  const redis = new Redis(process.env.REDIS_URL!, { lazyConnect: true });
+  const ipLocal = ['127.0.0.1', '::1'];
+  const limparIp = () => redis.del(...ipLocal.map((ip) => `webhook:falhas:${ip}`));
+  const saude = async () => (await adm.get('/admin/saude').expect(200)).body as SaudeDoSistema;
+
+  afterAll(async () => {
+    await limparIp();
+    redis.disconnect();
+  });
+
+  it('worker sem sinal há mais de 2 min aparece parado; rotina sem rodar no prazo, atrasada', async () => {
+    await redis.set(CHAVE_BATIMENTO_WORKER, new Date(Date.now() - 10 * 60_000).toISOString());
+    await redis.hset(
+      CHAVE_ROTINAS_WORKER,
+      'avisos',
+      JSON.stringify({
+        quando: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+        resultado: 'x',
+      }),
+    );
+    let s = await saude();
+    expect(s.worker.parado).toBe(true);
+    expect(s.rotinas.find((r) => r.rotina === 'avisos')).toMatchObject({
+      atrasada: true,
+      resultado: 'x',
+    });
+    await redis.set(CHAVE_BATIMENTO_WORKER, new Date().toISOString());
+    await redis.hset(
+      CHAVE_ROTINAS_WORKER,
+      'avisos',
+      JSON.stringify({ quando: new Date().toISOString(), resultado: 'avisos: 0 notificações' }),
+    );
+    s = await saude();
+    expect(s.worker.parado).toBe(false);
+    expect(s.rotinas.find((r) => r.rotina === 'avisos')?.atrasada).toBe(false);
+    expect(Array.isArray(s.segredosCurtos)).toBe(true);
+  });
+
+  it('segredo errado fica registrado com o IP; depois do limite, o IP leva 429', async () => {
+    await limparIp();
+    const antes = (await saude()).webhooksRecusados.total7Dias;
+    await http()
+      .post('/webhooks/asaas')
+      .set('asaas-access-token', 'errado-'.repeat(5))
+      .send({ event: 'PAYMENT_RECEIVED', payment: { id: 'pay_x' } })
+      .expect(401);
+    const s = await saude();
+    expect(s.webhooksRecusados.total7Dias).toBe(antes + 1);
+    expect(s.webhooksRecusados.ultimos[0]).toMatchObject({ rota: 'asaas' });
+    expect(ipLocal).toContain(s.webhooksRecusados.ultimos[0]!.ip);
+
+    // Muitos erros do mesmo IP: bloqueado antes de conferir o segredo (Asaas e Evolution não erram).
+    for (const ip of ipLocal) await redis.set(`webhook:falhas:${ip}`, LIMITE_RECUSAS_POR_IP);
+    await http().post('/webhooks/whatsapp').send({ instance: 'x' }).expect(429);
+    await limparIp();
   });
 });

@@ -23,6 +23,10 @@
 # API: o painel fala com ela por dentro (web → api); aqui ficam os webhooks (Asaas).
 api.{$DOMINIO} {
 	import seguranca
+	# O webhook do WhatsApp só vem da Evolution, por dentro (http://api:3001). Fechado para fora:
+	# a assinatura é fixa por instância e não cobre o corpo (segurança W2).
+	@webhook_whatsapp path /webhooks/whatsapp /webhooks/whatsapp/*
+	respond @webhook_whatsapp 404
 	reverse_proxy api:3001
 }
 

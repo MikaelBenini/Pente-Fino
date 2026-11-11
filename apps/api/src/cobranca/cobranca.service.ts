@@ -34,6 +34,9 @@ import {
   type ProvedorCobranca,
 } from './provedor.js';
 
+export type { NotaWebhook, PagamentoWebhook } from './provedor.js';
+import type { NotaWebhook, PagamentoWebhook } from './provedor.js';
+
 /** Mesmo dia, n meses depois (vencimento do Asaas é dia do mês; dia 31 cai no último dia). */
 function somarMeses(data: string, n: number): string {
   const [a, m, d] = data.split('-').map(Number) as [number, number, number];
@@ -46,41 +49,10 @@ const dataBanco = (d: string) => new Date(`${d}T00:00:00.000Z`);
 
 /** Pagamento como chega no webhook do Asaas (só o que usamos). */
 /** Nota fiscal no webhook do Asaas (eventos INVOICE_*, objeto em "invoice"). */
-export interface NotaWebhook {
-  id: string;
-  customer?: string | null;
-  payment?: string | null;
-  status?: string;
-  statusDescription?: string | null;
-  number?: string | null;
-  value?: number | null;
-  pdfUrl?: string | null;
-  xmlUrl?: string | null;
-}
 
 /** Só endereço https vira link na tela da barbearia. */
 const linkSeguro = (u: string | null | undefined) =>
   u && /^https:\/\/[^\s]+$/.test(u) ? u.slice(0, 1000) : null;
-
-export interface PagamentoWebhook {
-  id: string;
-  customer: string;
-  subscription?: string | null;
-  status: string;
-  value: number;
-  dueDate: string;
-  invoiceUrl?: string | null;
-  billingType?: string | null;
-  paymentDate?: string | null;
-  confirmedDate?: string | null;
-  clientPaymentDate?: string | null;
-  /** Valor depois da taxa do Asaas (o split usa este). */
-  netValue?: number | null;
-  /** Quando o Asaas prevê o crédito na conta. */
-  estimatedCreditDate?: string | null;
-  /** Split da cobrança (clube online): quanto foi para cada carteira, em reais. */
-  split?: { walletId?: string; totalValue?: number | null }[] | null;
-}
 
 /**
  * Assinatura do Pente Fino pela barbearia: assina no Asaas, traz as cobranças para a tabela

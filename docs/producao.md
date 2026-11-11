@@ -42,6 +42,25 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
 - Sem o acesso fiscal, deixe a emissão desligada: nada muda para as barbearias, as mensalidades
   seguem cobradas normalmente, só sem nota.
 
+## Segurança dos webhooks
+
+- **Asaas:** do corpo recebido o sistema só usa o evento e o id. A cobrança e a nota são
+  buscadas no próprio Asaas (`GET /payments/{id}` e `GET /invoices/{id}`) com a chave da API, então
+  nem um token vazado permite inventar pagamento, valor ou repasse.
+- **WhatsApp:** `/webhooks/whatsapp` responde 404 para fora (Caddy). A Evolution chama a API por
+  dentro (`http://api:3001`, `WHATSAPP_WEBHOOK_URL` no `docker-compose.prod.yml`).
+- **Segredos:** `ASAAS_WEBHOOK_TOKEN` e `WHATSAPP_WEBHOOK_SEGREDO` com 32 caracteres ou mais
+  (`openssl rand -hex 32`). Mais curto, a Saúde do sistema avisa. O token de produção existe só no
+  `.env` do servidor; os do desenvolvimento são de teste (sandbox). Trocar o do Asaas: novo valor no
+  `.env`, `docker compose up -d api` e o mesmo valor no webhook do painel do Asaas. Trocar o do
+  WhatsApp: novo valor, subir a API e o worker e reconectar cada unidade (a assinatura é gravada ao
+  conectar).
+- **Tentativas:** chamada com o segredo errado fica registrada com o IP (Saúde do sistema →
+  "Webhooks recusados"). Depois de 20 erros em 10 minutos, o IP leva 429 por 10 minutos.
+- **Teste do webhook do Asaas no Codespaces:** a porta 3001 pública abre a API de desenvolvimento
+  inteira (inclusive `/docs`), não só o webhook. Deixe pública só durante o teste, com o token do
+  sandbox, e volte para privada (aba Portas → botão direito → Visibilidade da porta → Private).
+
 ## Limpeza automática de dados
 
 O worker roda todo dia às 3h30 (depois do backup) e apaga o que passou do prazo da política de
@@ -96,6 +115,11 @@ privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os va
   Pode rodar de novo: o que já existe não é duplicado. O painel interno continua com login. A
   página pública sai com o visual do Pente Fino (`infra/status.css`, aplicado pelo script; dá para
   colar também em Editar página → CSS personalizado).
+- Worker (bot, lembretes e rotinas): o healthcheck confere o batimento a cada 30 s. Travado, o
+  contêiner fica `unhealthy` e o `vigia.sh` (cron de 5 min) reinicia e avisa o Kuma como "down",
+  com o nome. Na tela: `/admin` → Saúde do sistema mostra o worker (no ar ou parado) e a última
+  execução de cada rotina (avisos a cada 15 min, automações às 10 h, avisos da assinatura às 9 h e
+  limpeza às 3h30), com "Atrasada" quando passa do prazo.
 - Backup: ver docs/restaurar.md.
 
 ## IP real na auditoria

@@ -16,6 +16,7 @@ import { ClubeOnlineService } from './clube/clube-online.service.js';
 import { EsperaController } from './agenda/espera.controller.js';
 import { provedorCobranca } from './cobranca/provedor.js';
 import { WebhookAsaasController } from './cobranca/webhook-asaas.controller.js';
+import { WebhooksRecusados } from './comum/webhooks-recusados.js';
 import { AutenticacaoGuard, PermissaoGuard } from './auth/guardas.js';
 import { limitesDeRequisicao } from './auth/limite.js';
 import { TokensAcesso } from './auth/tokens.js';
@@ -212,6 +213,7 @@ export class ComumModule {}
     AdminGuard,
     BotService,
     AlertaConexaoService,
+    WebhooksRecusados,
     ConversasService,
     CobrancaService,
     provedorCobranca,

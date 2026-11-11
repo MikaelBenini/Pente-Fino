@@ -5,11 +5,12 @@ import {
   preencher,
   rotuloDoDia,
   textoLembrete,
+  trabalhosDeLembrete,
   variantesTelefone,
   type LembreteDeHorario,
   type SessaoBot,
 } from '@pente-fino/shared';
-import { regrasDaUnidade } from './agenda.js';
+import { lembretesDoAgendamento, regrasDaUnidade } from './agenda.js';
 import { json, mensagensDoBot } from './bot.js';
 import type { Prisma, PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -134,4 +135,31 @@ export async function confirmarPeloCliente(tx: Tx, agendamentoId: string, agora:
     data: { status: 'confirmado', confirmadoEm: agora },
   });
   return r.count > 0;
+}
+
+/**
+ * V4: lembretes dos horários das próximas 48 h, nas unidades com o WhatsApp conectado, que ainda
+ * não saíram. A rotina de 15 min põe de novo na fila: o id é fixo (o que já está lá não duplica)
+ * e o worker confere na hora se o lembrete já saiu. Cobre o lembrete que não entrou na fila
+ * quando o horário foi marcado (Redis fora do ar, por exemplo).
+ */
+export async function lembretesPerdidos(prisma: PrismaClient, contaId: string, agora = new Date()) {
+  return naConta(prisma, contaId, async (tx) => {
+    const horarios = await tx.agendamento.findMany({
+      where: {
+        status: { in: ['agendado', 'confirmado'] },
+        inicio: { gt: agora, lte: new Date(agora.getTime() + 48 * 3_600_000) },
+        OR: [{ lembrete24hEm: null }, { lembrete2hEm: null }],
+        unidade: { botConexao: { status: 'conectado' } },
+      },
+      select: { id: true },
+      orderBy: { inicio: 'asc' },
+      take: 2_000,
+    });
+    const trabalhos: ReturnType<typeof trabalhosDeLembrete> = [];
+    for (const h of horarios)
+      for (const t of await lembretesDoAgendamento(tx, contaId, h.id, agora))
+        if (t.dados.tipo === 'lembrete') trabalhos.push(t as (typeof trabalhos)[number]);
+    return trabalhos;
+  });
 }

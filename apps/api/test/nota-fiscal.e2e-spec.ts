@@ -16,7 +16,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { codigoDoPasso, passoDe } from '../src/admin/totp.js';
 import { PROVEDOR_COBRANCA, type ProvedorCobrancaFalso } from '../src/cobranca/provedor.js';
-import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+import { como, criarApp, criarCenario, noAsaas, type Cenario } from './ajudantes.js';
 
 let app: INestApplication<App>;
 let a: Cenario;
@@ -177,12 +177,14 @@ describe('nota fiscal das mensalidades', () => {
   });
 
   it('webhook do Asaas: a nota chega à fatura da barbearia e à Saúde do sistema', async () => {
-    const webhook = (corpo: object) =>
-      http()
+    const webhook = (corpo: object, registrar = true) => {
+      if (registrar) noAsaas(provedor, corpo);
+      return http()
         .post('/webhooks/asaas')
         .set('asaas-access-token', process.env.ASAAS_WEBHOOK_TOKEN!)
         .send(corpo)
         .expect(200);
+    };
     const conta = await naConta(prisma, a.contaId, (tx) =>
       tx.conta.findUniqueOrThrow({ where: { id: a.contaId } }),
     );
@@ -245,6 +247,16 @@ describe('nota fiscal das mensalidades', () => {
     );
     // Link que não é https não é guardado (vira link na tela da barbearia).
     expect(guardada.pdfUrl).toBeNull();
+
+    // Nota que não existe no Asaas (corpo inventado com o token certo): ignorada.
+    const falsa = await webhook(
+      {
+        event: 'INVOICE_AUTHORIZED',
+        invoice: { id: 'inv_inventada', customer: conta.asaasClienteId, status: 'AUTHORIZED' },
+      },
+      false,
+    );
+    expect(falsa.body.resultado).toBe('ignorado');
 
     // Cliente que não é conta do Pente Fino (ex.: subconta do clube): ignorado.
     const r = await webhook({

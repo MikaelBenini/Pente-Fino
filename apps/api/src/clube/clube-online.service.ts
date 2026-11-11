@@ -37,6 +37,8 @@ import type { PagamentoWebhook } from '../cobranca/cobranca.service.js';
 
 const centavos = (reais: number | null | undefined) => Math.round((reais ?? 0) * 100);
 const PAGO = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED']);
+/** Status da cobrança no Asaas que valem como pagos (o evento sozinho não basta). */
+const STATUS_PAGO = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH']);
 
 @Injectable()
 export class ClubeOnlineService {
@@ -282,7 +284,7 @@ export class ClubeOnlineService {
    * pagamento com as taxas e o repasse. Repetido (mesma cobrança) não conta duas vezes.
    */
   async webhook(contaId: string, evento: string, p: PagamentoWebhook): Promise<string> {
-    if (!PAGO.has(evento) || !p.subscription) return 'ignorado';
+    if (!PAGO.has(evento) || !STATUS_PAGO.has(p.status) || !p.subscription) return 'ignorado';
     return this.banco.naConta(contaId, async (tx) => {
       const a = await tx.assinaturaClubeOnline.findUnique({
         where: { asaasAssinaturaId: p.subscription! },

@@ -11,7 +11,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AssinaturaGuard } from '../src/assinatura/assinatura.guard.js';
 import { PROVEDOR_COBRANCA, type ProvedorCobrancaFalso } from '../src/cobranca/provedor.js';
-import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+import { como, criarApp, criarCenario, noAsaas, type Cenario } from './ajudantes.js';
 
 let app: INestApplication<App>;
 let a: Cenario;
@@ -27,7 +27,8 @@ const conta = () =>
   naConta(prisma, a.contaId, (tx) => tx.conta.findUniqueOrThrow({ where: { id: a.contaId } }));
 const situacao = async () =>
   (await dono.get('/conta/situacao').expect(200)).body as EstadoAssinatura;
-const webhook = (corpo: object, token: string | null = TOKEN) => {
+const webhook = (corpo: object, token: string | null = TOKEN, registrar = true) => {
+  if (registrar) noAsaas(provedor, corpo);
   const r = request(app.getHttpServer()).post('/webhooks/asaas');
   if (token) r.set('asaas-access-token', token);
   return r.send(corpo);
@@ -133,6 +134,32 @@ describe('webhook do Asaas', () => {
       payment: { ...(await pagamento({})), customer: 'cus_de_ninguem' },
     }).expect(200);
     expect(r.body.resultado).toBe('ignorado');
+  });
+
+  it('token certo não basta: vale a cobrança que está no Asaas, não o corpo recebido', async () => {
+    // Cobrança que não existe no Asaas: ignorada, mesmo dizendo que foi paga.
+    const inventada = await webhook(
+      {
+        event: 'PAYMENT_RECEIVED',
+        payment: await pagamento({ id: 'pay_inventado', status: 'RECEIVED', paymentDate: hoje }),
+      },
+      TOKEN,
+      false,
+    ).expect(200);
+    expect(inventada.body.resultado).toBe('ignorado');
+    // No Asaas está pendente; o corpo diz paga e com outro valor: fica pendente, com o valor de lá.
+    noAsaas(provedor, { payment: await pagamento({}) });
+    await webhook(
+      {
+        event: 'PAYMENT_RECEIVED',
+        payment: await pagamento({ status: 'RECEIVED', paymentDate: hoje, value: 1 }),
+      },
+      TOKEN,
+      false,
+    ).expect(200);
+    const d = (await dono.get('/conta/assinatura').expect(200)).body as AssinaturaDetalhe;
+    expect(d.pendente).toMatchObject({ valor: 34980 });
+    expect(d.pendente?.status).not.toBe('paga');
   });
 
   it('cobrança nova → recusada com o motivo → paga, sem duplicar a fatura', async () => {
