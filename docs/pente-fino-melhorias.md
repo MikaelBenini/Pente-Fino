@@ -69,15 +69,15 @@ Itens que se sobrepõem e devem ser feitos juntos:
 
 | ID | Decisão | Padrão adotado até decidir |
 | --- | --- | --- |
-| Painel A1 | Faturamento, lucro e "última visita" pela data do atendimento (competência) | Data do fechamento em todas as telas (concordam entre si) |
-| Painel A2 | "Receber adiantado (sinal)" sem fechar a comanda | Não existe |
+| Painel A1 | Faturamento, lucro e "última visita" pela data do atendimento (competência) | ✅ decidido em 11/11: continua a data do fechamento (bate com o caixa; o dia fechado não muda) |
+| Painel A2 | "Receber adiantado (sinal)" sem fechar a comanda | ✅ aprovado em 11/11: entra no [a-fazer](a-fazer.md) |
 | Painel M6 | Depois de agendar, ficar na Agenda com aviso | ✅ fica na Agenda (`DEPOIS_DE_AGENDAR`) |
 | Painel P4 | Indexar páginas de barbearia que ligarem "Aparecer no Google" | ✅ só com a opção ligada (padrão desligado) |
 | Admin R1 | Cupom LANCAMENTO sem limite de vagas | ✅ decidido em 11/11: sem limite |
 | Admin R3 | Conta "Teste" reativada indevidamente | ✅ decidido em 11/11: "Teste" e "Implantação" são internas; marcar no `/admin` |
 | Admin R6 | Máximo de dias de teste | ✅ 60 (#154) |
-| Site P2 | Lucro por serviço no Pro | Só no Premium (`LUCRO_POR_SERVICO_NO_PRO = false`) |
-| Site P3 | Básico mais competitivo (preço menor ou bot no Básico) | Sem mudança |
+| Site P2 | Lucro por serviço no Pro | Só no Premium até o estudo de planos do [a-fazer](a-fazer.md) |
+| Site P3 | Básico mais competitivo (preço menor ou bot no Básico) | Estudo de planos no [a-fazer](a-fazer.md): o Básico atende uma barbearia; sobe-se pelas funções |
 | Site B6 | Selo do anual | "economize até R$ 504/ano" (feito) |
 
 ## O que depende do dono (dados e produção)
@@ -659,3 +659,21 @@ Situação de cada item (✅ entregue, com o PR):
 - Booksy — https://biz.booksy.com/pt-br/precos
 - Trinks (via comparativo de terceiros, set/2026) — https://www.barbeiro.app/alternativas/trinks
 - ZapCorte e EiBarber (comparativo publicado pela ZapCorte, out/2026) — https://blog.zapcorte.com.br/melhor-app-de-agendamento-para-barbearia-em-2026-mn4o4n2p
+
+### Anexo: comparação com a planilha da barbearia (11/11/2026)
+
+| Ponto | Decisão do dono | Situação |
+| --- | --- | --- |
+| a) Comissão sobre o valor com ou sem desconto | Depois do desconto (como já era) | ✅ sem mudança |
+| b) e d) Mensalidade do clube no faturamento | Entra no dia em que é paga, numa linha própria; o assinante conta como cliente e atendimento; o ticket médio conta só o avulso; bloco "Clube" com mensalidades, atendimentos e valor por atendimento | ✅ branch `feat/clube-no-faturamento` |
+| c) Comissão do assinante | Por atendimento, para quem atendeu (como já era) | ✅ sem mudança |
+| Despesas | Conferidas, estão certas; investimento fora do % de despesas de propósito | ✅ sem mudança |
+
+Aguardando o dono escolher (recomendação: primeiro o preço livre e as despesas fixas, depois o
+preço por barbeiro e a importação):
+
+- preço por barbeiro;
+- serviço com preço livre na comanda (química);
+- repetir as despesas fixas no mês seguinte;
+- importar os meses passados da planilha;
+- lançamento rápido por quantidade.
