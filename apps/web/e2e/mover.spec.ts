@@ -34,6 +34,8 @@ async function agendar(page: Page, cliente: string, dia: string) {
     .first()
     .click();
   await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
+  // Painel M6: fica na Agenda com o aviso; a comanda abre pelo atalho.
+  await page.getByRole('link', { name: 'Abrir comanda' }).click();
   await page.waitForURL(/\/comandas\?id=/);
 }
 
