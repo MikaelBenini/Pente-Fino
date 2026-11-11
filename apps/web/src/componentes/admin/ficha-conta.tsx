@@ -228,10 +228,12 @@ function Conteudo({
   // Padrão: 7 dias depois do fim do teste atual (ou de hoje, se já acabou); nunca encurta sem querer.
   const baseTeste =
     f.testeAte && dataLocal(new Date(f.testeAte)) > hoje ? dataLocal(new Date(f.testeAte)) : hoje;
+  // Sugere +7 dias, mas nunca além do limite do teste (admin R6): a tela não sugere uma data
+  // que o servidor vai recusar.
   const [ate, setAte] = useState(() => {
-    const d = new Date(`${baseTeste}T12:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + 7);
-    return d.toISOString().slice(0, 10);
+    const sugerida = somarDias(baseTeste, 7);
+    const limite = somarDias(hoje, LIMITE_TESTE_DIAS);
+    return sugerida > limite ? limite : sugerida;
   });
   const [motivoTeste, setMotivoTeste] = useState('');
   const opcoesSituacao = acoesPara(f);
