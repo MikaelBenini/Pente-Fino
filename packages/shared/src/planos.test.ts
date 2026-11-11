@@ -206,7 +206,7 @@ describe('cupons', () => {
     });
     expect(avaliarCupom(fundador, { hoje: '2026-11-10', usados: 20 })).toEqual({
       ok: false,
-      motivo: 'As vagas deste cupom acabaram.',
+      motivo: 'Este cupom esgotou: as vagas acabaram.',
     });
     expect(
       avaliarCupom({ ...fundador, validoAte: '2026-11-09' }, { hoje: '2026-11-10', usados: 0 }),

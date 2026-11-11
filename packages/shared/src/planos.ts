@@ -57,14 +57,15 @@ export function diasRestantesTeste(testeAte: Date, agora: Date): number {
 
 /**
  * Oferta de lançamento: 30% em toda mensalidade, enquanto a assinatura estiver ativa, para quem
- * assinar até a data. A urgência vem da data; o limite de vagas existe, mas o contador só
+ * assinar até a data. Sem limite de vagas (decisão do dono em 2026-11-11, admin R1: o site e os
+ * anúncios prometem só a data). Se um dia o cupom ganhar vagas na administração, o contador só
  * aparece quando sobra pouco (um contador cheio passa a ideia de que ninguém assinou).
  */
 export const OFERTA_LANCAMENTO = {
   codigo: 'LANCAMENTO',
   descontoBp: 3000,
   ate: '2027-01-31',
-  vagas: 20,
+  vagas: null,
   mostrarVagasAte: 5,
 } as const;
 
@@ -408,7 +409,7 @@ export function avaliarCupom(
   if (cupom.validoAte && d.hoje > cupom.validoAte)
     return { ok: false, motivo: 'Este cupom já expirou.' };
   if (cupom.vagas !== null && d.usados >= cupom.vagas)
-    return { ok: false, motivo: 'As vagas deste cupom acabaram.' };
+    return { ok: false, motivo: 'Este cupom esgotou: as vagas acabaram.' };
   return { ok: true, descontoBp: cupom.descontoBp, codigo: cupom.codigo };
 }
 
