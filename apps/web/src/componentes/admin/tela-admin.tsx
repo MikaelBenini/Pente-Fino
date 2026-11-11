@@ -6,6 +6,8 @@ import {
   NOME_PAPEL_PLATAFORMA,
   NOME_PLANO,
   PLANOS,
+  TOTAL_PASSOS_ATIVACAO,
+  SEM_ORIGEM,
   type ContaNaPlataforma,
   type RespostaEntrarAdmin,
   type UsuarioPlataformaSessao,
@@ -25,7 +27,7 @@ import { AuditoriaAdmin, EquipeAdmin } from './equipe-admin';
 import { FichaConta } from './ficha-conta';
 import { CobrancaAdmin, InicioAdmin } from './inicio-admin';
 import { ConfiguracoesAdmin, SaudeAdmin } from './config-admin';
-import { NovaVenda, VendasPorVendedor } from './nova-venda';
+import { NovaVenda, VendasPorOrigemAdmin, VendasPorVendedor } from './nova-venda';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
 const NOME_STATUS: Record<ContaNaPlataforma['status'], string> = {
@@ -238,7 +240,16 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     },
     { id: 'contas', rotulo: 'Contas', conteudo: <ContasAdmin u={u} onAbrirConta={setAberta} /> },
     { id: 'cobranca', rotulo: 'Cobrança', conteudo: <CobrancaAdmin onAbrirConta={setAberta} /> },
-    { id: 'vendas', rotulo: 'Vendas', conteudo: <VendasPorVendedor /> },
+    {
+      id: 'vendas',
+      rotulo: 'Vendas',
+      conteudo: (
+        <div className="flex flex-col gap-8">
+          <VendasPorOrigemAdmin />
+          <VendasPorVendedor />
+        </div>
+      ),
+    },
     { id: 'equipe', rotulo: 'Equipe', conteudo: <EquipeAdmin u={u} /> },
     { id: 'auditoria', rotulo: 'Auditoria', conteudo: <AuditoriaAdmin onAbrirConta={setAberta} /> },
     { id: 'configuracoes', rotulo: 'Configurações', conteudo: <ConfiguracoesAdmin /> },
@@ -261,14 +272,18 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
   );
 }
 
-type Ordem = 'criada' | 'nome' | 'acesso' | 'fechadas' | 'teste';
+type Ordem = 'criada' | 'nome' | 'acesso' | 'fechadas' | 'teste' | 'ativacao';
 const ORDENAR: Record<Ordem, (a: ContaNaPlataforma, b: ContaNaPlataforma) => number> = {
   criada: (a, b) => b.criadaEm.localeCompare(a.criadaEm),
   nome: (a, b) => a.nome.localeCompare(b.nome, 'pt-BR'),
   acesso: (a, b) => (a.ultimoAcessoEm ?? '').localeCompare(b.ultimoAcessoEm ?? ''),
   fechadas: (a, b) => b.fechadas7Dias - a.fechadas7Dias,
   teste: (a, b) => (a.testeAte ?? '9').localeCompare(b.testeAte ?? '9'),
+  ativacao: (a, b) => a.ativacao - b.ativacao || b.criadaEm.localeCompare(a.criadaEm),
 };
+
+/** Primeira coluna presa ao rolar a tabela para o lado (admin U2). */
+const FIXA = 'sticky left-0 z-10 bg-superficie';
 
 /** Planilha (CSV com ponto e vírgula, abre direto no Excel em português). */
 function baixarCsv(contas: ContaNaPlataforma[]) {
@@ -288,6 +303,8 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
       'Último acesso',
       'Cobrança',
       'Conta interna',
+      'Origem',
+      'Ativação',
     ],
     ...contas.map((c) => [
       c.nome,
@@ -303,6 +320,8 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
       c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '',
       c.cobrancaAutomatica ? 'Asaas' : 'Manual',
       c.interna ? 'Sim' : 'Não',
+      c.origem ?? SEM_ORIGEM,
+      `${c.ativacao}/${TOTAL_PASSOS_ATIVACAO}`,
     ]),
   ];
   const texto = '\ufeff' + linhas.map((l) => l.map(campo).join(';')).join('\r\n');
@@ -411,6 +430,7 @@ function ContasAdmin({
             { valor: 'teste', rotulo: 'Teste acabando' },
             { valor: 'acesso', rotulo: 'Sem acesso há mais tempo' },
             { valor: 'fechadas', rotulo: 'Mais comandas na semana' },
+            { valor: 'ativacao', rotulo: 'Menos configuradas' },
           ]}
         />
         <Botao
@@ -433,6 +453,8 @@ function ContasAdmin({
                   'Barbearia',
                   'Plano',
                   'Situação',
+                  'Ativação',
+                  'Origem',
                   'Criada',
                   'Unidades',
                   'Profissionais',
@@ -440,8 +462,8 @@ function ContasAdmin({
                   'Fechadas (7 dias)',
                   'Última fechada',
                   'Último acesso',
-                ].map((c) => (
-                  <th key={c} scope="col" className={th}>
+                ].map((c, i) => (
+                  <th key={c} scope="col" className={i === 0 ? `${th} ${FIXA}` : th}>
                     {c}
                   </th>
                 ))}
@@ -450,7 +472,7 @@ function ContasAdmin({
             <tbody>
               {filtradas.map((c) => (
                 <tr key={c.id} className="border-b border-borda">
-                  <th scope="row" className={`${td} font-semibold`}>
+                  <th scope="row" className={`${td} ${FIXA} font-semibold`}>
                     <button
                       type="button"
                       onClick={() => onAbrirConta(c.id)}
@@ -474,6 +496,13 @@ function ContasAdmin({
                         até {formatarData(c.testeAte)}
                       </span>
                     )}
+                  </td>
+                  <td className={`${td} tabular-nums whitespace-nowrap`}>
+                    {c.ativacao}/{TOTAL_PASSOS_ATIVACAO}
+                    <span className="sr-only"> primeiros passos feitos</span>
+                  </td>
+                  <td className={`${td} text-sm`}>
+                    {c.origem ?? <span className="text-tinta-suave">{SEM_ORIGEM}</span>}
                   </td>
                   <td className={`${td} tabular-nums`}>{formatarData(c.criadaEm)}</td>
                   <td className={`${td} tabular-nums`}>{c.unidades}</td>

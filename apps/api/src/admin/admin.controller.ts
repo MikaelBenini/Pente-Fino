@@ -20,6 +20,13 @@ import {
   contaInternaSchema,
   mudarTesteContaSchema,
   registrarPagamentoSchema,
+  notaInternaSchema,
+  vendasPorOrigem,
+  origemCadastroSchema,
+  resumoDaOrigem,
+  type NotaInterna,
+  type NotaInternaEntrada,
+  type VendasPorOrigem,
   venderContaSchema,
   type VendaCriada,
   type VendasDoVendedor,
@@ -227,6 +234,19 @@ export class AdminController {
     return this.contasServico.registrarPagamento(id, d, a, ip);
   }
 
+  @Post('contas/:id/notas')
+  @PapeisPlataforma('admin')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Nota interna da equipe sobre a conta (a barbearia não vê)' })
+  anotar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(notaInternaSchema) d: NotaInternaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<NotaInterna> {
+    return this.contasServico.anotar(id, d, a, ip);
+  }
+
   @Post('contas')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -245,5 +265,26 @@ export class AdminController {
   @ApiOperation({ summary: 'Vendas por vendedor: contas criadas, ativadas pelo dono e pagas' })
   vendas(): Promise<VendasDoVendedor[]> {
     return this.vendasServico.vendas();
+  }
+
+  @Get('vendas/origens')
+  @PapeisPlataforma('admin')
+  @ApiOperation({
+    summary: 'Vendas por origem do cadastro: cadastros, conversão do teste e receita paga',
+  })
+  async vendasPorOrigem(): Promise<VendasPorOrigem[]> {
+    const db = this.banco.prisma;
+    const [contas, faturas] = await Promise.all([contasDaPlataforma(db), faturasDaPlataforma(db)]);
+    return vendasPorOrigem({
+      contas: contas.map((c) => ({
+        id: c.id,
+        origem: resumoDaOrigem(origemCadastroSchema.safeParse(c.origem).data),
+        status: c.status,
+        interna: c.interna,
+      })),
+      faturasPagas: faturas
+        .filter((f) => f.status === 'paga')
+        .map((f) => ({ contaId: f.conta_id, valor: f.valor })),
+    });
   }
 }

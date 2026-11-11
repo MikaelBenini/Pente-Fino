@@ -1,5 +1,5 @@
 import type { LinhaContaPlataforma } from '@pente-fino/db';
-import type { ContaNaPlataforma } from '@pente-fino/shared';
+import { origemCadastroSchema, resumoDaOrigem, type ContaNaPlataforma } from '@pente-fino/shared';
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
 const dia = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
@@ -29,5 +29,7 @@ export function contaParaTela(c: LinhaContaPlataforma): ContaNaPlataforma {
     interna: c.interna,
     cortesiaAte: dia(c.cortesia_ate),
     cobrarAPartirDe: dia(c.cobrar_a_partir_de),
+    origem: resumoDaOrigem(origemCadastroSchema.safeParse(c.origem).data),
+    ativacao: Number(c.ativacao) || 0,
   };
 }

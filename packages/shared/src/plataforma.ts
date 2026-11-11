@@ -1,4 +1,6 @@
 // Administração do sistema (Etapa 15.1): quem opera o Pente Fino, fora das contas.
+import { PASSOS_INICIAIS } from './ajuda.js';
+import { documentoValido } from './assinatura.js';
 import { z } from 'zod';
 import type { Ciclo, PlanoConta } from './planos.js';
 
@@ -67,7 +69,31 @@ export interface ContaNaPlataforma {
   cortesiaAte: string | null;
   /** A cobrança manual começa neste dia, AAAA-MM-DD. */
   cobrarAPartirDe: string | null;
+  /** De onde veio o cadastro ("Google Ads · lancamento"); null = direto ou sem dado. */
+  origem: string | null;
+  /** Quantos dos primeiros passos do tutorial a barbearia já fez (de TOTAL_PASSOS_ATIVACAO). */
+  ativacao: number;
 }
+
+/** Os passos do tutorial "Primeiros passos" que contam na ativação (admin U2). */
+export const TOTAL_PASSOS_ATIVACAO = PASSOS_INICIAIS.length;
+
+/** Uma nota interna da equipe sobre uma conta (admin U3). A barbearia não vê. */
+export interface NotaInterna {
+  id: string;
+  texto: string;
+  autor: string | null;
+  criadoEm: string;
+}
+
+export const notaInternaSchema = z.object({
+  texto: z
+    .string()
+    .trim()
+    .min(3, { error: 'Escreva a nota (pelo menos 3 letras).' })
+    .max(2000, { error: 'No máximo 2.000 letras.' }),
+});
+export type NotaInternaEntrada = z.infer<typeof notaInternaSchema>;
 
 // ─── Ações numa conta (sempre com motivo, na auditoria da plataforma) ─────
 
@@ -191,6 +217,10 @@ export interface FichaContaPlataforma {
   profissionais: number;
   faturas: FaturaNaPlataforma[];
   historico: EventoDaConta[];
+  /** Quantos dos primeiros passos do tutorial a barbearia fez (de TOTAL_PASSOS_ATIVACAO). */
+  ativacao: number;
+  /** Notas da equipe sobre a conta (a barbearia não vê), das mais novas. */
+  notas: NotaInterna[];
 }
 
 // ─── Venda presencial ─────────────────────────────────────────────────────
@@ -219,6 +249,14 @@ export const venderContaSchema = z.object({
   diasTeste: z.number().int().min(0).max(60).default(14),
   /** Cupom de desconto (opcional). */
   cupom: z.string().trim().max(30).optional(),
+  /** CPF ou CNPJ de quem paga (opcional na venda; o Asaas pede antes da cobrança automática). */
+  documento: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ''))
+    .refine((v) => v === '' || documentoValido(v), { error: 'CPF ou CNPJ inválido.' })
+    .transform((v) => v || null)
+    .nullable()
+    .optional(),
 });
 export type VenderContaEntrada = z.infer<typeof venderContaSchema>;
 

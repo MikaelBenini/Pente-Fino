@@ -1634,8 +1634,9 @@ model UsuarioPlataforma {
   criadoEm         DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime        @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  sessoes    SessaoPlataforma[]
-  auditorias AuditoriaPlataforma[]
+  sessoes       SessaoPlataforma[]
+  auditorias    AuditoriaPlataforma[]
+  notasInternas NotaInternaConta[]
 
   @@map("usuario_plataforma")
 }
@@ -1655,6 +1656,22 @@ model SessaoPlataforma {
 
   @@index([usuarioId])
   @@map("sessao_plataforma")
+}
+
+/// Notas internas da equipe da plataforma sobre uma conta (admin U3): combinados, contexto da
+/// venda, o que o dono pediu. A barbearia nunca vê. Fora do RLS das barbearias (como a auditoria).
+model NotaInternaConta {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// Conta da barbearia (sem chave estrangeira, como na auditoria).
+  contaAfetadaId String   @map("conta_afetada_id") @db.Uuid
+  autorId        String?  @map("autor_id") @db.Uuid
+  texto          String
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  autor UsuarioPlataforma? @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([contaAfetadaId, criadoEm])
+  @@map("nota_interna_conta")
 }
 
 /// Toda ação de admin e vendedor: quem, quando, em que conta, antes e depois. Imutável.

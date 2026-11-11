@@ -28,6 +28,8 @@ const conta = (o: Partial<ContaNaPlataforma>): ContaNaPlataforma => ({
   fechadas7Dias: 10,
   ultimaFechadaEm: '2026-11-19T12:00:00Z',
   ultimoAcessoEm: '2026-11-19T12:00:00Z',
+  origem: null,
+  ativacao: 8,
   interna: false,
   cortesiaAte: null,
   cobrarAPartirDe: null,

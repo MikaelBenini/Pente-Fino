@@ -47,6 +47,7 @@ export * from './plataforma.js';
 export * from './situacao-conta.js';
 export * from './metricas-plataforma.js';
 export * from './plataforma-gestao.js';
+export * from './ficha-admin.js';
 export * from './protecao-cadastro.js';
 export * from './clube-online.js';
 export * from './nota-fiscal.js';

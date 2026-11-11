@@ -337,6 +337,7 @@ export type FiltroAuditoria = z.infer<typeof filtroAuditoriaSchema>;
 
 /** Nome das ações na tela; o que não estiver aqui aparece como está gravado. */
 export const ROTULO_ACAO_PLATAFORMA: Readonly<Record<string, string>> = {
+  nota_interna: 'Escreveu uma nota interna',
   entrar: 'Entrou',
   sair: 'Saiu',
   entrar_recusado: 'Login recusado',
