@@ -4,12 +4,14 @@
 // da assinatura das barbearias. Aqui: conferir os dados fiscais no Asaas, escolher o serviço e o
 // ISS, ligar e aplicar às assinaturas que já existem.
 import {
+  formatarDataHora,
   NOME_QUANDO_EMITIR_NOTA,
   QUANDO_EMITIR_NOTA,
   type ConfigNotaFiscal,
+  type NotasFiscaisNaSaude,
+  type ProntidaoNotaFiscal,
   type ResultadoAplicarNota,
   type ServicoMunicipal,
-  type SituacaoFiscalAsaas,
 } from '@pente-fino/shared';
 import { Botao, Campo, CampoTexto, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,33 +29,75 @@ const numero = (t: string) => {
 };
 const texto = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 
-function SituacaoAsaas() {
+const CHAVE_SITUACAO = ['admin', 'nota-fiscal', 'asaas'] as const;
+
+/**
+ * Dados fiscais no Asaas e o que falta para ligar (admin R2). Enquanto faltar algo, a emissão
+ * não liga e nada muda para as barbearias: as mensalidades seguem cobradas como sempre.
+ */
+function SituacaoAsaas({ ligada }: { ligada: boolean }) {
   const q = useQuery({
-    queryKey: ['admin', 'nota-fiscal', 'asaas'],
-    queryFn: () => adminApi<SituacaoFiscalAsaas>(`${BASE}/asaas`),
+    queryKey: CHAVE_SITUACAO,
+    queryFn: () => adminApi<ProntidaoNotaFiscal>(`${BASE}/asaas`),
     retry: false,
   });
+  const conferir = (
+    <Botao
+      variante="secundario"
+      className="self-start"
+      carregando={q.isFetching}
+      onClick={() => void q.refetch()}
+    >
+      Conferir de novo no Asaas
+    </Botao>
+  );
   if (q.isPending) return <p className="text-sm text-tinta-suave">Conferindo no Asaas…</p>;
-  if (q.isError) return <Aviso tom="erro">{mensagemDe(q.error)}</Aviso>;
-  const s = q.data;
-  if (!s.configurada)
+  if (q.isError)
     return (
-      <Aviso tom="erro">
-        Os dados fiscais da empresa ainda não estão no Asaas. No painel do Asaas, abra Notas fiscais
-        → Configurações e preencha a inscrição municipal, o regime e o acesso à prefeitura
-        (certificado ou senha). Depois volte aqui.
-      </Aviso>
+      <div className="flex flex-col gap-2">
+        <Aviso tom="erro">{mensagemDe(q.error)}</Aviso>
+        {conferir}
+      </div>
     );
+  const s = q.data;
   return (
-    <p role="status" className="text-sm text-acao-texto">
-      Dados fiscais no Asaas: inscrição municipal {s.inscricaoMunicipal ?? '—'}
-      {s.simplesNacional === null
-        ? ''
-        : s.simplesNacional
-          ? ' · Simples Nacional'
-          : ' · regime normal'}
-      {s.acessoPrefeitura ? ' · acesso à prefeitura enviado' : ' · falta o acesso à prefeitura'}.
-    </p>
+    <div className="flex flex-col gap-2">
+      {s.configurada && (
+        <p className="text-sm text-tinta-suave">
+          Dados fiscais no Asaas: inscrição municipal {s.inscricaoMunicipal ?? '—'}
+          {s.simplesNacional === null
+            ? ''
+            : s.simplesNacional
+              ? ' · Simples Nacional'
+              : ' · regime normal'}
+          {s.acessoPrefeitura ? ' · acesso à prefeitura enviado' : ''}.
+        </p>
+      )}
+      {s.pendencias.length === 0 ? (
+        <p role="status" className="text-sm font-semibold text-acao-texto">
+          Tudo conferido: a emissão pode ser ligada.
+        </p>
+      ) : (
+        <Aviso tom={ligada ? 'erro' : 'aviso'}>
+          <p className="font-semibold">
+            {ligada
+              ? 'A emissão está ligada, mas as notas não vão sair até resolver:'
+              : 'Antes de ligar a emissão, falta:'}
+          </p>
+          <ul className="mt-1 list-disc pl-5">
+            {s.pendencias.map((p) => (
+              <li key={p.codigo}>{p.mensagem}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm">
+            Enquanto isso, nada muda para as barbearias: as mensalidades seguem cobradas
+            normalmente, só sem nota fiscal.
+            {ligada && ' Desligue a emissão e salve para não acumular notas recusadas no Asaas.'}
+          </p>
+        </Aviso>
+      )}
+      {conferir}
+    </div>
   );
 }
 
@@ -77,17 +121,24 @@ export function NotaFiscalAdmin({ atual }: { atual: ConfigNotaFiscal }) {
   const [servicos, setServicos] = useState<ServicoMunicipal[] | null>(null);
   const [acao, setAcao] = useState<'buscar' | 'salvar' | 'aplicar' | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [pendentes, setPendentes] = useState<string[]>([]);
   const [ok, setOk] = useState<string | null>(null);
   const [aplicado, setAplicado] = useState<ResultadoAplicarNota | null>(null);
 
   async function executar(qual: NonNullable<typeof acao>, f: () => Promise<string | null>) {
     setAcao(qual);
     setErro(null);
+    setPendentes([]);
     setOk(null);
     try {
       setOk(await f());
     } catch (e) {
-      setErro(mensagemDe(e));
+      if (e instanceof ErroApi && e.codigo === 'nota_fiscal_pendente') {
+        setErro(e.message);
+        setPendentes(e.campos.map((c) => c.mensagem));
+        // A tela passa a mostrar a situação de agora.
+        void cliente.invalidateQueries({ queryKey: CHAVE_SITUACAO });
+      } else setErro(mensagemDe(e));
     } finally {
       setAcao(null);
     }
@@ -132,6 +183,7 @@ export function NotaFiscalAdmin({ atual }: { atual: ConfigNotaFiscal }) {
         },
       });
       await cliente.invalidateQueries({ queryKey: ['admin', 'configuracoes'] });
+      await cliente.invalidateQueries({ queryKey: CHAVE_SITUACAO });
       return ativa
         ? 'Salvo. As assinaturas novas já saem com nota; use "Aplicar às assinaturas atuais" para as que existem.'
         : 'Salvo. A nota está desligada para as assinaturas novas.';
@@ -154,10 +206,11 @@ export function NotaFiscalAdmin({ atual }: { atual: ConfigNotaFiscal }) {
       </h2>
       <p className="text-sm text-tinta-suave">
         O Asaas emite a nota de serviço (NFS-e) de cada mensalidade que as barbearias pagam pelo
-        sistema e manda por e-mail para elas. Confira o código do serviço e o ISS com o seu contador
-        antes de ligar.
+        sistema e manda por e-mail para elas; a nota também aparece na fatura, em Configurações →
+        Assinatura. Confira o código do serviço e o ISS com o seu contador antes de ligar. Dá para
+        deixar tudo preenchido e salvo com a emissão desligada.
       </p>
-      <SituacaoAsaas />
+      <SituacaoAsaas ligada={atual.ativa} />
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="min-w-56 flex-1">
@@ -289,7 +342,18 @@ export function NotaFiscalAdmin({ atual }: { atual: ConfigNotaFiscal }) {
           Aplicar às assinaturas atuais
         </Botao>
       </div>
-      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {erro && (
+        <Aviso tom="erro">
+          {erro}
+          {pendentes.length > 0 && (
+            <ul className="mt-1 list-disc pl-5">
+              {pendentes.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          )}
+        </Aviso>
+      )}
       {ok && (
         <p role="status" className="text-sm text-acao-texto">
           {ok}
@@ -300,6 +364,37 @@ export function NotaFiscalAdmin({ atual }: { atual: ConfigNotaFiscal }) {
           {aplicado.falhas.length} assinatura(s) não aceitaram:{' '}
           {aplicado.falhas.map((f) => `${f.conta} (${f.motivo})`).join('; ')}
         </Aviso>
+      )}
+    </section>
+  );
+}
+
+/** Saúde do sistema: a emissão está ligada? A última nota saiu? Alguma não saiu, e por quê? */
+export function NotasNaSaude({ n }: { n: NotasFiscaisNaSaude }) {
+  return (
+    <section aria-labelledby="titulo-notas-saude" className="flex flex-col gap-2">
+      <h2 id="titulo-notas-saude" className="text-lg font-semibold">
+        Nota fiscal das mensalidades
+      </h2>
+      <p className="text-sm text-tinta-suave">
+        {n.ativa ? 'Emissão ligada' : 'Emissão desligada (as mensalidades saem sem nota)'}
+        {n.ultimaEmitida
+          ? ` · última emitida em ${formatarDataHora(n.ultimaEmitida.quando)} (${n.ultimaEmitida.conta}${n.ultimaEmitida.numero ? `, nº ${n.ultimaEmitida.numero}` : ''})`
+          : ' · nenhuma nota emitida ainda'}
+        {n.aCaminho > 0 ? ` · ${n.aCaminho} a caminho da prefeitura` : ''}.
+      </p>
+      {n.erros.length > 0 && (
+        <ul className="flex flex-col gap-1 text-sm" aria-label="Notas que não saíram">
+          {n.erros.map((e, i) => (
+            <li key={i} className="flex flex-col border-b border-borda py-1">
+              <span>
+                <strong>{e.conta}</strong> ·{' '}
+                <span className="tabular-nums text-tinta-suave">{formatarDataHora(e.quando)}</span>
+              </span>
+              <span className="text-perigo-texto">{e.mensagem}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

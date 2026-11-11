@@ -135,6 +135,27 @@ export function conexoesCaidasPlataforma(prisma: PrismaClient) {
   >`SELECT * FROM plataforma_conexoes_caidas()`;
 }
 
+/** Notas fiscais das mensalidades (Saúde do sistema): as dos últimos dias e as a caminho. */
+export function notasFiscaisPlataforma(prisma: PrismaClient, desde: Date) {
+  return prisma.$queryRaw<
+    {
+      conta: string;
+      status: 'agendada' | 'enviada' | 'emitida' | 'erro' | 'cancelando' | 'cancelada';
+      numero: string | null;
+      mensagem: string | null;
+      atualizado_em: Date;
+    }[]
+  >`SELECT * FROM plataforma_notas_fiscais(${desde}::timestamptz)`;
+}
+
+/** A última nota emitida de qualquer conta (ou nenhuma). */
+export async function ultimaNotaEmitidaPlataforma(prisma: PrismaClient) {
+  const [r] = await prisma.$queryRaw<
+    { conta: string; numero: string | null; emitida_em: Date }[]
+  >`SELECT * FROM plataforma_ultima_nota_emitida()`;
+  return r ?? null;
+}
+
 /** Configuração do SMTP guardada pela administração (senha cifrada); null = usar o .env. */
 export async function configuracaoSmtp(prisma: PrismaClient): Promise<unknown> {
   const [r] = await prisma.$queryRaw<{ c: unknown }[]>`SELECT configuracao_smtp() AS c`;

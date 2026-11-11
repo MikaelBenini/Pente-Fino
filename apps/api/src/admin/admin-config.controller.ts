@@ -18,6 +18,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   cifrar,
   conexoesCaidasPlataforma,
+  notasFiscaisPlataforma,
+  ultimaNotaEmitidaPlataforma,
   contasDaPlataforma,
   configuracaoDoSistema,
   configuracaoSmtp,
@@ -55,6 +57,7 @@ import {
   type ConfiguracaoPublica,
   type SaudeDoSistema,
   type ExecucaoLimpezaNaTela,
+  lerConfigNotaFiscal,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { z } from 'zod';
@@ -126,9 +129,11 @@ export class SaudeService implements OnModuleDestroy {
       orderBy: { iniciadaEm: 'desc' },
       take: 7,
     });
+    const notasFiscais = await this.notasFiscais();
     return {
       banco,
       filas,
+      notasFiscais,
       conexoesCaidas: caidas.map((x) => ({
         contaId: x.conta_id,
         conta: x.conta,
@@ -144,6 +149,29 @@ export class SaudeService implements OnModuleDestroy {
         retidas: e.retidas as ExecucaoLimpezaNaTela['retidas'],
         erro: e.erro,
       })),
+    };
+  }
+
+  /** Nota fiscal das mensalidades: ligada?, a última emitida e as que não saíram em 30 dias. */
+  private async notasFiscais(): Promise<SaudeDoSistema['notasFiscais']> {
+    const db = this.banco.prisma;
+    const config = await db.configuracaoPlataforma.findUnique({ where: { chave: 'nota_fiscal' } });
+    const recentes = await notasFiscaisPlataforma(db, new Date(Date.now() - 30 * DIA_MS));
+    const ultima = await ultimaNotaEmitidaPlataforma(db);
+    return {
+      ativa: lerConfigNotaFiscal(config?.valor).ativa,
+      ultimaEmitida: ultima
+        ? { conta: ultima.conta, numero: ultima.numero, quando: ultima.emitida_em.toISOString() }
+        : null,
+      erros: recentes
+        .filter((n) => n.status === 'erro')
+        .slice(0, 20)
+        .map((n) => ({
+          conta: n.conta,
+          mensagem: n.mensagem ?? 'Sem detalhe do Asaas.',
+          quando: n.atualizado_em.toISOString(),
+        })),
+      aCaminho: recentes.filter((n) => n.status === 'agendada' || n.status === 'enviada').length,
     };
   }
 

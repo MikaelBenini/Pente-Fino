@@ -57,6 +57,25 @@ export class ContaController {
         take: 24,
       });
       const dia = (d: Date) => d.toISOString().slice(0, 10);
+      // Nota fiscal de cada mensalidade, pelo pagamento do Asaas (admin R2).
+      const pagamentos = faturas.flatMap((f) => (f.idExterno ? [f.idExterno] : []));
+      const notas = pagamentos.length
+        ? await tx.notaFiscalMensalidade.findMany({
+            where: { pagamentoId: { in: pagamentos } },
+            orderBy: { atualizadoEm: 'desc' },
+          })
+        : [];
+      const notaDe = (idExterno: string | null) => {
+        // A mais recente vale: a cancelada que foi reemitida dá lugar à nova.
+        const n = idExterno ? notas.find((x) => x.pagamentoId === idExterno) : undefined;
+        return n
+          ? {
+              status: n.status,
+              numero: n.numero,
+              pdfUrl: n.status === 'emitida' ? n.pdfUrl : null,
+            }
+          : null;
+      };
       const lista: FaturaDetalhe[] = faturas.map((f) => ({
         id: f.id,
         plano: f.plano,
@@ -70,6 +89,7 @@ export class ContaController {
         pagaEm: f.pagaEm?.toISOString() ?? null,
         motivoRecusa: f.motivoRecusa,
         linkPagamento: f.linkPagamento,
+        notaFiscal: notaDe(f.idExterno),
       }));
       const pendente =
         [...lista]

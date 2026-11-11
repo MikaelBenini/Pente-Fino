@@ -4,9 +4,12 @@ import type { INestApplication } from '@nestjs/common';
 import { hash } from '@node-rs/argon2';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
 import type {
+  AssinaturaDetalhe,
   ConfigNotaFiscalEntrada,
+  ProntidaoNotaFiscal,
   ResultadoAplicarNota,
   RespostaEntrarAdmin,
+  SaudeDoSistema,
 } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
@@ -96,13 +99,47 @@ describe('nota fiscal das mensalidades', () => {
   it('confere os dados fiscais e busca o serviço da prefeitura no Asaas', async () => {
     expect((await adm.get(`${URL}/asaas`).expect(200)).body).toMatchObject({
       configurada: true,
-      inscricaoMunicipal: '123456',
+      inscricaoMunicipal: '4.821.390-7',
+      pendencias: [],
     });
     const servicos = (await adm.get(`${URL}/servicos?busca=1.05`).expect(200)).body;
     expect(servicos).toEqual([expect.objectContaining({ id: 'svc_falso_105', iss: 2 })]);
     // Só a administração.
     const dono = await como(app, a.emails.dono);
     await dono.get(`${URL}/asaas`).expect(401);
+  });
+
+  // Admin R2: a auditoria de 10/11 achou a emissão ligada com a inscrição "123456".
+  it('sem o acesso fiscal: não liga, mas salva desligada e tudo segue igual', async () => {
+    const pronta = { ...provedor.situacao };
+    provedor.situacao = { ...pronta, inscricaoMunicipal: '123456', acessoPrefeitura: false };
+    try {
+      const r = await adm.put(URL, config).expect(422);
+      expect(r.body.erro.codigo).toBe('nota_fiscal_pendente');
+      expect(r.body.erro.campos.map((c: { campo: string }) => c.campo)).toEqual([
+        'inscricao_exemplo',
+        'sem_acesso_prefeitura',
+      ]);
+      expect((await adm.get('/admin/configuracoes').expect(200)).body.notaFiscal.ativa).toBe(false);
+      // Desligada, salva: fica pronta para quando houver o acesso.
+      await adm.put(URL, { ...config, ativa: false }).expect(204);
+      const p = (await adm.get(`${URL}/asaas`).expect(200)).body as ProntidaoNotaFiscal;
+      expect(p.pendencias.map((x) => x.codigo)).toEqual([
+        'inscricao_exemplo',
+        'sem_acesso_prefeitura',
+      ]);
+      // Sem dados fiscais no Asaas: o mesmo, com o motivo certo.
+      provedor.situacao = {
+        configurada: false,
+        inscricaoMunicipal: null,
+        simplesNacional: null,
+        acessoPrefeitura: false,
+      };
+      const r2 = await adm.put(URL, config).expect(422);
+      expect(r2.body.erro.campos[0].campo).toBe('sem_dados_fiscais');
+    } finally {
+      provedor.situacao = pronta;
+    }
   });
 
   it('salva com validação; assinatura nova já sai com a nota; aplicar cobre as existentes', async () => {
@@ -137,5 +174,83 @@ describe('nota fiscal das mensalidades', () => {
     const r2 = (await adm.post(`${URL}/aplicar`).expect(200)).body as ResultadoAplicarNota;
     expect(r2.falhas.find((f) => f.conta === conta.nome)).toBeUndefined();
     expect(provedor.notas.has(assinatura)).toBe(true);
+  });
+
+  it('webhook do Asaas: a nota chega à fatura da barbearia e à Saúde do sistema', async () => {
+    const webhook = (corpo: object) =>
+      http()
+        .post('/webhooks/asaas')
+        .set('asaas-access-token', process.env.ASAAS_WEBHOOK_TOKEN!)
+        .send(corpo)
+        .expect(200);
+    const conta = await naConta(prisma, a.contaId, (tx) =>
+      tx.conta.findUniqueOrThrow({ where: { id: a.contaId } }),
+    );
+    const fatura = await naConta(prisma, a.contaId, (tx) =>
+      tx.faturaAssinatura.findFirstOrThrow({ where: { idExterno: { not: null } } }),
+    );
+    const id = `inv_${randomUUID().slice(0, 12)}`;
+    const nota = (status: string, extra: object = {}) => ({
+      id,
+      customer: conta.asaasClienteId,
+      payment: fatura.idExterno,
+      status,
+      value: fatura.valor / 100,
+      ...extra,
+    });
+    const dono = await como(app, a.emails.dono);
+    const naFatura = async () =>
+      ((await dono.get('/conta/assinatura').expect(200)).body as AssinaturaDetalhe).faturas.find(
+        (f) => f.id === fatura.id,
+      )!.notaFiscal;
+
+    expect(await naFatura()).toBeNull();
+    await webhook({ event: 'INVOICE_CREATED', invoice: nota('SCHEDULED') });
+    expect(await naFatura()).toEqual({ status: 'agendada', numero: null, pdfUrl: null });
+    await webhook({
+      event: 'INVOICE_AUTHORIZED',
+      invoice: nota('AUTHORIZED', { number: '1234', pdfUrl: 'https://www.asaas.com/n/pdf/1' }),
+    });
+    // Repetido e atrasado (o Asaas avisa "pelo menos uma vez"): a nota emitida não volta atrás.
+    await webhook({ event: 'INVOICE_SYNCHRONIZED', invoice: nota('SCHEDULED') });
+    expect(await naFatura()).toEqual({
+      status: 'emitida',
+      numero: '1234',
+      pdfUrl: 'https://www.asaas.com/n/pdf/1',
+    });
+
+    // Nota que não saiu: a barbearia vê "em emissão"; a administração vê o motivo.
+    const outra = `inv_${randomUUID().slice(0, 12)}`;
+    await webhook({
+      event: 'INVOICE_ERROR',
+      invoice: {
+        id: outra,
+        customer: conta.asaasClienteId,
+        payment: `pay_${randomUUID().slice(0, 8)}`,
+        status: 'ERROR',
+        statusDescription: 'Inscrição municipal inválida para o município.',
+        pdfUrl: 'javascript:alert(1)',
+      },
+    });
+    const saude = (await adm.get('/admin/saude').expect(200)).body as SaudeDoSistema;
+    expect(saude.notasFiscais.ultimaEmitida).toMatchObject({ conta: conta.nome, numero: '1234' });
+    expect(saude.notasFiscais.erros).toContainEqual(
+      expect.objectContaining({
+        conta: conta.nome,
+        mensagem: 'Inscrição municipal inválida para o município.',
+      }),
+    );
+    const guardada = await naConta(prisma, a.contaId, (tx) =>
+      tx.notaFiscalMensalidade.findUniqueOrThrow({ where: { idExterno: outra } }),
+    );
+    // Link que não é https não é guardado (vira link na tela da barbearia).
+    expect(guardada.pdfUrl).toBeNull();
+
+    // Cliente que não é conta do Pente Fino (ex.: subconta do clube): ignorado.
+    const r = await webhook({
+      event: 'INVOICE_AUTHORIZED',
+      invoice: { id: 'inv_de_fora', customer: 'cus_de_fora', status: 'AUTHORIZED' },
+    });
+    expect(r.body.resultado).toBe('ignorado');
   });
 });

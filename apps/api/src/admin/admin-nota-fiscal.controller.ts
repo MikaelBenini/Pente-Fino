@@ -15,13 +15,15 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { assinaturasAsaasPlataforma } from '@pente-fino/db';
 import {
   configNotaFiscalSchema,
+  lerConfigNotaFiscal,
+  pendenciasNotaFiscal,
   type ConfigNotaFiscal,
+  type ProntidaoNotaFiscal,
   type ResultadoAplicarNota,
   type ServicoMunicipal,
-  type SituacaoFiscalAsaas,
 } from '@pente-fino/shared';
 import { Publico } from '../auth/decoradores.js';
-import { Erros } from '../comum/erros.js';
+import { ErroApp, Erros } from '../comum/erros.js';
 import { Corpo } from '../comum/validacao.js';
 import { ErroCobranca, PROVEDOR_COBRANCA, type ProvedorCobranca } from '../cobranca/provedor.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
@@ -53,6 +55,23 @@ export class AdminNotaFiscalController {
     }
   }
 
+  /**
+   * Admin R2: ligar a emissão (ou aplicar às assinaturas) só com os dados fiscais conferidos no
+   * Asaas. Com pendência, nada muda para as barbearias: a nota fica desligada e as mensalidades
+   * seguem cobradas.
+   */
+  private async exigirPronta(c: ConfigNotaFiscal): Promise<void> {
+    const situacao = await this.noAsaas(() => this.provedor.situacaoFiscal());
+    const pendencias = pendenciasNotaFiscal(situacao, c);
+    if (pendencias.length > 0)
+      throw new ErroApp(
+        HttpStatus.UNPROCESSABLE_ENTITY,
+        'nota_fiscal_pendente',
+        'A emissão continua desligada até resolver o que falta.',
+        pendencias.map((p) => ({ campo: p.codigo, mensagem: p.mensagem })),
+      );
+  }
+
   @Put()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Nota fiscal das mensalidades: serviço, ISS e quando emitir' })
@@ -63,6 +82,8 @@ export class AdminNotaFiscalController {
   ): Promise<void> {
     const db = this.banco.prisma;
     const antes = await db.configuracaoPlataforma.findUnique({ where: { chave: CHAVE } });
+    // Desligada, salva sempre (deixa tudo pronto para quando houver o acesso).
+    if (d.ativa) await this.exigirPronta(d);
     await db.configuracaoPlataforma.upsert({
       where: { chave: CHAVE },
       create: { chave: CHAVE, valor: d, atualizadoPorId: a.id },
@@ -78,9 +99,18 @@ export class AdminNotaFiscalController {
   }
 
   @Get('asaas')
-  @ApiOperation({ summary: 'Dados fiscais da conta do Pente Fino no Asaas (inscrição, acesso)' })
-  async situacao(): Promise<SituacaoFiscalAsaas> {
-    return this.noAsaas(() => this.provedor.situacaoFiscal());
+  @ApiOperation({
+    summary: 'Dados fiscais da conta do Pente Fino no Asaas e o que falta para ligar a emissão',
+  })
+  async situacao(): Promise<ProntidaoNotaFiscal> {
+    const situacao = await this.noAsaas(() => this.provedor.situacaoFiscal());
+    const guardada = await this.banco.prisma.configuracaoPlataforma.findUnique({
+      where: { chave: CHAVE },
+    });
+    return {
+      ...situacao,
+      pendencias: pendenciasNotaFiscal(situacao, lerConfigNotaFiscal(guardada?.valor)),
+    };
   }
 
   @Get('servicos')
@@ -105,6 +135,7 @@ export class AdminNotaFiscalController {
     const c = configNotaFiscalSchema.safeParse(guardada?.valor);
     if (!c.success || !c.data.ativa)
       throw Erros.conflito('Ligue e salve a nota fiscal antes de aplicar às assinaturas.');
+    await this.exigirPronta(c.data);
     const r: ResultadoAplicarNota = { aplicadas: 0, falhas: [] };
     // Uma por vez: o Asaas limita pedidos por minuto e a lista é pequena.
     for (const s of await assinaturasAsaasPlataforma(db)) {

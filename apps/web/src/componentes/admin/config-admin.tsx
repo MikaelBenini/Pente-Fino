@@ -24,7 +24,7 @@ import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
 import { LimpezaNaSaude } from './limpeza-admin';
-import { NotaFiscalAdmin } from './nota-fiscal-admin';
+import { NotaFiscalAdmin, NotasNaSaude } from './nota-fiscal-admin';
 import { useTabelasAdmin } from './precos-admin';
 
 const mensagemDe = (e: unknown) =>
@@ -341,6 +341,7 @@ export function SaudeAdmin() {
                 </ul>
               )}
             </section>
+            <NotasNaSaude n={d.notasFiscais} />
             <LimpezaNaSaude execucoes={d.limpeza} />
           </div>
         );
