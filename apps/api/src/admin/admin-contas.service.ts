@@ -14,7 +14,9 @@ import {
   formatarData,
   formatarMoeda,
   NOME_PLANO,
+  origemCadastroSchema,
   problemaFimDoTeste,
+  resumoDaOrigem,
   transicaoDaConta,
   valorDaCobranca,
   type AcaoContaEntrada,
@@ -80,12 +82,13 @@ export class AdminContasService {
     return {
       ...(f as unknown as Omit<
         FichaContaPlataforma,
-        'historico' | 'statusAnterior' | 'cortesiaAte' | 'cobrarAPartirDe' | 'interna'
+        'historico' | 'statusAnterior' | 'cortesiaAte' | 'cobrarAPartirDe' | 'interna' | 'origem'
       >),
       statusAnterior: situacao?.statusAnterior ?? null,
       cortesiaAte: situacao?.cortesiaAte ?? null,
       cobrarAPartirDe: situacao?.cobrarAPartirDe ?? null,
       interna: situacao?.interna ?? false,
+      origem: resumoDaOrigem(origemCadastroSchema.safeParse(situacao?.origem).data),
       historico: eventos.map((e) => ({
         acao: e.acao,
         quem: e.usuario?.nome ?? null,

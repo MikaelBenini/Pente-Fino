@@ -695,8 +695,15 @@ opção padrão do briefing, numa constante fácil de trocar.
 **3ª e 4ª prioridade (próximos PRs)**
 
 - [ ] **P3** [DECISÃO DO DONO] Básico mais competitivo (preço menor ou bot no Básico)
-- [ ] **S1–S6** sitemap com todas as páginas, metadados e OG por página, BreadcrumbList/Article/FAQPage, links internos no rodapé, `www`→raiz e `http`→`https` com 301 no Caddy, robots sem `Allow` redundante
-- [ ] **T1–T3** `sign_up` com valor só no sucesso, gclid/gbraid/wbraid/UTM guardados por 90 dias e enviados no cadastro, eventos do funil (`view_planos`, `toggle_ciclo`, `click_cta`, `begin_sign_up`); **T4** consentimento já existe (Consent Mode v2, negado até aceitar)
+- [x] **S1** sitemap com as páginas públicas e as das barbearias que ligaram "Aparecer no Google" (painel P4). As páginas novas da seção N entram quando existirem
+- [x] **S2** título, descrição e canonical em todas as páginas do site e do cadastro; Open Graph pela imagem do site e, na página da barbearia, pela imagem dela (P1)
+- [x] **S3** BreadcrumbList em Planos, Termos e Privacidade (`TrilhaGoogle`, `trilhaJsonLd`); FAQPage e ofertas já existiam; Article fica para o blog (N4)
+- [ ] **S4** links internos no rodapé: entram com as páginas da seção N
+- [x] **S5** `www` e `app.` → raiz com 301 no Caddy (desde 2026-11-07); `http` → `https` pelo próprio Caddy
+- [x] **S6** robots só com `Allow: /` e os `Disallow` (app, API, convite, redefinir senha, `/agendar` que redireciona e o link pessoal `/horario`); `/b/` decide pela própria página
+- [x] **T1** conversão só no sucesso do cadastro, com `value` (o preço por mês do plano com o cupom) e `currency` BRL, em `cadastro_concluido` (o que o GTM já usa) e em `sign_up`. **Dono:** conferir no Tag Assistant e marcar o valor na conversão do Google Ads
+- [x] **T2** gclid, gbraid, wbraid e utm_* (e o domínio de origem) guardados ao chegar: com o aceite, cookie próprio `pf_origem` por 90 dias; sem, só na visita (`lib/origem.ts`, `origemDaVisita`); enviados no cadastro e gravados em `conta.origem` (só os campos conhecidos, `origemCadastroSchema`). A ficha da administração mostra a origem (admin F2, em parte: Contas, Vendas e Início ficam com U2 e U5). Política de privacidade atualizada
+- [x] **T3** eventos do funil: `view_planos`, `toggle_ciclo`, `click_cta` (com a posição: topo, rodapé ou a seção; um ouvinte só para toda chamada ao cadastro), `begin_sign_up`; `play_video`, `use_calculadora` e `click_whatsapp` já existiam. **T4** consentimento já existia (Consent Mode v2)
 - [ ] **N1–N5** páginas por intenção de busca, comparativos (só fatos com data e fonte), calculadoras em URL própria, blog e Sobre/Contato
 - [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
 

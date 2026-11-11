@@ -26,7 +26,7 @@ import {
   TabelaEditavel,
   type LinhaEditavel,
 } from '@pente-fino/ui';
-import { Plus, Scissors } from 'lucide-react';
+import { Pencil, Plus, Scissors } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -172,11 +172,6 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                     {verCusto && <th className={`${th} text-right`}>Custo de produto</th>}
                     <th className={th}>Tipo</th>
                     <th className={`${th} text-right`}>Conta como</th>
-                    {podeEditar && (
-                      <th className={th}>
-                        <span className="sr-only">Ações</span>
-                      </th>
-                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -185,22 +180,43 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                     return (
                       <tr key={s.id} className="border-t border-borda">
                         <td className={`${td} font-semibold`}>
-                          {s.nome} {!s.ativo && <Ficha tom="neutro">Inativo</Ficha>}
+                          {/* Editar pelo próprio nome: a tabela é larga e um botão no fim
+                              ficava fora da tela no notebook. */}
+                          {podeEditar ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditando(s)}
+                              aria-label={`Editar ${s.nome}`}
+                              className="inline-flex min-h-11 items-center gap-2 rounded-md text-left underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+                            >
+                              {s.nome}
+                              <Pencil aria-hidden className="size-4 shrink-0 text-tinta-suave" />
+                            </button>
+                          ) : (
+                            s.nome
+                          )}{' '}
+                          {!s.ativo && <Ficha tom="neutro">Inativo</Ficha>}
                         </td>
                         <td className={`${td} text-tinta-suave`}>{s.categoria ?? '—'}</td>
-                        <td className={`${td} text-right font-denso tabular-nums`}>
+                        <td
+                          className={`${td} text-right font-denso tabular-nums whitespace-nowrap`}
+                        >
                           {s.duracaoMin} min
                         </td>
-                        <td className={`${td} text-right font-denso tabular-nums`}>
+                        <td
+                          className={`${td} text-right font-denso tabular-nums whitespace-nowrap`}
+                        >
                           {faixa(l) ?? <span className="text-tinta-suave">sem preço</span>}
                         </td>
                         {verMargem && lucroReal && (
                           <>
-                            <td className={`${td} text-right font-denso tabular-nums`}>
+                            <td
+                              className={`${td} text-right font-denso tabular-nums whitespace-nowrap`}
+                            >
                               {l.comissaoMedia === null ? '—' : formatarMoeda(l.comissaoMedia)}
                             </td>
                             <td
-                              className={`${td} text-right font-denso font-semibold tabular-nums ${(l.sobraMedia ?? 0) < 0 ? 'text-perigo-texto' : ''}`}
+                              className={`${td} text-right font-denso font-semibold tabular-nums whitespace-nowrap ${(l.sobraMedia ?? 0) < 0 ? 'text-perigo-texto' : ''}`}
                             >
                               {l.sobraMedia === null ? '—' : formatarMoeda(l.sobraMedia)}
                             </td>
@@ -212,7 +228,9 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                           </td>
                         )}
                         {verCusto && (
-                          <td className={`${td} text-right font-denso tabular-nums`}>
+                          <td
+                            className={`${td} text-right font-denso tabular-nums whitespace-nowrap`}
+                          >
                             {formatarMoeda(s.custoProduto)}
                           </td>
                         )}
@@ -223,22 +241,13 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                             <Ficha tom="neutro">Principal</Ficha>
                           )}
                         </td>
-                        <td className={`${td} text-right font-denso tabular-nums`}>
+                        <td
+                          className={`${td} text-right font-denso tabular-nums whitespace-nowrap`}
+                        >
                           {s.pesoAtendimento === 0
                             ? '0 (extra)'
                             : `${s.pesoAtendimento} ${s.pesoAtendimento === 1 ? 'atendimento' : 'atendimentos'}`}
                         </td>
-                        {podeEditar && (
-                          <td className={`${td} text-right`}>
-                            <Botao
-                              variante="fantasma"
-                              onClick={() => setEditando(s)}
-                              aria-label={`Editar ${s.nome}`}
-                            >
-                              Editar
-                            </Botao>
-                          </td>
-                        )}
                       </tr>
                     );
                   })}

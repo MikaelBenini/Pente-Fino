@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { TrilhaGoogle } from '@/componentes/site/trilha-google';
 import { DocumentoLegal, type SecaoLegal } from '@/componentes/site/documento-legal';
 import { EMAIL_PRIVACIDADE } from '@/lib/site';
 
@@ -158,6 +159,12 @@ const SECOES: readonly SecaoLegal[] = [
           funciona igual. Para mudar a escolha, limpe os dados do site no navegador e o aviso
           aparece de novo.
         </p>
+        <p>
+          Quando você chega por um anúncio ou campanha, guardamos os parâmetros do endereço (como
+          gclid e utm_source) e o site de onde veio, nunca dados pessoais. Com o aceite, ficam num
+          cookie nosso por 90 dias; sem o aceite, só durante a visita. Se você criar a conta, eles
+          vão junto, para sabermos qual campanha trouxe a barbearia.
+        </p>
       </>
     ),
   },
@@ -179,10 +186,13 @@ const SECOES: readonly SecaoLegal[] = [
 
 export default function Pagina() {
   return (
-    <DocumentoLegal
-      titulo="Política de privacidade"
-      resumo="A barbearia é dona dos dados dos clientes dela; nós cuidamos deles para prestar o serviço, com isolamento por conta e sem vender nada a ninguém."
-      secoes={SECOES}
-    />
+    <>
+      <TrilhaGoogle pagina="Política de privacidade" caminho="/privacidade" />
+      <DocumentoLegal
+        titulo="Política de privacidade"
+        resumo="A barbearia é dona dos dados dos clientes dela; nós cuidamos deles para prestar o serviço, com isolamento por conta e sem vender nada a ninguém."
+        secoes={SECOES}
+      />
+    </>
   );
 }

@@ -30,6 +30,23 @@ test('dono cadastra serviço e grava o preço pela tabela', async ({ page }, inf
   await expect(linha).toContainText('40 min');
   await expect(linha).toContainText('R$ 6,50');
 
+  // Editar o serviço criado pelo próprio nome, num notebook comum (1366 px): antes o "Editar"
+  // ficava no fim da tabela, fora da tela.
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const editar = page.getByRole('button', { name: `Editar ${nome}` });
+  // Dentro da largura da tela, sem rolar a tabela para o lado (a lista pode ser longa: a altura
+  // não importa aqui).
+  const caixa = (await editar.boundingBox())!;
+  expect(caixa.x).toBeGreaterThanOrEqual(0);
+  expect(caixa.x + caixa.width).toBeLessThanOrEqual(1366);
+  await editar.click();
+  const edicao = page.getByRole('dialog', { name: `Editar ${nome}` });
+  await expect(edicao.getByLabel('Duração (minutos)')).toHaveValue('40');
+  await edicao.getByLabel('Duração (minutos)').fill('45');
+  await edicao.getByRole('button', { name: 'Salvar' }).click();
+  await expect(edicao).toBeHidden();
+  await expect(linha).toContainText('45 min');
+
   await page.getByRole('tab', { name: 'Tabela de preços' }).click();
   await page.getByLabel(`Centro (R$), ${nome}`).fill('85,00');
   await page.getByRole('button', { name: 'Gravar 1 preço' }).click();

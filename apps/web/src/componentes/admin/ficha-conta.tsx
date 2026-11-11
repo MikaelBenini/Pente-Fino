@@ -228,10 +228,12 @@ function Conteudo({
   // Padrão: 7 dias depois do fim do teste atual (ou de hoje, se já acabou); nunca encurta sem querer.
   const baseTeste =
     f.testeAte && dataLocal(new Date(f.testeAte)) > hoje ? dataLocal(new Date(f.testeAte)) : hoje;
+  // Sugere +7 dias, mas nunca além do limite do teste (admin R6): a tela não sugere uma data
+  // que o servidor vai recusar.
   const [ate, setAte] = useState(() => {
-    const d = new Date(`${baseTeste}T12:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + 7);
-    return d.toISOString().slice(0, 10);
+    const sugerida = somarDias(baseTeste, 7);
+    const limite = somarDias(hoje, LIMITE_TESTE_DIAS);
+    return sugerida > limite ? limite : sugerida;
   });
   const [motivoTeste, setMotivoTeste] = useState('');
   const opcoesSituacao = acoesPara(f);
@@ -312,6 +314,10 @@ function Conteudo({
         <div>
           <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">Desde</dt>
           <dd className="tabular-nums">{formatarData(f.criadaEm)}</dd>
+          {/* Admin F2: de onde veio o cadastro (anúncio, campanha, site). */}
+          <dd className="text-sm text-tinta-suave">
+            {f.origem ? `Veio de: ${f.origem}` : 'Origem: direto ou sem dado'}
+          </dd>
         </div>
         <div className="sm:col-span-2">
           <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">

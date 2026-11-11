@@ -21,12 +21,13 @@ import {
 import { Botao, Campo, cn } from '@pente-fino/ui';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import { api, ErroApi } from '@/lib/api';
 import { useTabelaPrecos } from '@/lib/consultas';
+import { lerOrigem } from '@/lib/origem';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
 import { Aviso } from '../aviso';
@@ -81,6 +82,7 @@ export function FormularioCadastro() {
     }
   }
   const [verSenha, setVerSenha] = useState(false);
+  const comecou = useRef(false);
   const router = useRouter();
   const params = useSearchParams();
   const hidratado = useHidratado();
@@ -134,10 +136,25 @@ export function FormularioCadastro() {
       setErroGeral(null);
       try {
         await api('publico/contas', {
-          corpo: { ...dados, abertoEm, site },
+          // Site T2: de onde veio (anúncio, campanha), guardado ao chegar no site.
+          corpo: { ...dados, abertoEm, site, origem: lerOrigem() },
         });
-        // Conversão para o Google Ads (só com a tag carregada e o aceite de cookies).
-        eventoGoogle('cadastro_concluido', { plano: dados.plano, ciclo: dados.ciclo });
+        // Site T1: conversão só no sucesso, com o valor por mês do plano (com o cupom) para o
+        // lance por valor do Google Ads. Só sai com a tag carregada e o aceite de cookies.
+        const valor =
+          aplicarDesconto(
+            precoPorMes(dados.plano, dados.ciclo, 1, tabela),
+            cupomAtivo?.descontoBp,
+          ) / 100;
+        const conversao = {
+          plano: dados.plano,
+          ciclo: dados.ciclo,
+          cupom: cupomAtivo?.codigo ?? null,
+          value: valor,
+          currency: 'BRL',
+        };
+        eventoGoogle('cadastro_concluido', conversao);
+        eventoGoogle('sign_up', { ...conversao, method: 'site' });
         router.replace('/configuracao-inicial');
       } catch (e) {
         setErroGeral(aplicarErroDaApi(e, setError));
@@ -149,6 +166,12 @@ export function FormularioCadastro() {
       method="post"
       noValidate
       onSubmit={(e) => enviar(String(new FormData(e.currentTarget).get('site') ?? ''))(e)}
+      // Site T3: começou a preencher (uma vez por visita ao cadastro).
+      onFocus={() => {
+        if (comecou.current) return;
+        comecou.current = true;
+        eventoGoogle('begin_sign_up', { plano, ciclo });
+      }}
       className="flex flex-col gap-5"
     >
       {/* Campo isca: fora da tela e do teclado; só robô preenche. */}

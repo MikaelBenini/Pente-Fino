@@ -33,8 +33,8 @@
 | 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ✅ R3, R4 e R6 #154; R5 #155 |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ✅ #156 (R9: correção do DNS com o dono) |
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ✅ #157 e #158 |
-| 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ⏳ (T4 já existia) |
-| 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ✅ X1–X4, P1, P3, P4 e P6 `feat/painel-x-acessibilidade-e-p-agendar`; P2 (fotos e nota) e P5 com a página personalizável |
+| 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ✅ `feat/site-s-t-medicao-e-seo` (S4 com as páginas N; T4 já existia) |
+| 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ✅ X1–X4, P1, P3, P4 e P6 #159; P2 (fotos e nota) e P5 com a página personalizável |
 | 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ |
 | 11 | Site | N1–N5, P3, P4, D1, D2, D4 | Conteúdo novo e ajustes finos | ⏳ |
 | 12 | Admin | F1–F9 | Recursos novos (F2 junto com o T2 do site) | ⏳ |
@@ -639,11 +639,11 @@ Situação de cada item (✅ entregue, com o PR):
 - [x] C1 faixa da oferta em todas as páginas; some após a data — #148
 - [x] C2/C3 WhatsApp e rodapé renderizam só com dados preenchidos — #148
 - [x] C4 depoimentos só aparecem com ≥ 2 itens reais — #148
-- [ ] S1 sitemap lista todas as páginas públicas
-- [ ] S5 `www` e `http` redirecionam com 301
+- [x] S1 sitemap lista todas as páginas públicas (e as das barbearias no Google)
+- [x] S5 `www` e `http` redirecionam com 301
 - [ ] N1–N5 páginas publicadas com title/description/canonical/OG e CTA
-- [ ] T1 conversão dispara só no sucesso do cadastro (verificar no Tag Assistant)
-- [ ] T2 gclid/UTM chegam ao backend
+- [x] T1 conversão dispara só no sucesso do cadastro, com valor (teste em `site.spec.ts`; **dono:** conferir no Tag Assistant)
+- [x] T2 gclid/UTM chegam ao backend (`conta.origem`)
 - [x] T4 consentimento funcionando — já existia (Consent Mode v2)
 - [ ] Lighthouse mobile da home: Performance ≥ 90, Acessibilidade ≥ 95, SEO 100
 - [ ] Build, lint e testes passando

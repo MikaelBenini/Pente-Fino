@@ -7,6 +7,29 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (serviços e administração)
+
+- Serviços: editar o serviço pelo próprio nome (com o lápis), na primeira coluna. Antes o botão
+  "Editar" ficava no fim da tabela, fora da tela no notebook, e parecia que não dava para editar.
+  Preços e durações não quebram mais em duas linhas.
+- Administração → Estender teste: a data sugerida nunca passa do limite de 60 dias.
+
+### Adicionado (medição dos anúncios)
+
+- Conversão do cadastro com o valor do plano (com o cupom) e a moeda, só no sucesso: o Google Ads
+  passa a poder dar lance por valor. Sai também com o nome padrão `sign_up`.
+- De onde veio cada cadastro: quem chega por anúncio ou campanha (gclid, utm) tem a origem guardada
+  (com o aceite de cookies, por 90 dias) e enviada no cadastro. A ficha da conta na
+  administração mostra "Veio de: Google Ads · campanha" (ou o site de origem).
+- Eventos do funil para os anúncios: planos vistos, troca entre mensal e anual, clique nas chamadas
+  para o cadastro (com a posição na página) e começo do preenchimento.
+
+### Alterado (SEO)
+
+- Trilha de navegação para o Google em Planos, Termos e Privacidade.
+- `robots.txt` sem regras repetidas; links pessoais de horário fora dos buscadores.
+- Política de privacidade explica a origem do cadastro guardada.
+
 ### Adicionado (página de agendamento)
 
 - Endereço curto da página da unidade: `/b/<endereço>` (bom para o Instagram). O antigo

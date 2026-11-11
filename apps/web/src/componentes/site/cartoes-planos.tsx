@@ -12,6 +12,7 @@ import {
   resumoAnual,
   textoEconomiaAnual,
 } from '@pente-fino/shared';
+import { eventoGoogle } from './tag-google';
 import { cn } from '@pente-fino/ui';
 import { Check, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -77,7 +78,10 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
             type="button"
             role="radio"
             aria-checked={ciclo === c}
-            onClick={() => setCiclo(c)}
+            onClick={() => {
+              setCiclo(c);
+              eventoGoogle('toggle_ciclo', { ciclo: c });
+            }}
             className={cn(
               'min-h-11 rounded-md px-5 font-semibold transition focus-visible:outline-2 focus-visible:outline-foco',
               ciclo === c ? 'bg-superficie-3 text-tinta' : 'text-tinta-suave hover:text-tinta',

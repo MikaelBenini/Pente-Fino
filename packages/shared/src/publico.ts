@@ -1,5 +1,6 @@
 // Esquemas das rotas sem login: cadastro de conta e agendamento pelo link público.
 import { z } from 'zod';
+import { origemCadastroSchema } from './origem-cadastro.js';
 import { emailSchema, senhaSchema } from './auth.js';
 import { CICLOS, PLANOS } from './planos.js';
 
@@ -30,6 +31,8 @@ export const cadastroContaSchema = z.object({
   site: z.string().max(200).optional(),
   /** Quando o formulário abriu (ms): envio rápido demais é robô. */
   abertoEm: z.number().optional(),
+  /** De onde veio (anúncio, campanha, site): site T2 e admin F2. */
+  origem: origemCadastroSchema.nullish(),
 });
 export type CadastroContaEntrada = z.infer<typeof cadastroContaSchema>;
 

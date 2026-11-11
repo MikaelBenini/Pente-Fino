@@ -1,7 +1,8 @@
 'use client';
 
 import Script from 'next/script';
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { capturarOrigem, promoverOrigem } from '@/lib/origem';
 
 /** Contêiner do Google Tag Manager (Google Ads). Público: aparece no HTML de qualquer forma. */
 export const ID_GTM = process.env.NEXT_PUBLIC_GTM_ID ?? 'GTM-WKWRDX4R';
@@ -47,6 +48,30 @@ export function eventoGoogle(evento: string, dados: Record<string, unknown> = {}
  * não grava cookie de anúncio; a escolha anterior do visitante vale desde o primeiro carregamento.
  */
 export function TagGoogle() {
+  // Site T2: de onde veio o visitante (anúncio, campanha), para o cadastro levar junto.
+  useEffect(() => capturarOrigem(), []);
+  // Site T3: clique em qualquer chamada para o cadastro, com a posição na página (topo, rodapé
+  // ou a seção). Um ouvinte só, para nenhum botão novo ficar de fora da medição.
+  useEffect(() => {
+    const aoClicar = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.('a[href]');
+      if (!a) return;
+      const href = a.getAttribute('href') ?? '';
+      if (!href.startsWith('/cadastro')) return;
+      const secao = a.closest('section');
+      const posicao = a.closest('header')
+        ? 'topo'
+        : a.closest('footer')
+          ? 'rodape'
+          : ((a as HTMLElement).dataset.posicao ??
+            secao?.getAttribute('aria-labelledby') ??
+            secao?.id ??
+            'pagina');
+      eventoGoogle('click_cta', { posicao, destino: href.split('?')[0] });
+    };
+    document.addEventListener('click', aoClicar, true);
+    return () => document.removeEventListener('click', aoClicar, true);
+  }, []);
   if (!ID_GTM) return null;
   return (
     <Script id="tag-google" strategy="afterInteractive">
@@ -78,6 +103,7 @@ export function AvisoCookies() {
       // Sem armazenamento (aba anônima): vale só nesta visita.
     }
     aplicar(e);
+    if (e === 'aceito') promoverOrigem();
     ouvintes.forEach((f) => f());
   };
   return (
