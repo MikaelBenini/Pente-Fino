@@ -26,15 +26,21 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
 - A conta do Pente Fino no Asaas precisa ser de **pessoa jurídica (CNPJ)**: só ela cria as subcontas
   das barbearias para o clube online (com conta de CPF o Asaas responde 403).
 - Webhook no Asaas (Integrações → Webhooks): `https://api.seudominio/webhooks/asaas`, com o token
-  `ASAAS_WEBHOOK_TOKEN`, eventos de cobrança. O mesmo webhook atende a assinatura do sistema e as
-  mensalidades do clube online.
+  `ASAAS_WEBHOOK_TOKEN`, eventos de cobrança **e de nota fiscal** (`INVOICE_*`). O mesmo webhook
+  atende a assinatura do sistema, as mensalidades do clube online e a situação das notas.
 - A taxa do clube online fica em `/admin` → Configurações → "Clube online".
 - Nota fiscal das mensalidades (NFS-e): primeiro, no painel do Asaas, Notas fiscais →
   Configurações (inscrição municipal, regime, certificado ou senha da prefeitura). Depois, em
-  `/admin` → Configurações → "Nota fiscal das mensalidades": confira a linha "Dados fiscais no
-  Asaas", escolha o serviço (código e ISS conferidos com o contador), marque "Emitir nota fiscal",
-  salve e clique em "Aplicar às assinaturas atuais". As assinaturas novas já saem com a nota; o
-  Asaas manda a nota por e-mail para a barbearia.
+  `/admin` → Configurações → "Nota fiscal das mensalidades": escolha o serviço (código e ISS
+  conferidos com o contador) e salve, mesmo com a emissão desligada. "Conferir de novo no Asaas"
+  diz o que falta (dados fiscais, inscrição de exemplo, o acesso que a prefeitura exige); só com
+  "Tudo conferido" a emissão liga. Então marque "Emitir nota fiscal", salve e clique em "Aplicar
+  às assinaturas atuais". As assinaturas novas já saem com a nota; o Asaas manda a nota por
+  e-mail para a barbearia, que também a baixa na fatura (Configurações → Assinatura). Acompanhe a
+  primeira nota em Saúde do sistema → "Nota fiscal das mensalidades": nota que não sai aparece
+  lá com o motivo da prefeitura.
+- Sem o acesso fiscal, deixe a emissão desligada: nada muda para as barbearias, as mensalidades
+  seguem cobradas normalmente, só sem nota.
 
 ## Limpeza automática de dados
 

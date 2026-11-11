@@ -29,7 +29,7 @@
 | 1 | Painel | A1–A4 | Caixa não batia; dinheiro no dia errado; comanda presa | ✅ #150 (A1 competência aguarda decisão) |
 | 2 | Site | B1–B8, P1, P2, C1–C7, D3, D5, D6 | Textos contraditórios e oferta invisível | ✅ #148 (C2/C3/C4 aguardam dados do dono) |
 | 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | ✅ branch `fix/painel-a5-a8` |
-| 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ⏳ |
+| 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | 🔄 R2 feito (`fix/admin-r2-nota-fiscal`); R1 aguarda decisão |
 | 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ⏳ |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ⏳ |
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ⏳ |
@@ -84,7 +84,11 @@ Itens que se sobrepõem e devem ser feitos juntos:
 
 - **Limpeza em produção (painel A3):** cancelar a comanda reaberta de teste
   `01a1c85f-c873-7d06-b61f-c67e8f37ff3f` e fechar o caixa de 11/11 aberto indevidamente.
-- **Nota fiscal (admin R2):** confirmar inscrição municipal, código de serviço e ISS com o contador.
+- **Nota fiscal (admin R2):** no Asaas (Notas fiscais → Configurações), cadastrar a inscrição
+  municipal, o regime e o certificado digital (e-CNPJ A1, que a prefeitura exige). Confirmar o
+  código do serviço e o ISS com o contador. No Asaas, em Integrações → Webhooks, marcar os
+  eventos de nota fiscal no mesmo webhook das cobranças. Depois: `/admin` → Configurações →
+  "Conferir de novo no Asaas" → ligar.
 - **Contato e rodapé (site C2/C3):** WhatsApp, razão social, CNPJ, cidade e redes em `lib/contato.ts`.
 - **Depoimentos (site C4):** pelo menos dois reais e autorizados.
 - **Suporte (painel M10):** WhatsApp de suporte e horário de atendimento.
@@ -313,7 +317,7 @@ Separação de dados das barbearias, autenticador obrigatório, auditoria imutá
 ### Checklist de validação
 
 - [ ] R1 cupom sem limite (ou status público com vagas) e mensagem clara de esgotado
-- [ ] R2 emissão de NF bloqueada com dados de exemplo; dados reais confirmados
+- [x] R2 emissão de NF bloqueada com dados de exemplo (`fix/admin-r2-nota-fiscal`). **Dados reais: com o dono** (inscrição, regime e certificado no Asaas; serviço e ISS com o contador)
 - [ ] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo
 - [ ] R4 cobrança manual gera cobrança prevista por ciclo
 - [ ] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR
