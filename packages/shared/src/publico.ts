@@ -11,6 +11,19 @@ export const cadastroContaSchema = z.object({
   plano: z.enum(PLANOS).default('basico'),
   ciclo: z.enum(CICLOS).default('mensal'),
   aceite: z.literal(true, { error: 'É preciso aceitar os termos de uso.' }),
+  /** WhatsApp do dono (opcional): para o suporte ajudar na configuração. Vazio = null. */
+  whatsapp: z
+    .string()
+    .nullish()
+    .transform((t) => (t ?? '').replace(/\D/g, ''))
+    .transform((d) => (d === '' ? null : d.length === 10 || d.length === 11 ? `55${d}` : d))
+    .pipe(
+      z
+        .string()
+        .regex(/^\d{12,13}$/, { error: 'WhatsApp inválido: informe DDD e número.' })
+        .nullable(),
+    )
+    .optional(),
   /** Cupom de desconto (opcional). */
   cupom: z.string().trim().max(30).optional(),
   /** Campo isca, invisível para pessoas: robô preenche (Etapa 15.4). */

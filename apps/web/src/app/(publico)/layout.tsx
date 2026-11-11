@@ -1,6 +1,7 @@
 import { ComandaExemplo } from '@/componentes/comanda-exemplo';
 import Link from 'next/link';
 import { Marca } from '@/componentes/marca';
+import { SeloPlano } from '@/componentes/site/selo-plano';
 
 export default function LayoutPublico({ children }: LayoutProps<'/'>) {
   return (
@@ -15,8 +16,8 @@ export default function LayoutPublico({ children }: LayoutProps<'/'>) {
           </h1>
           <ComandaExemplo />
         </div>
-        <p className="text-sm text-tinta-suave">
-          Lucro real por serviço, por barbeiro e por unidade.
+        <p className="flex flex-wrap items-center gap-2 text-sm text-tinta-suave">
+          Lucro real por serviço, por barbeiro e por unidade <SeloPlano recurso="lucroReal" />
         </p>
       </aside>
       <main className="flex flex-col px-[max(1rem,env(safe-area-inset-left))] py-8 pr-[max(1rem,env(safe-area-inset-right))] sm:px-10">

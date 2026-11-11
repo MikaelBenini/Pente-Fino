@@ -17,11 +17,25 @@ export function IconeMarca({ className }: { className?: string }) {
   );
 }
 
-export function Marca({ className, compacta = false }: { className?: string; compacta?: boolean }) {
+export function Marca({
+  className,
+  compacta = false,
+  nomeSoNoComputador = false,
+}: {
+  className?: string;
+  compacta?: boolean;
+  /** No celular estreito, só o ícone (o nome continua para o leitor de tela). */
+  nomeSoNoComputador?: boolean;
+}) {
   return (
     <span className={cn('inline-flex items-center gap-2', className)}>
       <IconeMarca className={compacta ? 'size-7' : 'size-8'} />
-      <span className="font-denso text-xl font-bold uppercase leading-none tracking-wide text-tinta">
+      <span
+        className={cn(
+          'font-denso text-xl font-bold uppercase leading-none tracking-wide whitespace-nowrap text-tinta',
+          nomeSoNoComputador && 'max-sm:sr-only',
+        )}
+      >
         Pente Fino
       </span>
     </span>

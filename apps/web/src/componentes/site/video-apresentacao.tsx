@@ -23,6 +23,7 @@ export function VideoApresentacao() {
     <video
       // Troca de elemento ao mudar a preferência, para o autoplay valer.
       key={reduzir ? 'parado' : 'tocando'}
+      id="apresentacao"
       className="aspect-video w-full rounded-xl border border-borda bg-fundo shadow-2xl"
       poster="/video/apresentacao.jpg"
       width={1280}
@@ -35,7 +36,7 @@ export function VideoApresentacao() {
       autoPlay={!reduzir}
       aria-label="Vídeo de 1 minuto: agenda, comanda no celular do barbeiro, fechamento na recepção, lucro do mês e agendamento pelo WhatsApp"
     >
-      <source src="/video/apresentacao.webm" type="video/webm" />
+      <source src="/video/apresentacao.webm" type={`video/webm; codecs="vp9"`} />
       <source src="/video/apresentacao.mp4" type="video/mp4" />
     </video>
   );

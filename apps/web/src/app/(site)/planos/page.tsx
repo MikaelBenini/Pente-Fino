@@ -1,11 +1,10 @@
-import { DIAS_TESTE, NOME_PLANO, PLANOS, precoPorMes } from '@pente-fino/shared';
+import { DIAS_TESTE, textoEconomiaAnual } from '@pente-fino/shared';
 import type { Metadata } from 'next';
 import { CartoesPlanos } from '@/componentes/site/cartoes-planos';
 import { ComparativoPlanos } from '@/componentes/site/comparativo-planos';
-import { LinkBotao } from '@/componentes/site/link-botao';
 import { type Pergunta, Perguntas } from '@/componentes/site/perguntas';
-import { URL_SITE } from '@/lib/site';
-import { OfertaLancamento } from '@/componentes/site/oferta-lancamento';
+import { ofertasJsonLd, URL_SITE } from '@/lib/site';
+import { LinkCadastro, OfertaLancamento } from '@/componentes/site/oferta-lancamento';
 
 export const metadata: Metadata = {
   title: 'Planos e preços',
@@ -20,8 +19,7 @@ const PERGUNTAS: readonly Pergunta[] = [
   },
   {
     pergunta: 'Tem fidelidade ou multa para cancelar?',
-    resposta:
-      'Não. No mensal, você cancela quando quiser e usa até o fim do mês pago. No anual, o valor é cobrado de uma vez com o desconto de dois meses.',
+    resposta: `Não. No mensal, você cancela quando quiser e usa até o fim do mês pago. No anual, o valor é cobrado de uma vez, com desconto (${textoEconomiaAnual()}).`,
   },
   {
     pergunta: 'Posso trocar de plano depois?',
@@ -36,7 +34,7 @@ const PERGUNTAS: readonly Pergunta[] = [
   {
     pergunta: 'O bot de WhatsApp cobra por mensagem?',
     resposta:
-      'Não. Ele usa o WhatsApp da própria barbearia, conectado por QR Code, e responde com menus que você mesmo programa. Não usa inteligência artificial. O bot está em construção e chega para os planos Pro e Premium sem custo extra.',
+      'Não. Ele usa o WhatsApp da própria barbearia, conectado por QR Code, e responde com menus que você mesmo programa. Não usa inteligência artificial. Está incluso no Pro e no Premium, sem custo extra.',
   },
   {
     pergunta: 'E os meus dados se eu sair?',
@@ -58,13 +56,7 @@ function jsonLd() {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web, Android, iOS',
     url: `${URL_SITE}/planos`,
-    offers: PLANOS.map((p) => ({
-      '@type': 'Offer',
-      name: `Plano ${NOME_PLANO[p]}`,
-      price: (precoPorMes(p, 'mensal') / 100).toFixed(2),
-      priceCurrency: 'BRL',
-      url: `${URL_SITE}/cadastro?plano=${p}`,
-    })),
+    offers: ofertasJsonLd(),
   };
 }
 
@@ -122,9 +114,7 @@ export default function Pagina() {
 
       <section className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 pb-20 text-center sm:px-6">
         <h2 className="font-denso text-4xl font-bold uppercase">Comece hoje, decida depois</h2>
-        <LinkBotao href="/cadastro" grande>
-          Criar conta grátis
-        </LinkBotao>
+        <LinkCadastro grande>Criar conta grátis</LinkCadastro>
       </section>
     </>
   );

@@ -10,12 +10,13 @@ import {
   type PlanoConta,
   precoPorMes,
   resumoAnual,
+  textoEconomiaAnual,
 } from '@pente-fino/shared';
 import { cn } from '@pente-fino/ui';
 import { Check, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useTabelaPrecos } from '@/lib/consultas';
-import { LinkBotao } from './link-botao';
+import { LinkCadastro } from './oferta-lancamento';
 
 const CHAMADA: Record<PlanoConta, string> = {
   basico: 'Para quem trabalha sozinho ou com um ou dois parceiros.',
@@ -84,12 +85,12 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
             )}
           >
             {c === 'mensal' ? 'Mensal' : 'Anual'}
-            {c === 'anual' && (
-              <span className="ml-2 text-sm font-medium text-acao-texto">2 meses grátis</span>
-            )}
           </button>
         ))}
       </div>
+      <p className="-mt-5 text-center text-sm font-medium text-acao-texto">
+        No anual, {textoEconomiaAnual(tabela)}
+      </p>
 
       <ul className="animar-escalonado grid gap-4 md:grid-cols-3">
         {PLANOS.map((p) => {
@@ -152,14 +153,14 @@ export function CartoesPlanos({ compacto = false }: { compacto?: boolean }) {
                   ))}
                 </ul>
               )}
-              <LinkBotao
-                href={`/cadastro?plano=${p}&ciclo=${ciclo}`}
+              <LinkCadastro
+                extra={`plano=${p}&ciclo=${ciclo}`}
                 variante={destaque ? 'acao' : 'contorno'}
                 className="mt-auto"
                 aria-label={`Testar o plano ${NOME_PLANO[p]} grátis por ${DIAS_TESTE} dias`}
               >
                 Testar {DIAS_TESTE} dias grátis
-              </LinkBotao>
+              </LinkCadastro>
             </li>
           );
         })}

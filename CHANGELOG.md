@@ -7,12 +7,23 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
-### Adicionado (agendamento)
+### Alterado (site)
 
-- Link de agendamento com mais de uma unidade: "Agendar em outra unidade", discreto, abaixo do
-  endereço (quem veio pela conversa do WhatsApp da unidade nem vê). O cliente troca sem perder o
-  que já escolheu (serviços que a outra unidade faz, nome e WhatsApp) e é avisado do que mudou:
-  serviço que lá não tem, preço diferente e barbeiro a escolher de novo.
+- Oferta de lançamento visível em todo o site (faixa no topo, fechável) e nos botões de teste;
+  some sozinha depois de 31/01/2027 ou quando as vagas acabam.
+- Cadastro com o cupom do link já aplicado: preço cheio riscado e preço com desconto; cupom
+  inválido avisa. Campo de WhatsApp opcional, "Mostrar senha" e campos obrigatórios marcados.
+- Cada promessa que não vem em todos os planos mostra o selo "Pro e Premium" ou "Premium".
+- "Economize até R$ 504/ano" (calculado) no lugar de "2 meses grátis", que não batia com a conta.
+- "Planos" no topo também no celular; "Ver em 1 minuto" já dá o play no vídeo; a calculadora
+  aceita "1.234,56" e leva ao teste.
+- Endereço que não existe mostra "Página não encontrada" (404) em vez da tela de login.
+
+### Corrigido (site)
+
+- /planos dizia que o bot de WhatsApp estava "em construção": ele já funciona no Pro e no
+  Premium.
+- Preços para o Google (dados estruturados) batem com os da página.
 
 ### Alterado (resultados do mês)
 

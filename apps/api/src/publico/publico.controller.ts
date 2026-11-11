@@ -209,7 +209,13 @@ export class PublicoController {
         });
         // Começa sem e-mail confirmado: o link vai no e-mail de boas-vindas.
         const dono = await tx.usuario.create({
-          data: { nome: d.nome, email: d.email, senhaHash, emailConfirmadoEm: null },
+          data: {
+            nome: d.nome,
+            email: d.email,
+            senhaHash,
+            emailConfirmadoEm: null,
+            telefone: d.whatsapp ?? null,
+          },
         });
         linkConfirmacao = (await this.auth.criarLinkDeConfirmacao(tx, dono.id)).link;
         await tx.papelUsuario.create({

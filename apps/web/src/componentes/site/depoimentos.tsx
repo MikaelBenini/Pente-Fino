@@ -8,6 +8,7 @@ export interface Depoimento {
 }
 
 /**
+ * TODO(dono): preencher com depoimentos reais e autorizados. A seção só aparece com 2 ou mais.
  * Depoimentos de clientes de verdade, com autorização por escrito de quem falou (nome, barbearia
  * e cidade). Lista vazia = a seção não aparece. Nunca inventar: depoimento falso fere o Código de
  * Defesa do Consumidor e as normas do CONAR, e derruba a confiança na página.
@@ -15,7 +16,7 @@ export interface Depoimento {
 export const DEPOIMENTOS: readonly Depoimento[] = [];
 
 export function Depoimentos() {
-  if (DEPOIMENTOS.length === 0) return null;
+  if (DEPOIMENTOS.length < 2) return null;
   return (
     <section
       aria-labelledby="depoimentos"

@@ -1,5 +1,6 @@
 // Etapa 6.14 a 6.18: comanda impressa, link público, importação, configuração guiada e exportação.
 import type { INestApplication } from '@nestjs/common';
+import { criarPrisma, naConta } from '@pente-fino/db';
 import { dataLocal } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
@@ -94,8 +95,28 @@ describe('cadastro de conta e configuração guiada', () => {
       .post('/publico/contas')
       .send({ ...base, aceite: false })
       .expect(400);
-    const r = await http().post('/publico/contas').send(base).expect(201);
+    // WhatsApp opcional (briefing do site, B8): incompleto é recusado; válido fica no dono.
+    await http()
+      .post('/publico/contas')
+      .send({ ...base, whatsapp: '98888' })
+      .expect(400);
+    const r = await http()
+      .post('/publico/contas')
+      .send({ ...base, whatsapp: '(11) 98888-7777' })
+      .expect(201);
     token = r.body.accessToken;
+    const prisma = criarPrisma();
+    try {
+      const contaId = (
+        JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString()) as { conta: string }
+      ).conta;
+      const dono = await naConta(prisma, contaId, (tx) =>
+        tx.usuario.findFirst({ where: { email }, select: { telefone: true } }),
+      );
+      expect(dono?.telefone).toBe('5511988887777');
+    } finally {
+      await prisma.$disconnect();
+    }
     expect(r.body.usuario).toMatchObject({ email, papeis: [{ papel: 'dono', unidadeId: null }] });
     await http().post('/publico/contas').send(base).expect(409);
     await http()

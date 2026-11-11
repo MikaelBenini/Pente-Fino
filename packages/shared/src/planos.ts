@@ -42,7 +42,7 @@ export const CICLOS = ['mensal', 'anual'] as const;
 export type Ciclo = (typeof CICLOS)[number];
 
 /** Data da versão dos termos e da política (mudou o texto, muda a data; o cadastro grava). */
-export const VERSAO_TERMOS = '2026-11-09';
+export const VERSAO_TERMOS = '2026-11-11';
 
 /** Dias de teste grátis, sem cartão. */
 export const DIAS_TESTE = 14;
@@ -67,6 +67,9 @@ export const OFERTA_LANCAMENTO = {
   vagas: 20,
   mostrarVagasAte: 5,
 } as const;
+
+/** A oferta de lançamento vale neste dia (AAAA-MM-DD em São Paulo)? Até o fim do último dia. */
+export const ofertaVigente = (hoje: string) => hoje <= OFERTA_LANCAMENTO.ate;
 
 /** "Últimas 3 vagas" quando sobra pouco; null quando ainda há bastante (ou sem limite). */
 export function textoVagasOferta(restantes: number | null): string | null {
@@ -160,12 +163,32 @@ export function resumoAnual(
   return { total, economia: precoPorMes(plano, 'mensal', unidades, tabela) * 12 - total };
 }
 
+/**
+ * Selo do anual, calculado (nunca digitado): "economize até R$ 504/ano" com o maior desconto
+ * entre os planos. "2 meses grátis" não batia com a conta (R$ 156 contra R$ 159,80 no Básico).
+ */
+export function textoEconomiaAnual(tabela: TabelaPrecosPlanos = TABELA_PADRAO): string {
+  const maior = Math.max(...PLANOS.map((p) => resumoAnual(p, 1, tabela).economia));
+  const reais = maior / 100;
+  const valor = Number.isInteger(reais)
+    ? `R$ ${reais.toLocaleString('pt-BR')}`
+    : `R$ ${reais.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `economize até ${valor}/ano`;
+}
+
 // ─── Recursos por plano (aplicados na API e na tela) ──────────────────────
 
 /**
  * Recursos que a API confere pelo plano da conta. O que não está no plano aparece na tela com
  * convite para mudar; o que já foi lançado continua visível (só gravar de novo é bloqueado).
  */
+/**
+ * [DECISÃO DO DONO] Lucro e margem por serviço também no Pro (briefing do site, P2). false = só
+ * no Premium (o site avisa isso na promessa da home). Muda junto o que a API libera, a tabela
+ * de /planos e os selos do site: uma fonte só, para o site nunca prometer o que o plano não tem.
+ */
+export const LUCRO_POR_SERVICO_NO_PRO = false;
+
 export const RECURSOS = {
   comissoes: { nome: 'Comissão automática por item, com extrato do barbeiro', desde: 'pro' },
   metas: { nome: 'Metas por unidade e serviço, com ritmo e projeção', desde: 'pro' },
@@ -176,7 +199,10 @@ export const RECURSOS = {
   avaliacoes: { nome: 'Pesquisa depois do atendimento, com as notas', desde: 'pro' },
   canais: { nome: 'Agendamentos por canal: balcão, WhatsApp e site', desde: 'pro' },
   rede: { nome: 'Várias unidades e painel da rede', desde: 'premium' },
-  lucroReal: { nome: 'Lucro real e margem por serviço e produto', desde: 'premium' },
+  lucroReal: {
+    nome: 'Lucro real e margem por serviço e produto',
+    desde: LUCRO_POR_SERVICO_NO_PRO ? 'pro' : 'premium',
+  },
   automacoes: {
     nome: 'Automações do bot: retorno, aniversário e aviso do clube',
     desde: 'premium',

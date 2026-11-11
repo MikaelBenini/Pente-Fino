@@ -172,7 +172,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await cadastro.goto(`/cadastro?cupom=${codigoCupom.toLowerCase()}`);
   await cadastro.getByLabel('Cupom de desconto (opcional)').focus();
   await cadastro.getByLabel('Cupom de desconto (opcional)').blur();
-  await expect(cadastro.getByText('25% de desconto enquanto a assinatura existir.')).toBeVisible();
+  await expect(cadastro.getByText(/^25% de desconto para sempre aplicado/)).toBeVisible();
   await site.close();
   await cupons
     .getByRole('row', { name: new RegExp(codigoCupom) })

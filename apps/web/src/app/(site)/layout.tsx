@@ -1,6 +1,8 @@
 import { CabecalhoSite } from '@/componentes/site/cabecalho-site';
+import { FaixaOferta } from '@/componentes/site/oferta-lancamento';
 import { RodapeSite } from '@/componentes/site/rodape-site';
 import { AvisoCookies, TagGoogle } from '@/componentes/site/tag-google';
+import { WhatsappFlutuante } from '@/componentes/site/whatsapp-flutuante';
 
 export default function LayoutSite({ children }: LayoutProps<'/'>) {
   return (
@@ -11,11 +13,13 @@ export default function LayoutSite({ children }: LayoutProps<'/'>) {
       >
         Pular para o conteúdo
       </a>
+      <FaixaOferta />
       <CabecalhoSite />
       <main id="conteudo" className="flex-1">
         {children}
       </main>
       <RodapeSite />
+      <WhatsappFlutuante />
       <TagGoogle />
       <AvisoCookies />
     </div>
