@@ -83,7 +83,7 @@ export function MapaDaSemana({ o }: { o: OcupacaoDaUnidade }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-88 border-separate border-spacing-1 text-sm">
           <caption className="sr-only">
             Ocupação por dia da semana e hora, de {o.de} a {o.ate}

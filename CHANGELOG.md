@@ -29,6 +29,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
   confirmada de novo; antes ficava presa.
 - Comanda sem itens não fecha mais com R$ 0,00.
 
+### Corrigido (celular)
+
+- Serviços e Produtos não passam mais da largura do celular: a barra de baixo ficava larga demais
+  e saía da tela. Todas as telas do painel são conferidas em 375 px.
+
 ### Corrigido (link de agendamento)
 
 - O link de agendamento só liga com pelo menos um serviço com preço e um profissional com

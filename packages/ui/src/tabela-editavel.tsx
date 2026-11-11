@@ -63,7 +63,7 @@ export function TabelaEditavel({ id, legenda, colunas, linhas, onChange }: Tabel
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-borda">
+    <div className="relative overflow-x-auto rounded-lg border border-borda">
       <table className="w-full border-collapse font-denso text-base">
         <caption className="sr-only">{legenda}</caption>
         <thead className="bg-superficie-2">

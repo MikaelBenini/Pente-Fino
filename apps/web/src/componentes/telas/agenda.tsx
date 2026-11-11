@@ -519,7 +519,7 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
           {coluna(agenda.profissionais.find((p) => p.id === profissionalCelular)!)}
         </div>
       </div>
-      <div className="hidden overflow-x-auto rounded-lg border border-borda bg-fundo md:block">
+      <div className="relative hidden overflow-x-auto rounded-lg border border-borda bg-fundo md:block">
         <div
           className="grid min-w-fit"
           style={{

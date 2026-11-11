@@ -564,7 +564,7 @@ export default function Pagina() {
             Mais que uma agenda bonita
           </h2>
         </div>
-        <div className="revelar overflow-x-auto rounded-2xl border border-borda">
+        <div className="revelar relative overflow-x-auto rounded-2xl border border-borda">
           <table className="w-full min-w-[36rem] text-left">
             <caption className="sr-only">
               Comparação entre o Pente Fino, um app de agenda comum e a planilha
