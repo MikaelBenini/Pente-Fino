@@ -7,6 +7,39 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (números da administração)
+
+- "Em dia" só para conta que já pagou e não está atrasada. Conta ativa que nunca pagou aparece
+  como "Ativa sem cobrança" e entra no "Precisa de atenção" como urgente; cortesia é contada à
+  parte e fica fora do MRR. Antes, o Início mostrava ao mesmo tempo MRR R$ 0, "0 pagantes" e
+  "Em dia 1".
+- Teste que vai além de 60 dias aparece em "Precisa de atenção".
+
+### Adicionado (conta interna)
+
+- Ficha da conta → "Conta interna" (com motivo): contas da própria equipe (testes,
+  demonstração, implantação) saem do MRR, dos números, dos gráficos, do "Precisa de atenção" e
+  da cobrança manual. A lista de contas mostra o selo, filtra por "Conta interna" e a planilha
+  traz a coluna. A barbearia não vê diferença.
+
+### Corrigido (situação da conta na administração)
+
+- Cancelar uma conta agora também cancela a cobrança automática no Asaas. Antes, a barbearia
+  cancelada continuava sendo cobrada. Se o Asaas não responder, a conta não é cancelada pela
+  metade e a tela pede para tentar de novo.
+- "Desbloquear" volta a conta exatamente ao que ela era (o teste mantém a data de fim). Conta
+  cancelada não "desbloqueia" mais para ativa sem cobrança: ela é reativada com o próximo passo
+  (voltar ao teste até uma data, cobrar a partir de uma data ou cortesia até uma data).
+- Teste com limite de 60 dias a partir de hoje. Para mais tempo sem pagar existe a cortesia,
+  com motivo e data de fim (no máximo um ano por vez).
+- Cobrança manual: a cobrança prevista nasce também para a conta ativa que nunca pagou, a partir
+  da data marcada pela administração, e nunca dentro da cortesia.
+
+### Adicionado (cortesia)
+
+- Durante a cortesia, a barbearia vê "Cortesia do Pente Fino até dd/mm/aaaa". No dia seguinte ao
+  fim, a cobrança começa sozinha.
+
 ### Alterado (oferta de lançamento)
 
 - O cupom `LANCAMENTO` não tem mais limite de vagas: vale para toda barbearia que assinar até

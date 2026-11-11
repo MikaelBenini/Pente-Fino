@@ -29,8 +29,8 @@
 | 1 | Painel | A1–A4 | Caixa não batia; dinheiro no dia errado; comanda presa | ✅ #150 (A1 competência aguarda decisão) |
 | 2 | Site | B1–B8, P1, P2, C1–C7, D3, D5, D6 | Textos contraditórios e oferta invisível | ✅ #148 (C2/C3/C4 aguardam dados do dono) |
 | 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | ✅ branch `fix/painel-a5-a8` |
-| 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ✅ R2 #152; R1 `fix/admin-r1-cupom-sem-limite` |
-| 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ⏳ |
+| 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ✅ R2 #152; R1 #153 |
+| 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ✅ R3, R4 e R6 #154; R5 `fix/admin-r5-indicadores-e-conta-interna` |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ⏳ |
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ⏳ |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ⏳ (T4 já existia) |
@@ -74,8 +74,8 @@ Itens que se sobrepõem e devem ser feitos juntos:
 | Painel M6 | Depois de agendar, ficar na Agenda com aviso | Ficar na Agenda, configurável |
 | Painel P4 | Indexar páginas de barbearia que ligarem "Aparecer no Google" | Só com a opção ligada; as demais `noindex` |
 | Admin R1 | Cupom LANCAMENTO sem limite de vagas | ✅ decidido em 11/11: sem limite |
-| Admin R3 | Conta "Teste" reativada indevidamente | Cortesia interna ou voltar ao teste |
-| Admin R6 | Máximo de dias de teste | 60 |
+| Admin R3 | Conta "Teste" reativada indevidamente | ✅ decidido em 11/11: "Teste" e "Implantação" são internas; marcar no `/admin` |
+| Admin R6 | Máximo de dias de teste | ✅ 60 (#154) |
 | Site P2 | Lucro por serviço no Pro | Só no Premium (`LUCRO_POR_SERVICO_NO_PRO = false`) |
 | Site P3 | Básico mais competitivo (preço menor ou bot no Básico) | Sem mudança |
 | Site B6 | Selo do anual | "economize até R$ 504/ano" (feito) |
@@ -316,12 +316,12 @@ Separação de dados das barbearias, autenticador obrigatório, auditoria imutá
 
 ### Checklist de validação
 
-- [x] R1 cupom sem limite e mensagem clara de esgotado (`fix/admin-r1-cupom-sem-limite`; o alerta de cupom perto de esgotar fica com o F3)
-- [x] R2 emissão de NF bloqueada com dados de exemplo (`fix/admin-r2-nota-fiscal`). **Dados reais: com o dono** (inscrição, regime e certificado no Asaas; serviço e ISS com o contador)
-- [x] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo; cancelar para a cobrança no Asaas (`fix/admin-r3-r4-r6-situacao-da-conta`)
-- [x] R4 cobrança manual gera cobrança prevista por ciclo, também para quem nunca pagou (`fix/admin-r3-r4-r6-situacao-da-conta`)
-- [ ] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR
-- [x] R6 teste com limite; acima disso só cortesia (`fix/admin-r3-r4-r6-situacao-da-conta`)
+- [x] R1 cupom sem limite e mensagem clara de esgotado (#153; o alerta de cupom perto de esgotar fica com o F3)
+- [x] R2 emissão de NF bloqueada com dados de exemplo (#152). **Dados reais: com o dono** (inscrição, regime e certificado no Asaas; serviço e ISS com o contador)
+- [x] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo; cancelar para a cobrança no Asaas (#154)
+- [x] R4 cobrança manual gera cobrança prevista por ciclo, também para quem nunca pagou (#154)
+- [x] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR (`fix/admin-r5-indicadores-e-conta-interna`)
+- [x] R6 teste com limite; acima disso só cortesia (#154)
 - [ ] R7 falhas de e-mail listáveis, reenviáveis e alertadas
 - [ ] R8 WhatsApp caído em Precisa de atenção
 - [ ] R9 IP real na auditoria atrás do proxy

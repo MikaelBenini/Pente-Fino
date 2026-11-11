@@ -3,9 +3,9 @@
 import {
   formatarMoeda,
   NOME_PLANO,
-  NOME_SITUACAO_ASSINATURA,
+  NOME_SITUACAO_NA_PLATAFORMA,
   type MetricasDaPlataforma,
-  type SituacaoAssinatura,
+  type SituacaoNaPlataforma,
 } from '@pente-fino/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Estado } from '../pagina';
@@ -13,9 +13,11 @@ import { adminApi } from './admin-api';
 
 const pct = (f: number) => `${Math.round(f * 100)}%`;
 const ddmm = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
-const ORDEM_SITUACAO: SituacaoAssinatura[] = [
+const ORDEM_SITUACAO: SituacaoNaPlataforma[] = [
   'teste',
-  'ativa',
+  'em_dia',
+  'cortesia',
+  'ativa_sem_cobranca',
   'em_atraso',
   'teste_vencido',
   'bloqueada',
@@ -130,7 +132,11 @@ export function MetricasAdmin() {
                 <Numero
                   rotulo="Contas"
                   valor={String(d.contas.total)}
-                  detalhe="todas as situações"
+                  detalhe={
+                    d.contas.internas > 0
+                      ? `todas as situações · fora ${d.contas.internas} interna${d.contas.internas === 1 ? '' : 's'}`
+                      : 'todas as situações'
+                  }
                 />
               </dl>
               <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
@@ -142,7 +148,7 @@ export function MetricasAdmin() {
                   <ul className="flex flex-col gap-1 text-sm" aria-label="Contas por situação">
                     {ORDEM_SITUACAO.filter((s) => d.contas.porSituacao[s] > 0).map((s) => (
                       <li key={s} className="flex justify-between gap-3">
-                        <span>{NOME_SITUACAO_ASSINATURA[s]}</span>
+                        <span>{NOME_SITUACAO_NA_PLATAFORMA[s]}</span>
                         <span className="tabular-nums">{d.contas.porSituacao[s]}</span>
                       </li>
                     ))}

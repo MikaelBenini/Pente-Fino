@@ -280,6 +280,7 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
       'Fechadas 7 dias',
       'Último acesso',
       'Cobrança',
+      'Conta interna',
     ],
     ...contas.map((c) => [
       c.nome,
@@ -294,6 +295,7 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
       c.fechadas7Dias,
       c.ultimoAcessoEm ? formatarDataHora(c.ultimoAcessoEm) : '',
       c.cobrancaAutomatica ? 'Asaas' : 'Manual',
+      c.interna ? 'Sim' : 'Não',
     ]),
   ];
   const texto = '\ufeff' + linhas.map((l) => l.map(campo).join(';')).join('\r\n');
@@ -332,7 +334,7 @@ function ContasAdmin({
       (c) =>
         (!termo || c.nome.toLowerCase().includes(termo)) &&
         (!plano || c.plano === plano) &&
-        (!situacao || c.status === situacao) &&
+        (!situacao || (situacao === 'interna' ? c.interna : c.status === situacao && !c.interna)) &&
         (!vendedor || (vendedor === 'site' ? c.vendedorId === null : c.vendedorId === vendedor)),
     )
     .sort(ORDENAR[ordem]);
@@ -375,6 +377,7 @@ function ContasAdmin({
               valor: s,
               rotulo: NOME_STATUS[s],
             })),
+            { valor: 'interna', rotulo: 'Conta interna' },
           ]}
         />
         {u.papel === 'admin' && (
@@ -454,6 +457,11 @@ function ContasAdmin({
                   </td>
                   <td className={td}>
                     <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>
+                    {c.interna && (
+                      <span className="ml-1">
+                        <Ficha tom="neutro">Interna</Ficha>
+                      </span>
+                    )}
                     {c.status === 'teste' && c.testeAte && (
                       <span className="block text-xs text-tinta-suave">
                         até {formatarData(c.testeAte)}

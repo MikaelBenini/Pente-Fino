@@ -61,6 +61,12 @@ export interface ContaNaPlataforma {
   fechadas7Dias: number;
   ultimaFechadaEm: string | null;
   ultimoAcessoEm: string | null;
+  /** Conta da própria equipe: fora das métricas, do "Precisa de atenção" e da cobrança. */
+  interna: boolean;
+  /** Cortesia (sem cobrança) até este dia, AAAA-MM-DD. */
+  cortesiaAte: string | null;
+  /** A cobrança manual começa neste dia, AAAA-MM-DD. */
+  cobrarAPartirDe: string | null;
 }
 
 // ─── Ações numa conta (sempre com motivo, na auditoria da plataforma) ─────
@@ -84,6 +90,10 @@ export const mudarTesteContaSchema = z.object({ ate: diaISO, motivo });
 export type MudarTesteContaEntrada = z.infer<typeof mudarTesteContaSchema>;
 
 // Bloquear, desbloquear, cancelar, reativar, cortesia e início da cobrança: situacao-conta.ts.
+
+/** Marcar a conta como interna (ou desmarcar), com motivo na auditoria (admin R5). */
+export const contaInternaSchema = z.object({ interna: z.boolean(), motivo });
+export type ContaInternaEntrada = z.infer<typeof contaInternaSchema>;
 
 export const FORMAS_PAGAMENTO_MANUAL = [
   'pix',
@@ -168,6 +178,8 @@ export interface FichaContaPlataforma {
   cortesiaAte: string | null;
   /** A cobrança manual começa neste dia. */
   cobrarAPartirDe: string | null;
+  /** Conta da própria equipe (testes, demonstração, implantação). */
+  interna: boolean;
   /** Data da tabela de preços contratada (null = a do lançamento). */
   precosDesde: string | null;
   cupom: string | null;

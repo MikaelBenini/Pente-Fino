@@ -107,7 +107,8 @@ export async function rotinaAvisosDaAssinatura(
         );
 
     // Conta manual: próxima cobrança em aberto 7 dias antes, com o aviso.
-    if (conta.status === 'ativa' && !conta.asaasAssinaturaId) {
+    // Conta interna (da própria equipe) não recebe cobrança manual (admin R5).
+    if (conta.status === 'ativa' && !conta.asaasAssinaturaId && !conta.interna) {
       const nova = proximaCobrancaManual({
         faturas: faturas.map((f) => ({ status: f.status, periodoFim: dia(f.periodoFim) })),
         hoje,
