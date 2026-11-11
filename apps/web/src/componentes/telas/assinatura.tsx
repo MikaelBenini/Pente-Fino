@@ -10,6 +10,7 @@ import {
   NOME_PLANO,
   NOME_SITUACAO_ASSINATURA,
   NOME_STATUS_FATURA,
+  proximaCobrancaSemFatura,
   documentoValido,
   PLANOS,
   valorDaCobranca,
@@ -130,11 +131,15 @@ export function Assinatura() {
                     </span>
                   </p>
                 ) : (
-                  <p className="text-tinta-suave">
-                    {estado.situacao === 'teste' || estado.situacao === 'teste_vencido'
-                      ? 'Nenhuma ainda: o teste é sem cartão.'
-                      : 'Nada em aberto.'}
-                  </p>
+                  <ProximaSemFatura
+                    r={proximaCobrancaSemFatura({
+                      situacao: estado.situacao,
+                      diasRestantesTeste: estado.diasRestantesTeste,
+                      faturas: d.faturas,
+                      valor: d.precoPorMes * (d.ciclo === 'anual' ? 12 : 1),
+                      cobrancaAutomatica: d.cobrancaAutomatica,
+                    })}
+                  />
                 )}
               </div>
             </section>
@@ -282,6 +287,16 @@ function AcaoPagar({
     >
       {rotulo} <ExternalLink aria-hidden className="size-4" />
     </a>
+  );
+}
+
+/** Painel M10: sem fatura em aberto, a data, o valor e a forma (ou os dias de teste). */
+function ProximaSemFatura({ r }: { r: { titulo: string; detalhe: string | null } }) {
+  return (
+    <div>
+      <p className="font-denso text-lg tabular-nums">{r.titulo}</p>
+      {r.detalhe && <p className="text-sm text-tinta-suave">{r.detalhe}</p>}
+    </div>
   );
 }
 

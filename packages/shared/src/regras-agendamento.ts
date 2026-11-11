@@ -107,3 +107,12 @@ export function faltaParaLigarLink(p: ProntidaoDoLink): FaltaParaOLink[] {
     });
   return falta;
 }
+
+// ─── Depois de agendar no balcão (painel M6) ──────────────────────────────
+
+/**
+ * [DECISÃO DO DONO] O que a Agenda faz depois de agendar no balcão. Padrão do briefing: ficar na
+ * Agenda com o aviso "Agendado para … · Abrir comanda" (antes ia direto para a comanda, e a
+ * recepção perdia a visão do dia). Trocar para 'abrir_comanda' volta ao jeito antigo.
+ */
+export const DEPOIS_DE_AGENDAR: 'ficar_na_agenda' | 'abrir_comanda' = 'ficar_na_agenda';

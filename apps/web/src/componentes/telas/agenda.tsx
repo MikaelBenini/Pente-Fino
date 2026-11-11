@@ -2,6 +2,8 @@
 
 import {
   dataLocal,
+  DEPOIS_DE_AGENDAR,
+  formatarData,
   formatarDiaPorExtenso,
   formatarHora,
   formatarMoeda,
@@ -10,6 +12,7 @@ import {
   type AgendaItem,
   type ComandaDetalhe,
   minutosDoArrasto,
+  nomeCurto,
   recorteDoDia,
 } from '@pente-fino/shared';
 import {
@@ -36,7 +39,8 @@ import {
 } from '@dnd-kit/core';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
   INVALIDAR_OPERACAO,
@@ -115,6 +119,13 @@ function ConteudoAgenda() {
   const [de, ate] = periodo(visao, dia);
   const agenda = useAgenda(unidadeId, de, ate);
   const [novo, setNovo] = useState(false);
+  // Painel M6: depois de agendar, fica na Agenda com o aviso e o atalho para a comanda.
+  const [agendado, setAgendado] = useState<{ id: string; inicio: string } | null>(null);
+  useEffect(() => {
+    if (!agendado) return;
+    const t = setTimeout(() => setAgendado(null), 10_000);
+    return () => clearTimeout(t);
+  }, [agendado]);
   const [espera, setEspera] = useState(false);
   const [bloquear, setBloquear] = useState(false);
   const [abriuDoAtalho, setAbriuDoAtalho] = useState(false);
@@ -137,6 +148,18 @@ function ConteudoAgenda() {
 
   return (
     <div className="flex flex-col gap-6">
+      {agendado && (
+        <Aviso tom="sucesso">
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span>
+              Agendado para {formatarData(agendado.inicio)} às {formatarHora(agendado.inicio)}.
+            </span>
+            <Link href={`/comandas?id=${agendado.id}`} className="font-semibold underline">
+              Abrir comanda
+            </Link>
+          </span>
+        </Aviso>
+      )}
       <CabecalhoPagina
         titulo="Agenda"
         pergunta="Quem atende quem e quando?"
@@ -275,6 +298,7 @@ function ConteudoAgenda() {
           clienteInicial={clienteInicial}
           aberto={novo}
           onFechar={() => setNovo(false)}
+          onAgendado={setAgendado}
         />
       )}
     </div>
@@ -467,6 +491,7 @@ function VisaoDia({ agenda, dia }: { agenda: Agenda; dia: string }) {
               inicio={formatarHora(i.inicio)}
               fim={formatarHora(i.fim)}
               cliente={i.cliente}
+              clienteCurto={nomeCurto(i.cliente)}
               servico={i.servicos.join(' + ')}
               estado={i.status}
               confirmado={i.confirmado}
@@ -583,6 +608,7 @@ function VisaoSemana({
                 inicio={formatarHora(i.inicio)}
                 fim={formatarHora(i.fim)}
                 cliente={i.cliente}
+                clienteCurto={nomeCurto(i.cliente)}
                 servico={i.servicos.join(' + ')}
                 estado={i.status}
                 confirmado={i.confirmado}
@@ -661,6 +687,7 @@ function NovoAgendamento({
   clienteInicial,
   aberto,
   onFechar,
+  onAgendado,
 }: {
   unidadeId: string;
   diaInicial: string;
@@ -668,6 +695,7 @@ function NovoAgendamento({
   clienteInicial?: ClienteEscolhido | null;
   aberto: boolean;
   onFechar: () => void;
+  onAgendado: (a: { id: string; inicio: string }) => void;
 }) {
   const router = useRouter();
   const servicos = useServicos();
@@ -746,7 +774,14 @@ function NovoAgendamento({
               ...(encaixe ? { encaixe: true, confirmarEncaixe: !!avisoEncaixe } : {}),
             });
             fechar();
-            router.push(`/comandas?id=${r.id}`);
+            if (DEPOIS_DE_AGENDAR === 'abrir_comanda') router.push(`/comandas?id=${r.id}`);
+            else
+              onAgendado({
+                id: r.id,
+                inicio: encaixe
+                  ? new Date(`${dia}T${horaEncaixe}:00-03:00`).toISOString()
+                  : horario!.inicio,
+              });
           } catch (er) {
             if (er instanceof ErroApi && er.codigo === 'encaixe_com_aviso') {
               setAvisoEncaixe(er.message);

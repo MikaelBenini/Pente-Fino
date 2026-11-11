@@ -1,6 +1,7 @@
 // Assinatura do Pente Fino pela barbearia (Etapa 10.1, lado do dono): em que situação a conta
 // está e se o sistema fica só para consulta. Bloqueio suave: nunca apaga dado.
 import { dataLocal } from './datas.js';
+import { formatarMoeda } from './formatacao.js';
 import type { NotaDaFatura } from './nota-fiscal.js';
 import { z } from 'zod';
 import {
@@ -298,4 +299,54 @@ export function faturaDaCobranca(c: CobrancaExterna): {
     };
   if (cancelados.includes(c.status)) return { status: 'cancelada', forma: null, pagaEm: null };
   return { status: 'aberta', forma: null, pagaEm: null };
+}
+
+// ─── Próxima cobrança na tela da barbearia (painel M10) ───────────────────
+
+const NOME_FORMA_COBRANCA: Readonly<Record<NonNullable<FaturaDetalhe['forma']>, string>> = {
+  pix: 'Pix',
+  cartao: 'cartão',
+  boleto: 'boleto',
+  dinheiro: 'dinheiro',
+  transferencia: 'transferência',
+};
+
+/**
+ * O que mostrar em "Próxima cobrança" quando não há fatura em aberto. Antes: "Nada em aberto".
+ * Ativa: vence no dia seguinte ao fim do último período pago, no valor do plano e pela forma da
+ * última vez. Teste: quantos dias faltam (a cobrança só começa quando assinar).
+ */
+export function proximaCobrancaSemFatura(d: {
+  situacao: SituacaoAssinatura;
+  diasRestantesTeste: number | null;
+  faturas: readonly Pick<FaturaDetalhe, 'status' | 'periodoFim' | 'forma'>[];
+  /** Valor de cada cobrança (o mês no mensal, o ano no anual), já com desconto. */
+  valor: number;
+  cobrancaAutomatica: boolean;
+}): { titulo: string; detalhe: string | null } {
+  if (d.situacao === 'teste') {
+    const n = d.diasRestantesTeste ?? 0;
+    return {
+      titulo: n === 0 ? 'O teste termina hoje' : `Faltam ${n} ${n === 1 ? 'dia' : 'dias'} de teste`,
+      detalhe: 'Nenhuma cobrança ainda: o teste é sem cartão. A primeira só depois de assinar.',
+    };
+  }
+  if (d.situacao === 'teste_vencido')
+    return { titulo: 'O teste terminou', detalhe: 'Assine para voltar a lançar.' };
+  const pagas = d.faturas
+    .filter((f) => f.status === 'paga')
+    .sort((a, b) => b.periodoFim.localeCompare(a.periodoFim));
+  const ultima = pagas[0];
+  if (!ultima) return { titulo: 'Nada em aberto', detalhe: null };
+  const dia = new Date(`${ultima.periodoFim}T12:00:00Z`);
+  dia.setUTCDate(dia.getUTCDate() + 1);
+  const vence = dia.toISOString().slice(0, 10);
+  const ddmmaaaa = `${vence.slice(8, 10)}/${vence.slice(5, 7)}/${vence.slice(0, 4)}`;
+  const forma = ultima.forma ? NOME_FORMA_COBRANCA[ultima.forma] : null;
+  return {
+    titulo: `${formatarMoeda(d.valor)} em ${ddmmaaaa}`,
+    detalhe: d.cobrancaAutomatica
+      ? `Cobrança automática${forma ? ` (${forma})` : ''}: o link chega por e-mail perto do vencimento.`
+      : `Pagamento combinado com o Pente Fino${forma ? ` (da última vez, ${forma})` : ''}.`,
+  };
 }

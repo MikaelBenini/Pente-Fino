@@ -85,10 +85,12 @@ export const useServicos = () =>
   useQuery({ queryKey: chaves.servicos, queryFn: () => api<ServicoDetalhe[]>('servicos') });
 export const usePrecos = () =>
   useQuery({ queryKey: chaves.precos, queryFn: () => api<TabelaPrecos>('precos') });
-export const useProfissionais = () =>
+/** `ativo` = false não busca (ex.: barbeiro na tela de Serviços, que não vê a margem). */
+export const useProfissionais = (ativo = true) =>
   useQuery({
     queryKey: chaves.profissionais,
     queryFn: () => api<ProfissionalDetalhe[]>('profissionais'),
+    enabled: ativo,
   });
 
 export function useCalendario(unidadeId: string | null, de: string, ate: string) {

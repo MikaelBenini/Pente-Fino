@@ -25,3 +25,24 @@ export function linkWhatsappComercial(mensagem: string = MENSAGEM_WHATSAPP): str
     ? `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`
     : null;
 }
+
+// ─── Suporte para quem já usa o painel (painel M10) ───────────────────────
+// TODO(dono): WhatsApp do suporte e o horário de atendimento (o briefing pede que cubra o sábado).
+// Vazios, a Ajuda mostra só o e-mail; nada de número ou horário inventado.
+
+export const SUPORTE = {
+  /** Só dígitos com 55 (ex.: '5511999998888'). */
+  whatsapp: '',
+  /** Ex.: 'Segunda a sábado, das 9h às 18h (horário de Brasília)'. */
+  horario: '',
+} as const;
+
+/** Link do WhatsApp do suporte com a mensagem pronta; null sem número. */
+export function linkWhatsappSuporte(
+  mensagem = 'Oi! Preciso de ajuda com o Pente Fino.',
+): string | null {
+  const numero = SUPORTE.whatsapp.replace(/\D/g, '');
+  return numero.length >= 12
+    ? `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`
+    : null;
+}

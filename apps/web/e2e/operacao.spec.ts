@@ -78,10 +78,14 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await dialogo.getByRole('button', { name: /^Encaixar \d{2}:\d{2}$/ }).click();
   // Fora do expediente ou em cima de outro horário (o teste roda a qualquer hora): confirma.
   const mesmoAssim = dialogo.getByRole('button', { name: 'Encaixar mesmo assim' });
-  await Promise.race([
-    recepcao.waitForURL(/\/comandas\?id=/),
-    mesmoAssim.waitFor().then(() => mesmoAssim.click()),
-  ]);
+  // Painel M6: depois de agendar, fica na Agenda com "Agendado para … · Abrir comanda".
+  const abrirComanda = recepcao.getByRole('link', { name: 'Abrir comanda' });
+  await Promise.race([abrirComanda.waitFor(), mesmoAssim.waitFor().then(() => mesmoAssim.click())]);
+  await expect(
+    recepcao.getByText(/^Agendado para \d{2}\/\d{2}\/\d{4} às \d{2}:\d{2}\.$/),
+  ).toBeVisible();
+  await expect(recepcao).toHaveURL(/\/agenda/);
+  await abrirComanda.click();
   await recepcao.waitForURL(/\/comandas\?id=/);
   const url = recepcao.url();
   await expect(recepcao.getByRole('heading', { name: cliente })).toBeVisible();
@@ -181,6 +185,7 @@ test('A2: atendimento de outro dia não é recebido antes de acontecer', async (
     .first()
     .click();
   await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
+  await recepcao.getByRole('link', { name: 'Abrir comanda' }).click();
   await recepcao.waitForURL(/\/comandas\?id=/);
   // Quem pode receber sem a confirmação do barbeiro (gestor) vê o botão desativado e o porquê.
   const gestor = await entrarComo(browser, 'gestor@demo.pentefino.dev', info.project.name);
@@ -246,6 +251,7 @@ test('cliente que não veio: a recepção marca falta e a comanda sai do faturam
     .last()
     .click();
   await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
+  await recepcao.getByRole('link', { name: 'Abrir comanda' }).click();
   await recepcao.waitForURL(/\/comandas\?id=/);
   await recepcao.getByRole('button', { name: 'Cancelar ou marcar falta' }).click();
   const cancelar = recepcao.getByRole('dialog', { name: 'Cancelar comanda' });
