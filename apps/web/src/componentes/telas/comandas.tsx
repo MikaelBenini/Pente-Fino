@@ -29,7 +29,7 @@ import {
 import { ArrowLeft, Minus, Plus, Printer, ReceiptText, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
   chavesOperacao,
@@ -381,6 +381,40 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
         ? `O atendimento é em ${formatarDiaPorExtenso(c.inicio!)} às ${formatarHora(c.inicio!)}.`
         : null;
 
+  // Painel M7: remover item tem 5 s para desfazer. O item só sai de verdade depois; sair da tela
+  // ou "Receber e fechar" nesse meio tempo removem na hora (nada é cobrado do item tirado).
+  const [removendo, setRemovendo] = useState<{ id: string; descricao: string } | null>(null);
+  const pendente = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  async function removerAgora() {
+    const p = pendente.current;
+    if (!p) return;
+    clearTimeout(p.timer);
+    pendente.current = null;
+    setRemovendo(null);
+    await executar(`itens/${p.id}`, undefined, 'DELETE');
+  }
+  async function removerItem(i: { id: string; descricao: string }) {
+    await removerAgora();
+    setRemovendo(i);
+    pendente.current = { id: i.id, timer: setTimeout(() => void removerAgora(), 5000) };
+  }
+  function desfazerRemocao() {
+    if (pendente.current) clearTimeout(pendente.current.timer);
+    pendente.current = null;
+    setRemovendo(null);
+  }
+  useEffect(
+    () => () => {
+      // Saiu da tela com a remoção pendente: remove assim mesmo.
+      const p = pendente.current;
+      if (p) {
+        clearTimeout(p.timer);
+        void api(`comandas/${c.id}/itens/${p.id}`, { metodo: 'DELETE', corpo: {} }).catch(() => {});
+      }
+    },
+    [c.id],
+  );
+
   /** Lançar item: sem internet, guarda no aparelho e envia depois. */
   async function lancar(
     item: { tipo: 'servico'; servicoId: string } | { tipo: 'produto'; produtoId: string },
@@ -471,75 +505,91 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
           {c.itens.length === 0 && (
             <li className="px-4 py-6 text-tinta-suave">Nenhum item lançado ainda.</li>
           )}
-          {c.itens.map((i) => (
-            <li key={i.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-2 font-semibold">
-                  {i.descricao}
-                  {i.ehExtra && (
-                    <span className="rounded-sm bg-modulo px-1.5 font-denso text-xs font-semibold uppercase text-sobre-modulo">
-                      Extra
-                    </span>
-                  )}
-                  {i.tipo === 'produto' && (
-                    <span className="rounded-sm border border-borda-forte px-1.5 font-denso text-xs font-semibold uppercase text-tinta-suave">
-                      Produto
-                    </span>
-                  )}
-                  {i.cobertoClube && (
-                    <span className="rounded-sm bg-acao px-1.5 font-denso text-xs font-semibold uppercase text-sobre-acao">
-                      Clube
-                    </span>
-                  )}
-                </span>
-                <span className="font-denso text-sm tabular-nums text-tinta-suave">
-                  {i.cobertoClube
-                    ? `${i.quantidade} × coberto pelo plano`
-                    : `${i.quantidade} × ${formatarMoeda(i.precoUnitario)}`}
-                  {i.desconto > 0 && ` · desconto ${formatarMoeda(i.desconto)}`}
-                  {c.status === 'fechada' &&
-                    i.comissaoValor > 0 &&
-                    ` · comissão ${formatarMoeda(i.comissaoValor)}`}
-                </span>
-              </span>
-              {editavel && (
-                <span className="flex items-center gap-1">
-                  <Botao
-                    variante="fantasma"
-                    className="px-3"
-                    aria-label={`Diminuir ${i.descricao}`}
-                    disabled={i.quantidade <= 1}
-                    onClick={() =>
-                      executar(`itens/${i.id}`, { quantidade: i.quantidade - 1 }, 'PATCH')
-                    }
-                  >
-                    <Minus aria-hidden className="size-4" />
-                  </Botao>
-                  <Botao
-                    variante="fantasma"
-                    className="px-3"
-                    aria-label={`Aumentar ${i.descricao}`}
-                    onClick={() =>
-                      executar(`itens/${i.id}`, { quantidade: i.quantidade + 1 }, 'PATCH')
-                    }
-                  >
-                    <Plus aria-hidden className="size-4" />
-                  </Botao>
-                  <Botao
-                    variante="fantasma"
-                    className="px-3"
-                    aria-label={`Remover ${i.descricao}`}
-                    onClick={() => executar(`itens/${i.id}`, undefined, 'DELETE')}
-                  >
-                    <Trash2 aria-hidden className="size-4" />
+          {c.itens.map((i) =>
+            removendo?.id === i.id ? (
+              <li
+                key={i.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                role="status"
+              >
+                <span className="text-tinta-suave line-through">{i.descricao}</span>
+                <span className="flex items-center gap-3 text-sm">
+                  Item removido.
+                  <Botao variante="secundario" onClick={desfazerRemocao}>
+                    Desfazer
                   </Botao>
                 </span>
-              )}
-              <span className="w-24 text-right font-denso text-lg font-semibold tabular-nums">
-                {formatarMoeda(i.quantidade * i.precoUnitario - i.desconto)}
-              </span>
-            </li>
-          ))}
+              </li>
+            ) : (
+              <li key={i.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2 font-semibold">
+                    {i.descricao}
+                    {i.ehExtra && (
+                      <span className="rounded-sm bg-modulo px-1.5 font-denso text-xs font-semibold uppercase text-sobre-modulo">
+                        Extra
+                      </span>
+                    )}
+                    {i.tipo === 'produto' && (
+                      <span className="rounded-sm border border-borda-forte px-1.5 font-denso text-xs font-semibold uppercase text-tinta-suave">
+                        Produto
+                      </span>
+                    )}
+                    {i.cobertoClube && (
+                      <span className="rounded-sm bg-acao px-1.5 font-denso text-xs font-semibold uppercase text-sobre-acao">
+                        Clube
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-denso text-sm tabular-nums text-tinta-suave">
+                    {i.cobertoClube
+                      ? `${i.quantidade} × coberto pelo plano`
+                      : `${i.quantidade} × ${formatarMoeda(i.precoUnitario)}`}
+                    {i.desconto > 0 && ` · desconto ${formatarMoeda(i.desconto)}`}
+                    {c.status === 'fechada' &&
+                      i.comissaoValor > 0 &&
+                      ` · comissão ${formatarMoeda(i.comissaoValor)}`}
+                  </span>
+                </span>
+                {editavel && (
+                  <span className="flex items-center gap-1">
+                    <Botao
+                      variante="fantasma"
+                      className="px-3"
+                      aria-label={`Diminuir ${i.descricao}`}
+                      disabled={i.quantidade <= 1}
+                      onClick={() =>
+                        executar(`itens/${i.id}`, { quantidade: i.quantidade - 1 }, 'PATCH')
+                      }
+                    >
+                      <Minus aria-hidden className="size-4" />
+                    </Botao>
+                    <Botao
+                      variante="fantasma"
+                      className="px-3"
+                      aria-label={`Aumentar ${i.descricao}`}
+                      onClick={() =>
+                        executar(`itens/${i.id}`, { quantidade: i.quantidade + 1 }, 'PATCH')
+                      }
+                    >
+                      <Plus aria-hidden className="size-4" />
+                    </Botao>
+                    <Botao
+                      variante="fantasma"
+                      className="px-3"
+                      aria-label={`Remover ${i.descricao}`}
+                      onClick={() => void removerItem({ id: i.id, descricao: i.descricao })}
+                    >
+                      <Trash2 aria-hidden className="size-4" />
+                    </Botao>
+                  </span>
+                )}
+                <span className="w-24 text-right font-denso text-lg font-semibold tabular-nums">
+                  {formatarMoeda(i.quantidade * i.precoUnitario - i.desconto)}
+                </span>
+              </li>
+            ),
+          )}
         </ul>
         <dl className="flex flex-col gap-1 self-end font-denso text-lg tabular-nums">
           {c.desconto > 0 && (
@@ -586,7 +636,10 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
           {pode('fechar') && (
             <>
               <Botao
-                onClick={() => setFechar(true)}
+                onClick={async () => {
+                  await removerAgora();
+                  setFechar(true);
+                }}
                 disabled={!!motivoNaoFecha}
                 aria-describedby={motivoNaoFecha ? 'motivo-nao-fecha' : undefined}
               >

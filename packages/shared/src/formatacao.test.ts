@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  nomeCurto,
   formatarData,
   formatarDataHora,
   formatarDiaPorExtenso,
@@ -38,5 +39,14 @@ describe('formatação pt-BR', () => {
     expect(formatarTelefone('551133334444')).toBe('(11) 3333-4444');
     expect(formatarTelefone('11988887777')).toBe('(11) 98888-7777');
     expect(formatarTelefone('123')).toBe('123');
+  });
+});
+
+describe('nome curto no bloco da agenda (painel M9)', () => {
+  it('primeiro nome e a inicial do segundo', () => {
+    expect(nomeCurto('vitor martins')).toBe('vitor M.');
+    expect(nomeCurto('Ana Paula Souza')).toBe('Ana P.');
+    expect(nomeCurto('  Ana  ')).toBe('Ana');
+    expect(nomeCurto('')).toBe('');
   });
 });

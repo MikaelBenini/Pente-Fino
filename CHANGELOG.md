@@ -7,6 +7,21 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (painel no dia a dia)
+
+- Serviços: preço de cada serviço (a faixa, quando muda entre unidades), comissão média dos
+  barbeiros e quanto sobra por atendimento, com a mesma conta da comanda; ordenar por nome, preço
+  ou sobra. Comissão e sobra são do lucro real (Premium) e não aparecem para o barbeiro.
+- Agenda: depois de agendar no balcão, a tela fica na Agenda com "Agendado para … · Abrir
+  comanda" (antes ia direto para a comanda).
+- Comanda: tirar um item tem 5 segundos para "Desfazer".
+- Agenda: horário curto (30 min) aparece numa linha só, "10:00 Vitor M. · Corte", com o texto
+  inteiro ao passar o mouse; antes o nome do cliente era cortado.
+- Assinatura: "Próxima cobrança" diz a data, o valor e a forma de pagamento (ou quantos dias de
+  teste faltam), no lugar de "Nada em aberto".
+- Ajuda: "Falar com o suporte" no rodapé do menu, levando ao contato da Ajuda, que mostra o
+  WhatsApp e o horário do suporte assim que forem cadastrados.
+
 ### Corrigido (informação no painel)
 
 - Início: sem meta de faturamento, o card mostra as metas de serviço que existem ("Corte · 0 de 12

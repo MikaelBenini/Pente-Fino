@@ -721,8 +721,11 @@ agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 - [x] **M4** coluna de Serviços "Conta como" (peso nos atendimentos), com a explicação; a contagem do mês segue em Resultados → Serviços e produtos
 - [x] **M5** "Custos operacionais" com comissão e despesas separadas (`percentualComissoes`)
 - [x] **M8** imprimir comandas desativado sem comanda no dia
-- [ ] **M3, M6, M7, M9** preço, comissão e sobra em Serviços; ficar na Agenda depois de agendar; desfazer ao tirar item; bloco curto da agenda (próximo PR)
-- [ ] **M10** assinatura com a próxima cobrança; suporte com WhatsApp e horário
+- [x] **M3** Serviços com preço, comissão média e sobra por atendimento (`linhaDoCatalogo`, com `comissaoItem` da comanda e a regra vigente de cada barbeiro ativo), ordenação, "Premium" fora do lucro real e nada de margem para o barbeiro
+- [x] **M6** [DECISÃO DO DONO] depois de agendar, fica na Agenda com o aviso e "Abrir comanda" (`DEPOIS_DE_AGENDAR = 'ficar_na_agenda'`; `'abrir_comanda'` volta ao jeito antigo)
+- [x] **M7** remover item da comanda com 5 s para desfazer; sair da tela ou "Receber e fechar" removem na hora, para nada ser cobrado do item tirado
+- [x] **M9** bloco da agenda com menos de 72 px numa linha só ("10:00 Vitor M. · Corte", `nomeCurto`), com o texto inteiro no `title` e no rótulo acessível
+- [x] **M10** assinatura com a próxima cobrança (`proximaCobrancaSemFatura`: data, valor e forma; ou os dias de teste) e "Falar com o suporte" no menu, levando à Ajuda → contato. **Falta o dono:** WhatsApp e horário do suporte em `apps/web/src/lib/contato.ts` (`SUPORTE`), cobrindo o sábado
 - [ ] **X1–X4, P1–P6** (seguintes)
 
 ## Etapa 23.4 · Administração sem furos (briefing de 2026-11-10)

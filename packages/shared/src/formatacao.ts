@@ -95,3 +95,13 @@ export function lerMoeda(texto: string): number | null {
 export function valorParaCampo(centavos: number): string {
   return formatarValor(centavos);
 }
+
+/**
+ * "Vitor Martins" → "Vitor M.", "Ana" → "Ana": para caber num bloco curto da agenda (painel M9).
+ * O nome inteiro continua no rótulo de acessibilidade e na dica.
+ */
+export function nomeCurto(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length <= 1) return partes[0] ?? '';
+  return `${partes[0]} ${partes[1]!.charAt(0).toUpperCase()}.`;
+}

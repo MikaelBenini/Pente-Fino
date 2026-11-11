@@ -6,6 +6,9 @@ import {
   formatarData,
   formatarMoeda,
   lerMoeda,
+  linhaDoCatalogo,
+  regraVigente,
+  type LinhaDoCatalogo,
   servicoSchema,
   temAlgumPapel,
   valorParaCampo,
@@ -19,6 +22,7 @@ import {
   Dialogo,
   EstadoVazio,
   Marcador,
+  Selecao,
   TabelaEditavel,
   type LinhaEditavel,
 } from '@pente-fino/ui';
@@ -28,7 +32,15 @@ import { useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { api } from '@/lib/api';
-import { chaves, useAcao, usePrecos, useServicos, useUnidadesDetalhe } from '@/lib/consultas';
+import {
+  chaves,
+  useAcao,
+  usePrecos,
+  useProfissionais,
+  useServicos,
+  useUnidadesDetalhe,
+} from '@/lib/consultas';
+import { useTemRecurso } from '@/lib/plano';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
@@ -61,10 +73,55 @@ export function TelaServicos() {
 
 // ─── Catálogo ─────────────────────────────────────────────────────────────
 
+type OrdemCatalogo = 'nome' | 'preco' | 'sobra';
+
+const faixa = (l: LinhaDoCatalogo) =>
+  !l.preco
+    ? null
+    : l.preco.min === l.preco.max
+      ? formatarMoeda(l.preco.min)
+      : `${formatarMoeda(l.preco.min)} a ${formatarMoeda(l.preco.max)}`;
+
 function Catalogo({ podeEditar }: { podeEditar: boolean }) {
   const servicos = useServicos();
   const [editando, setEditando] = useState<ServicoDetalhe | 'novo' | null>(null);
-  const verCusto = temAlgumPapel(useApp().usuario.papeis, ['dono', 'gestor']);
+  const { usuario, unidadeAtiva } = useApp();
+  const verCusto = temAlgumPapel(usuario.papeis, ['dono', 'gestor']);
+  // Painel M3: preço, comissão e sobra (a pergunta da tela). Margem é do lucro real (Premium).
+  const precos = usePrecos();
+  const profissionais = useProfissionais(verCusto);
+  const lucroReal = useTemRecurso('lucroReal');
+  const [ordem, setOrdem] = useState<OrdemCatalogo>('nome');
+  const hoje = dataLocal(new Date());
+  const linhas = useMemo(() => {
+    const m = new Map<string, LinhaDoCatalogo>();
+    const daUnidade = (u: string) =>
+      unidadeAtiva === 'todas' || !unidadeAtiva || u === unidadeAtiva;
+    const barbeiros = (profissionais.data ?? [])
+      .filter((p) => p.ativo && daUnidade(p.unidadeId))
+      .map((p) => ({ unidadeId: p.unidadeId, regra: regraVigente(p.regras, hoje) }));
+    for (const sv of servicos.data ?? [])
+      m.set(
+        sv.id,
+        linhaDoCatalogo({
+          precos: (precos.data?.vigentes ?? []).filter(
+            (x) => x.servicoId === sv.id && daUnidade(x.unidadeId),
+          ),
+          custoProduto: sv.custoProduto,
+          barbeiros,
+        }),
+      );
+    return m;
+  }, [servicos.data, precos.data, profissionais.data, unidadeAtiva, hoje]);
+  const verMargem = verCusto && lucroReal !== undefined;
+  const ordenados = [...(servicos.data ?? [])].sort((a, b) => {
+    const la = linhas.get(a.id)!;
+    const lb = linhas.get(b.id)!;
+    if (ordem === 'preco') return (lb.preco?.max ?? -1) - (la.preco?.max ?? -1);
+    if (ordem === 'sobra' && lucroReal)
+      return (lb.sobraMedia ?? -Infinity) - (la.sobraMedia ?? -Infinity);
+    return a.nome.localeCompare(b.nome, 'pt-BR');
+  });
 
   return (
     <Estado consulta={servicos}>
@@ -82,67 +139,118 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
               texto="Duração, custo de produto, se é extra e quanto pesa em atendimentos. Depois, defina o preço em cada unidade."
             />
           ) : (
-            <Tabela rotulo="Serviços cadastrados">
-              <thead className="bg-superficie-2">
-                <tr>
-                  <th className={th}>Serviço</th>
-                  <th className={th}>Categoria</th>
-                  <th className={`${th} text-right`}>Duração</th>
-                  {verCusto && <th className={`${th} text-right`}>Custo de produto</th>}
-                  <th className={th}>Tipo</th>
-                  <th className={`${th} text-right`}>Conta como</th>
-                  {podeEditar && (
-                    <th className={th}>
-                      <span className="sr-only">Ações</span>
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {servicos.data!.map((s) => (
-                  <tr key={s.id} className="border-t border-borda">
-                    <td className={`${td} font-semibold`}>
-                      {s.nome} {!s.ativo && <Ficha tom="neutro">Inativo</Ficha>}
-                    </td>
-                    <td className={`${td} text-tinta-suave`}>{s.categoria ?? '—'}</td>
-                    <td className={`${td} text-right font-denso tabular-nums`}>
-                      {s.duracaoMin} min
-                    </td>
-                    {verCusto && (
-                      <td className={`${td} text-right font-denso tabular-nums`}>
-                        {formatarMoeda(s.custoProduto)}
-                      </td>
+            <>
+              <div className="w-56">
+                <Selecao
+                  id="catalogo-ordem"
+                  rotulo="Ordenar por"
+                  value={ordem}
+                  onChange={(e) => setOrdem(e.target.value as OrdemCatalogo)}
+                  opcoes={[
+                    { valor: 'nome', rotulo: 'Nome' },
+                    { valor: 'preco', rotulo: 'Maior preço' },
+                    ...(lucroReal && verCusto
+                      ? [{ valor: 'sobra', rotulo: 'Maior sobra por atendimento' }]
+                      : []),
+                  ]}
+                />
+              </div>
+              <Tabela rotulo="Serviços cadastrados">
+                <thead className="bg-superficie-2">
+                  <tr>
+                    <th className={th}>Serviço</th>
+                    <th className={th}>Categoria</th>
+                    <th className={`${th} text-right`}>Duração</th>
+                    <th className={`${th} text-right`}>Preço</th>
+                    {verMargem && lucroReal && (
+                      <>
+                        <th className={`${th} text-right`}>Comissão média</th>
+                        <th className={`${th} text-right`}>Sobra por atendimento</th>
+                      </>
                     )}
-                    <td className={td}>
-                      {s.ehExtra ? (
-                        <Ficha tom="aviso">Extra</Ficha>
-                      ) : (
-                        <Ficha tom="neutro">Principal</Ficha>
-                      )}
-                    </td>
-                    <td className={`${td} text-right font-denso tabular-nums`}>
-                      {s.pesoAtendimento === 0
-                        ? '0 (extra)'
-                        : `${s.pesoAtendimento} ${s.pesoAtendimento === 1 ? 'atendimento' : 'atendimentos'}`}
-                    </td>
+                    {verMargem && !lucroReal && <th className={th}>Comissão e sobra</th>}
+                    {verCusto && <th className={`${th} text-right`}>Custo de produto</th>}
+                    <th className={th}>Tipo</th>
+                    <th className={`${th} text-right`}>Conta como</th>
                     {podeEditar && (
-                      <td className={`${td} text-right`}>
-                        <Botao
-                          variante="fantasma"
-                          onClick={() => setEditando(s)}
-                          aria-label={`Editar ${s.nome}`}
-                        >
-                          Editar
-                        </Botao>
-                      </td>
+                      <th className={th}>
+                        <span className="sr-only">Ações</span>
+                      </th>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </Tabela>
+                </thead>
+                <tbody>
+                  {ordenados.map((s) => {
+                    const l = linhas.get(s.id)!;
+                    return (
+                      <tr key={s.id} className="border-t border-borda">
+                        <td className={`${td} font-semibold`}>
+                          {s.nome} {!s.ativo && <Ficha tom="neutro">Inativo</Ficha>}
+                        </td>
+                        <td className={`${td} text-tinta-suave`}>{s.categoria ?? '—'}</td>
+                        <td className={`${td} text-right font-denso tabular-nums`}>
+                          {s.duracaoMin} min
+                        </td>
+                        <td className={`${td} text-right font-denso tabular-nums`}>
+                          {faixa(l) ?? <span className="text-tinta-suave">sem preço</span>}
+                        </td>
+                        {verMargem && lucroReal && (
+                          <>
+                            <td className={`${td} text-right font-denso tabular-nums`}>
+                              {l.comissaoMedia === null ? '—' : formatarMoeda(l.comissaoMedia)}
+                            </td>
+                            <td
+                              className={`${td} text-right font-denso font-semibold tabular-nums ${(l.sobraMedia ?? 0) < 0 ? 'text-perigo-texto' : ''}`}
+                            >
+                              {l.sobraMedia === null ? '—' : formatarMoeda(l.sobraMedia)}
+                            </td>
+                          </>
+                        )}
+                        {verMargem && !lucroReal && (
+                          <td className={td}>
+                            <Ficha tom="neutro">Premium</Ficha>
+                          </td>
+                        )}
+                        {verCusto && (
+                          <td className={`${td} text-right font-denso tabular-nums`}>
+                            {formatarMoeda(s.custoProduto)}
+                          </td>
+                        )}
+                        <td className={td}>
+                          {s.ehExtra ? (
+                            <Ficha tom="aviso">Extra</Ficha>
+                          ) : (
+                            <Ficha tom="neutro">Principal</Ficha>
+                          )}
+                        </td>
+                        <td className={`${td} text-right font-denso tabular-nums`}>
+                          {s.pesoAtendimento === 0
+                            ? '0 (extra)'
+                            : `${s.pesoAtendimento} ${s.pesoAtendimento === 1 ? 'atendimento' : 'atendimentos'}`}
+                        </td>
+                        {podeEditar && (
+                          <td className={`${td} text-right`}>
+                            <Botao
+                              variante="fantasma"
+                              onClick={() => setEditando(s)}
+                              aria-label={`Editar ${s.nome}`}
+                            >
+                              Editar
+                            </Botao>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </Tabela>
+            </>
           )}
           {servicos.data!.length > 0 && (
             <p className="text-sm text-tinta-suave">
+              {verMargem && lucroReal
+                ? 'Sobra por atendimento = preço − comissão média dos barbeiros − custo de produto, com os preços e as regras de comissão de hoje. '
+                : ''}
               “Conta como” é quanto cada serviço soma nos atendimentos de Resultados do mês e de
               Clientes: Corte conta 1, Corte + Barba conta 2 e extra não conta. Quantas vezes cada
               serviço foi feito no mês está em Resultados do mês → Serviços e produtos.

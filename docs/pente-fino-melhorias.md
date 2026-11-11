@@ -32,7 +32,7 @@
 | 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ✅ R2 #152; R1 #153 |
 | 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ✅ R3, R4 e R6 #154; R5 #155 |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ✅ #156 (R9: correção do DNS com o dono) |
-| 7 | Painel | M1–M10 | Informação confusa e atrito de uso | 🔄 M1, M2, M4, M5 e M8 em `fix/painel-m1-m2-m4-m5-m8` |
+| 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ✅ M1, M2, M4, M5 e M8 #157; M3, M6, M7, M9 e M10 `feat/painel-m3-m6-m7-m9-m10` |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ⏳ (T4 já existia) |
 | 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ⏳ |
 | 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ |
@@ -71,7 +71,7 @@ Itens que se sobrepõem e devem ser feitos juntos:
 | --- | --- | --- |
 | Painel A1 | Faturamento, lucro e "última visita" pela data do atendimento (competência) | Data do fechamento em todas as telas (concordam entre si) |
 | Painel A2 | "Receber adiantado (sinal)" sem fechar a comanda | Não existe |
-| Painel M6 | Depois de agendar, ficar na Agenda com aviso | Ficar na Agenda, configurável |
+| Painel M6 | Depois de agendar, ficar na Agenda com aviso | ✅ fica na Agenda (`DEPOIS_DE_AGENDAR`) |
 | Painel P4 | Indexar páginas de barbearia que ligarem "Aparecer no Google" | Só com a opção ligada; as demais `noindex` |
 | Admin R1 | Cupom LANCAMENTO sem limite de vagas | ✅ decidido em 11/11: sem limite |
 | Admin R3 | Conta "Teste" reativada indevidamente | ✅ decidido em 11/11: "Teste" e "Implantação" são internas; marcar no `/admin` |
@@ -91,7 +91,8 @@ Itens que se sobrepõem e devem ser feitos juntos:
   "Conferir de novo no Asaas" → ligar.
 - **Contato e rodapé (site C2/C3):** WhatsApp, razão social, CNPJ, cidade e redes em `lib/contato.ts`.
 - **Depoimentos (site C4):** pelo menos dois reais e autorizados.
-- **Suporte (painel M10):** WhatsApp de suporte e horário de atendimento.
+- **Suporte (painel M10):** WhatsApp de suporte e horário de atendimento (cobrindo o sábado), em
+  `apps/web/src/lib/contato.ts` → `SUPORTE`. Enquanto vazio, a Ajuda mostra só o e-mail.
 - **Sobre (site N5):** quem faz o Pente Fino, por que existe, cidade.
 - **IP real na auditoria (admin R9):** se a Saúde do sistema avisar acessos com IP interno, tirar
   o registro AAAA do DNS (ou ligar o IPv6 no Docker), conforme `docs/producao.md`.
@@ -225,7 +226,7 @@ Itens que se sobrepõem e devem ser feitos juntos:
 - [x] A6 selo da conversa reflete a conexão — `fix/painel-a5-a8`
 - [x] A7 não liga o link sem serviço com preço; página pública sem serviço mostra contato — `fix/painel-a5-a8`
 - [x] A8 `scrollWidth === innerWidth` em 375 px em todas as rotas — `fix/painel-a5-a8`
-- [ ] M1–M10 conferidos
+- [x] M1–M10 conferidos (#157 e `feat/painel-m3-m6-m7-m9-m10`). **Dono:** WhatsApp e horário do suporte
 - [ ] X1–X4: axe sem "serious/critical"
 - [ ] P1 prévia no WhatsApp mostra a barbearia; P3 redirect 301 funcionando
 - [ ] Build, lint e testes passando

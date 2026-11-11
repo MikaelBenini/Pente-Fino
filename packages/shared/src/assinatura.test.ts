@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   documentoValido,
+  proximaCobrancaSemFatura,
   faturaDaCobranca,
   situacaoAssinatura,
   TOLERANCIA_ATRASO_DIAS,
   valorDaCobranca,
 } from './assinatura.js';
+import { formatarMoeda } from './formatacao.js';
 
 const agora = new Date('2026-11-05T15:00:00-03:00');
 const dia = (n: number) => new Date(agora.getTime() + n * 86_400_000);
@@ -115,5 +117,51 @@ describe('cobrança', () => {
     expect(faturaDaCobranca({ ...base, status: 'REFUNDED', forma: 'PIX' }).status).toBe(
       'cancelada',
     );
+  });
+});
+
+describe('próxima cobrança sem fatura em aberto (painel M10)', () => {
+  const base = {
+    diasRestantesTeste: null,
+    faturas: [],
+    valor: 14990,
+    cobrancaAutomatica: true,
+  };
+
+  it('ativa: o valor e o dia seguinte ao fim do período pago, com a forma da última vez', () => {
+    expect(
+      proximaCobrancaSemFatura({
+        ...base,
+        situacao: 'ativa',
+        faturas: [
+          { status: 'paga', periodoFim: '2026-11-04', forma: 'pix' },
+          { status: 'paga', periodoFim: '2026-12-04', forma: 'cartao' },
+        ],
+      }),
+    ).toEqual({
+      titulo: `${formatarMoeda(14990)} em 05/12/2026`,
+      detalhe: 'Cobrança automática (cartão): o link chega por e-mail perto do vencimento.',
+    });
+    expect(
+      proximaCobrancaSemFatura({
+        ...base,
+        situacao: 'ativa',
+        cobrancaAutomatica: false,
+        faturas: [{ status: 'paga', periodoFim: '2026-11-30', forma: 'dinheiro' }],
+      }).detalhe,
+    ).toBe('Pagamento combinado com o Pente Fino (da última vez, dinheiro).');
+  });
+
+  it('teste: os dias que faltam; ativa sem pagamento: nada em aberto', () => {
+    expect(
+      proximaCobrancaSemFatura({ ...base, situacao: 'teste', diasRestantesTeste: 9 }).titulo,
+    ).toBe('Faltam 9 dias de teste');
+    expect(
+      proximaCobrancaSemFatura({ ...base, situacao: 'teste', diasRestantesTeste: 0 }).titulo,
+    ).toBe('O teste termina hoje');
+    expect(proximaCobrancaSemFatura({ ...base, situacao: 'ativa' })).toEqual({
+      titulo: 'Nada em aberto',
+      detalhe: null,
+    });
   });
 });

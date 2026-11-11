@@ -9,8 +9,9 @@ import {
   PERGUNTAS_AJUDA,
   type ArtigoAjuda,
 } from '@pente-fino/shared';
+import { linkWhatsappSuporte, SUPORTE } from '@/lib/contato';
 import { Campo } from '@pente-fino/ui';
-import { ArrowLeft, ArrowRight, BookOpen, Lightbulb, Mail } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Lightbulb, Mail, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -187,17 +188,31 @@ function Artigo({ artigo, onVoltar }: { artigo: ArtigoAjuda; onVoltar: () => voi
 }
 
 function Contato() {
+  // Painel M10: WhatsApp e horário do suporte quando o dono cadastrar (lib/contato.ts).
+  const whatsapp = linkWhatsappSuporte();
   return (
     <section
+      id="contato"
       aria-labelledby="titulo-contato"
-      className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-4"
+      className="flex scroll-mt-24 flex-col gap-2 rounded-lg border border-borda bg-superficie p-4"
     >
       <h2 id="titulo-contato" className="font-semibold">
-        Não achou o que precisava?
+        Falar com o suporte
       </h2>
       <p className="text-tinta-suave">
-        Escreva para a gente contando o que estava tentando fazer. Respondemos em dias úteis.
+        Conte o que estava tentando fazer.{' '}
+        {SUPORTE.horario ? `Atendimento: ${SUPORTE.horario}.` : 'Respondemos em dias úteis.'}
       </p>
+      {whatsapp && (
+        <a
+          href={whatsapp}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${classeLink} flex items-center gap-2`}
+        >
+          <MessageCircle aria-hidden className="size-4" /> WhatsApp do suporte
+        </a>
+      )}
       <a href={`mailto:${EMAIL_CONTATO}`} className={`${classeLink} flex items-center gap-2`}>
         <Mail aria-hidden className="size-4" /> {EMAIL_CONTATO}
       </a>
