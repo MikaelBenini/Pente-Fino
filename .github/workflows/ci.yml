@@ -105,9 +105,20 @@ jobs:
           for i in $(seq 1 60); do curl -sf http://localhost:3201/health >/dev/null && break; sleep 1; done
           CARGA_API=http://localhost:3201 pnpm carga
 
+      # O espelho do Ubuntu às vezes não responde ("Temporary failure resolving
+      # azure.archive.ubuntu.com"). Tenta as dependências 3 vezes; se continuar fora, instala só o
+      # navegador: a imagem do runner já traz as bibliotecas essenciais, e o que falha costuma ser
+      # fonte de outros idiomas, que os testes não usam.
       - name: Instalar o Chromium do Playwright
         working-directory: apps/web
-        run: pnpm exec playwright install --with-deps chromium
+        run: |
+          for tentativa in 1 2 3; do
+            if pnpm exec playwright install --with-deps chromium; then exit 0; fi
+            echo "::warning::Dependências do Chromium não instalaram (tentativa $tentativa de 3)"
+            sleep 30
+          done
+          echo "::warning::Espelho do Ubuntu fora do ar: instalando só o navegador"
+          pnpm exec playwright install chromium
 
       - name: Telas no navegador (menu por papel, no computador e no celular)
         working-directory: apps/web
