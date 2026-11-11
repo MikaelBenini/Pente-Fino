@@ -126,6 +126,7 @@ function Resultado({ mes }: { mes: string }) {
               <dl className="flex flex-col">
                 {linha('Serviços', i.receitaServicos)}
                 {linha('Produtos', i.receitaProdutos)}
+                {i.receitaClube > 0 && linha('Clube (mensalidades)', i.receitaClube)}
                 {linha('Faturamento', i.faturamento, { forte: true })}
                 {linha('Comissões', i.comissoes, { sinal: '−', recuo: true })}
                 {linha('Fixas', i.despesasPorGrupo.fixa, { sinal: '−', recuo: true })}

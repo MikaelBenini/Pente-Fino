@@ -344,7 +344,7 @@ Só a comanda fechada entra em faturamento, comissão e indicadores; a tabela di
 1. Ao abrir a comanda, o sistema procura adesão ativa do cliente.
 2. Itens cobertos pelo plano entram com valor zero para o cliente e contam no uso do mês.
 3. Itens fora do plano, ou acima do limite, entram com preço normal como extra.
-4. A receita do clube vem da mensalidade, não do item: o relatório separa as duas coisas.
+4. A receita do clube vem da mensalidade, não do item. Desde 2026-11-11 a mensalidade entra no faturamento do mês no dia em que é paga (o que chega na conta da barbearia; no online, o repasse), na linha "Clube (mensalidades)": indicadores, projeção (soma o que já entrou, sem projetar), meta, relatório, resumo do dia e do mês, rede por unidade e arquivo do contador. O assinante conta como cliente e como atendimento; o ticket médio conta só o cliente avulso; o cartão "Clube" mostra mensalidades, atendimentos cobertos e valor por atendimento. O desempenho por barbeiro fica de fora (a comissão do assinante continua por atendimento).
 
 ## 4. UI/UX design
 

@@ -35,7 +35,12 @@ import { data, dataTexto, GESTAO } from '../comum/escopo.js';
 import { ComissoesService } from '../comissoes/comissoes.service.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { avaliacoesDoProfissional, notaPorProfissional } from '../avaliacoes/avaliacoes.js';
-import { escopoUnidades, somarDias, ultimoDiaDoMes } from '../resultados/resultados.service.js';
+import {
+  escopoUnidades,
+  ResultadosService,
+  somarDias,
+  ultimoDiaDoMes,
+} from '../resultados/resultados.service.js';
 
 const inicioDoDia = (d: string) => new Date(`${d}T00:00:00-03:00`);
 const noPeriodo = (de: string, ate: string) => ({
@@ -85,6 +90,7 @@ export class DesempenhoService {
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(ComissoesService) private readonly comissoes: ComissoesService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(ResultadosService) private readonly resultados: ResultadosService,
   ) {}
 
   /** Visitas (comandas fechadas com cliente) dos profissionais, nos últimos dois anos até hoje. */
@@ -311,6 +317,7 @@ export class DesempenhoService {
         const ind = calcularIndicadores(
           fechadas,
           despesas.map((d) => ({ grupo: d.categoria.grupo, valor: d.valor })),
+          await this.resultados.clube(tx, de, ate, { unidadeId: u.id }),
         );
         const { mapa } = await this.mapaDaUnidade(tx, u, de, ate);
         const notas = await tx.avaliacao.findMany({

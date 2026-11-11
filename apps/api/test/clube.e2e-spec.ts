@@ -9,7 +9,9 @@ import {
   type RelatorioClube,
   type ComandaDetalhe,
   type ItemClubeDetalhe,
+  type Indicadores,
 } from '@pente-fino/shared';
+import type request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
 
@@ -325,5 +327,48 @@ describe('relatório do clube', () => {
     expect(r.motivosCancelamento).toEqual(['Mudou de cidade']);
     expect(r.ativos).toBe(2);
     await recepcao.get('/clube/relatorio').expect(403);
+  });
+});
+
+describe('mensalidade no resultado do mês', () => {
+  const binario = (res: request.Response, cb: (err: Error | null, body: Buffer) => void) => {
+    const partes: Buffer[] = [];
+    res.on('data', (c: Buffer) => partes.push(c));
+    res.on('end', () => cb(null, Buffer.concat(partes)));
+  };
+
+  it('entra no faturamento da unidade no dia do pagamento; o ticket conta só o avulso', async () => {
+    const periodo = `de=${hoje.slice(0, 7)}-01&ate=${hoje}`;
+    const r = (await dono.get(`/indicadores?${periodo}&unidadeId=${a.unidadeA}`).expect(200))
+      .body as { atual: Indicadores };
+    expect(r.atual.receitaClube).toBe(9990);
+    expect(r.atual.faturamento).toBe(
+      r.atual.receitaServicos + r.atual.receitaProdutos + r.atual.receitaClube,
+    );
+    // A comanda fechada toda coberta (corte e barba): conta como cliente, não como avulso.
+    expect(r.atual).toMatchObject({
+      clientes: 1,
+      clientesAvulsos: 0,
+      ticketMedio: 0,
+      atendimentosClube: 2,
+      valorPorAtendimentoClube: 4995,
+    });
+
+    const rede = (await dono.get(`/indicadores?${periodo}`).expect(200)).body as {
+      atual: Indicadores;
+    };
+    expect(rede.atual.receitaClube).toBe(9990);
+    const b = (await dono.get(`/indicadores?${periodo}&unidadeId=${a.unidadeB}`).expect(200))
+      .body as { atual: Indicadores };
+    expect(b.atual.receitaClube).toBe(0);
+
+    const csv = await dono
+      .get(`/exportacao?mes=${hoje.slice(0, 7)}&formato=csv`)
+      .buffer(true)
+      .parse(binario)
+      .expect(200);
+    expect((csv.body as Buffer).toString('utf-8')).toMatch(
+      /receita;Mensalidade do clube;Unidade A;Clube;99,90/,
+    );
   });
 });

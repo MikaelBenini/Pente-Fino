@@ -20,7 +20,12 @@ import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade, GESTAO } from '../comum/escopo.js';
 import { DesempenhoService } from '../desempenho/desempenho.service.js';
-import { escopoUnidades, somarDias, ultimoDiaDoMes } from '../resultados/resultados.service.js';
+import {
+  escopoUnidades,
+  ResultadosService,
+  somarDias,
+  ultimoDiaDoMes,
+} from '../resultados/resultados.service.js';
 
 const inicioDoDia = (d: string) => new Date(`${d}T00:00:00-03:00`);
 const doDia = (d: string) => ({ gte: inicioDoDia(d), lt: inicioDoDia(somarDias(d, 1)) });
@@ -35,6 +40,7 @@ export class ResumoService {
   constructor(
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(DesempenhoService) private readonly desempenho: DesempenhoService,
+    @Inject(ResultadosService) private readonly resultados: ResultadosService,
   ) {}
 
   /** Filtro de unidade e, se pedido, de um profissional (conferido contra o escopo). */
@@ -205,7 +211,12 @@ export class ResumoService {
         .filter((p) => p.ativo || p.itens.length > 0 || p.clientes > 0)
         .map(({ ativo: _ativo, ...p }) => p);
 
-      const ind = calcularIndicadores(fechadas);
+      // A mensalidade do clube paga hoje entra no faturamento do dia (não é de um barbeiro só).
+      const ind = calcularIndicadores(
+        fechadas,
+        [],
+        profissionalId ? null : await this.resultados.clube(tx, dia, dia, filtro),
+      );
       const visiveis = itens.filter((i) => i.situacao !== 'cancelada');
       return {
         data: dia,
@@ -272,13 +283,19 @@ export class ResumoService {
       );
       const dias: string[] = [];
       for (let d = de; d <= ate; d = somarDias(d, 1)) dias.push(d);
+      const mensalidades = profissionalId
+        ? []
+        : await this.resultados.pagamentosClube(tx, de, ate, filtroComanda);
       const linhas = resumoPorDia(
         dias,
         [...trabalho],
         fechadas.map((c) => ({ data: dataLocal(c.fechadaEm!), comanda: c })),
         agendamentos.map((a) => ({ data: dataLocal(a.inicio), status: a.status })),
+        mensalidades,
       );
-      const total = calcularIndicadores(fechadas);
+      const total = calcularIndicadores(fechadas, [], {
+        mensalidades: mensalidades.reduce((s, m) => s + m.valor, 0),
+      });
       const hoje = dataLocal(new Date());
       return {
         mes,
