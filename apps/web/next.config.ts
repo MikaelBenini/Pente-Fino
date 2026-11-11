@@ -63,6 +63,19 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // Painel P3: o endereço da página da unidade virou /b/<slug>. O antigo /agendar?u=<slug>
+  // (divulgado no Instagram, impresso, mandado pelo bot) redireciona com 301 e leva a query junto
+  // (o código ?c= do bot continua valendo).
+  async redirects() {
+    return [
+      {
+        source: '/agendar',
+        has: [{ type: 'query', key: 'u', value: '(?<slug>[a-z0-9]+(?:-[a-z0-9]+)*)' }],
+        destination: '/b/:slug',
+        statusCode: 301,
+      },
+    ];
+  },
   async headers() {
     return [
       {

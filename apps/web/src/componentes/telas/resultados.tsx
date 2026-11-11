@@ -351,8 +351,9 @@ function Historico({ r }: { r: RelatorioDoMes }) {
       </div>
       <div
         className="flex h-44 items-end gap-[2px]"
-        role="img"
-        aria-label="Gráfico do faturamento dos últimos 12 meses (valores na tabela abaixo)"
+        // Painel X4: grupo (não imagem), para cada barra seguir alcançável com o mês e o valor.
+        role="group"
+        aria-label="Gráfico do faturamento mês a mês (valores na tabela abaixo)"
       >
         {r.historico.map((h, i) => (
           <button

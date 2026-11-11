@@ -141,7 +141,7 @@ describe('agendar pela conversa', () => {
     expect(await fala(tel, '1')).toContain('Como você prefere marcar?\n\n1. Por aqui, na conversa');
     const servicos = await fala(tel, '1');
     expect(servicos).toContain('1. Barba · R$ 35,00 · 30 min\n2. Corte · R$ 45,00 · 30 min');
-    expect(servicos).toContain('pelo site? http://app.teste/agendar?u=navalha-');
+    expect(servicos).toContain('pelo site? http://app.teste/b/navalha-');
     // Um profissional só: pula a escolha e vai direto aos dias.
     const dias = await fala(tel, '1 e 2');
     expect(dias).toMatch(/Qual dia fica melhor\?\n\n1\. Hoje \(ter, 01\/12\)/);
@@ -472,7 +472,7 @@ describe('regras da unidade', () => {
 
     await regras({ antecedenciaMin: 0, pelaConversa: false });
     const r = await fala('5511955550002', 'agendar');
-    expect(r).toContain('http://app.teste/agendar?u=navalha-');
+    expect(r).toContain('http://app.teste/b/navalha-');
     expect(r).not.toContain('Qual serviço');
   });
 });
@@ -886,7 +886,7 @@ describe('canal de agendamento', () => {
     await fala(tel, 'oi');
     await fala(tel, '1');
     const site = await fala(tel, '2');
-    const token = /http:\/\/app\.teste\/agendar\?u=navalha-[a-z0-9]+&c=([A-Za-z0-9_-]{10})\n/.exec(
+    const token = /http:\/\/app\.teste\/b\/navalha-[a-z0-9]+\?c=([A-Za-z0-9_-]{10})\n/.exec(
       site,
     )?.[1];
     expect(token).toBeDefined();
@@ -1410,7 +1410,7 @@ describe('atraso: remarcação rápida depois do "Não veio"', () => {
     ).texto;
     expect(texto).toContain('Seu horário das 09:00 foi cancelado pelo atraso. Quer remarcar?');
     expect(texto).toMatch(/1\. Hoje \(qua, 30\/12\), às 09:30\n2\. .*09:45\n3\. .*10:00/);
-    expect(texto).toMatch(/4\. Outro dia \(pelo site\): http:\/\/app\.teste\/agendar\?u=.*&c=/);
+    expect(texto).toMatch(/4\. Outro dia \(pelo site\): http:\/\/app\.teste\/b\/.*\?c=/);
 
     const marcado = await fala(tel, '1', new Date(agoraAtraso.getTime() + 60_000));
     expect(marcado).toContain('Pronto, horário marcado!');

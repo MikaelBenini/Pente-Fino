@@ -66,6 +66,8 @@ export interface UnidadePublica {
   barbearia: string;
   endereco: string | null;
   telefone: string | null;
+  /** Painel P4: a página pode aparecer no Google (JSON-LD e index). */
+  aparecerNoGoogle: boolean;
   servicos: {
     id: string;
     nome: string;
@@ -198,4 +200,16 @@ export type EsperaPublicaEntrada = z.infer<typeof esperaPublicaSchema>;
 export interface EsperaPublicaCriada {
   lembretes: LembretesDoSite;
   linkLembretes: string | null;
+}
+
+// ─── Endereço da página de agendamento (painel P3) ─────────────────────────
+
+/**
+ * O endereço público da unidade: `/b/<slug>`, curto e bom para o Instagram. O antigo
+ * `/agendar?u=<slug>` redireciona para cá (301), então link já divulgado continua valendo.
+ * `codigo` é o do bot (nome e telefone já preenchidos).
+ */
+export function linkDeAgendamento(base: string, slug: string, codigo?: string | null): string {
+  const url = `${base.replace(/\/$/, '')}/b/${encodeURIComponent(slug)}`;
+  return codigo ? `${url}?c=${encodeURIComponent(codigo)}` : url;
 }

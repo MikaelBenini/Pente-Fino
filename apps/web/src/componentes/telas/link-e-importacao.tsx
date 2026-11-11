@@ -9,6 +9,7 @@ import {
   type RelatorioImportacao,
   type TipoImportacao,
   type UnidadeDetalhe,
+  linkDeAgendamento,
 } from '@pente-fino/shared';
 import { Botao, Campo, Marcador, Selecao } from '@pente-fino/ui';
 import { Copy, Download, ExternalLink, FileUp } from 'lucide-react';
@@ -65,7 +66,7 @@ function LinkUnidade({ u, podeEditar }: { u: UnidadeDetalhe; podeEditar: boolean
   );
   const link =
     typeof window !== 'undefined' && u.slug
-      ? `${window.location.origin}/agendar?u=${u.slug}`
+      ? linkDeAgendamento(window.location.origin, u.slug)
       : null;
 
   async function enviar(corpo: object) {
@@ -142,6 +143,13 @@ function LinkUnidade({ u, podeEditar }: { u: UnidadeDetalhe; podeEditar: boolean
           </a>
         </div>
       )}
+      {u.agendamentoPublico && (
+        <p className="text-sm text-tinta-suave">
+          {u.aparecerNoGoogle
+            ? 'A página aparece nas buscas do Google (pode levar alguns dias para o Google encontrar).'
+            : 'Fora do Google: só quem tem o link chega na página. Ligue "Aparecer no Google" para ser encontrado nas buscas.'}
+        </p>
+      )}
       {podeEditar && (
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-56 flex-1">
@@ -172,6 +180,13 @@ function LinkUnidade({ u, podeEditar }: { u: UnidadeDetalhe; podeEditar: boolean
                   : { agendamentoPublico: false },
               )
             }
+          />
+          <Marcador
+            id={`google-${u.id}`}
+            rotulo="Aparecer no Google"
+            checked={u.aparecerNoGoogle}
+            disabled={!u.agendamentoPublico}
+            onChange={(e) => enviar({ aparecerNoGoogle: e.target.checked })}
           />
         </div>
       )}

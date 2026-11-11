@@ -352,6 +352,9 @@ model Unidade {
   slug                String?  @unique
   /// Link público ligado: só então a página de agendamento responde.
   agendamentoPublico  Boolean  @default(false) @map("agendamento_publico")
+  /// [DECISÃO DO DONO] A página da unidade (/b/slug) aparece no Google. Desligado (padrão), fica
+  /// fora da busca (noindex) e do sitemap (painel P4).
+  aparecerNoGoogle    Boolean  @default(false) @map("aparecer_no_google")
   /// Regras de agendamento (antecedência, janela, prazos, intervalo, lembretes). JSON validado
   /// em packages/shared (regras-agendamento.ts); vazio = padrão.
   regrasAgendamento   Json     @default("{}") @map("regras_agendamento")

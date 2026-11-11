@@ -7,6 +7,27 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (página de agendamento)
+
+- Endereço curto da página da unidade: `/b/<endereço>` (bom para o Instagram). O antigo
+  `/agendar?u=<endereço>` redireciona sozinho (301), então link já divulgado continua valendo,
+  inclusive o do bot.
+- Link compartilhado no WhatsApp e no Instagram mostra a barbearia: "Agende na {barbearia} ·
+  {unidade}", os serviços, o preço inicial e uma imagem com o nome.
+- Configurações → Link de agendamento → "Aparecer no Google": ligado, a página entra nas buscas
+  com os dados da barbearia; desligado (padrão), fica fora do Google.
+- Confirmação do agendamento com "Adicionar ao calendário" (arquivo do celular, com lembrete 1 h
+  antes).
+
+### Corrigido (acessibilidade)
+
+- Textos secundários (horários da grade da agenda, títulos do menu, metas) com contraste AA nos
+  dois temas; antes ficavam abaixo do mínimo no fundo escuro.
+- Gráfico de 12 meses: cada barra é alcançável pelo leitor de tela, com o mês e o valor.
+- "Como fazer", "Fazer agora" e "Ver como reconectar" com área de toque de 44 px no celular.
+- Auditoria automática (axe, WCAG 2.2 AA) em todas as telas do painel, no computador e no
+  celular, e nos diálogos abertos.
+
 ### Adicionado (painel no dia a dia)
 
 - Serviços: preço de cada serviço (a faixa, quando muda entre unidades), comissão média dos

@@ -726,7 +726,16 @@ agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 - [x] **M7** remover item da comanda com 5 s para desfazer; sair da tela ou "Receber e fechar" removem na hora, para nada ser cobrado do item tirado
 - [x] **M9** bloco da agenda com menos de 72 px numa linha só ("10:00 Vitor M. · Corte", `nomeCurto`), com o texto inteiro no `title` e no rótulo acessível
 - [x] **M10** assinatura com a próxima cobrança (`proximaCobrancaSemFatura`: data, valor e forma; ou os dias de teste) e "Falar com o suporte" no menu, levando à Ajuda → contato. **Falta o dono:** WhatsApp e horário do suporte em `apps/web/src/lib/contato.ts` (`SUPORTE`), cobrindo o sábado
-- [ ] **X1–X4, P1–P6** (seguintes)
+- [x] **X1** caixas de serviço do Novo agendamento com nome (o teste confere cada uma e o diálogo aberto passa pelo axe)
+- [x] **X2** "Como fazer", "Fazer agora" e "Ver como reconectar" com 44 px de toque; a auditoria inclui `target-size` (WCAG 2.2)
+- [x] **X3** contraste AA do token `--tinta-fraca` nos dois temas (escuro `#92928a`, claro `#60615a`, 4,5:1 ou mais em todos os fundos)
+- [x] **X4** `e2e/acessibilidade.spec.ts`: axe (WCAG 2 A/AA, 2.1 e 2.2 AA) em todas as rotas do painel, no computador e no celular, e nos diálogos; nada "serious" ou "critical". O gráfico de 12 meses virou `role="group"` (as barras seguem alcançáveis)
+- [x] **P1** prévia por unidade (`metadadosDaPagina`): "Agende na {barbearia} · {unidade}", serviços e preço inicial; imagem própria (`/b/[slug]/opengraph-image`). A logo entra quando o envio de logo existir (página personalizável)
+- [ ] **P2** endereço com mapa, WhatsApp e horário já aparecem; fotos e nota média ficam com a página personalizável da barbearia
+- [x] **P3** `/b/<slug>` com 301 de `/agendar?u=<slug>` (`next.config`, leva a query e o código do bot); `linkDeAgendamento` é o único lugar que monta o link (bot, convite de retorno, atraso, Configurações). Trocar de unidade não recria a tela
+- [x] **P4** [DECISÃO DO DONO] "Aparecer no Google" por unidade (`unidade.aparecer_no_google`, padrão desligado): ligado, `index` e JSON-LD `HairSalon` (`jsonLdDaBarbearia`) e a página no sitemap (`paginas_de_barbearia_no_google()`); desligado, `noindex`. A prévia fica em cache por alguns minutos
+- [ ] **P5** barbeiros por serviço, com foto: o sistema não guarda quem faz cada serviço nem foto do barbeiro; entra na página personalizável (cadastro "quem faz o quê" e envio de foto)
+- [x] **P6** confirmação com "Adicionar ao calendário" (`arquivoCalendario`, .ics com lembrete 1 h antes); remarcar ou cancelar e o aviso do WhatsApp já existiam
 
 ## Etapa 23.4 · Administração sem furos (briefing de 2026-11-10)
 

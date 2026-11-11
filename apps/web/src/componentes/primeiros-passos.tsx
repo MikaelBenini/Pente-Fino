@@ -118,16 +118,17 @@ export function PrimeirosPassos() {
                   {!feito && <span className="text-sm text-tinta-suave">{d.porque}</span>}
                 </span>
                 {!feito && (
-                  <span className="flex gap-3 text-sm">
+                  <span className="flex gap-1 text-sm">
                     <Link
                       href={`/ajuda?artigo=${d.artigo}`}
-                      className="font-semibold text-tinta-suave underline underline-offset-4 hover:text-tinta"
+                      // Painel X2: 44 px de área de toque (o texto continua do mesmo tamanho).
+                      className="inline-flex min-h-11 items-center px-1 font-semibold text-tinta-suave underline underline-offset-4 hover:text-tinta"
                     >
                       Como fazer
                     </Link>
                     <Link
                       href={d.rota}
-                      className="font-semibold text-tinta underline underline-offset-4 hover:decoration-modulo"
+                      className="inline-flex min-h-11 items-center px-1 font-semibold text-tinta underline underline-offset-4 hover:decoration-modulo"
                     >
                       Fazer agora
                     </Link>

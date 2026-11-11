@@ -8,6 +8,7 @@ import {
   formatarTelefone,
   linkWhatsapp,
   NOMES_DIAS_CURTOS,
+  arquivoCalendario,
   avisoDaTroca,
   textoTolerancia,
   trocarDeUnidade,
@@ -16,6 +17,7 @@ import {
   type EsperaPublicaCriada,
   type HorarioLivre,
   type UnidadePublica,
+  linkDeAgendamento,
 } from '@pente-fino/shared';
 import { Botao, Campo, Carregando, cn, EstadoVazio, Marcador } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +25,7 @@ import {
   BellRing,
   CalendarCheck,
   CalendarClock,
+  CalendarPlus,
   ChevronDown,
   CircleCheck,
   MapPin,
@@ -30,7 +33,7 @@ import {
   Phone,
   SearchX,
 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
@@ -53,17 +56,20 @@ export const chip = (ativo: boolean) =>
       : 'border-borda bg-superficie hover:border-borda-forte',
   );
 
-export function TelaAgendar() {
+/** `slugDaRota` vem de `/b/<slug>` (painel P3); sem ele, lê o `?u=` antigo. */
+export function TelaAgendar({ slugDaRota }: { slugDaRota?: string } = {}) {
   return (
     <Suspense fallback={<Carregando />}>
-      <Agendar />
+      <Agendar slugDaRota={slugDaRota} />
     </Suspense>
   );
 }
 
-function Agendar() {
+function Agendar({ slugDaRota }: { slugDaRota?: string }) {
   const params = useSearchParams();
-  const slug = params.get('u') ?? '';
+  // A unidade fica no estado (não só no endereço): trocar de unidade não recria a tela e o
+  // cliente não perde o que já escolheu.
+  const [slug, setSlug] = useState(slugDaRota ?? params.get('u') ?? '');
   const token = params.get('c') ?? '';
   const pagina = useQuery({
     queryKey: ['publico', slug],
@@ -89,7 +95,7 @@ function Agendar() {
         <Carregando />
       </Moldura>
     );
-  return <Formulario slug={slug} u={pagina.data} token={token} />;
+  return <Formulario slug={slug} u={pagina.data} token={token} onTrocouUnidade={setSlug} />;
 }
 
 export function Moldura({
@@ -173,7 +179,17 @@ function SemAgendamentoOnline({ u }: { u: UnidadePublica }) {
   );
 }
 
-function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token: string }) {
+function Formulario({
+  slug,
+  u,
+  token,
+  onTrocouUnidade,
+}: {
+  slug: string;
+  u: UnidadePublica;
+  token: string;
+  onTrocouUnidade: (slug: string) => void;
+}) {
   // Veio pelo link do bot: nome e telefone já preenchidos (o telefone vem do token).
   const doLink = useQuery({
     queryKey: ['publico', slug, 'cliente', token],
@@ -197,7 +213,6 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
   const [feito, setFeito] = useState<AgendamentoPublicoCriado | null>(null);
   const dias = useMemo(() => proximosDias(14), []);
   const consultas = useQueryClient();
-  const router = useRouter();
   const [avisoTroca, setAvisoTroca] = useState<string | null>(null);
   const [trocando, setTrocando] = useState(false);
 
@@ -224,7 +239,8 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
         setTelefone(formatarTelefone(cliente.telefone));
         setUsarLink(false);
       }
-      router.replace(`/agendar?u=${novo}`, { scroll: false });
+      onTrocouUnidade(novo);
+      window.history.replaceState(null, '', linkDeAgendamento('', novo));
     } catch {
       setErro('Não foi possível abrir a outra unidade. Tente de novo.');
     } finally {
@@ -315,6 +331,27 @@ function Formulario({ slug, u, token }: { slug: string; u: UnidadePublica; token
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-borda-forte bg-superficie px-4 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
           >
             <CalendarClock aria-hidden className="size-5" /> Ver, remarcar ou cancelar
+          </a>
+          {/* Painel P6: o celular abre o arquivo direto na agenda, com lembrete 1 h antes. */}
+          <a
+            href={`data:text/calendar;charset=utf-8,${encodeURIComponent(
+              arquivoCalendario({
+                id: feito.linkGerenciar.split('t=')[1] ?? feito.inicio,
+                inicio: feito.inicio,
+                duracaoMin: duracao,
+                titulo: `${feito.servicos.join(' + ')} · ${u.barbearia}`,
+                local: u.endereco,
+                descricao: `Com ${feito.profissional}. Ver, remarcar ou cancelar: ${
+                  typeof window === 'undefined'
+                    ? feito.linkGerenciar
+                    : new URL(feito.linkGerenciar, window.location.origin).toString()
+                }`,
+              }),
+            )}`}
+            download="horario.ics"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-borda-forte bg-superficie px-4 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco"
+          >
+            <CalendarPlus aria-hidden className="size-5" /> Adicionar ao calendário
           </a>
           <p className="text-sm text-tinta-suave">
             Guarde este link: é por ele que você muda o horário sem precisar ligar

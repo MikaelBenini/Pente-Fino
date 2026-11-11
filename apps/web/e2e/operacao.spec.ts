@@ -72,15 +72,46 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await dialogo.getByRole('button', { name: 'Usar este cliente' }).click();
   await dialogo.getByLabel('Corte · 30 min').check();
   await dialogo.getByLabel('Dia').fill(agora.dia);
-  await dialogo.getByLabel('Barbeiro').selectOption({ label: 'Rafael Moura' });
   await dialogo.getByLabel(/^Encaixe/).check();
   await dialogo.getByLabel('Horário do encaixe').fill(agora.hora);
-  await dialogo.getByRole('button', { name: /^Encaixar \d{2}:\d{2}$/ }).click();
-  // Fora do expediente ou em cima de outro horário (o teste roda a qualquer hora): confirma.
+  // O cliente chegou: encaixa agora. Os dados de demonstração têm horários o dia todo; se o
+  // barbeiro estiver ocupado neste minuto ("já tem um cliente nesse horário"), vai o próximo,
+  // como a recepção faria. O passo 2 entra como quem atendeu.
   const mesmoAssim = dialogo.getByRole('button', { name: 'Encaixar mesmo assim' });
   // Painel M6: depois de agendar, fica na Agenda com "Agendado para … · Abrir comanda".
   const abrirComanda = recepcao.getByRole('link', { name: 'Abrir comanda' });
-  await Promise.race([abrirComanda.waitFor(), mesmoAssim.waitFor().then(() => mesmoAssim.click())]);
+  const ocupado = dialogo.getByText('Este profissional já tem um cliente nesse horário.');
+  const BARBEIROS = [
+    { nome: 'Rafael Moura', email: 'rafael@demo.pentefino.dev' },
+    { nome: 'Thiago Nunes', email: 'thiago@demo.pentefino.dev' },
+    { nome: 'Diego Prado', email: 'diego@demo.pentefino.dev' },
+  ];
+  let quemAtende: (typeof BARBEIROS)[number] | null = null;
+  for (const b of BARBEIROS) {
+    await dialogo.getByLabel('Barbeiro').selectOption({ label: b.nome });
+    if (await mesmoAssim.isVisible()) await mesmoAssim.click();
+    else await dialogo.getByRole('button', { name: /^Encaixar \d{2}:\d{2}$/ }).click();
+    // A mensagem da tentativa anterior some quando o envio começa.
+    await ocupado.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    // Fora do expediente ou em cima de bloqueio: o sistema avisa e pede "mesmo assim".
+    let r = await Promise.race([
+      abrirComanda.waitFor().then(() => 'marcou' as const),
+      mesmoAssim.waitFor().then(() => 'aviso' as const),
+      ocupado.waitFor().then(() => 'ocupado' as const),
+    ]);
+    if (r === 'aviso') {
+      await mesmoAssim.click();
+      r = await Promise.race([
+        abrirComanda.waitFor().then(() => 'marcou' as const),
+        ocupado.waitFor().then(() => 'ocupado' as const),
+      ]);
+    }
+    if (r === 'marcou') {
+      quemAtende = b;
+      break;
+    }
+  }
+  expect(quemAtende, 'algum barbeiro do Centro livre agora').not.toBeNull();
   await expect(
     recepcao.getByText(/^Agendado para \d{2}\/\d{2}\/\d{4} às \d{2}:\d{2}\.$/),
   ).toBeVisible();
@@ -94,7 +125,7 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   ).toBeVisible();
 
   // 2. Barbeiro começa, lança um extra em um toque e confirma.
-  const barbeiro = await entrarComo(browser, 'rafael@demo.pentefino.dev', info.project.name);
+  const barbeiro = await entrarComo(browser, quemAtende!.email, info.project.name);
   await barbeiro.goto(url.replace(/^https?:\/\/[^/]+/, ''));
   await barbeiro.getByRole('button', { name: 'Começar atendimento' }).click();
   await expect(

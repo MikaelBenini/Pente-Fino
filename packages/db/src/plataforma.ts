@@ -208,3 +208,9 @@ export async function cupomParaCadastro(
     SELECT cupom_para_cadastro(${codigo}) AS r`;
   return { cupom: r?.r.cupom ?? null, usados: Number(r?.r.usados ?? 0) };
 }
+
+/** Páginas de barbearia que ligaram "Aparecer no Google" (sitemap, painel P4). Só o público. */
+export function paginasDeBarbeariaNoGoogle(prisma: PrismaClient) {
+  return prisma.$queryRaw<{ slug: string; atualizado_em: Date }[]>`
+    SELECT * FROM paginas_de_barbearia_no_google()`;
+}

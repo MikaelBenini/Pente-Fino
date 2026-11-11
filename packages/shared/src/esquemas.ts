@@ -68,6 +68,8 @@ export const unidadeParcialSchema = unidadeSchema.partial().extend({
     .max(60)
     .optional(),
   agendamentoPublico: z.boolean().optional(),
+  /** Painel P4: a página da unidade aparece no Google (desligado = fica fora da busca). */
+  aparecerNoGoogle: z.boolean().optional(),
 });
 
 export const diaCalendarioSchema = z.object({
@@ -87,6 +89,7 @@ export interface UnidadeDetalhe {
   ativa: boolean;
   slug: string | null;
   agendamentoPublico: boolean;
+  aparecerNoGoogle: boolean;
 }
 
 export interface DiaCalendario {

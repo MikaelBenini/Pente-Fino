@@ -11,6 +11,7 @@ const PUBLICAS = [
   '/offline',
   '/cadastro',
   '/agendar',
+  '/b',
   '/horario',
   '/assinar',
   '/planos',

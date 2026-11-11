@@ -11,6 +11,7 @@ import {
   variantesTelefone,
   type RemarcacaoPorAtraso,
   type SessaoBot,
+  linkDeAgendamento,
 } from '@pente-fino/shared';
 import { calcularLivres, regrasDaUnidade } from './agenda.js';
 import { json } from './bot.js';
@@ -86,7 +87,11 @@ export async function remarcacaoPorAtraso(
     }
     const link =
       ag.unidade.agendamentoPublico && ag.unidade.slug
-        ? `${appUrl}/agendar?u=${encodeURIComponent(ag.unidade.slug)}&c=${await criarTokenDeAgendamento(tx, ag.unidadeId, cliente.id, agora)}`
+        ? linkDeAgendamento(
+            appUrl,
+            ag.unidade.slug,
+            await criarTokenDeAgendamento(tx, ag.unidadeId, cliente.id, agora),
+          )
         : null;
     const texto = textoRemarcarAtraso({
       cliente: primeiroNome(cliente.nome),

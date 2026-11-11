@@ -149,16 +149,26 @@ function ConteudoAgenda() {
   return (
     <div className="flex flex-col gap-6">
       {agendado && (
-        <Aviso tom="sucesso">
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>
-              Agendado para {formatarData(agendado.inicio)} às {formatarHora(agendado.inicio)}.
+        // Flutua no rodapé: no topo, ao sumir, empurrava a grade (e o arrasto caía fora do lugar).
+        <div className="fixed inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-40 mx-auto max-w-md shadow-lg lg:bottom-6">
+          <Aviso tom="sucesso">
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>
+                Agendado para {formatarData(agendado.inicio)} às {formatarHora(agendado.inicio)}.
+              </span>
+              <Link href={`/comandas?id=${agendado.id}`} className="font-semibold underline">
+                Abrir comanda
+              </Link>
+              <button
+                type="button"
+                onClick={() => setAgendado(null)}
+                className="ml-auto inline-flex min-h-11 items-center px-2 text-sm font-semibold underline"
+              >
+                Fechar
+              </button>
             </span>
-            <Link href={`/comandas?id=${agendado.id}`} className="font-semibold underline">
-              Abrir comanda
-            </Link>
-          </span>
-        </Aviso>
+          </Aviso>
+        </div>
       )}
       <CabecalhoPagina
         titulo="Agenda"

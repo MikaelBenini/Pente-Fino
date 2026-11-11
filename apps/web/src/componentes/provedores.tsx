@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { ErroApi } from '@/lib/api';
 import { BarraNavegacao } from './barra-navegacao';
 
@@ -35,7 +35,11 @@ export function Provedores({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={cliente}>
       <RegistrarServiceWorker />
-      <BarraNavegacao />
+      {/* Lê o endereço (usePathname): em rota com parte dinâmica (/b/<slug>), fora de um
+          Suspense, a pré-renderização para. A barra não mostra nada até a navegação. */}
+      <Suspense fallback={null}>
+        <BarraNavegacao />
+      </Suspense>
       {children}
     </QueryClientProvider>
   );
