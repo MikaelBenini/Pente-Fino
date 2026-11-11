@@ -5,7 +5,13 @@ import {
   servicoSchema,
   unidadeParcialSchema,
 } from './esquemas.js';
-import { agendamentoPublicoSchema, cadastroContaSchema, slugSchema } from './publico.js';
+import {
+  agendamentoPublicoSchema,
+  avisoDaTroca,
+  cadastroContaSchema,
+  slugSchema,
+  trocarDeUnidade,
+} from './publico.js';
 
 describe('cadastroContaSchema', () => {
   const base = {

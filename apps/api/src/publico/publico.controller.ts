@@ -328,6 +328,18 @@ export class PublicoController {
         lembretesWhatsapp: !!(await numeroDosLembretes(tx, u.id, u.regrasAgendamento)),
         linkWhatsappAgendar: await linkAgendarPelaConversa(tx, u.id, u.regrasAgendamento),
         listaEspera: temRecurso((await estadoAssinatura(tx)).plano, 'listaEspera'),
+        outrasUnidades: (
+          await tx.unidade.findMany({
+            where: {
+              id: { not: u.id },
+              ativa: true,
+              agendamentoPublico: true,
+              slug: { not: null },
+            },
+            select: { slug: true, nome: true, endereco: true },
+            orderBy: { nome: 'asc' },
+          })
+        ).map((o) => ({ slug: o.slug!, nome: o.nome, endereco: o.endereco })),
       };
     });
   }
