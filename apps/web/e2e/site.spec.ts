@@ -90,7 +90,7 @@ for (const rota of ['/', '/planos', '/termos', '/privacidade']) {
   });
 }
 
-// ─── Briefing do site (docs/pente-fino-melhorias-site.md) ──────────────────
+// ─── Briefing do site (docs/pente-fino-melhorias.md, parte 3) ─────
 
 test('B1: endereço que não existe responde 404; tela do sistema ainda pede login', async ({
   page,

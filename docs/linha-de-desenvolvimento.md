@@ -665,7 +665,7 @@ temos bot de WhatsApp, lucro real, comanda única e preço menor). Ordem de cons
 
 ## Etapa 23.2 · Site que vende (briefing de 2026-11-10)
 
-Fonte: [pente-fino-melhorias-site.md](pente-fino-melhorias-site.md) (auditoria do site em 10/11/2026,
+Fonte: [pente-fino-melhorias.md](pente-fino-melhorias.md), parte 3 (auditoria do site em 10/11/2026,
 com comparação com AppBarber, Trinks, Booksy, ZapCorte e EiBarber). Itens [DECISÃO DO DONO] usam a
 opção padrão do briefing, numa constante fácil de trocar.
 
@@ -701,7 +701,7 @@ opção padrão do briefing, numa constante fácil de trocar.
 
 ## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)
 
-Fonte: [pente-fino-melhorias-painel.md](pente-fino-melhorias-painel.md) (auditoria com um
+Fonte: [pente-fino-melhorias.md](pente-fino-melhorias.md), parte 1 (auditoria com um
 agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 
 **Grupo A — dinheiro e dados**
@@ -711,8 +711,20 @@ agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 - [x] **A2** não recebe atendimento de outro dia, nem de hoje que ainda não começou (cliente adiantado que o barbeiro já começou recebe normalmente); o servidor recusa (`atendimento_futuro`) e a tela explica. Caixa de hoje não aberto: o servidor recusa (`caixa_nao_aberto`) e a tela oferece "abrir o caixa com o troco e receber"
 - [x] **A3** comanda reaberta volta a ter as ações de uma aberta: começar, confirmar, cancelar (com motivo), marcar falta e mover horário. **Limpeza em produção (dono):** cancelar a comanda reaberta de teste (`01a1c85f-…`) e fechar o caixa de 11/11 aberto indevidamente
 - [x] **A4** comanda sem itens não fecha: botão desativado com "Sem itens. Lance um serviço ou cancele/marque falta." e o servidor recusa (`sem_itens`); item do clube com valor zero continua fechando
-- [ ] **A5–A8** bot de fábrica, selo da conversa, link sem serviço e `/servicos` no celular (próximo PR)
+- [ ] **A5–A8** bot de fábrica, selo da conversa, link sem serviço e `/servicos` no celular (em andamento)
 - [ ] **M1–M10, X1–X4, P1–P6** (seguintes)
+
+## Etapa 23.4 · Administração sem furos (briefing de 2026-11-10)
+
+Fonte: [pente-fino-melhorias.md](pente-fino-melhorias.md), parte 2 (auditoria do `/admin` em
+10/11/2026, só leitura). O admin continua sem ver dados das barbearias; toda ação sensível pede
+motivo e vai para a auditoria.
+
+- [ ] **R1, R2** cupom LANCAMENTO sem limite de vagas e aviso de esgotado; nota fiscal só liga com dados fiscais conferidos
+- [ ] **R3–R6** máquina de estados da conta (bloquear volta ao anterior, reativar pede o próximo passo), cobrança prevista na cobrança manual, "Em dia" só com pagamento (cortesia e conta interna fora do MRR), teste com limite
+- [ ] **R7–R10** falhas de e-mail listáveis e reenviáveis, WhatsApp caído em "Precisa de atenção", IP real atrás do proxy, abas que respondem ao endereço
+- [ ] **U1–U9** usabilidade por aba
+- [ ] **F1–F9** funil de ativação, origem do cadastro (com o T2 do site), alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 24 · Premium completo
 
