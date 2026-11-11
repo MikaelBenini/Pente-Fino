@@ -1,4 +1,5 @@
 import { DIAS_TESTE } from '@pente-fino/shared';
+import { TrilhaGoogle } from '@/componentes/site/trilha-google';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { DocumentoLegal, type SecaoLegal } from '@/componentes/site/documento-legal';
@@ -209,10 +210,13 @@ const SECOES: readonly SecaoLegal[] = [
 
 export default function Pagina() {
   return (
-    <DocumentoLegal
-      titulo="Termos de uso"
-      resumo="Em poucas palavras: teste sem cartão, sem fidelidade, seus dados são seus e você pode exportá-los quando quiser."
-      secoes={SECOES}
-    />
+    <>
+      <TrilhaGoogle pagina="Termos de uso" caminho="/termos" />
+      <DocumentoLegal
+        titulo="Termos de uso"
+        resumo="Em poucas palavras: teste sem cartão, sem fidelidade, seus dados são seus e você pode exportá-los quando quiser."
+        secoes={SECOES}
+      />
+    </>
   );
 }

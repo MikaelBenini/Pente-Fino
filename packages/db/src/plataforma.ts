@@ -96,6 +96,7 @@ export interface SituacaoDaContaNoBanco {
   canceladaEm: string | null;
   asaasAssinaturaId: string | null;
   interna: boolean;
+  origem: unknown;
 }
 
 /** O que a regra da situação precisa saber da conta (admin R3). null = conta não existe. */

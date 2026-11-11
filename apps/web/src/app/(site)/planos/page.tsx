@@ -2,6 +2,8 @@ import { DIAS_TESTE, textoEconomiaAnual } from '@pente-fino/shared';
 import type { Metadata } from 'next';
 import { CartoesPlanos } from '@/componentes/site/cartoes-planos';
 import { ComparativoPlanos } from '@/componentes/site/comparativo-planos';
+import { EventoDaPagina } from '@/componentes/site/evento-da-pagina';
+import { TrilhaGoogle } from '@/componentes/site/trilha-google';
 import { type Pergunta, Perguntas } from '@/componentes/site/perguntas';
 import { ofertasJsonLd, URL_SITE } from '@/lib/site';
 import { LinkCadastro, OfertaLancamento } from '@/componentes/site/oferta-lancamento';
@@ -68,6 +70,10 @@ export default function Pagina() {
         // JSON montado aqui, sem dado de usuário; "<" escapado para não fechar o <script>.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()).replace(/</g, '\\u003c') }}
       />
+      {/* Site S3: trilha de navegação para o Google. */}
+      <TrilhaGoogle pagina="Planos e preços" caminho="/planos" />
+      {/* Site T3: quem chegou nos planos. */}
+      <EventoDaPagina nome="view_planos" />
       <section className="mx-auto flex max-w-6xl flex-col gap-10 px-4 pt-14 pb-16 sm:px-6 sm:pt-20">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
           <p className="font-denso text-lg font-semibold tracking-widest text-modulo-texto uppercase">

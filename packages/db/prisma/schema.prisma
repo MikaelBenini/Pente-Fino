@@ -270,6 +270,9 @@ model Conta {
   vendedorId              String?       @map("vendedor_id") @db.Uuid
   /// Data da tabela de preços contratada (assinatura ou última troca de plano); null = a do lançamento.
   precosDesde             DateTime?     @map("precos_desde") @db.Date
+  /// De onde veio o cadastro (gclid, gbraid, wbraid, utm_*, domínio de origem): site T2 e admin
+  /// F2. Só parâmetros de campanha, nunca dado pessoal.
+  origem                  Json?
   /// Conta da própria equipe (testes, demonstração, implantação): fora do MRR, das métricas,
   /// do "Precisa de atenção" e da cobrança manual (admin R5).
   interna                 Boolean       @default(false)

@@ -173,3 +173,62 @@ test('B7: "Planos" aparece no topo também no celular', async ({ page }) => {
   for (const nome of ['Planos', 'Entrar', 'Testar grátis'])
     await expect(nav.getByRole('link', { name: nome })).toBeVisible();
 });
+
+// Site T1, T2 e T3: de onde veio o visitante (anúncio), os passos do funil e a conversão com valor.
+test('do anúncio ao cadastro: origem guardada, eventos do funil e conversão com valor', async ({
+  page,
+  context,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'a medição é a mesma no celular');
+  // Visitante que aceitou os cookies; os eventos do dataLayer ficam anotados para o teste.
+  await page.addInitScript(() => {
+    localStorage.setItem('pf-cookies', 'aceito');
+    const anotar = (e: unknown) => {
+      const lista = JSON.parse(sessionStorage.getItem('eventos-e2e') ?? '[]') as unknown[];
+      lista.push(e);
+      sessionStorage.setItem('eventos-e2e', JSON.stringify(lista));
+    };
+    const dl: unknown[] = [];
+    dl.push = (...itens: unknown[]) => {
+      itens.forEach(anotar);
+      return Array.prototype.push.apply(dl, itens);
+    };
+    (window as unknown as { dataLayer: unknown[] }).dataLayer = dl;
+  });
+  const sufixoT = Date.now().toString(36);
+  await page.goto('/?gclid=gclid-e2e&utm_source=google&utm_medium=cpc&utm_campaign=e2e');
+  // A tela grava a origem logo depois de carregar.
+  await expect
+    .poll(async () => (await context.cookies()).some((c) => c.name === 'pf_origem'))
+    .toBe(true);
+  const cookie = (await context.cookies()).find((c) => c.name === 'pf_origem');
+  expect(decodeURIComponent(cookie!.value)).toContain('"gclid":"gclid-e2e"');
+  expect(cookie!.expires - Date.now() / 1000).toBeGreaterThan(89 * 86_400);
+
+  await page.goto('/planos');
+  await page.getByRole('radio', { name: 'Mensal' }).click();
+  await page
+    .getByRole('link', { name: /Testar grátis|Começar|Criar conta/ })
+    .first()
+    .click();
+  await page.waitForURL(/\/cadastro/);
+  await page.getByLabel('Nome da barbearia').fill(`Barbearia Anúncio ${sufixoT}`);
+  await page.getByLabel('Seu nome').fill('Dono Anúncio');
+  await page.getByLabel('E-mail').fill(`anuncio-${sufixoT}@e2e.pentefino.dev`);
+  await page.getByLabel('Senha').fill('senha-forte-123');
+  await page.getByText('Li e aceito').click();
+  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await page.waitForURL(/configuracao-inicial/);
+
+  const eventos = (await page.evaluate(() =>
+    JSON.parse(sessionStorage.getItem('eventos-e2e') ?? '[]'),
+  )) as { event?: string; value?: number; currency?: string; posicao?: string }[];
+  const nomes = eventos.map((e) => e.event).filter(Boolean);
+  for (const n of ['view_planos', 'toggle_ciclo', 'click_cta', 'begin_sign_up', 'sign_up'])
+    expect(nomes, n).toContain(n);
+  // Conversão só no sucesso, com valor e moeda (lance por valor no Google Ads).
+  const conversao = eventos.find((e) => e.event === 'sign_up')!;
+  expect(conversao.currency).toBe('BRL');
+  expect(conversao.value).toBeGreaterThan(0);
+  expect(nomes.indexOf('begin_sign_up')).toBeLessThan(nomes.indexOf('sign_up'));
+});

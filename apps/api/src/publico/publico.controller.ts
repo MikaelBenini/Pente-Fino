@@ -199,6 +199,8 @@ export class PublicoController {
             precosDesde: new Date(`${dataLocal(new Date())}T00:00:00Z`),
             cupom: desconto.cupom,
             descontoBp: desconto.descontoBp,
+            // De onde veio (anúncio, campanha, site): site T2 e admin F2.
+            ...(d.origem && Object.keys(d.origem).length ? { origem: d.origem } : {}),
           },
         });
         const unidade = await tx.unidade.create({

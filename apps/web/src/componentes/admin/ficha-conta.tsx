@@ -312,6 +312,10 @@ function Conteudo({
         <div>
           <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">Desde</dt>
           <dd className="tabular-nums">{formatarData(f.criadaEm)}</dd>
+          {/* Admin F2: de onde veio o cadastro (anúncio, campanha, site). */}
+          <dd className="text-sm text-tinta-suave">
+            {f.origem ? `Veio de: ${f.origem}` : 'Origem: direto ou sem dado'}
+          </dd>
         </div>
         <div className="sm:col-span-2">
           <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">

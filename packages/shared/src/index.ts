@@ -61,3 +61,4 @@ export * from './configuracao-sistema.js';
 export * from './modelos-email.js';
 export * from './catalogo-servicos.js';
 export * from './pagina-barbearia.js';
+export * from './origem-cadastro.js';

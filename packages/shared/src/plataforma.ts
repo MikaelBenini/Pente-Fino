@@ -180,6 +180,8 @@ export interface FichaContaPlataforma {
   cobrarAPartirDe: string | null;
   /** Conta da própria equipe (testes, demonstração, implantação). */
   interna: boolean;
+  /** De onde veio o cadastro ("Google Ads · lancamento", "instagram.com"); null = sem dado. */
+  origem: string | null;
   /** Data da tabela de preços contratada (null = a do lançamento). */
   precosDesde: string | null;
   cupom: string | null;

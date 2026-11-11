@@ -388,8 +388,16 @@ describe('ações da administração numa conta', () => {
       expect(depois.contas.porSituacao.ativa_sem_cobranca).toBe(
         antes.contas.porSituacao.ativa_sem_cobranca - 1,
       );
+      // Admin F2: a ficha diz de onde veio o cadastro.
+      await naConta(criarPrisma(), c.contaId, (tx) =>
+        tx.conta.update({
+          where: { id: c.contaId },
+          data: { origem: { gclid: 'x', utm_campaign: 'lancamento' } },
+        }),
+      );
       const ficha = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
       expect(ficha.interna).toBe(true);
+      expect(ficha.origem).toBe('Google Ads · lancamento');
       expect(ficha.historico[0]).toMatchObject({
         acao: 'marcar_interna',
         motivo: 'Conta de teste da equipe',

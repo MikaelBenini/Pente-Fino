@@ -100,9 +100,21 @@ describe('cadastro de conta e configuração guiada', () => {
       .post('/publico/contas')
       .send({ ...base, whatsapp: '98888' })
       .expect(400);
+    // Site T2 / admin F2: de onde veio. Campo desconhecido é descartado (nada de dado pessoal).
     const r = await http()
       .post('/publico/contas')
-      .send({ ...base, whatsapp: '(11) 98888-7777' })
+      .send({
+        ...base,
+        whatsapp: '(11) 98888-7777',
+        origem: {
+          gclid: 'teste-gclid',
+          utm_source: 'google',
+          utm_medium: 'cpc',
+          utm_campaign: 'lancamento',
+          referrer: 'google.com',
+          email: 'nao@deve.entrar',
+        },
+      })
       .expect(201);
     token = r.body.accessToken;
     const prisma = criarPrisma();
@@ -114,6 +126,16 @@ describe('cadastro de conta e configuração guiada', () => {
         tx.usuario.findFirst({ where: { email }, select: { telefone: true } }),
       );
       expect(dono?.telefone).toBe('5511988887777');
+      const conta = await naConta(prisma, contaId, (tx) =>
+        tx.conta.findUniqueOrThrow({ where: { id: contaId }, select: { origem: true } }),
+      );
+      expect(conta.origem).toEqual({
+        gclid: 'teste-gclid',
+        utm_source: 'google',
+        utm_medium: 'cpc',
+        utm_campaign: 'lancamento',
+        referrer: 'google.com',
+      });
     } finally {
       await prisma.$disconnect();
     }
