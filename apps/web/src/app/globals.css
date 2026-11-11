@@ -18,7 +18,7 @@
   --borda-forte: #4a4a44;
   --tinta: #f4f4ef;
   --tinta-suave: #aaaaa1;
-  --tinta-fraca: #74746c;
+  --tinta-fraca: #92928a; /* AA (4,5:1) em todos os fundos escuros: painel X3 */
   --modulo: #f5d33b;
   --modulo-texto: #f5d33b;
   --sobre-modulo: #0b0b0b;
@@ -46,7 +46,7 @@
   --borda-forte: #9c9e95;
   --tinta: #121211;
   --tinta-suave: #4f504a;
-  --tinta-fraca: #84857d;
+  --tinta-fraca: #60615a; /* AA (4,5:1) em todos os fundos claros: painel X3 */
   --modulo: #f5d33b;
   --modulo-texto: #765c00;
   --sobre-modulo: #121211;
@@ -393,7 +393,7 @@ dialog[open]::backdrop {
     --borda-forte: #9c9e95;
     --tinta: #121211;
     --tinta-suave: #4f504a;
-    --tinta-fraca: #84857d;
+    --tinta-fraca: #60615a; /* AA (4,5:1) em todos os fundos claros: painel X3 */
     --modulo-texto: #765c00;
     --acao-texto: #3b6a08;
     --aviso-texto: #934f00;

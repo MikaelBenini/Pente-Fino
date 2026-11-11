@@ -13,6 +13,7 @@ import {
   Prisma,
   type Transacao,
   estadoAssinatura,
+  paginasDeBarbeariaNoGoogle,
 } from '@pente-fino/db';
 import {
   lerRegrasAgendamento,
@@ -317,6 +318,7 @@ export class PublicoController {
       return {
         nome: u.nome,
         barbearia: conta.nome,
+        aparecerNoGoogle: u.aparecerNoGoogle,
         endereco: u.endereco,
         telefone: u.telefone,
         // Só o que tem preço na unidade pode ser agendado pelo cliente.
@@ -342,6 +344,16 @@ export class PublicoController {
         ).map((o) => ({ slug: o.slug!, nome: o.nome, endereco: o.endereco })),
       };
     });
+  }
+
+  @Get('paginas')
+  @Publico()
+  @ApiOperation({
+    summary: 'Páginas de barbearia que aparecem no Google (para o sitemap): endereço e data',
+  })
+  async paginas(): Promise<{ slug: string; atualizadoEm: string }[]> {
+    const linhas = await paginasDeBarbeariaNoGoogle(this.banco.prisma);
+    return linhas.map((l) => ({ slug: l.slug, atualizadoEm: l.atualizado_em.toISOString() }));
   }
 
   @Get('agendamento/:slug/cliente')

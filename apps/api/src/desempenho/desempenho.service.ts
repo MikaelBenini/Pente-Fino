@@ -26,6 +26,7 @@ import {
   type LinhaDaRede,
   type PainelDaRede,
   type OcupacaoDaUnidade,
+  linkDeAgendamento,
 } from '@pente-fino/shared';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
@@ -562,7 +563,7 @@ export class DesempenhoService {
         periodo: { de, ate },
         linkAgendamento:
           p.unidade.agendamentoPublico && p.unidade.slug
-            ? `${this.config.appUrl}/agendar?u=${encodeURIComponent(p.unidade.slug)}`
+            ? linkDeAgendamento(this.config.appUrl, p.unidade.slug)
             : null,
         verMargem,
         resumo: resumoDe(indicadores),

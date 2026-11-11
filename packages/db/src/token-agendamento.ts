@@ -1,4 +1,4 @@
-// Link do site mandado pelo bot (/agendar?u=slug&c=token): nome e telefone já preenchidos,
+// Link do site mandado pelo bot (/b/slug?c=token): nome e telefone já preenchidos,
 // sem dado pessoal na URL. O token é curto, vale 48 h, serve uma vez e fica só como hash.
 import { createHash, randomBytes } from 'node:crypto';
 import type { Prisma } from './generated/prisma/client.js';

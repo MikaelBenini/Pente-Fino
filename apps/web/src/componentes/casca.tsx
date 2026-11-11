@@ -836,7 +836,10 @@ function AvisoWhatsapp() {
           O WhatsApp {caidas.length === 1 ? 'da' : 'das unidades'} {nomes} desconectou e o bot não
           está respondendo.
         </span>
-        <Link href="/bot?aba=conexao" className="font-semibold text-acao-texto underline">
+        <Link
+          href="/bot?aba=conexao"
+          className="inline-flex min-h-11 items-center font-semibold text-acao-texto underline"
+        >
           Ver como reconectar
         </Link>
       </p>

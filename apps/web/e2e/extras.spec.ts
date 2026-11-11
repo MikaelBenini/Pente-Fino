@@ -43,6 +43,11 @@ test('cliente agenda pelo link público, sem login', async ({ page }) => {
   await page.getByLabel('WhatsApp').fill(`(11) 9${String(Date.now()).slice(-8)}`);
   await page.getByRole('button', { name: /^Agendar \d{2}:\d{2}/ }).click();
   await expect(page.getByRole('heading', { name: 'Horário marcado' })).toBeVisible();
+  // Painel P6: "Adicionar ao calendário" baixa um .ics com o horário e o link de remarcar.
+  const calendario = page.getByRole('link', { name: 'Adicionar ao calendário' });
+  await expect(calendario).toHaveAttribute('download', 'horario.ics');
+  const ics = decodeURIComponent((await calendario.getAttribute('href'))!.split(',')[1]!);
+  expect(ics).toMatch(/BEGIN:VEVENT[\s\S]*DTSTART:\d{8}T\d{6}Z[\s\S]*\/horario\?t=/);
   await expect(page.getByRole('link', { name: 'Confirmar pelo WhatsApp' })).toHaveAttribute(
     'href',
     /^https:\/\/wa\.me\/551130000001\?text=/,
@@ -88,7 +93,8 @@ test('cliente troca de unidade no meio do agendamento sem perder o que fez', asy
     .getByRole('list', { name: 'Outras unidades' })
     .getByRole('button', { name: /Jardins/ })
     .click();
-  await page.waitForURL(/\/agendar\?u=demo-jardins$/);
+  // Painel P3: o endereço passa a ser o da outra unidade, sem recarregar a tela.
+  await page.waitForURL(/\/b\/demo-jardins(\?|$)/);
   await expect(page.getByText('Jardins', { exact: true }).first()).toBeVisible();
   // Mantém o serviço e os dados; o barbeiro volta para "Sem preferência", com aviso.
   await expect(page.getByLabel(/^Corte · 30 min$/)).toBeChecked();
@@ -196,4 +202,55 @@ test('impressão das comandas e exportação para o contador baixam pelo /api', 
     /attachment; filename="pente-fino-\d{4}-\d{2}\.csv"/,
   );
   expect(await csv.text()).toMatch(/data;tipo;descricao;unidade;forma_ou_grupo;valor/);
+});
+
+// Painel P1, P3 e P4: endereço curto, prévia da barbearia e o Google só com a opção ligada.
+test('página da unidade em /b/<slug>: 301 do endereço antigo, prévia e Google', async ({
+  page,
+  browser,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'o que muda é o HTML e os cabeçalhos');
+  const antigo = await page.request.get('/agendar?u=demo-centro&c=tokenDeTeste123', {
+    maxRedirects: 0,
+  });
+  expect(antigo.status()).toBe(301);
+  expect(antigo.headers()['location']).toMatch(/^\/b\/demo-centro\?.*c=tokenDeTeste123/);
+
+  await page.goto('/b/demo-centro');
+  await expect(page.getByRole('heading', { name: /Barbearia Pente Fino/ })).toBeVisible();
+  await expect(page).toHaveTitle(/^Agende na Barbearia Pente Fino/);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    'content',
+    /\/b\/demo-centro\/opengraph-image/,
+  );
+  // Padrão: fora do Google.
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
+  // A prévia usa o endereço oficial (APP_URL); o teste busca pelo caminho, na porta do teste.
+  const og = new URL((await page.locator('meta[property="og:image"]').getAttribute('content'))!);
+  const imagem = await page.request.get(`${og.pathname}${og.search}`);
+  expect(imagem.headers()['content-type']).toBe('image/png');
+
+  // O dono liga "Aparecer no Google": JSON-LD de barbearia e a página indexável.
+  const dono = await browser.newPage();
+  await entrar(dono, 'dono@demo.pentefino.dev');
+  await dono.goto('/configuracoes?aba=link');
+  // Liga na outra unidade (Jardins): a Centro fica no padrão para o resto dos testes.
+  const secao = dono.getByRole('region', { name: 'Link de Jardins' });
+  const google = secao.getByLabel('Aparecer no Google');
+  // A caixa mostra o que está gravado: muda quando o servidor confirma.
+  await google.click();
+  await expect(google).toBeChecked();
+  await expect(secao.getByText(/aparece nas buscas do Google/)).toBeVisible();
+  try {
+    // Os dados da prévia ficam em cache por alguns minutos: o teste confere pela API.
+    const r = (await (await page.request.get('/api/publico/agendamento/demo-jardins')).json()) as {
+      aparecerNoGoogle: boolean;
+    };
+    expect(r.aparecerNoGoogle).toBe(true);
+  } finally {
+    await google.click();
+    await expect(google).not.toBeChecked();
+    await dono.close();
+  }
 });

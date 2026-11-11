@@ -48,6 +48,7 @@ const SELECAO = {
   ativa: true,
   slug: true,
   agendamentoPublico: true,
+  aparecerNoGoogle: true,
 } as const;
 const periodoSchema = z.object({
   de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),

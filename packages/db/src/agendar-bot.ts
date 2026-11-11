@@ -87,8 +87,12 @@ export interface DadosDaConversa {
 const primeiroNome = (n: string) => n.trim().split(/\s+/)[0]!;
 /** Link do site com o token do cliente (nome e telefone preenchidos). */
 async function linkDoSite(tx: Tx, d: DadosDaConversa): Promise<string> {
-  if (d.simulacao || !d.clienteId) return `${d.link}&c=exemplo`;
-  return `${d.link}&c=${await criarTokenDeAgendamento(tx, d.unidadeId, d.clienteId, d.agora)}`;
+  // O link é /b/<slug> (sem query) desde o painel P3: o código entra com "?" ou "&".
+  const base = d.link ?? '';
+  const comCodigo = (c: string) =>
+    `${base}${base.includes('?') ? '&' : '?'}c=${encodeURIComponent(c)}`;
+  if (d.simulacao || !d.clienteId) return comCodigo('exemplo');
+  return comCodigo(await criarTokenDeAgendamento(tx, d.unidadeId, d.clienteId, d.agora));
 }
 
 async function guardarCanal(tx: Tx, d: DadosDaConversa, canal: CanalAgendamento) {

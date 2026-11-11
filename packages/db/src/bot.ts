@@ -35,6 +35,7 @@ import {
   type DataISO,
   type VagaLiberada,
   caminhoAssinarClube,
+  linkDeAgendamento,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -132,8 +133,7 @@ export async function situacaoDaUnidade(
     descricao: descreverHorario(vale),
     // Sem horário conhecido (equipe sem expediente cadastrado), não diz que está fechado.
     aberto: !fechadoHoje && (vale.length === 0 || dentroDoHorario(vale, agora)),
-    link:
-      u.agendamentoPublico && u.slug ? `${appUrl}/agendar?u=${encodeURIComponent(u.slug)}` : null,
+    link: u.agendamentoPublico && u.slug ? linkDeAgendamento(appUrl, u.slug) : null,
   };
 }
 
