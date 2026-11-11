@@ -29,7 +29,7 @@
 | 1 | Painel | A1–A4 | Caixa não batia; dinheiro no dia errado; comanda presa | ✅ #150 (A1 competência aguarda decisão) |
 | 2 | Site | B1–B8, P1, P2, C1–C7, D3, D5, D6 | Textos contraditórios e oferta invisível | ✅ #148 (C2/C3/C4 aguardam dados do dono) |
 | 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | ✅ branch `fix/painel-a5-a8` |
-| 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | 🔄 R2 feito (`fix/admin-r2-nota-fiscal`); R1 aguarda decisão |
+| 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ✅ R2 #152; R1 `fix/admin-r1-cupom-sem-limite` |
 | 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ⏳ |
 | 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ⏳ |
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ⏳ |
@@ -47,9 +47,9 @@ Já existia antes dos briefings (conferido no `CHANGELOG.md`), só falta complet
 - **Site T1:** o evento `cadastro_concluido` já dispara no sucesso do cadastro. Falta mandar o
   valor do plano para lances por valor.
 - **Site T4:** aviso de cookies com Consent Mode já existe.
-- **Admin R1:** o contador de vagas do cupom só aparece quando restam 5 ou menos e a oferta some ao
-  esgotar. Falta a decisão sobre as 20 vagas e o aviso aos admins.
-- **Admin R2:** a configuração da nota fiscal existe (`/admin` → Configurações). Falta a trava
+- **Admin R1:** feito em 11/11: LANCAMENTO sem limite de vagas. O aviso aos admins sobre cupom perto
+  de esgotar fica com o F3.
+- **Admin R2:** feito em 11/11 (#152): a nota só liga com os dados fiscais conferidos. Antes, faltava a trava
   contra dados de exemplo.
 - **Admin R8:** a barbearia já recebe aviso e e-mail quando o WhatsApp cai. Falta o filtro em
   "Precisa de atenção" do admin.
@@ -73,7 +73,7 @@ Itens que se sobrepõem e devem ser feitos juntos:
 | Painel A2 | "Receber adiantado (sinal)" sem fechar a comanda | Não existe |
 | Painel M6 | Depois de agendar, ficar na Agenda com aviso | Ficar na Agenda, configurável |
 | Painel P4 | Indexar páginas de barbearia que ligarem "Aparecer no Google" | Só com a opção ligada; as demais `noindex` |
-| Admin R1 | Cupom LANCAMENTO sem limite de vagas | Sem limite |
+| Admin R1 | Cupom LANCAMENTO sem limite de vagas | ✅ decidido em 11/11: sem limite |
 | Admin R3 | Conta "Teste" reativada indevidamente | Cortesia interna ou voltar ao teste |
 | Admin R6 | Máximo de dias de teste | 60 |
 | Site P2 | Lucro por serviço no Pro | Só no Premium (`LUCRO_POR_SERVICO_NO_PRO = false`) |
@@ -316,7 +316,7 @@ Separação de dados das barbearias, autenticador obrigatório, auditoria imutá
 
 ### Checklist de validação
 
-- [ ] R1 cupom sem limite (ou status público com vagas) e mensagem clara de esgotado
+- [x] R1 cupom sem limite e mensagem clara de esgotado (`fix/admin-r1-cupom-sem-limite`; o alerta de cupom perto de esgotar fica com o F3)
 - [x] R2 emissão de NF bloqueada com dados de exemplo (`fix/admin-r2-nota-fiscal`). **Dados reais: com o dono** (inscrição, regime e certificado no Asaas; serviço e ISS com o contador)
 - [ ] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo
 - [ ] R4 cobrança manual gera cobrança prevista por ciclo

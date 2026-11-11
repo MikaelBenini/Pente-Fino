@@ -92,7 +92,7 @@ afterAll(async () => {
 });
 
 describe('oferta de lançamento', () => {
-  it('o cupom LANCAMENTO já existe (30%, até 31/01/2027, 20 vagas) e o FUNDADOR saiu', async () => {
+  it('o cupom LANCAMENTO já existe (30%, até 31/01/2027, sem limite de vagas) e o FUNDADOR saiu', async () => {
     const cupons = lerCupons(
       (await plataforma.configuracaoPlataforma.findUniqueOrThrow({ where: { chave: 'cupons' } }))
         .valor,
@@ -100,9 +100,11 @@ describe('oferta de lançamento', () => {
     expect(cupons.find((c) => c.codigo === 'LANCAMENTO')).toMatchObject({
       descontoBp: 3000,
       validoAte: '2027-01-31',
-      vagas: 20,
+      vagas: null,
       ativo: true,
     });
+    // Admin R1: sem limite, o site não mostra contador de vagas.
+    expect((await http().get('/publico/cupom/LANCAMENTO').expect(200)).body.restantes).toBeNull();
     expect(cupons.find((c) => c.codigo === 'FUNDADOR')?.ativo ?? false).toBe(false);
     await http().get('/publico/cupom/FUNDADOR').expect(400);
   });
