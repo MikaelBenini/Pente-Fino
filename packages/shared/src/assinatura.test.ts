@@ -11,6 +11,21 @@ const agora = new Date('2026-11-05T15:00:00-03:00');
 const dia = (n: number) => new Date(agora.getTime() + n * 86_400_000);
 
 describe('situacaoAssinatura', () => {
+  it('cortesia (admin R3): ativa, sem bloqueio, e a barbearia vê até quando', () => {
+    expect(
+      situacaoAssinatura({ status: 'ativa', testeAte: null, cortesiaAte: '2026-12-31' }, [], agora),
+    ).toMatchObject({
+      situacao: 'ativa',
+      somenteLeitura: false,
+      mensagem: 'Cortesia do Pente Fino até 31/12/2026.',
+    });
+    // Acabou a cortesia: volta ao texto de sempre (a cobrança manual já nasceu).
+    expect(
+      situacaoAssinatura({ status: 'ativa', testeAte: null, cortesiaAte: '2026-11-04' }, [], agora)
+        .mensagem,
+    ).toBe('Assinatura em dia.');
+  });
+
   it('teste: conta os dias que faltam e não bloqueia', () => {
     expect(situacaoAssinatura({ status: 'teste', testeAte: dia(3) }, [], agora)).toMatchObject({
       situacao: 'teste',

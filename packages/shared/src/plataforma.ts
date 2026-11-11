@@ -79,20 +79,11 @@ export const mudarPlanoContaSchema = z.object({
 });
 export type MudarPlanoContaEntrada = z.infer<typeof mudarPlanoContaSchema>;
 
-/** Estender o teste ou dar cortesia: o último dia em que a conta usa sem pagar. */
+/** Estender o teste: o último dia do teste (no máximo LIMITE_TESTE_DIAS a partir de hoje). */
 export const mudarTesteContaSchema = z.object({ ate: diaISO, motivo });
 export type MudarTesteContaEntrada = z.infer<typeof mudarTesteContaSchema>;
 
-export const ACOES_SITUACAO = ['bloquear', 'desbloquear', 'cancelar'] as const;
-export type AcaoSituacao = (typeof ACOES_SITUACAO)[number];
-export const mudarSituacaoContaSchema = z.object({ acao: z.enum(ACOES_SITUACAO), motivo });
-export type MudarSituacaoContaEntrada = z.infer<typeof mudarSituacaoContaSchema>;
-/** Bloquear = suspensa (só consulta); desbloquear = ativa; cancelar = cancelada (nada se apaga). */
-export const STATUS_DA_ACAO: Readonly<Record<AcaoSituacao, 'suspensa' | 'ativa' | 'cancelada'>> = {
-  bloquear: 'suspensa',
-  desbloquear: 'ativa',
-  cancelar: 'cancelada',
-};
+// Bloquear, desbloquear, cancelar, reativar, cortesia e início da cobrança: situacao-conta.ts.
 
 export const FORMAS_PAGAMENTO_MANUAL = [
   'pix',
@@ -171,6 +162,12 @@ export interface FichaContaPlataforma {
   documento: string | null;
   canceladaEm: string | null;
   motivoCancelamento: string | null;
+  /** Bloqueada: o que era antes (desbloquear volta a isso). */
+  statusAnterior: ContaNaPlataforma['status'] | null;
+  /** Cortesia (sem cobrança) até este dia. */
+  cortesiaAte: string | null;
+  /** A cobrança manual começa neste dia. */
+  cobrarAPartirDe: string | null;
   /** Data da tabela de preços contratada (null = a do lançamento). */
   precosDesde: string | null;
   cupom: string | null;

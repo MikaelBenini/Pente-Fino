@@ -7,6 +7,24 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (situação da conta na administração)
+
+- Cancelar uma conta agora também cancela a cobrança automática no Asaas. Antes, a barbearia
+  cancelada continuava sendo cobrada. Se o Asaas não responder, a conta não é cancelada pela
+  metade e a tela pede para tentar de novo.
+- "Desbloquear" volta a conta exatamente ao que ela era (o teste mantém a data de fim). Conta
+  cancelada não "desbloqueia" mais para ativa sem cobrança: ela é reativada com o próximo passo
+  (voltar ao teste até uma data, cobrar a partir de uma data ou cortesia até uma data).
+- Teste com limite de 60 dias a partir de hoje. Para mais tempo sem pagar existe a cortesia,
+  com motivo e data de fim (no máximo um ano por vez).
+- Cobrança manual: a cobrança prevista nasce também para a conta ativa que nunca pagou, a partir
+  da data marcada pela administração, e nunca dentro da cortesia.
+
+### Adicionado (cortesia)
+
+- Durante a cortesia, a barbearia vê "Cortesia do Pente Fino até dd/mm/aaaa". No dia seguinte ao
+  fim, a cobrança começa sozinha.
+
 ### Alterado (nota fiscal das mensalidades)
 
 - A emissão da nota fiscal só liga com os dados fiscais da empresa conferidos no Asaas: sem

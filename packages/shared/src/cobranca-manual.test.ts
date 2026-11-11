@@ -39,4 +39,40 @@ describe('cobrança manual', () => {
     })!;
     expect(c).toMatchObject({ periodoFim: '2028-11-04', valor: (20790 + 8290) * 12 });
   });
+
+  // Admin R4: conta ativa que nunca pagou ficava sem cobrança nenhuma ("Vence em 7 dias R$ 0").
+  it('ativa sem pagamento com data de início: a primeira cobrança vence nessa data', () => {
+    const r = { ...base, faturas: [], cobrarAPartirDe: '2026-11-15' };
+    expect(proximaCobrancaManual({ ...r, hoje: '2026-11-07' })).toBeNull();
+    expect(proximaCobrancaManual({ ...r, hoje: '2026-11-08' })).toEqual({
+      vencimento: '2026-11-15',
+      periodoInicio: '2026-11-15',
+      periodoFim: '2026-12-14',
+      valor: 14990,
+    });
+  });
+
+  it('cortesia: nada durante; a cobrança começa no dia seguinte ao fim', () => {
+    const r = {
+      ...base,
+      faturas: [{ status: 'paga' as const, periodoFim: '2026-11-30' }],
+      cortesiaAte: '2027-01-31',
+      cobrarAPartirDe: '2027-02-01',
+    };
+    expect(proximaCobrancaManual({ ...r, hoje: '2026-11-28' })).toBeNull();
+    expect(proximaCobrancaManual({ ...r, hoje: '2027-01-26' })).toMatchObject({
+      vencimento: '2027-02-01',
+    });
+  });
+
+  it('reativada com início depois do último período pago: vale a data de início', () => {
+    expect(
+      proximaCobrancaManual({
+        ...base,
+        hoje: '2026-11-11',
+        faturas: [{ status: 'paga', periodoFim: '2026-06-30' }],
+        cobrarAPartirDe: '2026-11-12',
+      }),
+    ).toMatchObject({ vencimento: '2026-11-12' });
+  });
 });

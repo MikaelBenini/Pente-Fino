@@ -7,7 +7,7 @@ export async function estadoAssinatura(
   agora = new Date(),
 ): Promise<EstadoDaConta> {
   const conta = await tx.conta.findFirstOrThrow({
-    select: { status: true, testeAte: true, plano: true },
+    select: { status: true, testeAte: true, cortesiaAte: true, plano: true },
   });
   const faturas = await tx.faturaAssinatura.findMany({
     where: { status: { in: ['aberta', 'recusada', 'paga'] } },

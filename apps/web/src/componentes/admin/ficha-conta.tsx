@@ -13,8 +13,12 @@ import {
   PLANOS,
   aplicarDesconto,
   precoPorMes,
-  type AcaoSituacao,
+  LIMITE_TESTE_DIAS,
+  NOME_PROXIMO_PASSO,
+  PROXIMOS_PASSOS,
+  type AcaoConta,
   type FichaContaPlataforma,
+  type ProximoPasso,
   type PapelPlataforma,
 } from '@pente-fino/shared';
 import { Botao, Campo, Dialogo, Selecao } from '@pente-fino/ui';
@@ -32,7 +36,57 @@ const NOME_ACAO: Record<string, string> = {
   bloquear: 'Bloqueou',
   desbloquear: 'Desbloqueou',
   cancelar: 'Cancelou',
+  reativar: 'Reativou',
+  cortesia: 'Deu cortesia',
+  cobrar: 'Marcou o início da cobrança',
   registrar_pagamento: 'Registrou pagamento',
+};
+
+const NOME_STATUS: Record<FichaContaPlataforma['status'], string> = {
+  teste: 'Em teste',
+  ativa: 'Ativa',
+  suspensa: 'Bloqueada',
+  cancelada: 'Cancelada',
+};
+
+/** O que dá para fazer em cada situação (a regra completa está em situacao-conta.ts). */
+function acoesPara(f: FichaContaPlataforma): { valor: AcaoConta; rotulo: string }[] {
+  const auto = f.cobrancaAutomatica;
+  switch (f.status) {
+    case 'teste':
+      return [
+        { valor: 'bloquear', rotulo: 'Bloquear (só consulta; desbloquear volta ao teste)' },
+        ...(auto ? [] : [{ valor: 'cortesia' as const, rotulo: 'Dar cortesia até a data' }]),
+        { valor: 'cancelar', rotulo: 'Cancelar (só consulta; nada se apaga)' },
+      ];
+    case 'ativa':
+      return [
+        { valor: 'bloquear', rotulo: 'Bloquear (só consulta; desbloquear volta a ativa)' },
+        ...(auto
+          ? []
+          : [
+              { valor: 'cortesia' as const, rotulo: 'Dar cortesia até a data' },
+              { valor: 'cobrar' as const, rotulo: 'Começar a cobrar a partir da data' },
+            ]),
+        { valor: 'cancelar', rotulo: 'Cancelar (para a cobrança; nada se apaga)' },
+      ];
+    case 'suspensa':
+      return [
+        {
+          valor: 'desbloquear',
+          rotulo: `Desbloquear (volta a ${NOME_STATUS[f.statusAnterior ?? 'ativa'].toLowerCase()})`,
+        },
+        { valor: 'cancelar', rotulo: 'Cancelar (para a cobrança; nada se apaga)' },
+      ];
+    case 'cancelada':
+      return [{ valor: 'reativar', rotulo: 'Reativar com o próximo passo' }];
+  }
+}
+
+const somarDias = (dia: string, n: number) => {
+  const d = new Date(`${dia}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 };
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível salvar.';
@@ -178,10 +232,19 @@ function Conteudo({
     return d.toISOString().slice(0, 10);
   });
   const [motivoTeste, setMotivoTeste] = useState('');
-  const [acao, setAcao] = useState<AcaoSituacao>(
-    f.status === 'ativa' || f.status === 'teste' ? 'bloquear' : 'desbloquear',
-  );
+  const opcoesSituacao = acoesPara(f);
+  const [acao, setAcao] = useState<AcaoConta>(opcoesSituacao[0]!.valor);
+  const [proximo, setProximo] = useState<ProximoPasso>('teste');
+  const [dataSituacao, setDataSituacao] = useState(() => somarDias(hoje, 14));
   const [motivoSituacao, setMotivoSituacao] = useState('');
+  // Ação que leva data: cortesia, início da cobrança e reativar.
+  const pedeData = acao === 'cortesia' || acao === 'cobrar' || acao === 'reativar';
+  const rotuloData =
+    acao === 'cobrar' || (acao === 'reativar' && proximo === 'cobranca')
+      ? 'Cobrar a partir de'
+      : acao === 'cortesia' || (acao === 'reativar' && proximo === 'cortesia')
+        ? 'Cortesia até'
+        : 'Teste até';
   const unidades = Math.max(1, f.unidades.filter((u) => u.ativa).length);
   const tabelaConta = useTabelasAdmin().vigente(f.precosDesde);
   const sugerido =
@@ -211,10 +274,27 @@ function Conteudo({
           </dt>
           <dd>
             <Ficha tom={f.status === 'ativa' ? 'acao' : f.status === 'teste' ? 'aviso' : 'perigo'}>
-              {f.status}
+              {f.cortesiaAte && f.status === 'ativa' && f.cortesiaAte >= hoje
+                ? 'Cortesia'
+                : NOME_STATUS[f.status]}
             </Ficha>
             {f.testeAte && f.status === 'teste' && (
               <span className="ml-2 text-sm text-tinta-suave">até {formatarData(f.testeAte)}</span>
+            )}
+            {f.status === 'suspensa' && f.statusAnterior && (
+              <span className="block text-sm text-tinta-suave">
+                Era {NOME_STATUS[f.statusAnterior].toLowerCase()} antes do bloqueio
+              </span>
+            )}
+            {f.cortesiaAte && f.cortesiaAte >= hoje && (
+              <span className="block text-sm text-tinta-suave">
+                Cortesia até {formatarData(`${f.cortesiaAte}T12:00:00Z`)}
+              </span>
+            )}
+            {f.cobrarAPartirDe && !f.cobrancaAutomatica && f.status === 'ativa' && (
+              <span className="block text-sm text-tinta-suave">
+                Cobrança a partir de {formatarData(`${f.cobrarAPartirDe}T12:00:00Z`)}
+              </span>
             )}
             {f.motivoCancelamento && (
               <span className="block text-sm text-tinta-suave">Motivo: {f.motivoCancelamento}</span>
@@ -359,7 +439,7 @@ function Conteudo({
 
         {admin && (
           <Acao
-            titulo="Estender teste ou dar cortesia"
+            titulo="Estender teste"
             textoBotao="Salvar data"
             podeEnviar={motivoOk(motivoTeste)}
             enviar={async () => {
@@ -373,8 +453,11 @@ function Conteudo({
           >
             <Campo
               id="teste-ate"
-              rotulo="Usa sem pagar até"
+              rotulo="Teste até"
               type="date"
+              min={hoje}
+              max={somarDias(hoje, LIMITE_TESTE_DIAS)}
+              dica={`No máximo ${LIMITE_TESTE_DIAS} dias a partir de hoje. Para mais tempo sem pagar, use cortesia.`}
               value={ate}
               onChange={(e) => setAte(e.target.value)}
             />
@@ -384,20 +467,21 @@ function Conteudo({
 
         {admin && (
           <Acao
-            titulo="Bloquear, desbloquear ou cancelar"
+            titulo="Situação da conta"
             textoBotao={
-              acao === 'cancelar'
-                ? 'Cancelar a conta'
-                : acao === 'bloquear'
-                  ? 'Bloquear'
-                  : 'Desbloquear'
+              opcoesSituacao.find((o) => o.valor === acao)?.rotulo.split(' (')[0] ?? 'Salvar'
             }
-            tom={acao === 'desbloquear' ? 'acao' : 'perigo'}
-            podeEnviar={motivoOk(motivoSituacao)}
+            tom={acao === 'bloquear' || acao === 'cancelar' ? 'perigo' : 'acao'}
+            podeEnviar={motivoOk(motivoSituacao) && (!pedeData || !!dataSituacao)}
             enviar={async () => {
               await adminApi(`${base}/situacao`, {
                 metodo: 'PUT',
-                corpo: { acao, motivo: motivoSituacao },
+                corpo: {
+                  acao,
+                  motivo: motivoSituacao,
+                  ...(acao === 'reativar' ? { proximo } : {}),
+                  ...(pedeData ? { data: dataSituacao } : {}),
+                },
               });
               setMotivoSituacao('');
               await atualizar();
@@ -407,15 +491,36 @@ function Conteudo({
               id="conta-acao"
               rotulo="O que fazer"
               value={acao}
-              onChange={(e) => setAcao(e.target.value as AcaoSituacao)}
-              opcoes={[
-                { valor: 'bloquear', rotulo: 'Bloquear (só consulta)' },
-                { valor: 'desbloquear', rotulo: 'Desbloquear (volta a usar)' },
-                { valor: 'cancelar', rotulo: 'Cancelar (só consulta; nada se apaga)' },
-              ]}
+              onChange={(e) => setAcao(e.target.value as AcaoConta)}
+              opcoes={opcoesSituacao}
             />
+            {acao === 'reativar' && (
+              <Selecao
+                id="conta-proximo"
+                rotulo="Próximo passo"
+                value={proximo}
+                onChange={(e) => setProximo(e.target.value as ProximoPasso)}
+                opcoes={PROXIMOS_PASSOS.map((p) => ({ valor: p, rotulo: NOME_PROXIMO_PASSO[p] }))}
+              />
+            )}
+            {pedeData && (
+              <Campo
+                id="conta-data"
+                rotulo={rotuloData}
+                type="date"
+                min={hoje}
+                value={dataSituacao}
+                onChange={(e) => setDataSituacao(e.target.value)}
+              />
+            )}
             <CampoMotivo id="motivo-situacao" valor={motivoSituacao} onMudar={setMotivoSituacao} />
             <p className="text-sm text-tinta-suave">
+              {acao === 'cancelar' && f.cobrancaAutomatica
+                ? 'Cancelar também para a cobrança automática no Asaas. '
+                : ''}
+              {acao === 'cortesia' || (acao === 'reativar' && proximo === 'cortesia')
+                ? 'Na cortesia a barbearia usa sem pagar; a cobrança começa no dia seguinte ao fim. '
+                : ''}
               Bloqueada ou cancelada, a barbearia continua lendo tudo e exportando os dados; só não
               grava.
             </p>

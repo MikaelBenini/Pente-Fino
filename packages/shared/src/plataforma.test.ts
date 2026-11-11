@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { acaoContaSchema } from './situacao-conta.js';
 import {
   fimDoPeriodo,
-  mudarSituacaoContaSchema,
   registrarPagamentoSchema,
   venderContaSchema,
   vendasPorVendedor,
@@ -16,9 +16,7 @@ describe('administração: ações numa conta', () => {
   });
 
   it('motivo obrigatório e pagamento em centavos', () => {
-    expect(mudarSituacaoContaSchema.safeParse({ acao: 'cancelar', motivo: 'oi' }).success).toBe(
-      false,
-    );
+    expect(acaoContaSchema.safeParse({ acao: 'cancelar', motivo: 'oi' }).success).toBe(false);
     expect(
       registrarPagamentoSchema.parse({
         valor: 14990,

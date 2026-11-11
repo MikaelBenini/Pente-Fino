@@ -119,6 +119,8 @@ export async function rotinaAvisosDaAssinatura(
           conta.precosDesde ? dia(conta.precosDesde) : null,
         ),
         descontoBp: conta.descontoBp,
+        cobrarAPartirDe: conta.cobrarAPartirDe ? dia(conta.cobrarAPartirDe) : null,
+        cortesiaAte: conta.cortesiaAte ? dia(conta.cortesiaAte) : null,
       });
       if (nova) {
         await tx.faturaAssinatura.create({

@@ -44,6 +44,7 @@ export * from './mover.js';
 export * from './avisos.js';
 export * from './rede.js';
 export * from './plataforma.js';
+export * from './situacao-conta.js';
 export * from './metricas-plataforma.js';
 export * from './plataforma-gestao.js';
 export * from './protecao-cadastro.js';

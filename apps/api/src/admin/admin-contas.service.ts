@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   fichaDaContaPlataforma,
+  aplicarSituacaoDaConta,
   mudarPlanoDaConta,
-  mudarSituacaoDaConta,
   mudarTesteDaConta,
+  situacaoDaContaPlataforma,
   registrarPagamentoManual,
 } from '@pente-fino/db';
 import {
@@ -12,17 +13,18 @@ import {
   formatarData,
   formatarMoeda,
   NOME_PLANO,
-  STATUS_DA_ACAO,
+  problemaFimDoTeste,
+  transicaoDaConta,
   valorDaCobranca,
+  type AcaoContaEntrada,
   type FichaContaPlataforma,
   type MudarPlanoContaEntrada,
-  type MudarSituacaoContaEntrada,
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
 } from '@pente-fino/shared';
 import { AssinaturaGuard } from '../assinatura/assinatura.guard.js';
 import { PlanoGuard } from '../assinatura/plano.guard.js';
-import { PROVEDOR_COBRANCA, type ProvedorCobranca } from '../cobranca/provedor.js';
+import { ErroCobranca, PROVEDOR_COBRANCA, type ProvedorCobranca } from '../cobranca/provedor.js';
 import { Erros } from '../comum/erros.js';
 import { EmailsService } from '../emails/emails.service.js';
 import { PrecosService } from '../comum/precos.service.js';
@@ -34,7 +36,9 @@ function traduzir(e: unknown): never {
   const msg = e instanceof Error ? e.message : '';
   if (msg.includes('conta_inexistente')) throw Erros.naoEncontrado('Conta não encontrada.');
   if (msg.includes('conta_parada'))
-    throw Erros.conflito('A conta está suspensa ou cancelada. Reative antes.');
+    throw Erros.conflito(
+      'A conta está bloqueada ou cancelada: desbloqueie ou reative com o próximo passo.',
+    );
   throw e;
 }
 
@@ -64,6 +68,7 @@ export class AdminContasService {
   async ficha(contaId: string): Promise<FichaContaPlataforma> {
     const f = await fichaDaContaPlataforma(this.banco.prisma, contaId);
     if (!f) throw Erros.naoEncontrado('Conta não encontrada.');
+    const situacao = await situacaoDaContaPlataforma(this.banco.prisma, contaId);
     const eventos = await this.banco.prisma.auditoriaPlataforma.findMany({
       where: { contaAfetadaId: contaId },
       include: { usuario: { select: { nome: true } } },
@@ -71,7 +76,13 @@ export class AdminContasService {
       take: 50,
     });
     return {
-      ...(f as unknown as Omit<FichaContaPlataforma, 'historico'>),
+      ...(f as unknown as Omit<
+        FichaContaPlataforma,
+        'historico' | 'statusAnterior' | 'cortesiaAte' | 'cobrarAPartirDe'
+      >),
+      statusAnterior: situacao?.statusAnterior ?? null,
+      cortesiaAte: situacao?.cortesiaAte ?? null,
+      cobrarAPartirDe: situacao?.cobrarAPartirDe ?? null,
       historico: eventos.map((e) => ({
         acao: e.acao,
         quem: e.usuario?.nome ?? null,
@@ -131,6 +142,9 @@ export class AdminContasService {
     a: AdminAutenticado,
     ip: string | null,
   ) {
+    // Admin R6: teste tem limite; para mais tempo sem pagar, cortesia (com motivo e fim).
+    const problema = problemaFimDoTeste(d.ate, dataLocal(new Date()));
+    if (problema) throw Erros.validacao([{ campo: 'ate', mensagem: problema }]);
     // Vale até o fim do dia escolhido, em São Paulo.
     const ate = new Date(`${d.ate}T23:59:59-03:00`);
     const antes = await mudarTesteDaConta(this.banco.prisma, contaId, ate).catch(traduzir);
@@ -146,22 +160,56 @@ export class AdminContasService {
     this.valeNaHora(contaId);
   }
 
+  /**
+   * Admin R3: bloquear, desbloquear, cancelar, reativar, cortesia e início da cobrança, pela
+   * máquina de estados (transicaoDaConta). Cancelar para a cobrança automática no Asaas antes de
+   * gravar: se o Asaas não responder, nada muda (a conta não fica cancelada sendo cobrada).
+   */
   async mudarSituacao(
     contaId: string,
-    d: MudarSituacaoContaEntrada,
+    d: AcaoContaEntrada,
     a: AdminAutenticado,
     ip: string | null,
   ) {
-    const status = STATUS_DA_ACAO[d.acao];
-    const antes = await mudarSituacaoDaConta(this.banco.prisma, contaId, status, d.motivo).catch(
-      traduzir,
+    const atual = await situacaoDaContaPlataforma(this.banco.prisma, contaId);
+    if (!atual) throw Erros.naoEncontrado('Conta não encontrada.');
+    const hoje = dataLocal(new Date());
+    const r = transicaoDaConta(
+      {
+        status: atual.status,
+        statusAnterior: atual.statusAnterior,
+        testeAte: atual.testeAte ? dataLocal(new Date(atual.testeAte)) : null,
+        cobrancaAutomatica: atual.asaasAssinaturaId !== null,
+      },
+      d,
+      hoje,
     );
+    if (!r.ok) throw Erros.validacao([{ campo: d.data ? 'data' : 'acao', mensagem: r.motivo }]);
+    if (r.mudanca.pararCobrancaAutomatica && atual.asaasAssinaturaId) {
+      try {
+        await this.provedor.cancelarAssinatura(atual.asaasAssinaturaId);
+      } catch (e) {
+        // Já cancelada no Asaas (404): segue; outro erro: não cancela pela metade.
+        if (!(e instanceof ErroCobranca && e.status === 404)) {
+          this.logger.error(`Asaas ao cancelar a conta ${contaId}: ${(e as Error).message}`);
+          throw Erros.conflito(
+            'Não deu para parar a cobrança automática no Asaas, então a conta não foi cancelada. Tente de novo em instantes.',
+          );
+        }
+      }
+    }
+    const antes = await aplicarSituacaoDaConta(
+      this.banco.prisma,
+      contaId,
+      r.mudanca,
+      d.motivo,
+    ).catch(traduzir);
     await this.auth.auditar({
       usuarioId: a.id,
       acao: d.acao,
       contaId,
       antes,
-      depois: { status },
+      depois: { ...r.mudanca, proximo: d.proximo ?? null },
       motivo: d.motivo,
       ip,
     });
