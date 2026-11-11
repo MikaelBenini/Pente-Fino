@@ -158,6 +158,13 @@ U2 a U5 já feitos (#161).
 - [ ] **N5** Página "Sobre": perguntar ao dono quem faz o Pente Fino, por que existe e de qual
   cidade, e escrever junto com ele
 
+## 9. Por último: verificação final do ecossistema
+
+- [ ] Rodar a [verificação final](verificacao-final.md) (pedido do dono em 11/11/2026): rotinas
+  automáticas, integrações, o dia do barbeiro, números que batem, segurança, produção e
+  documentação. Só depois de todas as etapas acima, para nada ficar de fora. Lá já estão os
+  achados V1 a V4 vistos em 11/11
+
 ## Perguntas para o dono
 
 Responda embaixo de cada pergunta, no espaço depois de "Resposta:". Quando eu ler a resposta,

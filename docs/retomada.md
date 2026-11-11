@@ -9,6 +9,7 @@ Leia este arquivo primeiro ao abrir uma conversa nova. O que falta fazer, e onde
 | --- | --- |
 | [retomada.md](retomada.md) | Porta de entrada: como trabalhar e onde está cada coisa |
 | [a-fazer.md](a-fazer.md) | Lista de trabalho temporária: checklist do que falta, marcado ao concluir |
+| [verificacao-final.md](verificacao-final.md) | Conferência de ponta a ponta do ecossistema, feita por último (temporária) |
 | [CLAUDE.md](CLAUDE.md) | Stack, comandos, regras de negócio que não podem quebrar e convenções |
 | [documentacao-do-produto.md](documentacao-do-produto.md) | PRD, TRD, fluxos, UI/UX, esquema, preços: como o produto funciona |
 | [linha-de-desenvolvimento.md](linha-de-desenvolvimento.md) | Histórico definitivo, etapa por etapa, com o que foi feito em cada item |
