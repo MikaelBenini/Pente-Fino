@@ -30,9 +30,9 @@
 | 2 | Site | B1–B8, P1, P2, C1–C7, D3, D5, D6 | Textos contraditórios e oferta invisível | ✅ #148 (C2/C3/C4 aguardam dados do dono) |
 | 3 | Painel | A5–A8 | Bot respondendo errado, status falso, cliente sem saída, layout quebrado | ✅ branch `fix/painel-a5-a8` |
 | 4 | Admin | R1, R2 | Risco comercial e fiscal imediato (anúncios rodando, NF ligada) | ✅ R2 #152; R1 #153 |
-| 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ✅ R3, R4 e R6 #154; R5 `fix/admin-r5-indicadores-e-conta-interna` |
-| 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ✅ `fix/admin-r7-r10-falhas-ip-e-abas` (R9: correção do DNS com o dono) |
-| 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ⏳ |
+| 5 | Admin | R3–R6 | Status e cobrança deixam conta usando de graça e números errados | ✅ R3, R4 e R6 #154; R5 #155 |
+| 6 | Admin | R7–R10 | Falhas invisíveis e auditoria com IP errado | ✅ #156 (R9: correção do DNS com o dono) |
+| 7 | Painel | M1–M10 | Informação confusa e atrito de uso | 🔄 M1, M2, M4, M5 e M8 em `fix/painel-m1-m2-m4-m5-m8` |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ⏳ (T4 já existia) |
 | 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ⏳ |
 | 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ |
@@ -322,9 +322,9 @@ Separação de dados das barbearias, autenticador obrigatório, auditoria imutá
 - [x] R2 emissão de NF bloqueada com dados de exemplo (#152). **Dados reais: com o dono** (inscrição, regime e certificado no Asaas; serviço e ISS com o contador)
 - [x] R3 máquina de estados testada; "Desbloquear" volta ao estado anterior; "Reativar" exige próximo passo; cancelar para a cobrança no Asaas (#154)
 - [x] R4 cobrança manual gera cobrança prevista por ciclo, também para quem nunca pagou (#154)
-- [x] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR (`fix/admin-r5-indicadores-e-conta-interna`)
+- [x] R5 "Em dia" só com pagamento; "Ativa sem cobrança", "Cortesia" e "conta interna" fora do MRR (#155)
 - [x] R6 teste com limite; acima disso só cortesia (#154)
-- [x] R7 falhas de e-mail listáveis, reenviáveis e alertadas
+- [x] R7 falhas de e-mail listáveis, reenviáveis e alertadas (#156)
 - [x] R8 WhatsApp caído em Precisa de atenção
 - [x] R9 IP real na auditoria atrás do proxy (a Saúde avisa IP interno; tirar o AAAA do DNS ou ligar IPv6 no Docker: `docs/producao.md`)
 - [x] R10 abas respondem ao hash

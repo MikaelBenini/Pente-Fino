@@ -716,7 +716,14 @@ agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 - [x] **A6** cada conversa traz a conexão da unidade dela (`conectado`); desconectado, o selo é "Bot parado: WhatsApp desconectado" (vermelho) com "Conectar"
 - [x] **A7** o link só liga com serviço com preço e profissional com horário (`faltaParaLigarLink`; 422 `link_incompleto` com o que falta e os atalhos); página pública sem serviço ou barbeiro mostra "Agendamento online indisponível" com WhatsApp, telefone e mapa; o editor do bot avisa as unidades com o link desligado
 - [x] **A8** `/servicos` e `/produtos` passavam da largura no celular: o "Ações" só para leitor de tela (absoluto) escapava da rolagem da tabela. `relative` nos contêineres de tabela e teste de tela com todas as rotas do painel em 375 px (`e2e/largura.spec.ts`)
-- [ ] **M1–M10, X1–X4, P1–P6** (seguintes)
+- [x] **M1** card de meta do Início com as metas de serviço quando não há de faturamento (`resumoDasMetas`)
+- [x] **M2** 12 meses a partir do mês de criação da conta (`mesesDoHistorico`) e "sem dados ainda" com os dois meses zerados (`textoDaVariacao`, agora único para tela, PDF e planilha). "Só dias de trabalho" já filtrava as folgas
+- [x] **M4** coluna de Serviços "Conta como" (peso nos atendimentos), com a explicação; a contagem do mês segue em Resultados → Serviços e produtos
+- [x] **M5** "Custos operacionais" com comissão e despesas separadas (`percentualComissoes`)
+- [x] **M8** imprimir comandas desativado sem comanda no dia
+- [ ] **M3, M6, M7, M9** preço, comissão e sobra em Serviços; ficar na Agenda depois de agendar; desfazer ao tirar item; bloco curto da agenda (próximo PR)
+- [ ] **M10** assinatura com a próxima cobrança; suporte com WhatsApp e horário
+- [ ] **X1–X4, P1–P6** (seguintes)
 
 ## Etapa 23.4 · Administração sem furos (briefing de 2026-11-10)
 
