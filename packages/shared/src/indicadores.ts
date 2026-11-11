@@ -320,7 +320,10 @@ export function lucratividadePorProduto(
   return [...comSituacao.sort((a, b) => b.lucro - a.lucro), ...parados];
 }
 
-/** Variação entre dois valores (fração); null quando não há base de comparação. */
+/**
+ * Variação entre dois valores (fração); null quando não há base de comparação. Divide pelo
+ * valor absoluto: lucro de −10 mil para −13 mil é −30% (piorou), não +30%.
+ */
 export function variacao(atual: number, anterior: number): number | null {
-  return anterior === 0 ? null : (atual - anterior) / anterior;
+  return anterior === 0 ? null : (atual - anterior) / Math.abs(anterior);
 }

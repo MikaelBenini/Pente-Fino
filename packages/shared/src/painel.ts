@@ -56,7 +56,7 @@ export function pendenciasDoDia(d: DadosPainelDia): PendenciaDoDia[] {
     r.push({
       chave: 'notas',
       tom: 'aviso',
-      rota: '/metricas',
+      rota: '/resultados?aba=agenda',
       texto: `${n(d.notasBaixas, 'nota baixa', 'notas baixas')} de cliente para resolver`,
     });
   if (d.totais.pendentes)

@@ -23,7 +23,6 @@ import type {
   ResumoDoDia,
   ResumoDoMes,
   FichaProfissional,
-  LinhaRankingEquipe,
   DespesaDetalhe,
   DesempenhoBarbeiro,
   ExtratoComissao,
@@ -293,16 +292,6 @@ export const useFichaProfissional = (id: string | null, de: string, ate: string)
   });
 
 /** Ranking da equipe no período; unidade ativa ou a rede inteira. */
-export const useRankingEquipe = (unidade: string | null, de: string, ate: string) =>
-  useQuery({
-    queryKey: [...chavesResultados.desempenho, 'ranking', unidade, de, ate],
-    queryFn: () =>
-      api<LinhaRankingEquipe[]>(
-        `profissionais/desempenho?de=${de}&ate=${ate}${comUnidade(unidade)}`,
-      ),
-    enabled: useLiberado('fichaProfissional'),
-  });
-
 const comProfissional = (id: string | null) => (id ? `&profissionalId=${id}` : '');
 
 /** O que tem para o dia e o que já foi feito; atualiza sozinho a cada minuto. */

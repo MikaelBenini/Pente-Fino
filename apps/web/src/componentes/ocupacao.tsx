@@ -16,7 +16,7 @@ const horasTexto = (min: number) => {
 };
 const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'] as const;
 
-/** Card do Início: quanto da agenda da unidade já foi ocupado no mês, e em que faixa do dia. */
+/** Quanto da agenda da unidade foi ocupado no período, e em que faixa do dia (Resultados do mês). */
 export function CardOcupacao({ o }: { o: OcupacaoDaUnidade }) {
   if (o.total.disponivelMin === 0) return null;
   return (

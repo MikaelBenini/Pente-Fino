@@ -1,8 +1,6 @@
-import type { Metadata } from 'next';
-import { TelaRelatorio } from '@/componentes/telas/relatorio';
-
-export const metadata: Metadata = { title: 'Relatório do mês' };
+// Relatório do mês virou Resultados do mês.
+import { permanentRedirect } from 'next/navigation';
 
 export default function Pagina() {
-  return <TelaRelatorio />;
+  permanentRedirect('/resultados');
 }

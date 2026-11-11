@@ -10,9 +10,7 @@ export type IdMenu =
   | 'comandas'
   | 'caixa'
   | 'financeiro'
-  | 'metricas'
-  | 'relatorio'
-  | 'rede'
+  | 'resultados'
   | 'equipe'
   | 'clube'
   | 'servicos'
@@ -20,7 +18,6 @@ export type IdMenu =
   | 'clientes'
   | 'desempenho'
   | 'comissoes'
-  | 'metas'
   | 'bot'
   | 'conversas'
   | 'configuracoes'
@@ -56,22 +53,14 @@ export const ITENS_MENU: readonly ItemMenu[] = [
   { id: 'comandas', rotulo: 'Comandas', rota: '/comandas', papeis: TODOS, grupo: 'Dia a dia' },
   { id: 'caixa', rotulo: 'Caixa do dia', rota: '/caixa', papeis: BALCAO, grupo: 'Dia a dia' },
   { id: 'clientes', rotulo: 'Clientes', rota: '/clientes', papeis: TODOS, grupo: 'Dia a dia' },
+  {
+    id: 'resultados',
+    rotulo: 'Resultados do mês',
+    rota: '/resultados',
+    papeis: GESTAO,
+    grupo: 'Gestão',
+  },
   { id: 'financeiro', rotulo: 'Financeiro', rota: '/financeiro', papeis: GESTAO, grupo: 'Gestão' },
-  {
-    id: 'metricas',
-    rotulo: 'Métricas e metas',
-    rota: '/metricas',
-    papeis: GESTAO,
-    grupo: 'Gestão',
-  },
-  {
-    id: 'relatorio',
-    rotulo: 'Relatório do mês',
-    rota: '/relatorio',
-    papeis: GESTAO,
-    grupo: 'Gestão',
-  },
-  { id: 'rede', rotulo: 'Painel da rede', rota: '/rede', papeis: GESTAO, grupo: 'Gestão' },
   { id: 'equipe', rotulo: 'Equipe', rota: '/equipe', papeis: GESTAO, grupo: 'Gestão' },
   {
     id: 'desempenho',
@@ -87,7 +76,6 @@ export const ITENS_MENU: readonly ItemMenu[] = [
     papeis: ['barbeiro'],
     grupo: 'Gestão',
   },
-  { id: 'metas', rotulo: 'Metas', rota: '/metas', papeis: ['barbeiro'], grupo: 'Gestão' },
   { id: 'servicos', rotulo: 'Serviços', rota: '/servicos', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'produtos', rotulo: 'Produtos', rota: '/produtos', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'clube', rotulo: 'Clube', rota: '/clube', papeis: GESTAO, grupo: 'Cadastros' },

@@ -11,12 +11,9 @@ import {
 import { EstadoVazio, cn } from '@pente-fino/ui';
 import { Network } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { api } from '@/lib/api';
 import { chavesResultados } from '@/lib/consultas';
-import { limitesDoMes, mesAtual } from '@/lib/periodo';
-import { SeletorMes } from '../indicadores';
-import { CabecalhoPagina, Estado, Tabela, td, th } from '../pagina';
+import { Estado, Tabela, td, th } from './pagina';
 
 const pct = (f: number) => `${Math.round(f * 100)}%`;
 const nota = (n: number | null) =>
@@ -42,22 +39,21 @@ function texto(n: NumerosDaRede, m: MetricaRede): string {
   }
 }
 
-/** Painel da rede (RF-23): as unidades lado a lado no mês, a melhor de cada indicador e o total. */
-export function TelaRede() {
-  const [mes, setMes] = useState(mesAtual());
-  const [de, ate] = limitesDoMes(mes);
+/**
+ * Unidades lado a lado no período (RF-23, antes "Painel da rede"), dentro de Resultados do mês:
+ * a melhor de cada indicador marcada e o total da rede.
+ */
+export function UnidadesDaRede({ de, ate }: { de: string; ate: string }) {
   const painel = useQuery({
     queryKey: [...chavesResultados.indicadores, 'rede', de, ate],
     queryFn: () => api<PainelDaRede>(`rede?de=${de}&ate=${ate}`),
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <CabecalhoPagina
-        titulo="Painel da rede"
-        pergunta="Qual unidade vai melhor?"
-        acao={<SeletorMes mes={mes} onMudar={setMes} />}
-      />
+    <section aria-labelledby="res-unidades" className="flex flex-col gap-3">
+      <h2 id="res-unidades" className="text-lg font-semibold">
+        Unidades lado a lado
+      </h2>
       <Estado consulta={painel}>
         {() => {
           const p = painel.data!;
@@ -72,12 +68,6 @@ export function TelaRede() {
           const melhor = (id: string, m: MetricaRede) => p.destaques[m] === id;
           return (
             <>
-              {p.unidades.length === 1 && (
-                <p className="text-tinta-suave">
-                  Você vê uma unidade. Com mais de uma, elas aparecem lado a lado, com a melhor de
-                  cada indicador marcada.
-                </p>
-              )}
               {/* Computador: tabela lado a lado. */}
               <Tabela rotulo="Unidades da rede no mês" className="hidden md:block">
                 <thead>
@@ -148,7 +138,7 @@ export function TelaRede() {
                   ...(p.unidades.length > 1 ? [{ id: 'rede', nome: 'Rede', n: p.rede }] : []),
                 ].map((c) => (
                   <li key={c.id} className="rounded-lg border border-borda bg-superficie p-4">
-                    <h2 className="mb-2 font-semibold">{c.nome}</h2>
+                    <h3 className="mb-2 font-semibold">{c.nome}</h3>
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                       {METRICAS_REDE.map((m) => (
                         <div key={m} className="flex flex-col">
@@ -177,6 +167,6 @@ export function TelaRede() {
           );
         }}
       </Estado>
-    </div>
+    </section>
   );
 }

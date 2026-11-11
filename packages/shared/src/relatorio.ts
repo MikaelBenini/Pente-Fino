@@ -2,6 +2,7 @@
 // indicador (falta menor é melhor), as frases "o que melhorou / piorou", custo e lucro de cada
 // barbeiro com os pontos fortes e fracos dele contra a equipe, e o mix de serviços e produtos.
 import type { Canal } from './canais.js';
+import type { Projecao } from './indicadores.js';
 
 export interface NumerosDoMes {
   faturamento: number;
@@ -20,6 +21,8 @@ export interface NumerosDoMes {
   taxaFaltas: number | null;
   /** Nota média do atendimento (1 a 5); null sem resposta. */
   notaMedia: number | null;
+  /** Agenda ocupada: minutos marcados ÷ minutos disponíveis (fração); null sem expediente. */
+  ocupacao: number | null;
   /** Atendidos por canal (WhatsApp, site, balcão, app, sem horário). */
   porCanal: Partial<Record<Canal, number>>;
 }
@@ -35,6 +38,7 @@ export type ChaveIndicador =
   | 'clientesNovos'
   | 'taxaRetorno'
   | 'taxaFaltas'
+  | 'ocupacao'
   | 'notaMedia';
 
 interface DefinicaoIndicador {
@@ -103,6 +107,13 @@ export const INDICADORES_RELATORIO: readonly DefinicaoIndicador[] = [
     formato: 'fracao',
     melhorQuando: 'menor',
     naFrase: 'as faltas',
+  },
+  {
+    chave: 'ocupacao',
+    rotulo: 'Agenda ocupada',
+    formato: 'fracao',
+    melhorQuando: 'maior',
+    naFrase: 'a ocupação da agenda',
   },
   {
     chave: 'notaMedia',
@@ -235,6 +246,10 @@ export interface BarbeiroDoMes {
   taxaRetorno: number;
   notaMedia: number | null;
   faltas: number;
+  /** Agenda dele ocupada no período (fração). */
+  ocupacao: number;
+  /** Comandas confirmadas no prazo (fração). */
+  percentualNoPrazo: number;
   servicosMaisFeitos: { nome: string; quantidade: number }[];
   faturamentoAnterior: number;
 }
@@ -344,6 +359,10 @@ export interface RelatorioDoMes {
   historico: { mes: string; faturamento: number; lucro: number | null }[];
   /** O plano mostra lucro (lucro real) e margem dos itens. */
   verLucro: boolean;
+  /** O plano tem ficha e ranking dos barbeiros; sem ele, `barbeiros` vem vazio. */
+  verBarbeiros: boolean;
+  /** Só no mês corrente: faturamento esperado no fim do mês no ritmo atual. */
+  projecao: Projecao | null;
 }
 
 /** Mês anterior de um AAAA-MM. */

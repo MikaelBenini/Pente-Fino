@@ -40,8 +40,6 @@ import { NOME_PAPEL } from '@/lib/sessao';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
-import { RankingEquipe } from './equipe-desempenho';
-import { SoNoPlano } from '../convite-plano';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? e.message : 'Não foi possível concluir. Tente de novo.';
@@ -53,27 +51,18 @@ const minutos = (texto: string) => {
 };
 
 export function TelaEquipe() {
-  const [aba, setAba] = useState('desempenho');
+  const [aba, setAba] = useState('profissionais');
   return (
     <div className="flex flex-col gap-8">
       <CabecalhoPagina
         titulo="Equipe"
-        pergunta="Quem trabalha aqui, como está indo e quanto ganha?"
+        pergunta="Quem trabalha aqui, com que regra e com que acesso?"
       />
       <Abas
         rotulo="Equipe"
         atual={aba}
         onTrocar={setAba}
         abas={[
-          {
-            id: 'desempenho',
-            rotulo: 'Desempenho',
-            conteudo: (
-              <SoNoPlano recurso="fichaProfissional">
-                <RankingEquipe />
-              </SoNoPlano>
-            ),
-          },
           { id: 'profissionais', rotulo: 'Profissionais', conteudo: <Profissionais /> },
           { id: 'acessos', rotulo: 'Acessos ao sistema', conteudo: <Acessos /> },
         ]}

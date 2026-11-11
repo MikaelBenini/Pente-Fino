@@ -2,7 +2,7 @@
 
 import { formatarHora, formatarMoeda, formatarNumero, statusEfetivo } from '@pente-fino/shared';
 import { BarraMeta, BlocoAgenda, CartaoIndicador, EstadoVazio } from '@pente-fino/ui';
-import { CalendarCheck, Target } from 'lucide-react';
+import { CalendarCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -171,45 +171,6 @@ export function TelaComissoesBarbeiro() {
             </>
           );
         }}
-      </Estado>
-    </div>
-  );
-}
-
-export function TelaMetasBarbeiro() {
-  const hoje = useMeHoje();
-  return (
-    <div className="flex flex-col gap-6">
-      <CabecalhoPagina titulo="Metas" pergunta="Falta quanto para a meta?" />
-      <Estado consulta={hoje}>
-        {() =>
-          hoje.data!.metas.length === 0 ? (
-            <EstadoVazio
-              icone={Target}
-              titulo="Nenhuma meta neste mês"
-              texto="Quando o dono definir as metas da unidade, elas aparecem aqui com a barra de ritmo."
-            />
-          ) : (
-            <section className="flex flex-col gap-6 rounded-lg border border-borda bg-superficie p-5">
-              {hoje.data!.metas.map((m) => (
-                <BarraMeta
-                  key={m.id}
-                  rotulo={
-                    m.tipo === 'faturamento' ? 'Faturamento da unidade' : `${m.servico} na unidade`
-                  }
-                  atual={m.atual}
-                  objetivo={m.objetivo}
-                  fracaoDoMes={m.fracaoDoMes}
-                  formatar={m.tipo === 'faturamento' ? formatarMoeda : formatarNumero}
-                />
-              ))}
-              <p className="text-sm text-tinta-suave">
-                A marca na barra mostra onde a unidade deveria estar hoje, pelo calendário de
-                trabalho do mês.
-              </p>
-            </section>
-          )
-        }
       </Estado>
     </div>
   );

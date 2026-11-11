@@ -1,4 +1,4 @@
-// Painel da rede (Etapa 15, RF-23): unidades lado a lado e o total da rede. Regras puras; a
+// Unidades lado a lado (Etapa 15, RF-23; em Resultados do mês): unidades lado a lado e o total da rede. Regras puras; a
 // API calcula cada unidade com as mesmas regras do resto do sistema.
 import type { Ocupacao } from './desempenho.js';
 

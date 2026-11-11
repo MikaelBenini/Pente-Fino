@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// Etapa 6C nas telas: indicadores, financeiro, métricas e o app do barbeiro.
+// Etapa 6C nas telas: Início, Financeiro, Resultados do mês e o app do barbeiro.
 const SENHA = 'pentefino123';
 
 async function entrar(page: Page, email: string) {
@@ -11,7 +11,9 @@ async function entrar(page: Page, email: string) {
   await page.waitForURL(/inicio|agenda|hoje/);
 }
 
-test('dono: início com metas e indicadores; financeiro e métricas', async ({ page }, info) => {
+test('dono: início com metas e indicadores; financeiro e resultados do mês', async ({
+  page,
+}, info) => {
   test.skip(info.project.name === 'celular', 'painel da gestão no computador');
   await entrar(page, 'dono@demo.pentefino.dev');
   await expect(page.getByRole('heading', { name: 'Início' })).toBeVisible();
@@ -44,31 +46,48 @@ test('dono: início com metas e indicadores; financeiro e métricas', async ({ p
     .getByRole('button', { name: 'Fechar' })
     .click();
 
-  await page.goto('/metricas');
-  await expect(page.getByRole('heading', { name: 'Serviços: lucro e procura' })).toBeVisible();
-  const servicos = page.getByRole('table', { name: 'Lucro por serviço' }).filter({ visible: true });
+  await page.goto('/resultados');
+  await expect(page.getByRole('heading', { name: 'Resultados do mês', level: 1 })).toBeVisible();
+  // Visão geral: metas, o mês em números contra o anterior e as frases.
+  await expect(page.getByRole('heading', { name: 'O mês em números' })).toBeVisible();
+  await expect(page.getByText('Agenda ocupada', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'O que melhorou' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'PDF' })).toHaveAttribute(
+    'href',
+    /\/api\/relatorio\/mes\/arquivo\?mes=\d{4}-\d{2}&formato=pdf/,
+  );
+
+  // Serviços e produtos: uma tabela de cada, com o peso e o lucro.
+  await page.getByRole('tab', { name: 'Serviços e produtos' }).click();
+  await expect(page).toHaveURL(/aba=itens/);
+  const servicos = page.getByRole('table', { name: 'Serviços do mês' }).filter({ visible: true });
   await expect(servicos.getByRole('row', { name: /^Corte\b/ }).first()).toBeVisible();
-  // Mais consumidos: o primeiro é o que mais saiu no mês.
+  await expect(servicos.getByRole('columnheader', { name: 'Margem' })).toBeVisible();
+  // Mais feitos: o primeiro é o que mais saiu no mês.
   await page.getByLabel('Ordenar por').filter({ visible: true }).selectOption('quantidade');
   const qtdes = await servicos
     .locator('tbody tr td:nth-child(2)')
-    .evaluateAll((tds) => tds.map((t) => Number(t.textContent!.replace(/\D/g, ''))));
+    // Só o número da célula (a fatia "x% dos feitos" vem logo abaixo dele).
+    .evaluateAll((tds) =>
+      tds.map((t) => Number(t.querySelector('span')!.firstChild!.textContent!.replace(/\D/g, ''))),
+    );
   expect(qtdes).toEqual([...qtdes].sort((a, b) => b - a));
-  // Produtos: destaques e a situação de cada um.
-  await expect(
-    page.getByRole('heading', { name: 'Produtos: o que vende e o que vale a pena' }),
-  ).toBeVisible();
   await expect(page.getByText('Mais vendido', { exact: true })).toBeVisible();
-  const produtos = page.getByRole('table', { name: 'Lucro por produto' }).filter({ visible: true });
+  const produtos = page.getByRole('table', { name: 'Produtos do mês' }).filter({ visible: true });
   await expect(produtos.getByRole('row').nth(1)).toContainText(
     /Investir|Divulgar|Rever preço|Repensar|Parado/,
   );
-  // Por canal: a demonstração tem horários do balcão, do WhatsApp e do site.
+
+  // Canais: a demonstração tem horários do balcão, do WhatsApp e do site.
+  await page.getByRole('tab', { name: 'Canais' }).click();
   const canais = page
-    .getByRole('table', { name: 'Agendamentos por canal' })
+    .getByRole('table', { name: 'Atendimentos por canal' })
     .filter({ visible: true });
   await expect(canais).toContainText('WhatsApp');
   await expect(canais).toContainText('Balcão');
+  await expect(canais.getByRole('columnheader', { name: 'Mês anterior' })).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Agenda e avaliações' }).click();
   // Avaliações dos clientes: notas do atendimento e da barbearia (demonstração tem respostas).
   const avaliacoes = page.getByRole('region', { name: 'Avaliações dos clientes' });
   await expect(avaliacoes.getByRole('list', { name: 'Notas de atendimento' })).toBeVisible();
@@ -102,7 +121,7 @@ test('dono lança uma despesa e ela aparece no mês', async ({ page }, info) => 
   await expect(linha).toContainText('Paga');
 });
 
-test('barbeiro no celular: hoje, comissões, desempenho e metas', async ({ page }) => {
+test('barbeiro no celular: hoje (com as metas), comissões e desempenho', async ({ page }) => {
   await entrar(page, 'rafael@demo.pentefino.dev');
   await expect(page.getByRole('heading', { name: 'Olá, Rafael' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Comissão hoje' })).toBeVisible();
@@ -111,35 +130,46 @@ test('barbeiro no celular: hoje, comissões, desempenho e metas', async ({ page 
   await expect(page.getByRole('table', { name: 'Extrato de comissões' })).toBeVisible();
   await page.goto('/desempenho');
   await expect(page.getByRole('heading', { name: 'Ticket médio' })).toBeVisible();
+  // As metas ficam no Hoje; o endereço antigo leva para lá.
   await page.goto('/metas');
+  await page.waitForURL(/\/hoje$/);
   await expect(page.getByRole('meter').first()).toBeVisible();
   // Painel da gestão continua fora do alcance do barbeiro.
+  await page.goto('/resultados');
+  await expect(
+    page.getByRole('heading', { name: 'Esta tela não faz parte do seu acesso' }),
+  ).toBeVisible();
   await page.goto('/financeiro');
   await expect(
     page.getByRole('heading', { name: 'Esta tela não faz parte do seu acesso' }),
   ).toBeVisible();
 });
 
-test('gestor: ocupação do mês no início e mapa da semana nas métricas', async ({ page }) => {
+test('gestor: agenda ocupada hora a hora no mês escolhido', async ({ page }) => {
   await entrar(page, 'gestor@demo.pentefino.dev');
-  await page.goto('/inicio');
+  await page.goto('/resultados?aba=agenda');
+  // Total e por faixa do dia (manhã, tarde, noite), e o mapa hora a hora.
   const card = page.getByRole('region', { name: 'Ocupação da agenda no mês' });
-  await expect(card).toBeVisible();
   await expect(card.getByRole('list', { name: 'Ocupação por faixa do dia' })).toContainText(
     /Manhã|Tarde/,
   );
-  await page.goto('/metricas');
-  const mapa = page.getByRole('region', { name: 'Mapa da semana' });
+  const mapa = page.getByRole('region', { name: 'Agenda ocupada, hora a hora' });
   await expect(mapa.getByRole('table')).toBeVisible();
   await expect(mapa.getByRole('columnheader', { name: 'Seg' })).toBeVisible();
   await expect(mapa.getByRole('list', { name: 'Mais vazios' })).toBeVisible();
   await expect(mapa.getByRole('list', { name: 'Mais cheios' })).toBeVisible();
+  // Mês anterior: o mapa acompanha o mês escolhido.
+  await page.getByRole('button', { name: 'Mês anterior' }).click();
+  await expect(page).toHaveURL(/mes=\d{4}-\d{2}&aba=agenda/);
+  await expect(mapa.getByRole('table')).toBeVisible();
 });
 
-test('dono: painel da rede com as unidades lado a lado e o total', async ({ page }, info) => {
+test('dono: unidades lado a lado e o total, nos resultados do mês', async ({ page }, info) => {
   await entrar(page, 'dono@demo.pentefino.dev');
+  // O endereço antigo do painel da rede leva para Resultados do mês.
   await page.goto('/rede');
-  await expect(page.getByRole('heading', { name: 'Painel da rede' })).toBeVisible();
+  await page.waitForURL(/\/resultados$/);
+  await expect(page.getByRole('heading', { name: 'Unidades lado a lado' })).toBeVisible();
   if (info.project.name === 'celular') {
     const cartoes = page.getByRole('list', { name: 'Unidades da rede no mês' });
     await expect(cartoes.getByRole('heading', { name: 'Centro' })).toBeVisible();
@@ -162,19 +192,27 @@ test('plano Básico: recursos do Pro e do Premium aparecem com convite, sem queb
 }, info) => {
   test.skip(info.project.name === 'celular', 'mesmas telas no computador');
   await entrar(page, 'basico@demo.pentefino.dev');
-  await page.goto('/metricas');
-  await expect(page.getByRole('heading', { name: 'Métricas e metas' })).toBeVisible();
-  await expect(page.getByRole('note', { name: 'Disponível no plano Premium' })).toBeVisible();
-  await expect(page.getByRole('note', { name: 'Disponível no plano Pro' }).first()).toBeVisible();
+  await page.goto('/resultados');
+  await expect(page.getByRole('heading', { name: 'Resultados do mês', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'O mês em números' })).toBeVisible();
+  // Metas e barbeiros são do Pro; lucro de cada serviço e produto, do Premium.
+  await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Definir meta' })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Ver planos e mudar' }).first()).toHaveAttribute(
     'href',
     '/configuracoes?aba=assinatura',
   );
-  await page.goto('/rede');
+  await page.getByRole('tab', { name: 'Barbeiros' }).click();
+  await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Serviços e produtos' }).click();
   await expect(page.getByRole('note', { name: 'Disponível no plano Premium' })).toContainText(
     'Seu plano é o Básico',
   );
+  await expect(
+    page.getByRole('table', { name: 'Serviços do mês' }).getByRole('columnheader', {
+      name: 'Margem',
+    }),
+  ).toHaveCount(0);
   await page.goto('/financeiro');
   await page.getByRole('tab', { name: 'Comissões' }).click();
   await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toBeVisible();
@@ -191,8 +229,8 @@ test('o dono muda de plano sozinho: sobe na hora e desce confirmando o que perde
   await expect(secao).toContainText('R$');
   await secao.getByRole('button', { name: 'Mudar para o Pro' }).click();
   await expect(secao.getByText('Pronto: a conta está no plano Pro.')).toBeVisible();
-  // Já vale: o convite do Pro some em Métricas (o do Premium continua).
-  await page.goto('/metricas');
+  // Já vale: o convite do Pro some dos resultados (o do Premium continua).
+  await page.goto('/resultados?aba=itens');
   await expect(page.getByRole('note', { name: 'Disponível no plano Premium' })).toBeVisible();
   await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toHaveCount(0);
 

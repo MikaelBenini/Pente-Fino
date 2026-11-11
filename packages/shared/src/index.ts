@@ -54,6 +54,7 @@ export * from './dados-cliente.js';
 export * from './ajuda.js';
 export * from './painel.js';
 export * from './relatorio.js';
+export * from './relatorio-arquivo.js';
 export * from './cobranca-manual.js';
 export * from './configuracao-sistema.js';
 export * from './modelos-email.js';

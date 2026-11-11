@@ -67,7 +67,7 @@ O produto existe para que cada atendimento seja lançado uma vez só e para que 
 | Clientes | Perfil, leads, fidelidade, recorrência | Básico a Premium |
 | Equipe e comissões | Profissional com data de entrada, regra de comissão com vigência, ficha de desempenho do profissional | Básico (comissões: Pro) |
 | Financeiro | Caixa, receitas separadas, despesas por categoria, lucro real | Básico (lucro real: Premium) |
-| Métricas e metas | Indicadores, ritmo, projeção, metas, lucratividade | Pro (lucratividade: Premium) |
+| Resultados do mês | O mês contra o anterior (uma só base de comparação), metas, projeção, 12 meses, unidades lado a lado, o mês dia a dia, barbeiros (custo, lucro, pontos fortes e fracos), serviços e produtos (peso e lucro), canais, agenda hora a hora e avaliações; baixa em PDF e planilha | Básico (metas, barbeiros, canais completos e avaliações: Pro · lucro por item e unidades: Premium) |
 | App do barbeiro | Agenda, comandas, clientes, desempenho, comissão, metas | Básico a Premium |
 | Bot WhatsApp | Menu, respostas prontas, agendamento pela conversa ou pelo site (o cliente escolhe), lembretes, avaliação depois do atendimento, mensagens de retorno | Pro (automações: Premium) |
 | Campeonato dos barbeiros | Ranking por % da meta, % de extras e nota, sem valores, no app e no painel (a TV da unidade foi descartada em 2026-11-08) | Premium |
@@ -360,18 +360,21 @@ A interface é pensada para uso em pé e com pressa: recepção no balcão e bar
 
 ### Navegação por papel
 
+Regra: cada número aparece num lugar só. O Início resume o dia e o mês; o detalhe do mês fica em Resultados do mês; o Financeiro cuida do contábil (resultado, despesas, comissões a pagar, arquivo do contador); a Equipe, do cadastro. Desde 2026-11-11, Métricas e metas, Relatório do mês e Painel da rede viraram Resultados do mês, e os endereços antigos levam para lá.
+
 | Papel | Dispositivo principal | Menu |
 | --- | --- | --- |
-| Dono | Computador e celular | **Dia a dia:** Início · Resumo do dia · Agenda · Comandas · Caixa do dia · Clientes · **Gestão:** Financeiro · Métricas e metas · Equipe · **Cadastros:** Serviços · Produtos · Clube · **WhatsApp:** Bot · Conversas do bot · **Conta:** Configurações |
+| Dono | Computador e celular | **Dia a dia:** Início · Resumo do dia · Agenda · Comandas · Caixa do dia · Clientes · **Gestão:** Resultados do mês · Financeiro · Equipe · **Cadastros:** Serviços · Produtos · Clube · **WhatsApp:** Bot · Conversas do bot · **Conta:** Configurações |
 | Gestor | Computador | Igual ao dono, limitado à unidade, sem Planos |
 | Recepção | Tablet ou computador no balcão | Agenda · Comandas · Caixa do dia · Clientes · Conversas do bot (tudo o que a recepção vê, dono e gestor também veem) |
-| Barbeiro | Celular (PWA) | Hoje · Comandas · Clientes · Desempenho · Comissões · Metas · Perfil |
+| Barbeiro | Celular (PWA) | Hoje (com as metas) · Comandas · Clientes · Desempenho · Comissões · Perfil |
 
 ### Telas principais
 
 | Tela | Para quem | O que mostra | Ação principal |
 | --- | --- | --- | --- |
-| Início do dono | Dono, gestor | Faturamento x meta, ritmo, projeção, lucro, ticket, ocupação, extras | Filtrar unidade |
+| Início do dono | Dono, gestor | O dia (o que entrou, agenda, o que precisa de ação) e o resumo do mês: metas e os indicadores contra os mesmos dias do mês anterior | Ver resultados do mês |
+| Resultados do mês | Dono, gestor | Cada número do mês num lugar só, em abas: visão geral, barbeiros, serviços e produtos, canais, agenda e avaliações | Baixar PDF ou planilha |
 | Agenda | Recepção, gestor | Colunas por profissional, blocos por horário, cor por estado da comanda | Novo agendamento |
 | Comanda | Recepção, barbeiro | Cliente, plano do clube, itens, total, estado | Confirmar ou fechar |
 | Fechamento | Recepção | Total, descontos, formas de pagamento divididas | Receber e fechar |
@@ -379,8 +382,8 @@ A interface é pensada para uso em pé e com pressa: recepção no balcão e bar
 | Hoje (barbeiro) | Barbeiro | Próximos clientes, meta do mês com barra, comissão do dia | Abrir comanda |
 | Comissões (barbeiro) | Barbeiro | Extrato por item, previsto, a receber e pago | Filtrar período |
 | Preços | Dono | Tabela serviço x unidade, vigência | Novo preço a partir de uma data |
-| Metas | Dono | Objetivo por unidade, mês e serviço; atual e % | Definir meta |
-| Lucratividade | Dono | Serviço, quantidade, receita, custo, lucro, margem | Ordenar por margem |
+| Metas (em Resultados do mês) | Dono | Objetivo por unidade, mês e serviço; atual e % | Definir meta |
+| Serviços e produtos (em Resultados do mês) | Dono, gestor | Quantidade, receita e a fatia de cada um, variação, custo, comissão, lucro, margem | Ordenar por faturamento, quantidade ou lucro |
 | Despesas | Dono, gestor | Lançamentos por categoria, % sobre faturamento | Nova despesa |
 | Ficha do profissional | Dono, gestor; barbeiro vê a própria | Resumo do período, serviços, comandas atendidas, clientes recorrentes, rotina, avaliações, evolução | Exportar PDF |
 | Construtor do bot | Dono, gestor | Árvore do menu, respostas, palavras-chave, prévia de conversa | Publicar menu |

@@ -9,8 +9,15 @@ import {
   mesAnteriorDe,
   type RelatorioDoMes,
 } from '@pente-fino/shared';
+import type request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+
+const binario = (res: request.Response, cb: (err: Error | null, body: Buffer) => void) => {
+  const partes: Buffer[] = [];
+  res.on('data', (c: Buffer) => partes.push(c));
+  res.on('end', () => cb(null, Buffer.concat(partes)));
+};
 
 let app: INestApplication<App>;
 let a: Cenario;
@@ -122,6 +129,11 @@ describe('relatório do mês', () => {
       servicosMaisFeitos: [{ nome: 'Corte', quantidade: 3 }],
     });
     expect(custoELucroDoBarbeiro(rui)).toEqual({ custo: 106_000, lucro: 15_000 - 1_500 - 106_000 });
+    expect(rui.ocupacao).toBeGreaterThanOrEqual(0);
+    expect(rui.percentualNoPrazo).toBeGreaterThanOrEqual(0);
+    // Mês corrente: projeção do faturamento no ritmo atual.
+    expect(r.projecao).not.toBeNull();
+    expect(r.projecao!.diasDoMes).toBeGreaterThanOrEqual(r.projecao!.diasTrabalhados);
 
     expect(r.mixAtual).toEqual([
       expect.objectContaining({ tipo: 'servico', nome: 'Corte', quantidade: 3, receita: 15_000 }),
@@ -129,6 +141,79 @@ describe('relatório do mês', () => {
     expect(r.historico).toHaveLength(12);
     expect(r.historico.at(-1)).toMatchObject({ mes, faturamento: 15_000 });
     expect(r.historico.at(-2)).toMatchObject({ mes: anterior, faturamento: 10_000 });
+  });
+
+  it('ocupação da agenda: a mesma conta da tela de ocupação, no mesmo período', async () => {
+    const r = (await dono.get(`/relatorio/mes?mes=${mes}&unidadeId=${a.unidadeA}`).expect(200))
+      .body as RelatorioDoMes;
+    const { de, ate } = r.periodoAnterior;
+    const o = (await dono.get(`/ocupacao?unidadeId=${a.unidadeA}&de=${de}&ate=${ate}`).expect(200))
+      .body as { total: { disponivelMin: number; fracao: number } };
+    const esperado = o.total.disponivelMin > 0 ? o.total.fracao : null;
+    if (esperado === null) expect(r.anterior.ocupacao).toBeNull();
+    else expect(r.anterior.ocupacao).toBeCloseTo(esperado, 6);
+    expect(compararMeses(r.atual, r.anterior).map((l) => l.chave)).toContain('ocupacao');
+  });
+
+  it('baixa o relatório em planilha e em PDF, com o mesmo conteúdo da tela', async () => {
+    const csv = await dono
+      .get(`/relatorio/mes/arquivo?mes=${mes}&unidadeId=${a.unidadeA}&formato=csv`)
+      .buffer(true)
+      .parse(binario)
+      .expect(200);
+    expect(csv.headers['content-type']).toMatch(/text\/csv/);
+    expect(csv.headers['content-disposition']).toBe(`attachment; filename="relatorio-${mes}.csv"`);
+    const texto = (csv.body as Buffer).toString('utf-8');
+    expect(texto.charCodeAt(0)).toBe(0xfeff);
+    expect(texto).toContain('O MÊS EM NÚMEROS');
+    expect(texto).toContain('Faturamento;R$ 150,00;R$ 100,00;+50%;Melhorou');
+    expect(texto).toContain('Agenda ocupada;');
+    expect(texto).toMatch(/Rui Relatório;150,00;\+50%;60,00;1\.000,00;1\.060,00;/);
+    expect(texto).toMatch(/Corte;Serviço;3;100%;150,00;100%;\+50%/);
+
+    const pdf = await dono
+      .get(`/relatorio/mes/arquivo?mes=${mes}&formato=pdf`)
+      .buffer(true)
+      .parse(binario)
+      .expect(200);
+    expect(pdf.headers['content-type']).toBe('application/pdf');
+    expect((pdf.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('arquivo: só dono e gestor, formato conferido', async () => {
+    await dono.get(`/relatorio/mes/arquivo?mes=${mes}&formato=xlsx`).expect(400);
+    await dono.get(`/relatorio/mes/arquivo?mes=${mes}`).expect(400);
+    await (
+      await como(app, a.emails.recepcao)
+    )
+      .get(`/relatorio/mes/arquivo?mes=${mes}&formato=csv`)
+      .expect(403);
+    await (
+      await como(app, a.emails.barbeiro)
+    )
+      .get(`/relatorio/mes/arquivo?mes=${mes}&formato=pdf`)
+      .expect(403);
+  });
+
+  it('sem "Ficha e ranking" no plano, o relatório e o arquivo vêm sem os barbeiros', async () => {
+    const plano = (p: 'basico' | 'premium') =>
+      naConta(prisma, a.contaId, (tx) => tx.conta.updateMany({ data: { plano: p } }));
+    await plano('basico');
+    try {
+      const r = (await dono.get(`/relatorio/mes?mes=${mes}`).expect(200)).body as RelatorioDoMes;
+      expect(r).toMatchObject({ verBarbeiros: false, verLucro: false, barbeiros: [] });
+      expect(r.atual.lucro).toBeNull();
+      const csv = await dono
+        .get(`/relatorio/mes/arquivo?mes=${mes}&formato=csv`)
+        .buffer(true)
+        .parse(binario)
+        .expect(200);
+      const texto = (csv.body as Buffer).toString('utf-8');
+      expect(texto).not.toContain('BARBEIROS');
+      expect(texto).not.toContain('Rui Relatório');
+    } finally {
+      await plano('premium');
+    }
   });
 
   it('o valor fixo do barbeiro não aparece para quem não é da gestão', async () => {

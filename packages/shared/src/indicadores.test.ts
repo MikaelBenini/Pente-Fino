@@ -154,6 +154,9 @@ describe('lucratividade e variação', () => {
   it('variação contra o período anterior', () => {
     expect(variacao(120, 100)).toBeCloseTo(0.2);
     expect(variacao(10, 0)).toBeNull();
+    // Base negativa (prejuízo): ficar mais negativo é queda; sair do prejuízo é alta.
+    expect(variacao(-1_373_261, -1_064_896)).toBeCloseTo(-0.29, 2);
+    expect(variacao(500, -1000)).toBeCloseTo(1.5);
   });
 });
 
