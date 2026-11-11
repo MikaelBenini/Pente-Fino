@@ -4,6 +4,7 @@ import {
   nomeDoMesPorExtenso,
   relatorioEmArquivo,
   relatorioEmCsv,
+  textoDaVariacao,
 } from './relatorio-arquivo.js';
 import type { BarbeiroDoMes, NumerosDoMes, RelatorioDoMes } from './relatorio.js';
 
@@ -206,5 +207,18 @@ describe('relatório do mês em arquivo', () => {
     expect(campoCsv('-R$ 13.732,61')).toBe('-R$ 13.732,61');
     expect(campoCsv('-R$ 1+1')).toBe("'-R$ 1+1");
     expect(campoCsv('Corte; barba')).toBe('"Corte; barba"');
+  });
+});
+
+describe('variação com os dois meses zerados (painel M2)', () => {
+  it('conta nova não mostra "0% (estável)"', () => {
+    const l = {
+      atual: 0,
+      anterior: 0,
+      variacao: 0,
+      formato: 'dinheiro',
+      tendencia: 'igual',
+    } as unknown as Parameters<typeof textoDaVariacao>[0];
+    expect(textoDaVariacao(l)).toBe('sem dados ainda');
   });
 });

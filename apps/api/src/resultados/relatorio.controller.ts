@@ -20,6 +20,7 @@ import {
   type ItemDoMix,
   type NumerosDoMes,
   type RelatorioDoMes,
+  mesesDoHistorico,
 } from '@pente-fino/shared';
 import type { Response } from 'express';
 import { z } from 'zod';
@@ -202,9 +203,18 @@ export class RelatorioService {
         ];
       };
 
-      // Últimos 12 meses (o mais antigo primeiro).
-      const meses: string[] = [];
-      for (let m = mes, i = 0; i < 12; i++, m = mesAnteriorDe(m)) meses.unshift(m);
+      // Últimos 12 meses (o mais antigo primeiro), sem meses vazios antes de a conta existir
+      // (M2). Começa na criação ou no primeiro mês com atendimento fechado (histórico importado),
+      // o que vier antes.
+      const primeiroComDado = fechadasAno
+        .map((c) => (c.fechadaEm ? mesDe(c.fechadaEm) : null))
+        .filter((m): m is string => m !== null)
+        .sort()[0];
+      const criacao = dataLocal(conta.criadoEm).slice(0, 7);
+      const meses = mesesDoHistorico(
+        mes,
+        primeiroComDado && primeiroComDado < criacao ? primeiroComDado : criacao,
+      );
       const historico: RelatorioDoMes['historico'] = [];
       for (const m of meses) {
         // Lucro com as despesas do próprio mês (só quando o plano tem lucro real).

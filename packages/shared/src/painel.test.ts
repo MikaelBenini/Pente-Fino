@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { pendenciasDoDia, porDiaParaMeta, type DadosPainelDia } from './painel.js';
+import {
+  mesesDoHistorico,
+  pendenciasDoDia,
+  porDiaParaMeta,
+  resumoDasMetas,
+  type DadosPainelDia,
+  type MetaParaResumo,
+} from './painel.js';
 
 const base: DadosPainelDia = {
   totais: {
@@ -63,5 +70,60 @@ describe('painel do dia', () => {
     );
     expect(porDiaParaMeta({ objetivo: 100, atual: 200, fracaoDoMes: 0.5 }, 25)).toBeNull();
     expect(porDiaParaMeta({ objetivo: 300, atual: 0, fracaoDoMes: 1 }, 25)).toBeNull();
+  });
+});
+
+describe('resumo das metas de serviço (painel M1)', () => {
+  const meta = (o: Partial<MetaParaResumo> = {}): MetaParaResumo => ({
+    tipo: 'servico',
+    servico: 'Corte',
+    objetivo: 12,
+    atual: 0,
+    fracaoDoMes: 0.4,
+    ...o,
+  });
+
+  it('a meta da auditoria: "Corte · 0 de 12" aparece, abaixo do ritmo', () => {
+    expect(resumoDasMetas([meta()])).toEqual({
+      valor: '0%',
+      detalhe: 'Corte · 0 de 12 · abaixo do ritmo',
+    });
+    expect(resumoDasMetas([meta({ atual: 6 })])?.detalhe).toBe('Corte · 6 de 12 · no ritmo');
+    expect(resumoDasMetas([meta({ atual: 13 })])).toEqual({
+      valor: '100%',
+      detalhe: 'Corte · 13 de 12 · batida',
+    });
+  });
+
+  it('várias metas: quantas estão no ritmo; sem meta de serviço, nada', () => {
+    expect(
+      resumoDasMetas([
+        meta({ atual: 6 }),
+        meta({ servico: 'Barba' }),
+        meta({ servico: 'Pigmentação', atual: 10 }),
+      ]),
+    ).toEqual({ valor: '2 de 3', detalhe: 'metas de serviço no ritmo · 1 abaixo' });
+    expect(resumoDasMetas([meta({ tipo: 'faturamento' })])).toBeNull();
+    expect(resumoDasMetas([])).toBeNull();
+  });
+});
+
+describe('meses do histórico (painel M2)', () => {
+  it('não começa antes do mês em que a conta foi criada', () => {
+    expect(mesesDoHistorico('2026-11', '2026-11')).toEqual(['2026-11']);
+    expect(mesesDoHistorico('2027-02', '2026-11')).toEqual([
+      '2026-11',
+      '2026-12',
+      '2027-01',
+      '2027-02',
+    ]);
+  });
+
+  it('conta antiga: os 12 meses, virando o ano', () => {
+    const m = mesesDoHistorico('2026-11', '2024-01');
+    expect(m).toHaveLength(12);
+    expect(m[0]).toBe('2025-12');
+    expect(m.at(-1)).toBe('2026-11');
+    expect(mesesDoHistorico('2026-11', null)).toHaveLength(12);
   });
 });

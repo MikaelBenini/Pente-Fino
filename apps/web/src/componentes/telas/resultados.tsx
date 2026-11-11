@@ -14,6 +14,7 @@ import {
   frasesDoMes,
   mesAnteriorDe,
   pontosDoBarbeiro,
+  textoDaVariacao,
   type BarbeiroDoMes,
   type FormatoIndicador,
   type LinhaComparativo,
@@ -58,19 +59,6 @@ function formatar(v: number | null, f: FormatoIndicador): string {
   return formatarNumero(v);
 }
 
-function textoVariacao(l: LinhaComparativo): string {
-  if (l.atual === null || l.anterior === null) return 'sem dado';
-  if (l.variacao === null) return 'novo';
-  if (l.formato === 'fracao') {
-    const p = Math.round(l.variacao * 100);
-    return `${p > 0 ? '+' : ''}${p} p.p.`;
-  }
-  if (l.formato === 'nota')
-    return `${l.variacao > 0 ? '+' : ''}${l.variacao.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}`;
-  const p = Math.round(l.variacao * 100);
-  return `${p > 0 ? '+' : ''}${p}%`;
-}
-
 const COR_TENDENCIA = {
   melhorou: 'text-acao-texto',
   piorou: 'text-perigo-texto',
@@ -79,6 +67,9 @@ const COR_TENDENCIA = {
 const NOME_TENDENCIA = { melhorou: 'melhorou', piorou: 'piorou', igual: 'estável' } as const;
 
 function Variacao({ l }: { l: LinhaComparativo }) {
+  // Os dois meses zerados (conta nova): sem seta nem "estável" (painel M2).
+  if (l.atual === 0 && l.anterior === 0)
+    return <span className="text-sm text-tinta-suave">{textoDaVariacao(l)}</span>;
   const Icone =
     l.tendencia === 'igual' ? Minus : (l.atual ?? 0) > (l.anterior ?? 0) ? ArrowUp : ArrowDown;
   return (
@@ -89,7 +80,7 @@ function Variacao({ l }: { l: LinhaComparativo }) {
       )}
     >
       <Icone aria-hidden className="size-4" />
-      {textoVariacao(l)}
+      {textoDaVariacao(l)}
       <span className="sr-only"> ({NOME_TENDENCIA[l.tendencia]})</span>
     </span>
   );

@@ -63,9 +63,13 @@ function valorIndicador(v: number | null, f: FormatoIndicador): string {
   return formatarNumero(v);
 }
 
-/** "+12%", "-3 p.p.", "+0,2", "novo", "sem dado" — igual à tela. */
+/**
+ * "+12%", "-3 p.p.", "+0,2", "novo", "sem dado", "sem dados ainda": um texto só para a tela, o
+ * PDF e a planilha. Os dois meses zerados (conta nova) não são "0% (estável)" (painel M2).
+ */
 export function textoDaVariacao(l: LinhaComparativo): string {
   if (l.atual === null || l.anterior === null) return 'sem dado';
+  if (l.atual === 0 && l.anterior === 0) return 'sem dados ainda';
   if (l.variacao === null) return 'novo';
   if (l.formato === 'fracao') {
     const p = Math.round(l.variacao * 100);

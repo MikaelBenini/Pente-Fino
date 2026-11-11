@@ -7,6 +7,20 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (informação no painel)
+
+- Início: sem meta de faturamento, o card mostra as metas de serviço que existem ("Corte · 0 de 12
+  · abaixo do ritmo", ou "2 de 3 no ritmo"); antes dizia "Defina a meta do mês" mesmo com meta.
+- Resultados do mês: os 12 meses começam no mês em que a conta foi criada (ou no primeiro mês com
+  atendimento, quando o histórico foi importado), sem meses vazios antes, e, com os dois meses
+  zerados, a variação diz "sem dados ainda" no lugar de "0% (estável)", também no PDF e na
+  planilha.
+- Serviços: a coluna "Atendimentos" virou "Conta como" (1 atendimento, 2 atendimentos, 0 extra),
+  com a explicação embaixo: é quanto cada serviço soma, não quantas vezes foi feito.
+- Financeiro e Início: "Custos operacionais" mostra a comissão e as despesas separadas
+  ("comissões 40% · despesas 0%"); antes, "Despesas operacionais: 40%" com as despesas zeradas.
+- Comandas: "Imprimir" fica desativado, com o aviso, quando não há comanda no dia.
+
 ### Corrigido (falhas invisíveis na administração)
 
 - E-mails que não saíram aparecem na Saúde do sistema: quando, para quem (endereço mascarado),

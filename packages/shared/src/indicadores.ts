@@ -49,6 +49,8 @@ export interface Indicadores {
   despesasOperacionais: number;
   /** Despesas operacionais ÷ faturamento (fração). */
   percentualDespesas: number;
+  /** Só as comissões ÷ faturamento: a parte de percentualDespesas que é comissão (painel M5). */
+  percentualComissoes: number;
   /** Faturamento − despesas operacionais. */
   lucro: number;
 }
@@ -126,6 +128,7 @@ export function calcularIndicadores(
     despesasPorGrupo,
     despesasOperacionais,
     percentualDespesas: faturamento > 0 ? despesasOperacionais / faturamento : 0,
+    percentualComissoes: faturamento > 0 ? comissoes / faturamento : 0,
     lucro: faturamento - despesasOperacionais,
   };
 }

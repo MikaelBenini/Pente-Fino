@@ -25,7 +25,7 @@ test('dono: início com metas e indicadores; financeiro e resultados do mês', a
     'Ticket médio',
     'Atendimentos',
     'Extras',
-    'Despesas sobre o faturamento',
+    'Custos sobre o faturamento',
   ]) {
     await expect(page.getByRole('heading', { name: rotulo, exact: true })).toBeVisible();
   }

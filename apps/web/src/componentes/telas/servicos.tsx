@@ -90,7 +90,7 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                   <th className={`${th} text-right`}>Duração</th>
                   {verCusto && <th className={`${th} text-right`}>Custo de produto</th>}
                   <th className={th}>Tipo</th>
-                  <th className={`${th} text-right`}>Atendimentos</th>
+                  <th className={`${th} text-right`}>Conta como</th>
                   {podeEditar && (
                     <th className={th}>
                       <span className="sr-only">Ações</span>
@@ -121,7 +121,9 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                       )}
                     </td>
                     <td className={`${td} text-right font-denso tabular-nums`}>
-                      {s.pesoAtendimento}
+                      {s.pesoAtendimento === 0
+                        ? '0 (extra)'
+                        : `${s.pesoAtendimento} ${s.pesoAtendimento === 1 ? 'atendimento' : 'atendimentos'}`}
                     </td>
                     {podeEditar && (
                       <td className={`${td} text-right`}>
@@ -138,6 +140,13 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                 ))}
               </tbody>
             </Tabela>
+          )}
+          {servicos.data!.length > 0 && (
+            <p className="text-sm text-tinta-suave">
+              “Conta como” é quanto cada serviço soma nos atendimentos de Resultados do mês e de
+              Clientes: Corte conta 1, Corte + Barba conta 2 e extra não conta. Quantas vezes cada
+              serviço foi feito no mês está em Resultados do mês → Serviços e produtos.
+            </p>
           )}
           <FormularioServico servico={editando} onFechar={() => setEditando(null)} />
         </div>

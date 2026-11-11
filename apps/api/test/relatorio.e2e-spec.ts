@@ -138,7 +138,9 @@ describe('relatório do mês', () => {
     expect(r.mixAtual).toEqual([
       expect.objectContaining({ tipo: 'servico', nome: 'Corte', quantidade: 3, receita: 15_000 }),
     ]);
-    expect(r.historico).toHaveLength(12);
+    // Painel M2: sem meses vazios antes de a conta existir; o mês anterior tem atendimento
+    // (histórico importado), então entra mesmo a conta tendo sido criada agora.
+    expect(r.historico.map((h) => h.mes)).toEqual([anterior, mes]);
     expect(r.historico.at(-1)).toMatchObject({ mes, faturamento: 15_000 });
     expect(r.historico.at(-2)).toMatchObject({ mes: anterior, faturamento: 10_000 });
   });
