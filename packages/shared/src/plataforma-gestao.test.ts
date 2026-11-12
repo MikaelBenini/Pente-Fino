@@ -5,6 +5,7 @@ import {
   pendenciasDaPlataforma,
   resumirCobrancas,
   resumoDaMudanca,
+  csvDaAuditoria,
 } from './plataforma-gestao.js';
 
 const agora = new Date('2026-11-20T15:00:00Z');
@@ -162,10 +163,26 @@ describe('precisa de atenção', () => {
 describe('auditoria', () => {
   it('resume só o que mudou, sem segredo', () => {
     expect(resumoDaMudanca({ plano: 'basico', senha: 'x' }, { plano: 'pro', senha: 'y' })).toBe(
-      'plano: basico → pro',
+      'Plano: Básico → Pro',
     );
-    expect(resumoDaMudanca(null, { email: 'a@b.c' })).toBe('email: a@b.c');
+    expect(resumoDaMudanca(null, { email: 'a@b.c' })).toBe('E-mail: a@b.c');
     expect(resumoDaMudanca({ a: 1 }, { a: 1 })).toBeNull();
+    // Admin U7: legível, sem JSON; dinheiro, porcentagem, datas no horário de Brasília, sim/não.
+    expect(
+      resumoDaMudanca(
+        { valor: 14990, interna: false, testeAte: '2026-11-20', id: 'x' },
+        { valor: 12490, interna: true, testeAte: '2026-12-05', id: 'y' },
+      ),
+    ).toBe(
+      'Valor: R$ 149,90 → R$ 124,90 · Conta interna: não → sim · Teste até: 20/11/2026 → 05/12/2026',
+    );
+    expect(
+      resumoDaMudanca(null, {
+        aviso: { titulo: 'Ola pessoal', tipo: 'manutencao', inicio: '2026-11-09T04:43:00.000Z' },
+        descontoBp: 2000,
+      }),
+    ).toBe('Aviso: título Ola pessoal, tipo manutencao, início 09/11/2026 01:43 · Desconto: 20%');
+    expect(resumoDaMudanca(null, { apiKeyCifrada: 'x', tokenWebhook: 'y' })).toBeNull();
   });
 
   // Admin R5: a auditoria de 10/11 viu uma conta ativa, sem cobrança, e "Tudo em dia por aqui".
@@ -258,5 +275,28 @@ describe('auditoria', () => {
       pendenciasDaPlataforma([], [], agora, { falhasEmail: [{ critico: false }] })[0],
     ).toMatchObject({ prioridade: 2, detalhe: '1 e-mail não saiu nas últimas 24 h' });
     expect(pendenciasDaPlataforma([], [], agora, { falhasEmail: [] })).toEqual([]);
+  });
+});
+
+describe('auditoria em CSV (admin U7)', () => {
+  it('cabeçalho, ação com nome, horário de Brasília e fórmula neutralizada', () => {
+    const csv = csvDaAuditoria([
+      {
+        id: '1',
+        quando: '2026-11-09T04:43:00.000Z',
+        quem: 'Ana',
+        acao: 'entrar',
+        contaId: null,
+        conta: null,
+        motivo: '=HYPERLINK("x")',
+        ip: '10.0.0.1',
+        detalhe: 'Plano: Básico → Pro',
+      },
+    ]);
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    const [cabeca, linha] = csv.slice(1).split('\r\n');
+    expect(cabeca).toBe('Quando;Quem;IP;Ação;Conta;Motivo;Detalhe');
+    expect(linha).toContain('09/11/2026 01:43;Ana;10.0.0.1;Entrou;;');
+    expect(linha).toContain(`"'=HYPERLINK(""x"")"`);
   });
 });

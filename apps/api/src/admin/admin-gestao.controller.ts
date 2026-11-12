@@ -244,32 +244,47 @@ export class AdminGestaoController {
 
   @Get('auditoria')
   @PapeisPlataforma('admin')
-  @ApiOperation({ summary: 'Últimas 300 ações da administração, com filtros' })
+  @ApiOperation({
+    summary: 'Ações da administração, com filtros (300 por vez; até 2000 para exportar)',
+  })
   async auditoria(@Query() q: Record<string, string>): Promise<EventoDaAuditoria[]> {
     const r = filtroAuditoriaSchema.safeParse(
       Object.fromEntries(Object.entries(q).filter(([, v]) => v !== '')),
     );
     if (!r.success) throw Erros.requisicaoInvalida('filtro_invalido', 'Filtro inválido.');
     const f: FiltroAuditoria = r.data;
-    const fim = f.ate ? new Date(Date.parse(`${f.ate}T00:00:00Z`) + 86_400_000) : undefined;
+    // Admin U7: os dias do filtro são os de Brasília, como a tela mostra.
+    const inicio = f.de ? new Date(`${f.de}T00:00:00-03:00`) : undefined;
+    const fim = f.ate ? new Date(Date.parse(`${f.ate}T00:00:00-03:00`) + 86_400_000) : undefined;
+    const antesDe = f.antesDe ? new Date(f.antesDe) : undefined;
+    // Cursor: mais antigo que o último da página, desempatando pelo id no mesmo milissegundo.
+    const cursor = antesDe
+      ? {
+          OR: [
+            { criadoEm: { lt: antesDe } },
+            ...(f.antesDeId ? [{ criadoEm: antesDe, id: { lt: f.antesDeId } }] : []),
+          ],
+        }
+      : {};
     const [eventos, contas] = await Promise.all([
       this.banco.prisma.auditoriaPlataforma.findMany({
         where: {
           ...(f.usuario ? { usuarioId: f.usuario } : {}),
           ...(f.acao ? { acao: f.acao } : {}),
           ...(f.conta ? { contaAfetadaId: f.conta } : {}),
-          ...(f.de || fim
+          ...(inicio || fim
             ? {
                 criadoEm: {
-                  ...(f.de ? { gte: new Date(`${f.de}T00:00:00Z`) } : {}),
+                  ...(inicio ? { gte: inicio } : {}),
                   ...(fim ? { lt: fim } : {}),
                 },
               }
             : {}),
+          ...cursor,
         },
         include: { usuario: { select: { nome: true } } },
-        orderBy: { criadoEm: 'desc' },
-        take: 300,
+        orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+        take: f.limite,
       }),
       contasDaPlataforma(this.banco.prisma),
     ]);

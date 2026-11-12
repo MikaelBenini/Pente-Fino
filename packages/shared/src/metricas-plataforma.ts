@@ -80,7 +80,29 @@ export interface FaturaParaMetricas extends FaturaParaSituacao {
   valor: number;
 }
 
+/** Admin U1: período dos números que dependem de datas (novas, cancelamentos, gráfico). */
+export type PeriodoMetricas = 'mes' | '30dias' | 'mes_anterior';
+export const NOME_PERIODO_METRICAS: Record<PeriodoMetricas, string> = {
+  mes: 'Mês atual',
+  '30dias': 'Últimos 30 dias',
+  mes_anterior: 'Mês anterior',
+};
+
+/** Primeiro e último dia (AAAA-MM-DD, São Paulo) do período. */
+export function intervaloDoPeriodo(
+  periodo: PeriodoMetricas,
+  hoje: string,
+): { de: string; ate: string } {
+  if (periodo === '30dias') return { de: somarDias(hoje, -29), ate: hoje };
+  if (periodo === 'mes') return { de: `${hoje.slice(0, 7)}-01`, ate: hoje };
+  const primeiroDeste = `${hoje.slice(0, 7)}-01`;
+  const ate = somarDias(primeiroDeste, -1);
+  return { de: `${ate.slice(0, 7)}-01`, ate };
+}
+
 export interface MetricasDaPlataforma {
+  /** O período escolhido e os dias dele. */
+  periodo: { tipo: PeriodoMetricas; de: string; ate: string };
   contas: {
     /** Sem as internas. */
     total: number;
@@ -92,6 +114,9 @@ export interface MetricasDaPlataforma {
     hoje: number;
     ultimos7Dias: number;
     noMes: number;
+    /** Contas criadas no período escolhido. */
+    noPeriodo: number;
+    /** Um ponto por dia do período. */
     porDia: { dia: string; contas: number }[];
   };
   receita: {
@@ -107,19 +132,22 @@ export interface MetricasDaPlataforma {
   conversao: { elegiveis: number; assinaram: number; taxa: number };
   cancelamentos: {
     noMes: number;
-    /** Canceladas no mês ÷ pagantes no começo do mês. */
+    /** Canceladas no período escolhido. */
+    noPeriodo: number;
+    /** Canceladas no período ÷ pagantes no começo do período. */
     taxa: number;
+    /** Motivos das canceladas no período. */
     motivos: { motivo: string; contas: number }[];
   };
   /** Contas com duas ou mais faturas pagas (renovaram pelo menos uma vez). */
   renovaram: number;
 }
 
-const somarDias = (dia: string, n: number) => {
+function somarDias(dia: string, n: number): string {
   const d = new Date(`${dia}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
-};
+}
 
 export function metricasDaPlataforma(d: {
   contas: readonly ContaParaMetricas[];
@@ -127,6 +155,8 @@ export function metricasDaPlataforma(d: {
   agora: Date;
   /** Tabelas de preço: cada conta entra no MRR pelo que contratou. */
   tabelas?: readonly TabelaPrecosPlanos[];
+  /** Admin U1: período das novas, dos cancelamentos e do gráfico (padrão: mês atual). */
+  periodo?: PeriodoMetricas;
 }): MetricasDaPlataforma {
   const tabelas = d.tabelas ?? [TABELA_PADRAO];
   // Admin R5: conta interna não entra em nenhum número (MRR, conversão, gráficos, cancelamentos).
@@ -185,34 +215,41 @@ export function metricasDaPlataforma(d: {
     )
     .reduce((s, c) => s + preco(c), 0);
 
-  // Cancelamentos do mês e a base de pagantes no começo dele (pagaram antes do dia 1).
-  const inicioDoMes = new Date(`${mes}-01T00:00:00-03:00`);
+  // Cancelamentos do período e a base de pagantes no começo dele (pagaram antes do 1º dia).
+  const tipo = d.periodo ?? 'mes';
+  const { de, ate } = intervaloDoPeriodo(tipo, hoje);
+  const inicioDoPeriodo = new Date(`${de}T00:00:00-03:00`);
+  const noIntervalo = (dia: string) => dia >= de && dia <= ate;
   const canceladasNoMes = contas.filter(
     (c) => c.canceladaEm && dataLocal(c.canceladaEm).slice(0, 7) === mes,
   );
+  const canceladasNoPeriodo = contas.filter(
+    (c) => c.canceladaEm && noIntervalo(dataLocal(c.canceladaEm)),
+  );
   const baseInicio = contas.filter(
     (c) =>
-      (porConta.get(c.id) ?? []).some((f) => f.status === 'paga' && f.vencimento < `${mes}-01`) &&
-      (!c.canceladaEm || c.canceladaEm >= inicioDoMes),
+      (porConta.get(c.id) ?? []).some((f) => f.status === 'paga' && f.vencimento < de) &&
+      (!c.canceladaEm || c.canceladaEm >= inicioDoPeriodo),
   ).length;
   const motivos = new Map<string, number>();
-  for (const c of canceladasNoMes) {
+  for (const c of canceladasNoPeriodo) {
     const m = c.motivoCancelamento?.trim() || 'Sem motivo informado';
     motivos.set(m, (motivos.get(m) ?? 0) + 1);
   }
 
   const criadas = contas.map((c) => dataLocal(c.criadaEm));
-  const porDia = Array.from({ length: 30 }, (_, i) => {
-    const dia = somarDias(hoje, i - 29);
-    return { dia, contas: criadas.filter((x) => x === dia).length };
-  });
+  const porDia: { dia: string; contas: number }[] = [];
+  for (let dia = de; dia <= ate; dia = somarDias(dia, 1))
+    porDia.push({ dia, contas: criadas.filter((x) => x === dia).length });
 
   return {
+    periodo: { tipo, de, ate },
     contas: { total: contas.length, porSituacao, internas },
     novas: {
       hoje: criadas.filter((x) => x === hoje).length,
       ultimos7Dias: criadas.filter((x) => x > somarDias(hoje, -7)).length,
       noMes: criadas.filter((x) => x.slice(0, 7) === mes).length,
+      noPeriodo: criadas.filter(noIntervalo).length,
       porDia,
     },
     receita: {
@@ -223,7 +260,8 @@ export function metricasDaPlataforma(d: {
     conversao: { elegiveis: elegiveis.length, assinaram, taxa: taxaConversao },
     cancelamentos: {
       noMes: canceladasNoMes.length,
-      taxa: baseInicio ? canceladasNoMes.length / baseInicio : 0,
+      noPeriodo: canceladasNoPeriodo.length,
+      taxa: baseInicio ? canceladasNoPeriodo.length / baseInicio : 0,
       motivos: [...motivos]
         .map(([motivo, contas]) => ({ motivo, contas }))
         .sort((a, b) => b.contas - a.contas),

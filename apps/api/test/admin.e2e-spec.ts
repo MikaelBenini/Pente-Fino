@@ -157,7 +157,20 @@ describe('administração do sistema', () => {
       await http().get('/admin/metricas').set('authorization', `Bearer ${token}`).expect(200)
     ).body as MetricasDaPlataforma;
     expect(m.contas.total).toBeGreaterThan(0);
-    expect(m.novas.porDia).toHaveLength(30);
+    // Padrão: mês atual (um ponto por dia até hoje); "30dias" mostra 30.
+    expect(m.periodo.tipo).toBe('mes');
+    expect(m.novas.porDia).toHaveLength(Number(m.periodo.ate.slice(8, 10)));
+    const trinta = (
+      await http()
+        .get('/admin/metricas?periodo=30dias')
+        .set('authorization', `Bearer ${token}`)
+        .expect(200)
+    ).body as MetricasDaPlataforma;
+    expect(trinta.novas.porDia).toHaveLength(30);
+    await http()
+      .get('/admin/metricas?periodo=ano')
+      .set('authorization', `Bearer ${token}`)
+      .expect(400);
     expect(m.receita.mrr).toBeGreaterThanOrEqual(0);
     await http().get('/clientes').set('authorization', `Bearer ${token}`).expect(401);
   });
@@ -1305,10 +1318,25 @@ describe('administração prática (etapa 15.2)', () => {
       expect.arrayContaining(['criar_membro', 'mudar_membro', 'redefinir_membro']),
     );
     expect(JSON.stringify(eventos)).not.toContain(novo.senha);
-    expect(eventos.find((e) => e.acao === 'mudar_membro')?.detalhe).toContain(
-      'ativo: true → false',
-    );
+    // Admin U7: legível, sem nomes técnicos.
+    expect(eventos.find((e) => e.acao === 'mudar_membro')?.detalhe).toContain('Ativo: sim → não');
     await como(tChefe).get('/admin/auditoria?de=ontem').expect(400);
+    // "Carregar mais": um por vez, e o seguinte é mais antigo que o anterior.
+    const [primeiro] = (
+      await como(tChefe).get(`/admin/auditoria?usuario=${eu.id}&limite=1`).expect(200)
+    ).body as { id: string; quando: string }[];
+    const seguintes = (
+      await como(tChefe)
+        .get(
+          `/admin/auditoria?usuario=${eu.id}&antesDe=${encodeURIComponent(primeiro!.quando)}&antesDeId=${primeiro!.id}`,
+        )
+        .expect(200)
+    ).body as { id: string; quando: string }[];
+    expect(seguintes.length).toBe(eventos.length - 1);
+    expect(seguintes.every((e) => e.quando <= primeiro!.quando && e.id !== primeiro!.id)).toBe(
+      true,
+    );
+    await como(tChefe).get('/admin/auditoria?limite=5000').expect(400);
   });
 
   it('pendências e cobranças: admin vê todas; vendedor só as contas dele', async () => {

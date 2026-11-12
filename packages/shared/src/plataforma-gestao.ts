@@ -1,5 +1,7 @@
 // Administração prática (Etapa 15.2): o que precisa de atenção hoje, cobranças em aberto de todas
 // as contas, equipe da plataforma e auditoria. Regras puras, usadas pela API e testadas aqui.
+import { formatarData, formatarDataHora, formatarMoeda } from './formatacao.js';
+import { campoCsv } from './relatorio-arquivo.js';
 import { LIMITE_TESTE_DIAS } from './situacao-conta.js';
 import { z } from 'zod';
 import type { ContaNaPlataforma, PapelPlataforma } from './plataforma.js';
@@ -332,8 +334,31 @@ export const filtroAuditoriaSchema = z.object({
   conta: z.uuid().optional(),
   de: z.iso.date().optional(),
   ate: z.iso.date().optional(),
+  /** Admin U7: "Carregar mais" — só o que aconteceu antes deste instante. */
+  antesDe: z.iso.datetime().optional(),
+  /** Desempate de "Carregar mais": o id do último da página (mesmo milissegundo não se perde). */
+  antesDeId: z.uuid().optional(),
+  /** 300 na tela; até 2000 para exportar. */
+  limite: z.coerce.number().int().min(1).max(2000).default(300),
 });
 export type FiltroAuditoria = z.infer<typeof filtroAuditoriaSchema>;
+
+/** Admin U7: a auditoria em CSV (abre no Excel em português: ponto e vírgula e BOM). */
+export function csvDaAuditoria(eventos: readonly EventoDaAuditoria[]): string {
+  const linhas = [
+    ['Quando', 'Quem', 'IP', 'Ação', 'Conta', 'Motivo', 'Detalhe'],
+    ...eventos.map((e) => [
+      formatarDataHora(e.quando),
+      e.quem ?? '',
+      e.ip ?? '',
+      ROTULO_ACAO_PLATAFORMA[e.acao] ?? e.acao,
+      e.conta ?? '',
+      e.motivo ?? '',
+      e.detalhe ?? '',
+    ]),
+  ];
+  return '\ufeff' + linhas.map((l) => l.map(campoCsv).join(';')).join('\r\n') + '\r\n';
+}
 
 /** Nome das ações na tela; o que não estiver aqui aparece como está gravado. */
 export const ROTULO_ACAO_PLATAFORMA: Readonly<Record<string, string>> = {
@@ -364,16 +389,116 @@ export const ROTULO_ACAO_PLATAFORMA: Readonly<Record<string, string>> = {
 };
 
 /** Resumo legível de antes/depois (só os campos que mudaram, sem segredo). */
+/** Admin U7: nomes legíveis dos campos que aparecem na auditoria da plataforma. */
+const ROTULO_CAMPO: Readonly<Record<string, string>> = {
+  nome: 'Nome',
+  email: 'E-mail',
+  telefone: 'Telefone',
+  plano: 'Plano',
+  ciclo: 'Ciclo',
+  status: 'Situação',
+  papel: 'Papel',
+  ativo: 'Ativo',
+  ativa: 'Ativa',
+  interna: 'Conta interna',
+  valor: 'Valor',
+  motivo: 'Motivo',
+  testeAte: 'Teste até',
+  diasTeste: 'Dias de teste',
+  cortesiaAte: 'Cortesia até',
+  cobrarApartirDe: 'Cobrar a partir de',
+  proximo: 'Próximo',
+  titulo: 'Título',
+  texto: 'Texto',
+  tipo: 'Tipo',
+  inicio: 'Início',
+  fim: 'Fim',
+  codigo: 'Código',
+  descontoBp: 'Desconto',
+  taxaBp: 'Taxa',
+  vagas: 'Vagas',
+  validoAte: 'Válido até',
+  ativaEm: 'Ativa em',
+  emitir: 'Emitir',
+  iss: 'ISS',
+  codigoServico: 'Código do serviço',
+  falhas: 'Falhas',
+  aplicadas: 'Aplicadas',
+  documento: 'CPF/CNPJ',
+};
+
+const NOME_VALOR: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  plano: { basico: 'Básico', pro: 'Pro', premium: 'Premium' },
+  ciclo: { mensal: 'Mensal', anual: 'Anual' },
+  papel: { admin: 'Administrador', vendedor: 'Vendedor' },
+};
+
+/** Campos internos que não dizem nada a quem lê. */
+const CAMPO_INTERNO = /^(id|contaId|usuarioId|criadoEm|atualizadoEm|.*Hash|.*Cifrad[ao])$/;
+const SEGREDO = /senha|segredo|token|hash|apiKey|chave/i;
+
+function rotuloDoCampo(k: string): string {
+  return (
+    ROTULO_CAMPO[k] ?? k.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase())
+  );
+}
+
+function valorLegivel(k: string, v: unknown, nivel = 0): string {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'sim' : 'não';
+  if (typeof v === 'number') {
+    if (/Bp$/.test(k)) return `${(v / 100).toLocaleString('pt-BR')}%`;
+    if (/^(valor|preco|mensalidade|total|desconto|mrr)/i.test(k)) return formatarMoeda(v);
+    return v.toLocaleString('pt-BR');
+  }
+  if (typeof v === 'string') {
+    const nomes = NOME_VALOR[k];
+    if (nomes?.[v]) return nomes[v];
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) return formatarDataHora(v);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return formatarData(`${v}T12:00:00Z`);
+    return v.length > 80 ? `${v.slice(0, 77)}…` : v;
+  }
+  if (Array.isArray(v)) {
+    if (v.length === 0) return 'nenhum';
+    return v
+      .slice(0, 5)
+      .map((x) => {
+        if (x && typeof x === 'object') {
+          const o = x as Record<string, unknown>;
+          return String(o.nome ?? o.titulo ?? o.codigo ?? o.email ?? '…');
+        }
+        return valorLegivel(k, x, nivel + 1);
+      })
+      .join(', ')
+      .concat(v.length > 5 ? ` e mais ${v.length - 5}` : '');
+  }
+  if (typeof v === 'object') {
+    if (nivel > 0) return '…';
+    const partes = Object.entries(v as Record<string, unknown>)
+      .filter(([c]) => !CAMPO_INTERNO.test(c) && !SEGREDO.test(c))
+      .slice(0, 6)
+      .map(([c, x]) => `${rotuloDoCampo(c).toLowerCase()} ${valorLegivel(c, x, nivel + 1)}`);
+    return partes.join(', ') || '…';
+  }
+  return String(v);
+}
+
+/**
+ * O que mudou, em português (admin U7): rótulos no lugar dos nomes técnicos, valores em reais,
+ * datas no horário de Brasília, sim/não. Segredos e campos internos ficam de fora.
+ */
 export function resumoDaMudanca(antes: unknown, depois: unknown): string | null {
   const a = (antes ?? {}) as Record<string, unknown>;
   const d = (depois ?? {}) as Record<string, unknown>;
   const chaves = [...new Set([...Object.keys(a), ...Object.keys(d)])].filter(
-    (k) => !/senha|segredo|token|hash/i.test(k),
+    (k) => !SEGREDO.test(k) && !CAMPO_INTERNO.test(k),
   );
-  const fmt = (v: unknown) =>
-    v === null || v === undefined ? '—' : typeof v === 'object' ? JSON.stringify(v) : String(v);
   const partes = chaves
     .filter((k) => JSON.stringify(a[k]) !== JSON.stringify(d[k]))
-    .map((k) => (k in a ? `${k}: ${fmt(a[k])} → ${fmt(d[k])}` : `${k}: ${fmt(d[k])}`));
-  return partes.length ? partes.join(' · ').slice(0, 400) : null;
+    .map((k) =>
+      k in a && k in d
+        ? `${rotuloDoCampo(k)}: ${valorLegivel(k, a[k])} → ${valorLegivel(k, d[k])}`
+        : `${rotuloDoCampo(k)}: ${valorLegivel(k, k in d ? d[k] : a[k])}`,
+    );
+  return partes.length ? partes.join(' · ').slice(0, 500) : null;
 }

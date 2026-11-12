@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (administração mais legível)
+
+- Auditoria em português: o detalhe de cada ação mostra nomes, valores em reais, datas no horário
+  de Brasília e "sim/não", no lugar do código. Dá para carregar mais do que 300 ações e exportar
+  em CSV (até 2000, com o mesmo filtro).
+- Início da administração: escolha do período nos números (mês atual, últimos 30 dias, mês
+  anterior), textos que explicam quando ainda não há dados ("Nenhuma conta paga ainda · contas em
+  teste: 3") e números que levam direto para a lista de contas já filtrada.
+
 ### Adicionado (sinal)
 
 - "Receber sinal (adiantado)" na comanda: a recepção registra um pagamento antes do atendimento.
