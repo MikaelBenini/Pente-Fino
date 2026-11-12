@@ -11,10 +11,15 @@ async function entrar(page: Page, email: string) {
   await page.waitForURL(/inicio|agenda|hoje/);
 }
 
-/** Uma quarta-feira daqui a umas 6 semanas: agenda vazia na demonstração. */
+/**
+ * Uma quarta-feira daqui a umas semanas, com a agenda livre. O banco de desenvolvimento guarda os
+ * horários das execuções anteriores (cada uma marca na primeira vaga do dia): a semana varia entre
+ * 30 quartas, para a primeira vaga não ir parar no fim do expediente.
+ */
 function quartaDistante(semanas: number) {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() + semanas * 7);
+  const espalhar = Math.floor(Date.now() / 60_000) % 30;
+  d.setUTCDate(d.getUTCDate() + (semanas + espalhar) * 7);
   while (d.getUTCDay() !== 3) d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
 }

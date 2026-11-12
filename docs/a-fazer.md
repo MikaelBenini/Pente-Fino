@@ -118,9 +118,11 @@ U2 a U5 já feitos (#161).
 
 - [x] **U1** Início (12/11, Etapa 23.4): estados vazios com orientação, cartões clicáveis para a lista filtrada e
   período selecionável
-- [x] Lote 4a (U1 e U7): bateria verde (12/11); PR e CI a acompanhar
-- [ ] Merge pelo dono (lote 4a)
-- [ ] **U6** Equipe: papéis Suporte e Financeiro, última troca de senha e motivo para desativar
+- [x] Lote 4a (U1 e U7): bateria verde, PR #168 (12/11)
+- [x] Merge pelo dono (lote 4a, #168, 12/11)
+- [x] Lote 4b (U6): bateria verde (12/11); PR e CI a acompanhar
+- [ ] Merge pelo dono (lote 4b)
+- [x] **U6** Equipe (12/11, Etapa 23.4): papéis Suporte e Financeiro, última troca de senha e motivo para desativar
 - [x] **U7** Auditoria (12/11, Etapa 23.4): detalhes legíveis, horário local, paginação além de 300 e CSV
 - [ ] **U8** Configurações: fuso escrito nos campos, prévia do aviso geral, e-mail de teste por
   modelo e histórico de mudanças
@@ -152,10 +154,17 @@ U2 a U5 já feitos (#161).
 - [ ] **F3** Alertas para a equipe (cadastro novo, teste acabando, cobrança vencida, falhas)
 - [ ] **F4** Nota de saúde da conta (0 a 100) e ordem por risco de cancelamento
 - [ ] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado
-- [ ] **F6** Suporte por chat (pedido do dono em 11/11): "Falar com o suporte" no painel da
-  barbearia abre uma conversa ligada à conta; a equipe responde pelo `/admin` (fila de conversas,
-  em aberto e respondidas, aviso de mensagem nova), com histórico e situação. Substitui o
-  WhatsApp de suporte no site e na Ajuda
+- [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
+  - **Quem chama:** ícone flutuante no canto da tela, no site (visitante, que informa nome e
+    contato) e no painel da barbearia (já logado: a conversa fica ligada à conta).
+  - **Fila de espera:** ao abrir, a conversa entra na fila e o cliente vê que está aguardando
+    (com a posição ou o tempo estimado).
+  - **No `/admin`:** uma aba de chat com a fila; o atendente da equipe **assume** a conversa (as
+    outras pessoas da equipe veem quem assumiu), conversa em tempo real, encerra e o histórico
+    fica guardado (com a conta, quando houver).
+  - **No celular:** notificação de conversa nova e de mensagem nova para a equipe (push do PWA no
+    `/admin` instalado), para atender sem estar no computador.
+  - Substitui o WhatsApp de suporte no site e na Ajuda.
 - [ ] **F7** Métricas de SaaS (churn, MRR por tipo, LTV, coortes)
 - [ ] **F8** Aviso geral segmentado
 - [ ] **F9** Gestão de cupons

@@ -4,7 +4,7 @@ import { formatarData, formatarDataHora, formatarMoeda } from './formatacao.js';
 import { campoCsv } from './relatorio-arquivo.js';
 import { LIMITE_TESTE_DIAS } from './situacao-conta.js';
 import { z } from 'zod';
-import type { ContaNaPlataforma, PapelPlataforma } from './plataforma.js';
+import { PAPEIS_PLATAFORMA, type ContaNaPlataforma, type PapelPlataforma } from './plataforma.js';
 
 const DIA_MS = 86_400_000;
 
@@ -284,6 +284,8 @@ export interface MembroDaPlataforma {
   ativo: boolean;
   segundoFatorConfigurado: boolean;
   ultimoAcessoEm: string | null;
+  /** Admin U6: última troca de senha (criação ou redefinição). */
+  senhaTrocadaEm: string | null;
   criadoEm: string;
   contasVendidas: number;
 }
@@ -295,16 +297,22 @@ export const novoMembroSchema = z.object({
     .trim()
     .toLowerCase()
     .pipe(z.email({ error: 'E-mail inválido.' })),
-  papel: z.enum(['admin', 'vendedor']),
+  papel: z.enum(PAPEIS_PLATAFORMA),
 });
 export type NovoMembro = z.infer<typeof novoMembroSchema>;
 
 export const mudarMembroSchema = z
   .object({
-    papel: z.enum(['admin', 'vendedor']).optional(),
+    papel: z.enum(PAPEIS_PLATAFORMA).optional(),
     ativo: z.boolean().optional(),
+    /** Admin U6: desativar pede o motivo (fica na auditoria). */
+    motivo: z.string().trim().min(5, { error: 'Explique o motivo.' }).max(300).optional(),
   })
-  .refine((d) => d.papel !== undefined || d.ativo !== undefined, { error: 'Nada para mudar.' });
+  .refine((d) => d.papel !== undefined || d.ativo !== undefined, { error: 'Nada para mudar.' })
+  .refine((d) => d.ativo !== false || !!d.motivo, {
+    error: 'Explique o motivo para desativar.',
+    path: ['motivo'],
+  });
 export type MudarMembro = z.infer<typeof mudarMembroSchema>;
 
 /** Resposta de criar ou redefinir: a senha aparece uma vez só. */

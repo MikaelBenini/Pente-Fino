@@ -148,6 +148,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
     .getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) })
     .getByRole('button', { name: 'Desativar' })
     .click();
+  // Admin U6: desativar pede o motivo.
+  const desativar = page.getByRole('dialog', { name: /^Desativar / });
+  await desativar.getByLabel('Motivo').fill('Teste da equipe');
+  await desativar.getByRole('button', { name: 'Desativar' }).click();
   await expect(
     equipe.getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) }),
   ).toContainText('Desativado');

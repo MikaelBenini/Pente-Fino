@@ -10,6 +10,9 @@ import {
   type MembroDaPlataforma,
   type UsuarioPlataformaSessao,
   csvDaAuditoria,
+  DESCRICAO_PAPEL_PLATAFORMA,
+  PAPEIS_PLATAFORMA,
+  type PapelPlataforma,
 } from '@pente-fino/shared';
 import { Botao, Campo, Dialogo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -85,7 +88,10 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
   const cliente = useQueryClient();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
-  const [papel, setPapel] = useState<'vendedor' | 'admin'>('vendedor');
+  const [papel, setPapel] = useState<PapelPlataforma>('vendedor');
+  // Admin U6: desativar pede o motivo.
+  const [desativar, setDesativar] = useState<{ id: string; nome: string } | null>(null);
+  const [motivo, setMotivo] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [acesso, setAcesso] = useState<AcessoTemporario | null>(null);
@@ -110,7 +116,9 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-semibold">Equipe</h1>
         <p className="text-tinta-suave">
-          Quem opera o Pente Fino. Vendedor vê e cobra só as contas que vendeu; admin vê tudo.
+          Quem opera o Pente Fino. Cada papel só vê o que precisa: vendedor, as contas que vendeu;
+          suporte, as contas e a saúde do sistema; financeiro, a cobrança e a nota fiscal; admin,
+          tudo.
         </p>
       </div>
       <form
@@ -155,11 +163,9 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
             id="membro-papel"
             rotulo="Papel"
             value={papel}
-            onChange={(e) => setPapel(e.target.value as 'vendedor' | 'admin')}
-            opcoes={[
-              { valor: 'vendedor', rotulo: 'Vendedor' },
-              { valor: 'admin', rotulo: 'Admin' },
-            ]}
+            onChange={(e) => setPapel(e.target.value as PapelPlataforma)}
+            dica={DESCRICAO_PAPEL_PLATAFORMA[papel]}
+            opcoes={PAPEIS_PLATAFORMA.map((p) => ({ valor: p, rotulo: NOME_PAPEL_PLATAFORMA[p] }))}
           />
         </div>
         <Botao type="submit" className="self-start" carregando={enviando}>
@@ -178,6 +184,7 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
                   'Situação',
                   'Autenticador',
                   'Último acesso',
+                  'Senha trocada em',
                   'Contas vendidas',
                   '',
                 ].map((c, i) => (
@@ -200,7 +207,33 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
                       {eu && <span className="font-normal text-tinta-suave"> (você)</span>}
                       <span className="block text-sm font-normal text-tinta-suave">{m.email}</span>
                     </th>
-                    <td className={td}>{NOME_PAPEL_PLATAFORMA[m.papel]}</td>
+                    <td className={td}>
+                      {eu ? (
+                        NOME_PAPEL_PLATAFORMA[m.papel]
+                      ) : (
+                        <select
+                          id={`papel-${m.id}`}
+                          aria-label={`Papel de ${m.nome}`}
+                          value={m.papel}
+                          disabled={!!ocupado}
+                          onChange={(e) =>
+                            acao(m.id, () =>
+                              adminApi(`equipe/${m.id}`, {
+                                metodo: 'PUT',
+                                corpo: { papel: e.target.value },
+                              }),
+                            )
+                          }
+                          className="min-h-11 rounded-md border border-borda-forte bg-fundo px-2 text-tinta focus-visible:outline-2 focus-visible:outline-foco"
+                        >
+                          {PAPEIS_PLATAFORMA.map((p) => (
+                            <option key={p} value={p}>
+                              {NOME_PAPEL_PLATAFORMA[p]}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
                     <td className={td}>
                       <Ficha tom={m.ativo ? 'acao' : 'neutro'}>
                         {m.ativo ? 'Ativo' : 'Desativado'}
@@ -212,24 +245,13 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
                     <td className={`${td} tabular-nums`}>
                       {m.ultimoAcessoEm ? formatarDataHora(m.ultimoAcessoEm) : '—'}
                     </td>
+                    <td className={`${td} tabular-nums`}>
+                      {m.senhaTrocadaEm ? formatarDataHora(m.senhaTrocadaEm) : '—'}
+                    </td>
                     <td className={`${td} tabular-nums`}>{m.contasVendidas}</td>
                     <td className={td}>
                       {!eu && (
                         <div className="flex flex-wrap gap-2">
-                          <Botao
-                            variante="secundario"
-                            disabled={!!ocupado}
-                            onClick={() =>
-                              acao(m.id, () =>
-                                adminApi(`equipe/${m.id}`, {
-                                  metodo: 'PUT',
-                                  corpo: { papel: m.papel === 'admin' ? 'vendedor' : 'admin' },
-                                }),
-                              )
-                            }
-                          >
-                            {m.papel === 'admin' ? 'Tornar vendedor' : 'Tornar admin'}
-                          </Botao>
                           <Botao
                             variante="secundario"
                             disabled={!!ocupado}
@@ -249,12 +271,14 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
                             variante={m.ativo ? 'perigo' : 'secundario'}
                             disabled={!!ocupado}
                             onClick={() =>
-                              acao(m.id, () =>
-                                adminApi(`equipe/${m.id}`, {
-                                  metodo: 'PUT',
-                                  corpo: { ativo: !m.ativo },
-                                }),
-                              )
+                              m.ativo
+                                ? setDesativar({ id: m.id, nome: m.nome })
+                                : acao(m.id, () =>
+                                    adminApi(`equipe/${m.id}`, {
+                                      metodo: 'PUT',
+                                      corpo: { ativo: true },
+                                    }),
+                                  )
                             }
                           >
                             {m.ativo ? 'Desativar' : 'Reativar'}
@@ -270,6 +294,50 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
         )}
       </Estado>
       <SenhaUmaVez acesso={acesso} onFechar={() => setAcesso(null)} />
+      <Dialogo
+        aberto={desativar !== null}
+        titulo={`Desativar ${desativar?.nome ?? ''}?`}
+        descricao="A pessoa sai na hora (as sessões abertas acabam). O motivo fica na auditoria."
+        onFechar={() => {
+          setDesativar(null);
+          setMotivo('');
+        }}
+      >
+        <form
+          method="post"
+          noValidate
+          className="flex flex-col gap-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!desativar || motivo.trim().length < 5) return;
+            const { id } = desativar;
+            setDesativar(null);
+            await acao(id, () =>
+              adminApi(`equipe/${id}`, {
+                metodo: 'PUT',
+                corpo: { ativo: false, motivo: motivo.trim() },
+              }),
+            );
+            setMotivo('');
+          }}
+        >
+          <Campo
+            id="desativar-motivo"
+            rotulo="Motivo"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Saiu da empresa, trocou de função…"
+          />
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Botao variante="secundario" onClick={() => setDesativar(null)}>
+              Voltar
+            </Botao>
+            <Botao type="submit" variante="perigo" disabled={motivo.trim().length < 5}>
+              Desativar
+            </Botao>
+          </div>
+        </form>
+      </Dialogo>
     </div>
   );
 }

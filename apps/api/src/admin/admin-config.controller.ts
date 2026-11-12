@@ -603,12 +603,14 @@ export class AdminConfigController {
   }
 
   @Get('saude/emails')
+  @PapeisPlataforma('admin', 'suporte')
   @ApiOperation({ summary: 'E-mails que não saíram (destinatário mascarado, motivo do SMTP)' })
   emailsFalhos(): Promise<FalhaDeEmail[]> {
     return this.saudeServico.falhasDeEmail();
   }
 
   @Post('saude/emails/:id/reenviar')
+  @PapeisPlataforma('admin', 'suporte')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Reenviar um e-mail que falhou' })
   async reenviarEmail(
@@ -621,6 +623,7 @@ export class AdminConfigController {
   }
 
   @Post('saude/emails/:id/descartar')
+  @PapeisPlataforma('admin', 'suporte')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Descartar um e-mail que falhou, com o motivo' })
   async descartarEmail(
@@ -640,6 +643,7 @@ export class AdminConfigController {
   }
 
   @Get('saude')
+  @PapeisPlataforma('admin', 'suporte')
   @ApiOperation({ summary: 'Saúde do sistema: filas, WhatsApp que caiu e erros recentes' })
   saude(): Promise<SaudeDoSistema> {
     return this.saudeServico.saude();

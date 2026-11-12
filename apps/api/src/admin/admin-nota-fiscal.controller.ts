@@ -37,7 +37,8 @@ const CHAVE = 'nota_fiscal';
 @Controller('admin/configuracoes/nota-fiscal')
 @Publico()
 @UseGuards(AdminGuard)
-@PapeisPlataforma('admin')
+// Admin U6: o financeiro cuida da nota fiscal (sem as outras configurações).
+@PapeisPlataforma('admin', 'financeiro')
 export class AdminNotaFiscalController {
   constructor(
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
@@ -70,6 +71,15 @@ export class AdminNotaFiscalController {
         'A emissão continua desligada até resolver o que falta.',
         pendencias.map((p) => ({ campo: p.codigo, mensagem: p.mensagem })),
       );
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Configuração atual da nota fiscal das mensalidades' })
+  async ler(): Promise<ConfigNotaFiscal> {
+    const linha = await this.banco.prisma.configuracaoPlataforma.findUnique({
+      where: { chave: CHAVE },
+    });
+    return lerConfigNotaFiscal(linha?.valor);
   }
 
   @Put()

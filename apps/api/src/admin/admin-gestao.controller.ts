@@ -31,6 +31,7 @@ import {
   type NovoMembro,
   type Pendencia,
   type ResumoCobrancas,
+  veTodasAsContas,
 } from '@pente-fino/shared';
 import { randomBytes } from 'node:crypto';
 import { Publico } from '../auth/decoradores.js';
@@ -57,14 +58,14 @@ export class AdminGestaoController {
     @Inject(SaudeService) private readonly saude: SaudeService,
   ) {}
 
-  /** Contas e cobranças que quem está logado pode ver (vendedor: só as que vendeu). */
+  /** Contas e cobranças que quem está logado pode ver (vendedor: só as que vendeu; U6: suporte e financeiro, todas). */
   private async contasECobrancas(a: AdminAutenticado) {
     const [linhas, faturas] = await Promise.all([
       contasDaPlataforma(this.banco.prisma),
       faturasDaPlataforma(this.banco.prisma),
     ]);
     const contas = linhas
-      .filter((c) => a.papel === 'admin' || c.vendedor_id === a.id)
+      .filter((c) => veTodasAsContas(a.papel) || c.vendedor_id === a.id)
       .map(contaParaTela);
     const porId = new Map(contas.map((c) => [c.id, c]));
     const cobrancas = faturas
@@ -84,6 +85,7 @@ export class AdminGestaoController {
   }
 
   @Get('pendencias')
+  @PapeisPlataforma('admin', 'vendedor', 'suporte', 'financeiro')
   @ApiOperation({
     summary:
       'O que precisa de atenção hoje (cobrança, teste, uso, ativação, WhatsApp caído, e-mail que não saiu)',
@@ -92,9 +94,11 @@ export class AdminGestaoController {
     const { contas, cobrancas } = await this.contasECobrancas(a);
     const agora = new Date();
     const caidas = await conexoesCaidasPlataforma(this.banco.prisma);
-    // E-mail é do sistema, não de uma conta: só o admin vê (o vendedor vê as contas dele).
+    // E-mail é do sistema, não de uma conta: o admin e o suporte veem (o vendedor vê as contas dele).
     const falhasEmail =
-      a.papel === 'admin' ? await this.saude.falhasDeEmail(agora.getTime() - 86_400_000) : [];
+      a.papel === 'admin' || a.papel === 'suporte'
+        ? await this.saude.falhasDeEmail(agora.getTime() - 86_400_000)
+        : [];
     return pendenciasDaPlataforma(contas, cobrancas, agora, {
       conexoesCaidas: caidas.map((c) => ({
         contaId: c.conta_id,
@@ -106,6 +110,7 @@ export class AdminGestaoController {
   }
 
   @Get('cobrancas')
+  @PapeisPlataforma('admin', 'vendedor', 'financeiro')
   @ApiOperation({ summary: 'Cobranças em aberto, vencidas e recebidas de todas as contas' })
   async cobrancas(@AdminAtual() a: AdminAutenticado): Promise<ResumoCobrancas> {
     const { cobrancas } = await this.contasECobrancas(a);
@@ -132,6 +137,7 @@ export class AdminGestaoController {
       ativo: m.ativo,
       segundoFatorConfigurado: !!m.totpConfirmadoEm,
       ultimoAcessoEm: m.ultimoAcessoEm?.toISOString() ?? null,
+      senhaTrocadaEm: m.senhaTrocadaEm?.toISOString() ?? null,
       criadoEm: m.criadoEm.toISOString(),
       contasVendidas: contas.filter((c) => c.vendedor_id === m.id).length,
     }));
@@ -157,6 +163,7 @@ export class AdminGestaoController {
         email: d.email,
         papel: d.papel,
         senhaHash: await gerarHashSenha(senha),
+        senhaTrocadaEm: new Date(),
       },
     });
     await this.auth.auditar({
@@ -182,7 +189,10 @@ export class AdminGestaoController {
     const m = await this.banco.prisma.usuarioPlataforma.findUnique({ where: { id } });
     if (!m) throw Erros.naoEncontrado('Pessoa não encontrada.');
     await this.banco.prisma.$transaction([
-      this.banco.prisma.usuarioPlataforma.update({ where: { id }, data: d }),
+      this.banco.prisma.usuarioPlataforma.update({
+        where: { id },
+        data: { papel: d.papel, ativo: d.ativo },
+      }),
       ...(d.ativo === false || (d.papel && d.papel !== m.papel)
         ? [
             this.banco.prisma.sessaoPlataforma.updateMany({
@@ -197,6 +207,8 @@ export class AdminGestaoController {
       acao: 'mudar_membro',
       antes: { email: m.email, papel: m.papel, ativo: m.ativo },
       depois: { email: m.email, papel: d.papel ?? m.papel, ativo: d.ativo ?? m.ativo },
+      // Admin U6: desativar pede o motivo.
+      motivo: d.motivo ?? null,
       ip,
     });
   }
@@ -224,6 +236,7 @@ export class AdminGestaoController {
           totpConfirmadoEm: null,
           totpUltimoPasso: null,
           ativo: true,
+          senhaTrocadaEm: new Date(),
         },
       }),
       this.banco.prisma.sessaoPlataforma.updateMany({

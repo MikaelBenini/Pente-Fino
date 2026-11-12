@@ -12,6 +12,8 @@ import {
   type RespostaEntrarAdmin,
   type UsuarioPlataformaSessao,
   type VendasDoVendedor,
+  ABAS_DO_PAPEL,
+  type ConfigNotaFiscal,
 } from '@pente-fino/shared';
 import { Abas, Botao, Campo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +25,7 @@ import { Aviso } from '../aviso';
 import { Marca } from '../marca';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { NotaFiscalAdmin } from './nota-fiscal-admin';
 import { AuditoriaAdmin, EquipeAdmin } from './equipe-admin';
 import { FichaConta } from './ficha-conta';
 import { CobrancaAdmin, InicioAdmin } from './inicio-admin';
@@ -210,8 +213,6 @@ function Entrar() {
   );
 }
 
-const ABAS_VENDEDOR = ['inicio', 'contas', 'cobranca'];
-
 /** Painel: abas por assunto; a ficha da conta e a nova venda abrem de qualquer aba. */
 function Painel({ u }: { u: UsuarioPlataformaSessao }) {
   // A aba fica no endereço (#contas), para voltar nela ao recarregar. O painel só monta no
@@ -245,7 +246,17 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
       rotulo: 'Contas',
       conteudo: <ContasAdmin key={aba} u={u} onAbrirConta={setAberta} />,
     },
-    { id: 'cobranca', rotulo: 'Cobrança', conteudo: <CobrancaAdmin onAbrirConta={setAberta} /> },
+    {
+      id: 'cobranca',
+      rotulo: 'Cobrança',
+      conteudo: (
+        <div className="flex flex-col gap-8">
+          <CobrancaAdmin onAbrirConta={setAberta} />
+          {/* Admin U6: o financeiro cuida da nota fiscal aqui (sem as outras configurações). */}
+          {u.papel === 'financeiro' && <NotaFiscalDoFinanceiro />}
+        </div>
+      ),
+    },
     {
       id: 'vendas',
       rotulo: 'Vendas',
@@ -260,12 +271,14 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     { id: 'auditoria', rotulo: 'Auditoria', conteudo: <AuditoriaAdmin onAbrirConta={setAberta} /> },
     { id: 'configuracoes', rotulo: 'Configurações', conteudo: <ConfiguracoesAdmin /> },
     { id: 'saude', rotulo: 'Saúde do sistema', conteudo: <SaudeAdmin /> },
-  ].filter((x) => u.papel === 'admin' || ABAS_VENDEDOR.includes(x.id));
+  ].filter((x) => ABAS_DO_PAPEL[u.papel].includes(x.id));
   return (
     <main className="flex flex-col gap-6">
-      <div className="flex justify-end">
-        <Botao onClick={() => setVender(true)}>Nova venda</Botao>
-      </div>
+      {(u.papel === 'admin' || u.papel === 'vendedor') && (
+        <div className="flex justify-end">
+          <Botao onClick={() => setVender(true)}>Nova venda</Botao>
+        </div>
+      )}
       <Abas
         rotulo="Administração"
         atual={abas.some((x) => x.id === abaId) ? abaId : 'inicio'}
@@ -276,6 +289,15 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
       <NovaVenda aberto={vender} onFechar={() => setVender(false)} onAbrirConta={setAberta} />
     </main>
   );
+}
+
+/** Nota fiscal das mensalidades para o financeiro (sem as outras configurações). */
+function NotaFiscalDoFinanceiro() {
+  const config = useQuery({
+    queryKey: ['admin', 'nota-fiscal'],
+    queryFn: () => adminApi<ConfigNotaFiscal>('configuracoes/nota-fiscal'),
+  });
+  return <Estado consulta={config}>{() => <NotaFiscalAdmin atual={config.data!} />}</Estado>;
 }
 
 type Ordem = 'criada' | 'nome' | 'acesso' | 'fechadas' | 'teste' | 'ativacao';
