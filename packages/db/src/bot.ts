@@ -150,7 +150,7 @@ export async function contextoDaConversa(
   const { clienteId, ...resto } = extra;
   const s = await situacaoDaUnidade(tx, u, agora, appUrl);
   const servicos = await tx.servico.findMany({
-    where: { ativo: true },
+    where: { ativo: true, unidadeIds: { has: u.id } },
     orderBy: [{ ehExtra: 'asc' }, { nome: 'asc' }],
   });
   const conta = await tx.conta.findFirst({ select: { nome: true } });

@@ -5,6 +5,7 @@ import {
   NOME_ORIGEM_ESPERA,
   textoFaixa,
   type EsperaDetalhe,
+  disponivelNaUnidade,
 } from '@pente-fino/shared';
 import { Botao, Campo, Dialogo, Marcador, Selecao } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
@@ -167,7 +168,7 @@ function Incluir({
         <legend className="mb-1 font-semibold">Serviços</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {(servicos.data ?? [])
-            .filter((s) => s.ativo)
+            .filter((s) => s.ativo && disponivelNaUnidade(s, unidadeId))
             .map((s) => (
               <Marcador
                 key={s.id}

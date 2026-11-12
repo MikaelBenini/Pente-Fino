@@ -34,6 +34,7 @@ import { Erros } from '../comum/erros.js';
 import { data, dataTexto, filtroUnidade, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { emSequencia } from '../comum/sequencia.js';
+import { unidadesDoCatalogo } from '../comum/catalogo.js';
 
 const servicoParcialSchema = servicoSchema.partial();
 const consultaPrecosSchema = z.object({
@@ -64,6 +65,7 @@ function paraDetalhe(
     precoLivre: boolean;
     precoMinimo: number | null;
     precoMaximo: number | null;
+    unidadeIds: string[];
   },
   custo = true,
 ): ServicoDetalhe {
@@ -79,6 +81,7 @@ function paraDetalhe(
     precoLivre: s.precoLivre,
     precoMinimo: s.precoMinimo,
     precoMaximo: s.precoMaximo,
+    unidadeIds: s.unidadeIds,
   };
 }
 
@@ -159,7 +162,8 @@ export class ServicosController {
     conferirFaixa(dados);
     return this.banco
       .daConta(async (tx) => {
-        const s = await tx.servico.create({ data: dados });
+        const unidadeIds = await unidadesDoCatalogo(tx, dados.unidadeIds);
+        const s = await tx.servico.create({ data: { ...dados, unidadeIds } });
         await auditar(tx, { entidade: 'servico', entidadeId: s.id, acao: 'criar', depois: dados });
         return paraDetalhe(s);
       })
@@ -183,7 +187,11 @@ export class ServicosController {
           precoMinimo: dados.precoMinimo !== undefined ? dados.precoMinimo : antes.precoMinimo,
           precoMaximo: dados.precoMaximo !== undefined ? dados.precoMaximo : antes.precoMaximo,
         });
-        const s = await tx.servico.update({ where: { id }, data: dados });
+        const unidadeIds =
+          dados.unidadeIds === undefined
+            ? undefined
+            : await unidadesDoCatalogo(tx, dados.unidadeIds);
+        const s = await tx.servico.update({ where: { id }, data: { ...dados, unidadeIds } });
         await auditar(tx, {
           entidade: 'servico',
           entidadeId: id,
@@ -291,6 +299,21 @@ export class ServicosController {
           },
           update: { valor: p.valor },
         });
+      }
+      // Preço numa unidade põe o serviço nela ("Disponível em"), se ainda não estava.
+      for (const servicoId of servicos) {
+        const sv = await tx.servico.findUniqueOrThrow({
+          where: { id: servicoId },
+          select: { unidadeIds: true },
+        });
+        const novas = precos
+          .filter((p) => p.servicoId === servicoId && !sv.unidadeIds.includes(p.unidadeId))
+          .map((p) => p.unidadeId);
+        if (novas.length)
+          await tx.servico.update({
+            where: { id: servicoId },
+            data: { unidadeIds: [...new Set([...sv.unidadeIds, ...novas])] },
+          });
       }
       await auditar(tx, {
         entidade: 'preco_servico',

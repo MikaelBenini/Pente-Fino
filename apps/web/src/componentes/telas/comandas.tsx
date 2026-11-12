@@ -15,6 +15,7 @@ import {
   type ComandaDetalhe,
   type ComandaResumo,
   type ItemComandaDetalhe,
+  disponivelNaUnidade,
 } from '@pente-fino/shared';
 import {
   Abas,
@@ -272,7 +273,7 @@ function NovaComanda({
           <legend className="mb-1 text-sm font-medium">Serviços</legend>
           <div className="flex flex-col gap-1">
             {(servicos.data ?? [])
-              .filter((s) => s.ativo && !s.ehExtra)
+              .filter((s) => s.ativo && !s.ehExtra && disponivelNaUnidade(s, unidadeId))
               .map((s) => (
                 <Marcador
                   key={s.id}
@@ -683,7 +684,7 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
             ) && <p className="text-sm text-tinta-suave">Nada a fazer nesta comanda agora.</p>}
         </div>
         {movimento.elementos}
-        {editavel && <LancarItens onLancar={lancar} podeProduto />}
+        {editavel && <LancarItens unidadeId={c.unidadeId} onLancar={lancar} podeProduto />}
       </aside>
       {podeMover && (
         <MoverComanda
@@ -822,9 +823,12 @@ function ValorDoItem({
 }
 
 function LancarItens({
+  unidadeId,
   onLancar,
   podeProduto,
 }: {
+  /** Catálogo por unidade: só o que está na unidade da comanda. */
+  unidadeId: string;
   onLancar: (
     item: { tipo: 'servico'; servicoId: string } | { tipo: 'produto'; produtoId: string },
     nome: string,
@@ -834,8 +838,11 @@ function LancarItens({
   const servicos = useServicos();
   const produtos = useProdutos();
   const [enviando, setEnviando] = useState<string | null>(null);
-  const extras = (servicos.data ?? []).filter((s) => s.ativo && s.ehExtra);
-  const principais = (servicos.data ?? []).filter((s) => s.ativo && !s.ehExtra);
+  const daUnidade = (servicos.data ?? []).filter(
+    (s) => s.ativo && disponivelNaUnidade(s, unidadeId),
+  );
+  const extras = daUnidade.filter((s) => s.ehExtra);
+  const principais = daUnidade.filter((s) => !s.ehExtra);
   const grupo = (
     titulo: string,
     itens: { id: string; nome: string; item: Parameters<typeof onLancar>[0] }[],
@@ -887,7 +894,7 @@ function LancarItens({
         grupo(
           'Produtos',
           (produtos.data ?? [])
-            .filter((p) => p.ativo)
+            .filter((p) => p.ativo && disponivelNaUnidade(p, unidadeId))
             .map((p) => ({
               id: p.id,
               nome: p.nome,

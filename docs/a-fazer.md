@@ -85,8 +85,13 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
   (valor, incluir ou tirar cada uma) antes de gravar; em cada despesa fixa, a opção "Repetir todo
   mês", que lança sozinha no 1º dia (dá para parar quando quiser); nunca duplica o que já existe
   no mês.
-- [x] Lote 3a (preço livre e despesas fixas): bateria verde (12/11); PR e CI a acompanhar
-- [ ] Merge pelo dono (lote 3a)
+- [x] Lote 3a (preço livre e despesas fixas): bateria verde, PR #164 e CI verde (12/11)
+- [x] Merge pelo dono (lote 3a, #164, 12/11)
+- [x] **Catálogo por unidade** (pedido do dono em 12/11, "Escolher as unidades"; feito antes do
+  preço por barbeiro, que depende dele): "Disponível em" em serviços e produtos; unidade nova
+  vazia com "Copiar catálogo de outra unidade" (Etapa 23.6 da linha de desenvolvimento)
+- [x] Catálogo por unidade: bateria verde (12/11); PR e CI a acompanhar
+- [ ] Merge pelo dono (catálogo por unidade)
 - [ ] **Preço por barbeiro** (detalhe do dono em 12/11): os serviços e a tabela continuam sendo
   da unidade. O barbeiro muda o próprio preço de um serviço **no perfil dele**; esse preço vale
   quando marcam horário com ele (agenda, bot, site) e na comanda dele. Sem preço próprio, vale o

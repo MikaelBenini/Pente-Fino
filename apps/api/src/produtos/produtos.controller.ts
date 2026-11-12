@@ -24,6 +24,7 @@ import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { TODOS } from '../comum/escopo.js';
 import { Corpo } from '../comum/validacao.js';
+import { unidadesDoCatalogo } from '../comum/catalogo.js';
 
 function nomeRepetido(e: unknown): never {
   if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')
@@ -39,6 +40,7 @@ const forma = (
     precoVenda: number;
     custo: number;
     ativo: boolean;
+    unidadeIds: string[];
   },
   custo: boolean,
 ): ProdutoDetalhe => ({
@@ -48,6 +50,7 @@ const forma = (
   precoVenda: p.precoVenda,
   custo: custo ? p.custo : 0,
   ativo: p.ativo,
+  unidadeIds: p.unidadeIds,
 });
 
 @ApiTags('Produtos')
@@ -75,7 +78,10 @@ export class ProdutosController {
   criar(@Corpo(produtoSchema) d: ProdutoEntrada): Promise<ProdutoDetalhe> {
     return this.banco
       .daConta(async (tx) => {
-        const p = await tx.produto.create({ data: { ...d, categoria: d.categoria ?? null } });
+        const unidadeIds = await unidadesDoCatalogo(tx, d.unidadeIds);
+        const p = await tx.produto.create({
+          data: { ...d, categoria: d.categoria ?? null, unidadeIds },
+        });
         await auditar(tx, { entidade: 'produto', entidadeId: p.id, acao: 'criar', depois: d });
         return forma(p, true);
       })
@@ -94,7 +100,9 @@ export class ProdutosController {
       .daConta(async (tx) => {
         const antes = await tx.produto.findUnique({ where: { id } });
         if (!antes) throw Erros.naoEncontrado('Produto não encontrado.');
-        const p = await tx.produto.update({ where: { id }, data: d });
+        const unidadeIds =
+          d.unidadeIds === undefined ? undefined : await unidadesDoCatalogo(tx, d.unidadeIds);
+        const p = await tx.produto.update({ where: { id }, data: { ...d, unidadeIds } });
         await auditar(tx, {
           entidade: 'produto',
           entidadeId: id,

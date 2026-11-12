@@ -13,6 +13,7 @@ import {
   temAlgumPapel,
   valorParaCampo,
   type ServicoDetalhe,
+  disponivelNaUnidade,
 } from '@pente-fino/shared';
 import {
   Abas,
@@ -86,8 +87,15 @@ const faixa = (l: LinhaDoCatalogo) =>
 function Catalogo({ podeEditar }: { podeEditar: boolean }) {
   const servicos = useServicos();
   const [editando, setEditando] = useState<ServicoDetalhe | 'novo' | null>(null);
-  const { usuario, unidadeAtiva } = useApp();
+  const { usuario, unidadeAtiva, unidades } = useApp();
   const verCusto = temAlgumPapel(usuario.papeis, ['dono', 'gestor']);
+  // Catálogo por unidade: só o que está na unidade escolhida ("todas" mostra tudo).
+  const visiveis = (servicos.data ?? []).filter((s) => disponivelNaUnidade(s, unidadeAtiva));
+  const nomesDasUnidades = (ids: string[]) =>
+    unidades
+      .filter((u) => ids.includes(u.id))
+      .map((u) => u.nome)
+      .join(', ');
   // Painel M3: preço, comissão e sobra (a pergunta da tela). Margem é do lucro real (Premium).
   const precos = usePrecos();
   const profissionais = useProfissionais(verCusto);
@@ -115,7 +123,7 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
     return m;
   }, [servicos.data, precos.data, profissionais.data, unidadeAtiva, hoje]);
   const verMargem = verCusto && lucroReal !== undefined;
-  const ordenados = [...(servicos.data ?? [])].sort((a, b) => {
+  const ordenados = [...visiveis].sort((a, b) => {
     const la = linhas.get(a.id)!;
     const lb = linhas.get(b.id)!;
     if (ordem === 'preco') return (lb.preco?.max ?? -1) - (la.preco?.max ?? -1);
@@ -134,7 +142,18 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
             </Botao>
           )}
           {podeEditar && servicos.data!.some((x) => x.precoLivre) && <LiberacaoPrecoLivre />}
-          {servicos.data!.length === 0 ? (
+          {servicos.data!.length > 0 && visiveis.length === 0 ? (
+            <div className="flex flex-col gap-4">
+              <EstadoVazio
+                icone={Scissors}
+                titulo="Nenhum serviço nesta unidade"
+                texto="Cadastre os serviços desta unidade ou traga o catálogo de outra (com os preços de hoje)."
+              />
+              {podeEditar && unidadeAtiva && unidadeAtiva !== 'todas' && (
+                <CopiarCatalogo unidadeId={unidadeAtiva} />
+              )}
+            </div>
+          ) : servicos.data!.length === 0 ? (
             <EstadoVazio
               icone={Scissors}
               titulo="Cadastre seu primeiro serviço"
@@ -198,6 +217,13 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                             s.nome
                           )}{' '}
                           {!s.ativo && <Ficha tom="neutro">Inativo</Ficha>}
+                          {unidadeAtiva === 'todas' && unidades.length > 1 && (
+                            <span className="block text-sm font-normal text-tinta-suave">
+                              {s.unidadeIds.length
+                                ? nomesDasUnidades(s.unidadeIds)
+                                : 'Em nenhuma unidade'}
+                            </span>
+                          )}
                         </td>
                         <td className={`${td} text-tinta-suave`}>{s.categoria ?? '—'}</td>
                         <td
@@ -299,6 +325,14 @@ function FormularioServico({
   const novo = servico === 'novo';
   const atual = servico && servico !== 'novo' ? servico : null;
   const [erroGeral, setErroGeral] = useState<string | null>(null);
+  const { unidades, unidadeAtiva } = useApp();
+  const ativas = unidades.filter((u) => u.ativa);
+  // "Disponível em": nasce na unidade escolhida (ou em todas, com "todas" no topo).
+  const [unidadesEscolhidas, setUnidadesEscolhidas] = useState<string[] | null>(null);
+  const escolhidas =
+    unidadesEscolhidas ??
+    atual?.unidadeIds ??
+    (unidadeAtiva && unidadeAtiva !== 'todas' ? [unidadeAtiva] : ativas.map((u) => u.id));
   const salvar = useAcao(
     (d: Omit<ServicoDetalhe, 'id'>) =>
       atual
@@ -346,6 +380,7 @@ function FormularioServico({
       return setError('maximoTexto', { message: 'Valor inválido. Ex.: 250,00' });
     if (precoMinimo !== null && precoMaximo !== null && precoMinimo > precoMaximo)
       return setError('minimoTexto', { message: 'O mínimo não pode ser maior que o máximo.' });
+    if (escolhidas.length === 0) return setErroGeral('Escolha pelo menos uma unidade.');
     try {
       await salvar.mutateAsync({
         ...d,
@@ -355,7 +390,9 @@ function FormularioServico({
         precoLivre: livre,
         precoMinimo,
         precoMaximo,
+        unidadeIds: escolhidas,
       } as Omit<ServicoDetalhe, 'id'>);
+      setUnidadesEscolhidas(null);
       onFechar();
     } catch (e) {
       setErroGeral(aplicarErroDaApi(e, setError));
@@ -366,7 +403,10 @@ function FormularioServico({
     <Dialogo
       aberto={servico !== null}
       titulo={novo ? 'Novo serviço' : `Editar ${atual?.nome ?? ''}`}
-      onFechar={onFechar}
+      onFechar={() => {
+        setUnidadesEscolhidas(null);
+        onFechar();
+      }}
     >
       <form method="post" noValidate onSubmit={enviar} className="flex flex-col gap-4">
         {erroGeral && <Aviso tom="erro">{erroGeral}</Aviso>}
@@ -435,6 +475,24 @@ function FormularioServico({
             />
           )}
         />
+        {ativas.length > 1 && (
+          <fieldset className="flex flex-col gap-1">
+            <legend className="mb-1 text-sm font-medium">Disponível em</legend>
+            {ativas.map((u) => (
+              <Marcador
+                key={u.id}
+                id={`servico-unidade-${u.id}`}
+                rotulo={u.nome}
+                checked={escolhidas.includes(u.id)}
+                onChange={(e) =>
+                  setUnidadesEscolhidas(
+                    e.target.checked ? [...escolhidas, u.id] : escolhidas.filter((x) => x !== u.id),
+                  )
+                }
+              />
+            ))}
+          </fieldset>
+        )}
         <Marcador
           id="servico-preco-livre"
           rotulo="Preço livre (química e afins): o valor é digitado na comanda"
@@ -487,6 +545,60 @@ function FormularioServico({
   );
 }
 
+/**
+ * Unidade sem serviços: traz o catálogo de outra unidade (serviços com os preços de hoje e
+ * produtos). Usado também na tela de Produtos.
+ */
+export function CopiarCatalogo({ unidadeId }: { unidadeId: string }) {
+  const { unidades } = useApp();
+  const outras = unidades.filter((u) => u.ativa && u.id !== unidadeId);
+  const [de, setDe] = useState(outras[0]?.id ?? '');
+  const [erro, setErro] = useState<string | null>(null);
+  const [feito, setFeito] = useState<string | null>(null);
+  const copiar = useAcao(
+    (deUnidadeId: string) =>
+      api<{ servicos: number; produtos: number; precos: number }>(
+        `unidades/${unidadeId}/copiar-catalogo`,
+        { corpo: { deUnidadeId } },
+      ),
+    [chaves.servicos, chaves.precos, ['produtos']],
+  );
+  if (outras.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {feito && <Aviso tom="sucesso">{feito}</Aviso>}
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-64">
+          <Selecao
+            id="copiar-catalogo-de"
+            rotulo="Copiar o catálogo de"
+            value={de}
+            onChange={(e) => setDe(e.target.value)}
+            opcoes={outras.map((u) => ({ valor: u.id, rotulo: u.nome }))}
+          />
+        </div>
+        <Botao
+          carregando={copiar.isPending}
+          onClick={async () => {
+            setErro(null);
+            try {
+              const r = await copiar.mutateAsync(de);
+              setFeito(
+                `Copiados: ${r.servicos} serviço(s), ${r.precos} preço(s) e ${r.produtos} produto(s).`,
+              );
+            } catch (e) {
+              setErro(e instanceof Error ? e.message : 'Não foi possível copiar.');
+            }
+          }}
+        >
+          Copiar catálogo
+        </Botao>
+      </div>
+    </div>
+  );
+}
+
 /** Só o dono: o barbeiro também digita o valor dos serviços com preço livre? */
 function LiberacaoPrecoLivre() {
   const config = useConfigPrecoLivre();
@@ -524,7 +636,7 @@ function Precos({ podeEditar }: { podeEditar: boolean }) {
     <Estado consulta={consulta}>
       {() => (
         <TabelaPrecosEditavel
-          servicos={servicos.data!.filter((s) => s.ativo)}
+          servicos={servicos.data!.filter((s) => s.ativo && disponivelNaUnidade(s, unidadeAtiva))}
           unidades={unidades.data!.filter(
             (u) => u.ativa && (unidadeAtiva === 'todas' || u.id === unidadeAtiva),
           )}

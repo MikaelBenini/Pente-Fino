@@ -309,7 +309,9 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     return vigente.valor;
   }
 
-  const produtos = await Promise.all(PRODUTOS.map((p) => tx.produto.create({ data: p })));
+  const produtos = await Promise.all(
+    PRODUTOS.map((p) => tx.produto.create({ data: { ...p, unidadeIds: [centro.id, jardins.id] } })),
+  );
 
   // Pessoas: dono, gestor, recepção (uma por unidade) e barbeiros.
   const dono = await tx.usuario.create({
@@ -1024,7 +1026,7 @@ async function contasDeCobranca(prisma: ReturnType<typeof criarPrisma>, hoje: st
       await tx.conta.create({
         data: { id: c.id, nome: c.nome, ciclo: 'mensal', configuradaEm: agora, ...c.conta },
       });
-      await tx.unidade.create({
+      const centro = await tx.unidade.create({
         data: { nome: 'Centro', endereco: 'Rua de Teste, 10', diasTrabalho: [1, 2, 3, 4, 5, 6] },
       });
       const dono = await tx.usuario.create({ data: { nome: c.dono, email: c.email, senhaHash } });
@@ -1032,7 +1034,13 @@ async function contasDeCobranca(prisma: ReturnType<typeof criarPrisma>, hoje: st
         data: { usuarioId: dono.id, papel: 'dono', unidadeId: null },
       });
       await tx.servico.create({
-        data: { nome: 'Corte', duracaoMin: 30, ehExtra: false, pesoAtendimento: 1 },
+        data: {
+          nome: 'Corte',
+          duracaoMin: 30,
+          ehExtra: false,
+          pesoAtendimento: 1,
+          unidadeIds: [centro.id],
+        },
       });
       for (const f of c.faturas)
         await tx.faturaAssinatura.create({

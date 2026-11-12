@@ -60,6 +60,8 @@ export async function traduzir<T>(fn: () => Promise<T>): Promise<T> {
     if (e instanceof ErroAgenda) {
       if (e.codigo === 'nao_encontrado') throw Erros.naoEncontrado(e.message);
       if (e.codigo === 'sem_preco') throw Erros.requisicaoInvalida('sem_preco', e.message);
+      if (e.codigo === 'fora_da_unidade')
+        throw Erros.requisicaoInvalida('fora_da_unidade', e.message);
       throw Erros.conflito(e.message);
     }
     throw e;

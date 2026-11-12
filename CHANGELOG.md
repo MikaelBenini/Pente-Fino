@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (catálogo por unidade)
+
+- Serviços e produtos agora são de cada unidade: no cadastro, "Disponível em" escolhe as unidades.
+  Ao trocar a unidade no topo, Serviços, Produtos, a tabela de preços, a comanda, a agenda, o bot
+  e o link de agendamento mostram só o que está nela. Unidade nova começa vazia, com o botão
+  "Copiar catálogo de outra unidade" (traz os serviços com os preços de hoje e os produtos). O que
+  já estava cadastrado continua em todas as unidades de antes.
+
 ### Adicionado (escolhas da planilha)
 
 - Preço livre para serviços como química: em Serviços, marque "Preço livre" e, se quiser, o valor

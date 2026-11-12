@@ -18,6 +18,7 @@ import {
   type RelatorioClube,
   type RecebimentoPix,
   type TipoItemClube,
+  disponivelNaUnidade,
 } from '@pente-fino/shared';
 import { Abas, Botao, Campo, Dialogo, EstadoVazio, Marcador, Selecao } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
@@ -532,7 +533,7 @@ function FormPlano({ plano, onFechar }: { plano: ItemClubeDetalhe | null; onFech
             tabela.
           </p>
           {(servicos.data ?? [])
-            .filter((s) => s.ativo)
+            .filter((s) => s.ativo && disponivelNaUnidade(s, unidadePadrao))
             .map((s) => {
               const l = linha(s.id);
               return (

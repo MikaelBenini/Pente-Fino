@@ -117,7 +117,7 @@ export async function servicosParaAgendar(
   dia: string,
 ): Promise<ServicoParaAgendar[]> {
   const servicos = await tx.servico.findMany({
-    where: { ativo: true },
+    where: { ativo: true, unidadeIds: { has: unidadeId } },
     orderBy: [{ ehExtra: 'asc' }, { nome: 'asc' }],
   });
   const r: ServicoParaAgendar[] = [];
