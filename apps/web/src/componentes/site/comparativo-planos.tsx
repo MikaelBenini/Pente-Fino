@@ -9,7 +9,12 @@ const LIMITES = [
 /** Tabela de recursos por plano. O que ainda está em construção aparece como "em breve". */
 export function ComparativoPlanos() {
   return (
-    <div className="relative overflow-x-auto rounded-xl border border-borda">
+    <div
+      role="region"
+      aria-label="Recursos de cada plano, role para o lado"
+      tabIndex={0}
+      className="relative overflow-x-auto rounded-xl border border-borda focus-visible:outline-2 focus-visible:outline-foco"
+    >
       <table className="w-full min-w-[22rem] border-collapse text-left">
         <caption className="sr-only">Recursos de cada plano</caption>
         <thead className="bg-superficie-2">

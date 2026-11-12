@@ -167,11 +167,13 @@ U2 a U5 já feitos (#161).
   - para publicar um rascunho, escrever o texto, pôr a data e criar a pasta do post;
   - registro no CHANGELOG.
 - [x] Lote 5d (N4): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 5d)
+- [x] Merge pelo dono (lote 5d)
 - [ ] **P4** Coerência com os anúncios do Google já publicados
-- [ ] **D1** Imagens do hero no tamanho certo para o celular
-- [ ] **D2** Scripts de terceiros carregados depois da página, sem gtag duplicado
-- [ ] **D4** Contraste AA e foco visível no site
+- [x] **D1** Imagens do hero no tamanho certo para o celular (12/11: versão com metade da largura e `srcset`)
+- [x] **D2** Scripts de terceiros carregados depois da página, sem gtag duplicado (12/11: só o GTM; **dono:** conferir no Tag Assistant que a conversão continua chegando)
+- [x] **D4** Contraste AA e foco visível no site (12/11: foco geral, tabelas roláveis pelo teclado e auditoria axe no site)
+- [x] Lote 5e (D1, D2, D4): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 5e)
 - [ ] **Contato e rodapé**: sem CNPJ por enquanto (o dono é MEI); falta o que está na pergunta
   P13
 
@@ -226,6 +228,23 @@ U2 a U5 já feitos (#161).
   página inicial, de `/planos` e do comparativo com tudo o que foi feito (clube no resultado,
   preço livre, despesas fixas, catálogo por unidade, preço por barbeiro, sinal, comissões no
   Básico, chat de suporte), com capturas de tela novas das telas atuais
+- [ ] **Vídeo novo com todas as funções** (pedido do dono em 12/11, depois da página de vendas):
+  - **antes de gerar o vídeo** (pedido do dono em 12/11): percorrer o sistema inteiro, tela por
+    tela e papel por papel (dono, gestor, recepção e barbeiro, no computador e no celular), e
+    listar tudo o que ele faz pelo olhar do barbeiro: o que ele bate o olho e pensa "isso faria
+    diferença". Cada item vira uma dor, a cena que resolve, a frase de venda e o plano;
+  - o roteiro só sai desse levantamento, aprovado pelo dono;
+  - ferramenta: Remotion (vídeo feito com código React), avaliado e viável;
+  - o vídeo junta as gravações reais do sistema (`apps/web/video`) com legendas, números e
+    transições feitas em código, com as cores do site;
+  - formatos: 16:9 para o site e 9:16 para Reels e Status, a partir do mesmo projeto;
+  - skills prontas em `.claude/skills` (12/11): `video-pente-fino`, com o padrão profissional da
+    marca, o roteiro com todas as funções e o checklist, e sete skills oficiais da Remotion
+    (`remotion-create`, `-markup`, `-captions`, `-studio`, `-render`, `-docs` e `-license`);
+  - o Higgsfield, que gera vídeo por IA, fica só como opção para aberturas e anúncios curtos sem
+    telas do sistema, porque pode inventar telas;
+  - licença grátis enquanto a empresa tiver até 3 pessoas;
+  - o projeto fica numa pasta própria, fora do build do site.
 
 ## 9. Por último: verificação final do ecossistema
 

@@ -575,7 +575,13 @@ export default function Pagina() {
             Mais que uma agenda bonita
           </h2>
         </div>
-        <div className="revelar relative overflow-x-auto rounded-2xl border border-borda">
+        {/* Site D4: no celular a tabela rola para o lado; a área recebe foco para rolar pelo teclado. */}
+        <div
+          role="region"
+          aria-label="Comparação, role para o lado"
+          tabIndex={0}
+          className="revelar relative overflow-x-auto rounded-2xl border border-borda focus-visible:outline-2 focus-visible:outline-foco"
+        >
           <table className="w-full min-w-[36rem] text-left">
             <caption className="sr-only">
               Comparação entre o Pente Fino, um app de agenda comum e a planilha

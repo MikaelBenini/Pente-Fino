@@ -1,6 +1,8 @@
-import Image from 'next/image';
-
-/** Fotos das telas (apps/web/video/telas.mjs): tamanho real, para a página não pular. */
+/**
+ * Fotos das telas (apps/web/video/telas.mjs): tamanho real, para a página não pular. Site D1:
+ * cada uma tem a versão com metade da largura (video/variantes.mjs), que o celular baixa pelo
+ * srcset no lugar da grande.
+ */
 export const TELAS = {
   financeiro: { src: '/site/financeiro.webp', w: 1600, h: 844 },
   agenda: { src: '/site/agenda.webp', w: 1600, h: 1000 },
@@ -11,17 +13,57 @@ export const TELAS = {
 } as const;
 type Tela = (typeof TELAS)[keyof typeof TELAS];
 
+/** A versão menor de uma foto: mesmo nome com a largura no fim. */
+export const srcMenor = (t: Tela) => t.src.replace(/\.webp$/, `-${Math.round(t.w / 2)}.webp`);
+
+/**
+ * Foto de tela com srcset (a grande e a com metade da largura). Sem o otimizador do Next: as
+ * versões já existem em public/site, e o servidor só entrega o arquivo.
+ */
+function FotoTela({
+  tela,
+  alt,
+  sizes,
+  prioridade,
+  className,
+}: {
+  tela: Tela;
+  alt: string;
+  sizes: string;
+  prioridade: boolean;
+  className: string;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- srcset próprio, sem o otimizador
+    <img
+      src={tela.src}
+      srcSet={`${srcMenor(tela)} ${Math.round(tela.w / 2)}w, ${tela.src} ${tela.w}w`}
+      sizes={sizes}
+      width={tela.w}
+      height={tela.h}
+      alt={alt}
+      loading={prioridade ? 'eager' : 'lazy'}
+      fetchPriority={prioridade ? 'high' : 'auto'}
+      decoding="async"
+      className={className}
+    />
+  );
+}
+
 /** Janela de navegador com uma tela do sistema. */
 export function Janela({
   tela,
   alt,
   prioridade = false,
   className = '',
+  sizes = '(min-width: 1024px) 640px, (min-width: 768px) 50vw, 100vw',
 }: {
   tela: Tela;
   alt: string;
   prioridade?: boolean;
   className?: string;
+  /** Largura em que a foto aparece (srcset). Padrão: até 640 px no computador, a tela toda no celular. */
+  sizes?: string;
 }) {
   return (
     <div
@@ -35,14 +77,11 @@ export function Janela({
           seupentefino.com.br
         </span>
       </div>
-      <Image
-        src={tela.src}
-        width={tela.w}
-        height={tela.h}
+      <FotoTela
+        tela={tela}
         alt={alt}
-        unoptimized
-        priority={prioridade}
-        loading={prioridade ? undefined : 'lazy'}
+        sizes={sizes}
+        prioridade={prioridade}
         className="h-auto w-full"
       />
     </div>
@@ -55,24 +94,23 @@ export function Celular({
   alt,
   className = '',
   prioridade = false,
+  sizes = '(min-width: 640px) 16rem, 46vw',
 }: {
   tela: Tela;
   alt: string;
   className?: string;
   prioridade?: boolean;
+  sizes?: string;
 }) {
   return (
     <div
       className={`overflow-hidden rounded-[2rem] border-[6px] border-[#26262b] bg-[#26262b] shadow-[0_30px_70px_-25px_rgb(0_0_0/0.8)] ${className}`}
     >
-      <Image
-        src={tela.src}
-        width={tela.w}
-        height={tela.h}
+      <FotoTela
+        tela={tela}
         alt={alt}
-        unoptimized
-        priority={prioridade}
-        loading={prioridade ? undefined : 'lazy'}
+        sizes={sizes}
+        prioridade={prioridade}
         className="h-auto w-full rounded-[1.6rem]"
       />
     </div>
@@ -92,6 +130,7 @@ export function Vitrine() {
         tela={TELAS.celularComanda}
         alt="App do barbeiro no celular: comanda com o total e os extras para lançar"
         className="absolute -bottom-2 -left-3 w-[30%] sm:-left-6 md:-left-10"
+        sizes="(min-width: 768px) 15vw, 30vw"
         prioridade
       />
       <div className="absolute -right-2 -bottom-4 rounded-xl border border-modulo/40 bg-superficie/95 px-4 py-3 shadow-2xl backdrop-blur sm:-right-4">

@@ -117,6 +117,18 @@ h3 {
 }
 
 /*
+ * Site D4: foco visível em todo link, botão e campo navegado pelo teclado, com a mesma cor de
+ * foco do produto. Na camada base: o componente que desenha o próprio foco (focus-visible:…,
+ * outline-none com borda no focus-within) continua valendo.
+ */
+@layer base {
+  :where(a, button, summary, select, textarea, input, [tabindex]):focus-visible {
+    outline: 2px solid var(--foco);
+    outline-offset: 2px;
+  }
+}
+
+/*
  * Movimento. Um ritmo só para o produto inteiro: curto, saindo do lugar e chegando
  * parado no estado natural (nada fica invisível esperando). Só transform e opacity,
  * que não refazem o layout. "Reduzir movimento" desliga tudo no bloco do fim.
