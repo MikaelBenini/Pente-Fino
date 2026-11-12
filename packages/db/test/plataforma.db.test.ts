@@ -159,4 +159,20 @@ describe('acesso da plataforma', () => {
         DELETE FROM alerta_equipe_enviado WHERE tipo = ${alerta.tipo} AND chave = ${alerta.chave}`;
     }
   });
+
+  it('etapa parada (admin F1d): a administração guarda a etapa; a aplicação não enxerga', async () => {
+    await plataforma.funilEtapaConta.upsert({
+      where: { contaId: conta },
+      create: { contaId: conta, etapa: 'servicos' },
+      update: { etapa: 'servicos', avisadoEm: null },
+    });
+    await plataforma.funilEtapaConta.update({
+      where: { contaId: conta },
+      data: { avisadoEm: new Date() },
+    });
+    expect(
+      (await plataforma.funilEtapaConta.findUnique({ where: { contaId: conta } }))?.etapa,
+    ).toBe('servicos');
+    await expect(app.$queryRaw`SELECT * FROM funil_etapa_conta`).rejects.toThrow();
+  });
 });

@@ -51,6 +51,7 @@ export * from './situacao-conta.js';
 export * from './calculadoras.js';
 export * from './funil.js';
 export * from './alertas-equipe.js';
+export * from './etapa-parada.js';
 export * from './metricas-plataforma.js';
 export * from './plataforma-gestao.js';
 export * from './ficha-admin.js';

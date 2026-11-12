@@ -814,6 +814,12 @@ motivo e vai para a auditoria.
   - `AlertasProcessor` no worker roda de hora em hora (aos 5 min), com a conexão da administração (`DATABASE_PLATAFORMA_URL`; sem ela, desligado);
   - `GET` e `PUT /admin/eu/alertas` para todos os papéis, e a seção "Meus alertas por e-mail" no Início;
   - testes em `alertas-equipe.test.ts`, `plataforma.db.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [x] **F1d** e-mail para a conta parada há 3 dias na mesma etapa (feito em 2026-11-12):
+  - regra em `packages/shared/src/etapa-parada.ts` (`decidirEtapaParada`, `emailDoPasso`), com teste;
+  - modelo `etapa_parada`;
+  - migração `funil_etapa_conta` (etapa, desde quando e o aviso, só a administração acessa);
+  - `executarAvisosDeEtapa` na rotina de hora em hora da F3, com e-mail só das 9 h às 20 h;
+  - teste em `plataforma.db.test.ts`.
 - [ ] **F2, F4–F9** origem do cadastro (com o T2 do site), saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)

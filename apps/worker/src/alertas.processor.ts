@@ -1,4 +1,5 @@
-// Admin F3: alertas para a equipe da plataforma, de hora em hora. Junta os dados com a conexão
+// Admin F3: alertas para a equipe da plataforma, de hora em hora (junto, o F1d: e-mail de ajuda
+// para a barbearia parada há 3 dias na mesma etapa do funil). Junta os dados com a conexão
 // da administração (a mesma da API), a regra do shared decide os alertas, cada alerta sai uma
 // vez só e cada pessoa recebe um e-mail só com os tipos que escolheu.
 import {
@@ -13,14 +14,21 @@ import {
   criarPrisma,
   equipeParaAlertas,
   faturasDaPlataforma,
+  fichaDaContaPlataforma,
+  funilDasContas,
   guardarAlertasNovos,
   notasFiscaisPlataforma,
   whatsappCaidoDaPlataforma,
   type PrismaClient,
 } from '@pente-fino/db';
 import {
+  decidirEtapaParada,
   detectarAlertasEquipe,
   emailDeAlertasEquipe,
+  emailDoPasso,
+  emailPronto,
+  etapaAtualDoFunil,
+  lerModelosEmail,
   FILA_ALERTAS_EQUIPE,
   FILA_EMAILS,
   lerCupons,
@@ -107,6 +115,89 @@ export async function executarAlertasEquipe(d: DependenciasAlertas): Promise<str
   return `alertas: ${novos.length} novo(s), ${enviados} e-mail(s)`;
 }
 
+/** Hora em São Paulo (0 a 23). */
+const horaLocal = (d: Date) =>
+  Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).format(d),
+  );
+
+/**
+ * Admin F1d: guarda a etapa do funil de cada conta e, para a que está parada há 3 dias na mesma
+ * etapa, manda aos donos o e-mail "Ajuda com o próximo passo" (modelo etapa_parada), uma vez por
+ * etapa. E-mail só das 9 h às 20 h: fora disso, a conta espera a próxima rodada.
+ */
+export async function executarAvisosDeEtapa(
+  d: Omit<DependenciasAlertas, 'emailsFalhos'>,
+): Promise<string> {
+  const agora = d.agora ?? new Date();
+  const comercial = horaLocal(agora) >= 9 && horaLocal(agora) < 20;
+  const [funil, contas, guardadas, modelosJson] = await Promise.all([
+    funilDasContas(d.prisma),
+    contasDaPlataforma(d.prisma),
+    d.prisma.funilEtapaConta.findMany(),
+    d.prisma.configuracaoPlataforma.findUnique({ where: { chave: 'modelos_email' } }),
+  ]);
+  const porId = new Map(contas.map((c) => [c.id, c]));
+  const guardadaDe = new Map(guardadas.map((g) => [g.contaId, g]));
+  const modelos = lerModelosEmail(modelosJson?.valor ?? null);
+  let guardadasAgora = 0;
+  let avisadas = 0;
+  for (const f of funil) {
+    const c = porId.get(f.id);
+    if (!c) continue;
+    const g = guardadaDe.get(f.id);
+    const decisao = decidirEtapaParada({
+      etapa: etapaAtualDoFunil(f),
+      guardada: g
+        ? {
+            etapa: g.etapa,
+            desde: g.desde.toISOString(),
+            avisadoEm: g.avisadoEm?.toISOString() ?? null,
+          }
+        : null,
+      status: c.status,
+      interna: c.interna,
+      plano: c.plano,
+      agora,
+    });
+    if (decisao.acao === 'guardar') {
+      await d.prisma.funilEtapaConta.upsert({
+        where: { contaId: f.id },
+        create: { contaId: f.id, etapa: decisao.etapa, desde: agora },
+        update: { etapa: decisao.etapa, desde: agora, avisadoEm: null },
+      });
+      guardadasAgora++;
+    } else if (decisao.acao === 'avisar' && comercial) {
+      const ficha = (await fichaDaContaPlataforma(d.prisma, f.id)) as {
+        donos?: { nome: string; email: string }[];
+      } | null;
+      const { link, ...vars } = emailDoPasso(decisao.passo, d.appUrl);
+      for (const dono of ficha?.donos ?? []) {
+        await d.enviarEmail(
+          emailPronto(
+            dono.email,
+            'etapa_parada',
+            modelos,
+            { nome: dono.nome.split(' ')[0] ?? dono.nome, conta: c.nome, ...vars },
+            link,
+            { site: d.appUrl },
+          ),
+        );
+      }
+      await d.prisma.funilEtapaConta.update({
+        where: { contaId: f.id },
+        data: { avisadoEm: agora },
+      });
+      avisadas++;
+    }
+  }
+  return `etapas: ${guardadasAgora} guardada(s), ${avisadas} conta(s) avisada(s)`;
+}
+
 @Injectable()
 export class AlertasProcessor implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger('AlertasEquipe');
@@ -148,8 +239,13 @@ export class AlertasProcessor implements OnModuleInit, OnApplicationShutdown {
       .catch((e: Error) => this.logger.error(`Agendar os alertas: ${e.message}`));
     this.worker = new Worker(
       FILA_ALERTAS_EQUIPE,
-      () =>
-        executarAlertasEquipe({
+      async () => {
+        const etapas = await executarAvisosDeEtapa({
+          prisma,
+          appUrl: this.config.APP_URL,
+          enviarEmail: (e) => emails.add('etapa_parada', e),
+        });
+        const alertas = await executarAlertasEquipe({
           prisma,
           appUrl: this.config.APP_URL,
           enviarEmail: (e) => emails.add('alertas_equipe', e),
@@ -159,7 +255,9 @@ export class AlertasProcessor implements OnModuleInit, OnApplicationShutdown {
               assunto: String((j.data as Partial<TrabalhoEmail>)?.assunto ?? '').slice(0, 120),
               quando: new Date(j.finishedOn ?? j.timestamp).toISOString(),
             })),
-        }),
+        });
+        return `${alertas} · ${etapas}`;
+      },
       { connection, concurrency: 1 },
     );
     this.worker.on('completed', (_j, r) => this.logger.log(String(r)));

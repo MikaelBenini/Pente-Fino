@@ -17,6 +17,7 @@ export const CHAVES_MODELO_EMAIL = [
   'conta_sem_confirmar',
   'conta_sera_apagada',
   'whatsapp_caiu',
+  'etapa_parada',
 ] as const;
 export type ChaveModeloEmail = (typeof CHAVES_MODELO_EMAIL)[number];
 
@@ -179,6 +180,18 @@ export const MODELOS_EMAIL: Readonly<Record<ChaveModeloEmail, DefinicaoModeloEma
       botao: 'Reconectar o WhatsApp',
     },
   },
+  etapa_parada: {
+    nome: 'Ajuda com o próximo passo',
+    quando:
+      'Quando a barbearia fica 3 dias parada na mesma etapa da configuração (uma vez por etapa).',
+    variaveis: ['nome', 'conta', 'passo', 'porque'],
+    padrao: {
+      assunto: '{{nome}}, falta pouco: {{passo}}',
+      corpo:
+        'Olá, {{nome}}!\n\nVimos que a {{conta}} ainda não fez este passo no Pente Fino: {{passo}}.\n\n{{porque}}\n\nLeva poucos minutos e o botão abaixo leva direto para a tela certa. Se travou em alguma coisa, é só responder este e-mail que a gente ajuda.',
+      botao: 'Fazer agora',
+    },
+  },
 };
 
 /** Valores de exemplo para a pré-visualização na administração. */
@@ -194,6 +207,8 @@ export const EXEMPLO_VARIAVEIS: Readonly<Record<string, string>> = {
   valor: 'R$ 149,90',
   periodo: '05/12/2026 a 04/01/2027',
   unidade: 'Centro',
+  passo: 'Cadastrar os serviços com preço',
+  porque: 'Sem preço não tem agenda nem lucro.',
 };
 
 const textoModeloSchema = z.object({

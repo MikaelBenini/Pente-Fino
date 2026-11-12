@@ -5,6 +5,7 @@ import { hash } from '@node-rs/argon2';
 import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
 import {
   dataLocal,
+  CHAVES_MODELO_EMAIL,
   DIAS_TESTE,
   ETAPAS_FUNIL,
   SEM_ORIGEM,
@@ -962,7 +963,7 @@ describe('modelos de e-mail', () => {
       chave: string;
       personalizado: unknown;
     }[];
-    expect(lista).toHaveLength(13);
+    expect(lista).toHaveLength(CHAVES_MODELO_EMAIL.length);
     await req('put', '/admin/configuracoes/modelos-email/inventado', {}).expect(400);
     const recusa = await req('put', '/admin/configuracoes/modelos-email/redefinir_senha', {
       assunto: 'Senha nova, {{nome}}',

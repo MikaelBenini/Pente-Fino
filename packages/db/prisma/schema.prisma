@@ -338,6 +338,7 @@ model Conta {
   listaEspera          ListaEspera[]
   bloqueiosRecorrentes BloqueioRecorrente[]
   avisos               Aviso[]
+  funilEtapa           FunilEtapaConta?
 
   @@map("conta")
 }
@@ -1669,6 +1670,19 @@ enum PapelPlataforma {
 }
 
 /// Quem opera o Pente Fino. Nunca reaproveita o login de uma barbearia.
+/// Admin F1d: em que etapa do funil cada conta está, desde quando, e se já recebeu o e-mail de
+/// ajuda desta etapa. Só a administração (e a rotina dela no worker) lê e grava.
+model FunilEtapaConta {
+  contaId   String    @id @map("conta_afetada_id") @db.Uuid
+  etapa     String
+  desde     DateTime  @default(now()) @db.Timestamptz(3)
+  avisadoEm DateTime? @map("avisado_em") @db.Timestamptz(3)
+
+  conta Conta @relation(fields: [contaId], references: [id], onDelete: Cascade)
+
+  @@map("funil_etapa_conta")
+}
+
 /// Admin F3: alertas da equipe que já saíram. O mesmo tipo + chave nunca sai duas vezes.
 model AlertaEquipeEnviado {
   tipo      String
