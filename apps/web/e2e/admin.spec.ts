@@ -248,6 +248,11 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   );
   await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
   await expect(page.getByRole('table', { name: 'Filas' })).toContainText('E-mails');
+  // Admin U9: versão, backup, webhook do Asaas, disco e certificado; limpeza explica o que fica.
+  const servidor = page.getByRole('region', { name: 'Servidor' });
+  await expect(servidor).toContainText('Versão em produção');
+  await expect(servidor).toContainText('Último backup');
+  await expect(page.getByText(/Conta que paga e conta em cortesia/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'E-mails que não saíram' })).toBeVisible();
   // Admin R10: mudar o endereço com a página aberta troca a aba (antes ficava em Saúde).
   await page.evaluate(() => {

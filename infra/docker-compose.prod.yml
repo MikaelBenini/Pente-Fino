@@ -18,6 +18,8 @@ x-imagem: &imagem
 x-ambiente-app: &ambiente-app
   NODE_ENV: production
   TZ: UTC
+  # Admin U9: a versão em produção (a tag da imagem), mostrada na Saúde do sistema.
+  APP_VERSAO: ${TAG:-latest}
   APP_URL: https://${DOMINIO:?defina DOMINIO no .env}
   API_URL: https://api.${DOMINIO}
   DATABASE_URL: postgresql://${DB_APP_USER}:${DB_APP_PASSWORD}@postgres:5432/${DB_NAME}

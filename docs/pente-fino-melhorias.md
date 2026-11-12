@@ -35,7 +35,7 @@
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ✅ #157 e #158 |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ✅ `feat/site-s-t-medicao-e-seo` (S4 com as páginas N; T4 já existia) |
 | 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ✅ X1–X4, P1, P3, P4 e P6 #159; P2 (fotos e nota) e P5 com a página personalizável |
-| 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ U2–U5 #161; U1 e U7 no lote 4a; U6 no lote 4b; U8 no lote 4c; falta U9 |
+| 10 | Admin | U1–U9 | Usabilidade por aba | ✅ U2–U5 #161; U1 e U7 #168; U6 #169; U8 #170; U9 no lote 4d |
 | 11 | Site | N1–N5, P3, P4, D1, D2, D4 | Conteúdo novo e ajustes finos | ⏳ |
 | 12 | Admin | F1–F9 | Recursos novos (F2 junto com o T2 do site) | ⏳ |
 | 13 | Painel | Seção "Melhorias de produto" | Backlog depois dos bugs | ⏳ |
@@ -76,8 +76,8 @@ Itens que se sobrepõem e devem ser feitos juntos:
 | Admin R1 | Cupom LANCAMENTO sem limite de vagas | ✅ decidido em 11/11: sem limite |
 | Admin R3 | Conta "Teste" reativada indevidamente | ✅ decidido em 11/11: "Teste" e "Implantação" são internas; marcar no `/admin` |
 | Admin R6 | Máximo de dias de teste | ✅ 60 (#154) |
-| Site P2 | Lucro por serviço no Pro | Só no Premium até o estudo de planos do [a-fazer](a-fazer.md) |
-| Site P3 | Básico mais competitivo (preço menor ou bot no Básico) | Estudo de planos no [a-fazer](a-fazer.md): o Básico atende uma barbearia; sobe-se pelas funções |
+| Site P2 | Lucro por serviço no Pro | ✅ decidido em 12/11: continua só no Premium |
+| Site P3 | Básico mais competitivo (preço menor ou bot no Básico) | ✅ decidido em 12/11: comissões no Básico; preço e bot como estão (anexo "Estudo de planos") |
 | Site B6 | Selo do anual | "economize até R$ 504/ano" (feito) |
 
 ## O que depende do dono (dados e produção)
@@ -699,3 +699,40 @@ preço por barbeiro e a importação):
 - repetir as despesas fixas no mês seguinte;
 - importar os meses passados da planilha;
 - lançamento rápido por quantidade.
+
+### Anexo: estudo de planos e concorrentes (12/11/2026)
+
+Pedido do dono (P10): o Básico atende uma barbearia de verdade, inclusive a que está começando;
+quem sobe de plano sobe pelas funções a mais, não porque "tem que mudar".
+
+| Sistema | Entrada | Como cresce | Teste | O que vale notar |
+| --- | --- | --- | --- | --- |
+| AppBarber | R$ 79,90 (1 profissional; R$ 55,90 no anual) | R$ 109,90 (2 a 5), R$ 164,50 (6 a 15), R$ 219,90 (mais de 15) | 30 dias | Todas as funções em todos os planos; lembrete por app ou SMS |
+| Trinks | R$ 110 (1 a 2; R$ 76 no anual) | 3 ou mais: sob consulta | 5 dias | Tem nota fiscal; WhatsApp, fidelidade e clube à parte |
+| Booksy | R$ 99,99 (1 profissional) | + R$ 20 por profissional | 7 dias | Plano único; SMS, sem WhatsApp |
+| EiBarber | R$ 49 (até 2) | planos maiores | 30 dias | WhatsApp na entrada; comissão e clube a partir do plano do meio |
+| ZapCorte | R$ 69,90 (solo) | planos maiores | 7 dias | WhatsApp com lembretes na entrada |
+| Simples Agenda | R$ 59,90 (1) | R$ 89,90 (3), R$ 109,90 (5), R$ 139,90 (10) | 35 dias | Comissão, caixa e Pix desde a entrada |
+| BestBarbers, Cash Barber, Avec | sem preço público | — | — | — |
+
+**Conclusões:**
+- Quase todos cobram pelo tamanho da equipe e dão comissão e caixa na entrada.
+- O preço do Básico (R$ 79,90 para até 3 profissionais) já é competitivo.
+- O que obrigava a subir de plano era a comissão só no Pro.
+
+**Proposta e decisão do dono (12/11):**
+
+| Item | Decisão |
+| --- | --- |
+| Comissões no Básico | ✅ aprovado |
+| Lembretes do WhatsApp no Básico (sem o menu do bot) | não: continuam no Pro |
+| Lucro por serviço no Pro | não: continua no Premium |
+| Teste de 30 dias | não: continua em 14 |
+| Preços | mantidos |
+
+**Fontes:**
+- AppBarber: https://appbarber.com.br/ (12/11/2026)
+- Booksy: https://biz.booksy.com/pt-br/precos (12/11/2026)
+- Comparativo do BarbeiroApp, que é concorrente, de set/2026: https://www.barbeiro.app/alternativas/trinks
+- Comparativo da ZapCorte, que é concorrente, de 31/10/2026: https://blog.zapcorte.com.br/melhor-app-de-agendamento-para-barbearia-em-2026-mn4o4n2p
+

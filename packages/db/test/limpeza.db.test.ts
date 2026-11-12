@@ -160,6 +160,9 @@ describe('limpeza de dados', () => {
       new Date('2027-05-25T15:00:00Z'),
     ))!;
     expect(aviso.decisao).toMatchObject({ tipo: 'avisar', motivo: 'sem_confirmar', dias: 2 });
+    // Admin U9: a previsão bate com o aviso (2 dias depois), e a ativa não tem previsão.
+    expect(aviso.prevista).toEqual({ motivo: 'sem_confirmar', apagaEm: '2027-05-27' });
+    expect((await situacaoDaContaNaLimpeza(app, ativa, agora))!.prevista).toBeNull();
     const [email] = avisosDeExclusao('Barbearia X', aviso, { appUrl: 'https://pf.dev' });
     expect(email).toMatchObject({ para: `dono-${semConfirmar.slice(0, 8)}@limpeza.dev` });
     expect(email!.assunto).toContain('Confirme seu e-mail');

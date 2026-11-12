@@ -11,6 +11,7 @@ import { REDIS } from '../filas/filas.module.js';
 export const LIMITE_RECUSAS_POR_IP = 20;
 const JANELA_IP_S = 600;
 const ULTIMOS = 'webhook:recusados:ultimos';
+const ULTIMO_ASAAS = 'webhook:asaas:ultimo';
 const porDia = (dia: string) => `webhook:recusados:${dia}`;
 const porIp = (ip: string) => `webhook:falhas:${ip}`;
 
@@ -68,6 +69,29 @@ export class WebhooksRecusados {
       }
     } catch (e) {
       this.logger.warn(`Registrar a recusa sem Redis: ${(e as Error).message}`);
+    }
+  }
+
+  /** Admin U9: o último aviso do Asaas aceito (a Saúde do sistema mostra quando chegou). */
+  async registrarRecebido(evento: string, resultado: string): Promise<void> {
+    if (!(await this.pronto())) return;
+    await this.redis
+      .set(
+        ULTIMO_ASAAS,
+        JSON.stringify({ quando: new Date().toISOString(), evento, resultado }),
+        'EX',
+        90 * 86_400,
+      )
+      .catch(() => undefined);
+  }
+
+  async ultimoRecebido(): Promise<{ quando: string; evento: string; resultado: string } | null> {
+    if (!(await this.pronto())) return null;
+    try {
+      const v = await this.redis.get(ULTIMO_ASAAS);
+      return v ? (JSON.parse(v) as { quando: string; evento: string; resultado: string }) : null;
+    } catch {
+      return null;
     }
   }
 

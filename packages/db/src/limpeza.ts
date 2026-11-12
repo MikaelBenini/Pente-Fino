@@ -13,6 +13,7 @@ import {
   type TextoModeloEmail,
   type TipoLimpeza,
   type TrabalhoEmail,
+  dataDeApagarConta,
 } from '@pente-fino/shared';
 import type { PrismaClient } from './generated/prisma/client.js';
 import { naConta, type Transacao } from './index.js';
@@ -130,6 +131,8 @@ export interface ContaNaLimpeza {
   /** Por que a conta não pode sair agora, mesmo no prazo (cobrança ativa no Asaas). */
   retencao: string | null;
   donos: { nome: string; email: string }[];
+  /** Admin U9: quando sairia pela regra (null = fica). */
+  prevista: { motivo: MotivoApagarConta; apagaEm: string } | null;
 }
 
 /** Lê a conta e decide (avisar, apagar ou manter) com a regra de `decidirLimpezaDaConta`. */
@@ -152,24 +155,22 @@ export async function situacaoDaContaNaLimpeza(
         select: { nome: true, email: true },
       }),
     ]);
-    const decisao = decidirLimpezaDaConta(
-      {
-        status: conta.status,
-        criadoEm: conta.criadoEm,
-        testeAte: conta.testeAte,
-        canceladaEm: conta.canceladaEm,
-        temPagamento: pagas > 0,
-        donoSemConfirmar: semConfirmar > 0,
-      },
-      agora,
-    );
+    const dados = {
+      status: conta.status,
+      criadoEm: conta.criadoEm,
+      testeAte: conta.testeAte,
+      canceladaEm: conta.canceladaEm,
+      temPagamento: pagas > 0,
+      donoSemConfirmar: semConfirmar > 0,
+    };
+    const decisao = decidirLimpezaDaConta(dados, agora);
     // Apagar a conta com cobrança viva no Asaas deixaria alguém sendo cobrado sem sistema.
     const retencao = conta.asaasAssinaturaId
       ? 'Assinatura do sistema ainda ativa no Asaas: cancele lá antes.'
       : clubeOnline > 0
         ? `${clubeOnline} assinatura(s) do clube online ativa(s) no Asaas: cancele antes.`
         : null;
-    return { decisao, retencao, donos };
+    return { decisao, retencao, donos, prevista: dataDeApagarConta(dados, agora) };
   });
 }
 

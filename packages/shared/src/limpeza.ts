@@ -114,6 +114,38 @@ export function decidirLimpezaDaConta(c: ContaParaLimpeza, agora: Date): Decisao
   return { tipo: 'manter' };
 }
 
+/**
+ * Admin U9: em que dia a conta seria apagada, pela mesma regra de `decidirLimpezaDaConta`, ou
+ * null se ela fica. Conta com pagamento (e não cancelada) e conta em cortesia (ativa, sem teste
+ * vencido) nunca entram.
+ */
+export function dataDeApagarConta(
+  c: ContaParaLimpeza,
+  agora: Date,
+): { motivo: MotivoApagarConta; apagaEm: string } | null {
+  if (c.temPagamento && c.status !== 'cancelada') return null;
+  if (c.donoSemConfirmar && !c.temPagamento && c.status === 'teste')
+    return {
+      motivo: 'sem_confirmar',
+      apagaEm: somarDias(dataLocal(c.criadoEm), DIAS_SEM_CONFIRMAR),
+    };
+  if (c.status === 'cancelada' && c.canceladaEm)
+    return { motivo: 'parada', apagaEm: somarDias(dataLocal(c.canceladaEm), DIAS_CONTA_PARADA) };
+  if (c.status === 'teste' && c.testeAte && c.testeAte.getTime() < agora.getTime())
+    return { motivo: 'parada', apagaEm: somarDias(dataLocal(c.testeAte), DIAS_CONTA_PARADA) };
+  return null;
+}
+
+/** Conta que a limpeza vai apagar em breve (Saúde do sistema, admin U9). */
+export interface ContaQueSeraApagada {
+  contaId: string;
+  conta: string;
+  motivo: MotivoApagarConta;
+  apagaEm: string;
+  /** Cobrança viva no Asaas: a limpeza não apaga até cancelar lá. */
+  retencao: string | null;
+}
+
 /** Resultado de uma execução da rotina (Saúde do sistema). */
 export interface ExecucaoLimpezaNaTela {
   iniciadaEm: string;
@@ -121,5 +153,7 @@ export interface ExecucaoLimpezaNaTela {
   apagados: Partial<Record<TipoLimpeza, number>>;
   /** Contas que já deviam sair mas têm cobrança ativa no Asaas (cancele lá primeiro). */
   retidas: { contaId: string; conta: string; motivo: string }[];
+  /** Admin U9: contas que a limpeza vai apagar nos próximos 7 dias. */
+  proximas: ContaQueSeraApagada[];
   erro: string | null;
 }

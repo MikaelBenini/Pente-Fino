@@ -270,6 +270,29 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
 }
 
 /** Saúde do sistema: banco, filas, WhatsApp que caiu e erros das últimas 24 h. */
+/** Um número do servidor (admin U9), em destaque quando pede atenção. */
+function ItemServidor({
+  rotulo,
+  valor,
+  detalhe,
+  alerta = false,
+}: {
+  rotulo: string;
+  valor: string;
+  detalhe: string;
+  alerta?: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-col gap-1 rounded-lg border bg-superficie p-3 ${alerta ? 'border-perigo' : 'border-borda'}`}
+    >
+      <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">{rotulo}</dt>
+      <dd className={`font-semibold ${alerta ? 'text-perigo-texto' : ''}`}>{valor}</dd>
+      <dd className="text-sm text-tinta-suave">{detalhe}</dd>
+    </div>
+  );
+}
+
 export function SaudeAdmin() {
   const s = useQuery({
     queryKey: ['admin', 'saude'],
@@ -305,6 +328,67 @@ export function SaudeAdmin() {
                 não saem. Veja os logs do contêiner worker na VPS (docs/producao.md).
               </Aviso>
             )}
+            <section aria-labelledby="titulo-servidor" className="flex flex-col gap-2">
+              <h2 id="titulo-servidor" className="text-lg font-semibold">
+                Servidor
+              </h2>
+              <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <ItemServidor
+                  rotulo="Versão em produção"
+                  valor={d.versao.versao}
+                  detalhe={`no ar desde ${formatarDataHora(d.versao.iniciadaEm)}`}
+                />
+                <ItemServidor
+                  rotulo="Último backup"
+                  valor={
+                    !d.backup
+                      ? 'Ainda não rodou'
+                      : d.backup.ok
+                        ? `${formatarDataHora(d.backup.quando)}${d.backup.tamanho ? ` · ${d.backup.tamanho}` : ''}`
+                        : 'Falhou'
+                  }
+                  detalhe={
+                    !d.backup
+                      ? 'O backup.sh grava aqui a cada execução (docs/restaurar.md).'
+                      : !d.backup.ok
+                        ? (d.backup.erro ?? 'Veja o log do cron na VPS.')
+                        : d.backup.externo
+                          ? 'Cópia também no armazenamento externo'
+                          : 'Só na VPS (sem armazenamento externo)'
+                  }
+                  alerta={!d.backup || !d.backup.ok || d.backup.atrasado}
+                />
+                <ItemServidor
+                  rotulo="Webhook do Asaas"
+                  valor={
+                    d.webhookAsaas ? formatarDataHora(d.webhookAsaas.quando) : 'Nenhum aviso ainda'
+                  }
+                  detalhe={
+                    d.webhookAsaas
+                      ? `${d.webhookAsaas.evento} · ${d.webhookAsaas.resultado}`
+                      : 'Último aviso de cobrança que chegou do Asaas'
+                  }
+                />
+                <ItemServidor
+                  rotulo="Disco"
+                  valor={d.servidor ? `${d.servidor.discoPct}% usado` : 'Sem leitura'}
+                  detalhe={
+                    d.servidor
+                      ? `memória ${d.servidor.memoriaPct}% · lido ${formatarDataHora(d.servidor.quando)}`
+                      : 'O vigia.sh grava aqui a cada 5 minutos.'
+                  }
+                  alerta={!!d.servidor && (d.servidor.discoPct > 80 || d.servidor.memoriaPct > 90)}
+                />
+                <ItemServidor
+                  rotulo="Certificado HTTPS"
+                  valor={
+                    d.servidor?.tlsAte ? `até ${formatarData(d.servidor.tlsAte)}` : 'Sem leitura'
+                  }
+                  detalhe="O Caddy renova sozinho uns 30 dias antes."
+                  alerta={d.servidor?.tlsDias != null && d.servidor.tlsDias < 14}
+                />
+              </dl>
+            </section>
             {d.segredosCurtos.length > 0 && (
               <Aviso tom="aviso">
                 Segredo de webhook com menos de 32 caracteres: {d.segredosCurtos.join(', ')}. Gere
