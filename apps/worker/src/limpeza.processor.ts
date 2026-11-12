@@ -55,6 +55,12 @@ const somar = (total: Apagados, parte: Apagados) => {
     total[k] = (total[k] ?? 0) + v;
 };
 
+const somarDiasIso = (dia: string, n: number) => {
+  const d = new Date(`${dia}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
 /** A rotina inteira; separada do Worker para ser testável sem Redis. */
 export async function executarLimpeza(
   prisma: PrismaClient,
@@ -65,6 +71,10 @@ export async function executarLimpeza(
   const execucao = await prisma.execucaoLimpeza.create({ data: { iniciadaEm: agora } });
   const apagados: Apagados = {};
   const retidas: ExecucaoLimpezaNaTela['retidas'] = [];
+  // Admin U9: as que saem nos próximos 7 dias, para a Saúde do sistema mostrar antes.
+  const proximas: ExecucaoLimpezaNaTela['proximas'] = [];
+  const hoje = dataLocal(agora);
+  const daquiASete = somarDiasIso(hoje, 7);
   const falhas: string[] = [];
   const { modelosEmail } = lerConfiguracaoPublica(await configuracaoDoSistema(prisma));
 
@@ -72,6 +82,14 @@ export async function executarLimpeza(
     try {
       const s = await situacaoDaContaNaLimpeza(prisma, conta.id, agora);
       if (!s) continue;
+      if (s.prevista && s.prevista.apagaEm > hoje && s.prevista.apagaEm <= daquiASete)
+        proximas.push({
+          contaId: conta.id,
+          conta: conta.nome,
+          motivo: s.prevista.motivo,
+          apagaEm: s.prevista.apagaEm,
+          retencao: s.retencao,
+        });
       if (s.decisao.tipo === 'avisar')
         for (const e of avisosDeExclusao(conta.nome, s, {
           appUrl: d.appUrl,
@@ -108,13 +126,15 @@ export async function executarLimpeza(
   const erro = falhas.length ? falhas.slice(0, 5).join(' · ').slice(0, 1000) : null;
   await prisma.execucaoLimpeza.update({
     where: { id: execucao.id },
-    data: { terminadaEm, apagados, retidas, erro },
+    // A coluna é JSON: a lista vai como está (retencao pode ser null).
+    data: { terminadaEm, apagados, retidas, proximas: proximas as unknown as object[], erro },
   });
   return {
     iniciadaEm: agora.toISOString(),
     terminadaEm: terminadaEm.toISOString(),
     apagados,
     retidas,
+    proximas,
     erro,
   };
 }

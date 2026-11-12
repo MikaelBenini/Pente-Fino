@@ -120,6 +120,12 @@ privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os va
   com o nome. Na tela: `/admin` → Saúde do sistema mostra o worker (no ar ou parado) e a última
   execução de cada rotina (avisos a cada 15 min, automações às 10 h, avisos da assinatura às 9 h e
   limpeza às 3h30), com "Atrasada" quando passa do prazo.
+- Saúde do sistema → "Servidor" (admin U9): versão em produção (`APP_VERSAO`, a `TAG` do `.env`)
+  e desde quando a API está no ar (o último deploy); último backup (data, tamanho, cópia externa,
+  erro; "atrasado" depois de 26 h), gravado pelo `backup.sh` em `configuracao_plataforma`
+  (chave `estado_backup`), inclusive quando falha; disco, memória e validade do certificado HTTPS,
+  gravados pelo `vigia.sh` a cada 5 minutos (chave `estado_servidor`); e o último aviso do Asaas
+  aceito. Se a gravação falhar, o backup e o vigia seguem normalmente.
 - Backup: ver docs/restaurar.md.
 
 ## IP real na auditoria

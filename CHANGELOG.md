@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (saúde do sistema)
+
+- Saúde do sistema → "Servidor": versão em produção e desde quando está no ar, último backup (com
+  tamanho, cópia externa e o erro quando falha; fica em destaque se passar de um dia sem backup),
+  uso de disco e memória, validade do certificado HTTPS e o último aviso de cobrança que chegou do
+  Asaas.
+- Limpeza de dados: deixa claro que conta que paga e conta em cortesia nunca são apagadas, e mostra
+  quais contas saem nos próximos 7 dias.
+
 ### Alterado (configurações da administração)
 
 - Aviso geral: os campos de data e hora dizem que são no horário de Brasília, e uma prévia mostra o

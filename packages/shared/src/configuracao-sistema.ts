@@ -119,6 +119,29 @@ export interface SaudeDoSistema {
   };
   /** W4: segredos de webhook com menos de 32 caracteres (nome da variável). */
   segredosCurtos: string[];
+  /** Admin U9: versão em produção e quando a API subiu (o último deploy). */
+  versao: { versao: string; iniciadaEm: string };
+  /** Admin U9: último backup, gravado pelo backup.sh (null = ainda não rodou). */
+  backup: {
+    quando: string;
+    ok: boolean;
+    tamanho?: string;
+    externo?: boolean;
+    erro?: string;
+    /** Passou de 26 h sem backup novo. */
+    atrasado: boolean;
+  } | null;
+  /** Admin U9: disco, memória e certificado, gravados pelo vigia.sh a cada 5 min. */
+  servidor: {
+    quando: string;
+    discoPct: number;
+    memoriaPct: number;
+    tlsAte: string | null;
+    /** Dias até o certificado vencer (null sem leitura). */
+    tlsDias: number | null;
+  } | null;
+  /** Admin U9: último aviso do Asaas que chegou e foi aceito. */
+  webhookAsaas: { quando: string; evento: string; resultado: string } | null;
 }
 
 // ─── E-mails que não saíram (admin R7) ────────────────────────────────────

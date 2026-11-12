@@ -66,6 +66,17 @@ export class WebhookAsaasController {
       await this.recusas.registrar('asaas', ip);
       throw Erros.naoAutenticado('Token do webhook inválido.');
     }
+    const r = await this.aplicar(corpo);
+    // Admin U9: a Saúde do sistema mostra quando chegou o último aviso aceito.
+    await this.recusas.registrarRecebido(corpo?.event ?? 'sem_evento', r.resultado);
+    return r;
+  }
+
+  private async aplicar(corpo: {
+    event?: string;
+    payment?: PagamentoWebhook;
+    invoice?: NotaWebhook;
+  }): Promise<{ ok: true; resultado: string }> {
     // Nota fiscal da mensalidade (INVOICE_*): o objeto vem em "invoice", não em "payment".
     const notaId = typeof corpo?.invoice?.id === 'string' ? corpo.invoice.id : null;
     if (corpo?.event?.startsWith('INVOICE_') && notaId) {

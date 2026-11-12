@@ -122,21 +122,26 @@ U2 a U5 já feitos (#161).
 - [x] Merge pelo dono (lote 4a, #168, 12/11)
 - [x] Lote 4b (U6): bateria verde, PR #169 e CI verde (12/11)
 - [x] Merge pelo dono (lote 4b, #169, 12/11)
-- [x] Lote 4c (U8): bateria verde (12/11); PR e CI a acompanhar
-- [ ] Merge pelo dono (lote 4c)
+- [x] Lote 4c (U8): bateria verde, PR #170 (12/11)
+- [x] Merge pelo dono (lote 4c)
+- [x] Lote 4d (U9): bateria verde, PR aberto (12/11)
+- [ ] Merge pelo dono (lote 4d)
 - [x] **U6** Equipe (12/11, Etapa 23.4): papéis Suporte e Financeiro, última troca de senha e motivo para desativar
 - [x] **U7** Auditoria (12/11, Etapa 23.4): detalhes legíveis, horário local, paginação além de 300 e CSV
 - [x] **U8** Configurações (12/11, Etapa 23.4): fuso escrito nos campos, prévia do aviso geral, e-mail de teste por
   modelo e histórico de mudanças
-- [ ] **U9** Saúde do sistema: último backup, versão e data do deploy, último evento do webhook
+- [x] **U9** Saúde do sistema (12/11, Etapa 23.4): último backup, versão e data do deploy, último evento do webhook
   do Asaas, validade do TLS e espaço em disco
 
 ## 5. Site: conteúdo novo e ajustes finos
 
-- [ ] **Planos (site P2 e P3)**: estudar os planos dos concorrentes (BestBarbers, Cash Barber,
-  Trinks, AppBarber, Avec, Booksy) e propor uma tabela para o dono aprovar. Regra do dono: o
-  Básico atende uma barbearia de verdade (inclusive a que está começando); quem sobe de plano
-  sobe pelas funções a mais, não porque "tem que mudar"
+- [x] **Planos (site P2 e P3)** (12/11): estudo dos concorrentes no anexo "Estudo de planos" do
+  [plano de melhorias](pente-fino-melhorias.md). O dono aprovou só **comissões no Básico**; ficam
+  como estão os preços, os lembretes do WhatsApp (Pro), o lucro por serviço (Premium) e o teste
+  de 14 dias
+- [ ] **Comissões no Básico** (aprovado em 12/11): o recurso `comissoes` passa a valer desde o
+  Básico (`RECURSOS` em `planos.ts`), com a página de planos, o comparativo e os testes de plano
+  atualizados; quem já assina o Básico ganha na hora
 - [ ] **N1** Páginas por intenção de busca (uma por termo dos anúncios)
 - [ ] **N2** Páginas de comparação
 - [ ] **N3** Ferramentas grátis em URL própria
@@ -190,6 +195,10 @@ U2 a U5 já feitos (#161).
 
 - [ ] **N5** Página "Sobre": perguntar ao dono quem faz o Pente Fino, por que existe e de qual
   cidade, e escrever junto com ele
+- [ ] **Atualizar a página de vendas** (pedido do dono em 12/11, por último): textos e telas da
+  página inicial, de `/planos` e do comparativo com tudo o que foi feito (clube no resultado,
+  preço livre, despesas fixas, catálogo por unidade, preço por barbeiro, sinal, comissões no
+  Básico, chat de suporte), com capturas de tela novas das telas atuais
 
 ## 9. Por último: verificação final do ecossistema
 

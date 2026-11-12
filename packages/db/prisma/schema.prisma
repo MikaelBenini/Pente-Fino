@@ -1772,6 +1772,8 @@ model ExecucaoLimpeza {
   apagados    Json      @default("{}")
   /// Contas que já deviam sair mas têm cobrança ativa no Asaas: [{ contaId, conta, motivo }].
   retidas     Json      @default("[]")
+  /// Admin U9: contas que saem nos próximos 7 dias: [{ contaId, conta, motivo, apagaEm, retencao }].
+  proximas    Json      @default("[]")
   erro        String?
 
   @@index([iniciadaEm])

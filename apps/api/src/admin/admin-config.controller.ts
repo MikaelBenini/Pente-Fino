@@ -133,6 +133,52 @@ export class SaudeService implements OnModuleDestroy {
     return { worker: { ultimoBatimento: batimento, parado }, rotinas };
   }
 
+  /**
+   * Admin U9: versão e hora em que a API subiu (o último deploy); o último backup e o estado do
+   * servidor gravados pelo backup.sh e pelo vigia.sh em configuracao_plataforma.
+   */
+  private async servidorEDeploy(): Promise<Pick<SaudeDoSistema, 'versao' | 'backup' | 'servidor'>> {
+    const linhas = await this.banco.prisma.configuracaoPlataforma.findMany({
+      where: { chave: { in: ['estado_backup', 'estado_servidor'] } },
+    });
+    const valor = (chave: string) =>
+      (linhas.find((l) => l.chave === chave)?.valor ?? null) as Record<string, unknown> | null;
+    const b = valor('estado_backup');
+    const s = valor('estado_servidor');
+    const quando = (v: unknown) =>
+      typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? v : null;
+    const backupQuando = quando(b?.quando);
+    return {
+      versao: {
+        versao: process.env.APP_VERSAO || 'desenvolvimento',
+        iniciadaEm: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+      },
+      backup:
+        b && backupQuando
+          ? {
+              quando: new Date(backupQuando).toISOString(),
+              ok: b.ok === true,
+              ...(typeof b.tamanho === 'string' ? { tamanho: b.tamanho } : {}),
+              ...(typeof b.externo === 'boolean' ? { externo: b.externo } : {}),
+              ...(typeof b.erro === 'string' ? { erro: b.erro.slice(0, 200) } : {}),
+              atrasado: Date.now() - Date.parse(backupQuando) > 26 * 3_600_000,
+            }
+          : null,
+      servidor:
+        s && quando(s.quando)
+          ? {
+              quando: new Date(quando(s.quando)!).toISOString(),
+              discoPct: Number(s.discoPct) || 0,
+              memoriaPct: Number(s.memoriaPct) || 0,
+              tlsAte: quando(s.tlsAte),
+              tlsDias: quando(s.tlsAte)
+                ? Math.floor((Date.parse(quando(s.tlsAte)!) - Date.now()) / 86_400_000)
+                : null,
+            }
+          : null,
+    };
+  }
+
   /** W4: segredo de webhook curto (menos de 32 caracteres) vira aviso, sem derrubar a API. */
   private segredosCurtos(): string[] {
     const curtos: string[] = [];
@@ -194,6 +240,8 @@ export class SaudeService implements OnModuleDestroy {
       ...(await this.worker()),
       webhooksRecusados: await this.recusas.resumo(),
       segredosCurtos: this.segredosCurtos(),
+      ...(await this.servidorEDeploy()),
+      webhookAsaas: await this.recusas.ultimoRecebido(),
       conexoesCaidas: caidas.map((x) => ({
         contaId: x.conta_id,
         conta: x.conta,
@@ -207,6 +255,7 @@ export class SaudeService implements OnModuleDestroy {
         terminadaEm: e.terminadaEm?.toISOString() ?? null,
         apagados: e.apagados as ExecucaoLimpezaNaTela['apagados'],
         retidas: e.retidas as ExecucaoLimpezaNaTela['retidas'],
+        proximas: (e.proximas ?? []) as unknown as ExecucaoLimpezaNaTela['proximas'],
         erro: e.erro,
       })),
     };

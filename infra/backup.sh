@@ -29,6 +29,14 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$PASTA/diario" "$PASTA/mensal"
 
 pg() { docker exec pente-fino-postgres-1 "$@"; }
+# Admin U9: o resultado vai para a Saúde do sistema (configuracao_plataforma, chave estado_backup).
+# Se não der para gravar, o backup segue: a tela é secundária.
+estado() {
+  pg psql -U postgres -d "$BANCO" -q -v ON_ERROR_STOP=1 -c \
+    "INSERT INTO configuracao_plataforma (chave, valor, atualizado_em) VALUES ('estado_backup', '$1'::jsonb, now()) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor, atualizado_em = now();" \
+    >/dev/null 2>&1 || true
+}
+trap 'estado "{\"quando\":\"$(date -Is)\",\"ok\":false,\"erro\":\"Falhou na linha $LINENO do backup.sh\"}"' ERR
 # rclone em contêiner (nada a instalar na VPS); a configuração fica em ./rclone (backup-externo.sh).
 rclone() {
   docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/rclone:/config/rclone" \
@@ -64,6 +72,7 @@ if [[ -n "$DESTINO" ]]; then
 fi
 TAMANHO="$(du -h "$ARQ" | cut -f1)"
 echo "$(date '+%F %T') ok $ARQ ($TAMANHO)${DESTINO:+ → $DESTINO}"
+estado "{\"quando\":\"$(date -Is)\",\"ok\":true,\"tamanho\":\"$TAMANHO\",\"externo\":$([[ -n "$DESTINO" ]] && echo true || echo false)}"
 if [[ -n "$AVISO" ]]; then
   curl -fsS -m 10 "$AVISO?status=up&msg=ok%20$TAMANHO" >/dev/null || true
 fi

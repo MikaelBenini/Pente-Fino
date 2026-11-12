@@ -249,3 +249,62 @@ describe('worker, rotinas e webhooks recusados (V3, W3, W4)', () => {
     await limparIp();
   });
 });
+
+describe('servidor, backup e webhook do Asaas (admin U9)', () => {
+  // O usuário de banco da administração não apaga configurações (só lê, grava e atualiza): no
+  // fim, o backup volta para "ok" em vez de sair, para a tela local não mostrar a falha simulada.
+  afterAll(async () => {
+    await plataforma.configuracaoPlataforma.update({
+      where: { chave: 'estado_backup' },
+      data: { valor: { quando: new Date().toISOString(), ok: true, tamanho: '—' } },
+    });
+  });
+
+  it('mostra o último backup, o servidor, a versão e o último aviso do Asaas', async () => {
+    const agora = Date.now();
+    const gravar = (chave: string, valor: object) =>
+      plataforma.configuracaoPlataforma.upsert({
+        where: { chave },
+        create: { chave, valor },
+        update: { valor },
+      });
+    await gravar('estado_backup', {
+      quando: new Date(agora - 3_600_000).toISOString(),
+      ok: true,
+      tamanho: '1.2M',
+      externo: true,
+    });
+    await gravar('estado_servidor', {
+      quando: new Date(agora - 60_000).toISOString(),
+      discoPct: 42,
+      memoriaPct: 63,
+      tlsAte: new Date(agora + 10 * 86_400_000).toISOString(),
+    });
+    // Um aviso do Asaas aceito (o token certo; a cobrança não existe, então é ignorada).
+    await http()
+      .post('/webhooks/asaas')
+      .set('asaas-access-token', process.env.ASAAS_WEBHOOK_TOKEN!)
+      .send({ event: 'PAYMENT_CREATED', payment: { id: 'pay_saude_u9' } })
+      .expect(200);
+
+    let s = (await adm.get('/admin/saude').expect(200)).body as SaudeDoSistema;
+    expect(s.backup).toMatchObject({ ok: true, tamanho: '1.2M', externo: true, atrasado: false });
+    expect(s.servidor).toMatchObject({ discoPct: 42, memoriaPct: 63, tlsDias: 9 });
+    expect(s.versao.versao).toBeTruthy();
+    expect(Date.parse(s.versao.iniciadaEm)).toBeLessThanOrEqual(agora);
+    expect(s.webhookAsaas).toMatchObject({ evento: 'PAYMENT_CREATED', resultado: 'ignorado' });
+
+    // Backup de dois dias atrás: atrasado; com erro, aparece o motivo.
+    await gravar('estado_backup', {
+      quando: new Date(agora - 48 * 3_600_000).toISOString(),
+      ok: false,
+      erro: 'Falhou na linha 40 do backup.sh',
+    });
+    s = (await adm.get('/admin/saude').expect(200)).body as SaudeDoSistema;
+    expect(s.backup).toMatchObject({
+      ok: false,
+      atrasado: true,
+      erro: 'Falhou na linha 40 do backup.sh',
+    });
+  });
+});
