@@ -146,6 +146,11 @@ export const servicoSchema = z.object({
   ehExtra: z.boolean(),
   pesoAtendimento: z.number().int().min(0).max(10),
   ativo: z.boolean().default(true),
+  /** Química e afins: o valor é digitado na comanda (a tabela vira o valor sugerido). */
+  precoLivre: z.boolean().default(false),
+  /** Faixa do preço livre, em centavos (null = sem limite). */
+  precoMinimo: centavos.nullable().default(null),
+  precoMaximo: centavos.nullable().default(null),
 });
 export type ServicoEntrada = z.infer<typeof servicoSchema>;
 

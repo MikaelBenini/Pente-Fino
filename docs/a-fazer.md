@@ -35,7 +35,7 @@ Aprovado pelo dono em 11/11/2026 (decisões b e d da comparação com a planilha
   CHANGELOG, linha de desenvolvimento e anexo da planilha no plano de melhorias (11/11)
 - [x] Testes de navegador conferidos: nenhum procura os textos que mudaram (11/11)
 - [x] Bateria completa verde, commit (sem o `.env.example`), PR #162 aberto e CI verde (11/11)
-- [ ] Merge pelo dono
+- [x] Merge pelo dono (#162, 11/11)
 
 ## 2. Segurança dos webhooks e worker vigiado (pedido do dono em 11/11/2026)
 
@@ -69,11 +69,11 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
 - [x] Documentado (11/11): CHANGELOG, linha de desenvolvimento (Etapa 23.5) e `docs/producao.md`
   ("Segurança dos webhooks" e o worker em "Monitoramento")
 - [x] Bateria completa verde (11/11); PR aberto, CI a acompanhar
-- [ ] Merge pelo dono (depois do #162)
+- [x] Merge pelo dono (12/11)
 
 ## 3. Escolhas da planilha aprovadas (respostas do dono em 11/11/2026)
 
-- [ ] **Preço livre na comanda (química)**, por serviço e desligado por padrão:
+- [x] **Preço livre na comanda (química)** (12/11, linha de desenvolvimento Etapa 23.6; a liberação do barbeiro ficou na tela de Serviços, junto do serviço, e não em Configurações), por serviço e desligado por padrão:
   - o dono liga "preço livre" no cadastro do serviço;
   - em Configurações, o dono escolhe quem digita o valor (padrão: dono, gestor e recepção; o
     barbeiro só se o dono liberar);
@@ -81,13 +81,17 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
   - a comissão sai do valor digitado, pela regra do barbeiro;
   - valor fora da tabela fica na auditoria da comanda.
   Assim a opção existe sem virar desconto escondido.
-- [ ] **Despesas fixas no mês seguinte**: botão "Copiar fixas do mês anterior" com prévia editável
+- [x] **Despesas fixas no mês seguinte** (12/11, Etapa 23.6; a que já tem igual lançada à mão vem desmarcada na prévia): botão "Copiar fixas do mês anterior" com prévia editável
   (valor, incluir ou tirar cada uma) antes de gravar; em cada despesa fixa, a opção "Repetir todo
   mês", que lança sozinha no 1º dia (dá para parar quando quiser); nunca duplica o que já existe
   no mês.
-- [ ] **Preço por barbeiro**: cada barbeiro pode ter preço próprio para um serviço, com vigência
-  como a tabela; sem preço próprio, vale o da unidade; a comanda grava o preço do momento; o
-  agendamento pelo site mostra o preço do barbeiro escolhido.
+- [x] Lote 3a (preço livre e despesas fixas): bateria verde (12/11); PR e CI a acompanhar
+- [ ] Merge pelo dono (lote 3a)
+- [ ] **Preço por barbeiro** (detalhe do dono em 12/11): os serviços e a tabela continuam sendo
+  da unidade. O barbeiro muda o próprio preço de um serviço **no perfil dele**; esse preço vale
+  quando marcam horário com ele (agenda, bot, site) e na comanda dele. Sem preço próprio, vale o
+  da unidade, como hoje. Com vigência, como a tabela (mudar não altera o passado); a comissão do
+  clube continua sobre o preço da unidade.
 - [ ] **Receber adiantado (sinal)** (painel A2): registra o pagamento na comanda aberta, entra no
   caixa do dia em que foi recebido e abate do total ao fechar; cancelar a comanda pede o que
   fazer com o sinal (devolver ou reter, com motivo).

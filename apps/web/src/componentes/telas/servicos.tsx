@@ -35,6 +35,7 @@ import { api } from '@/lib/api';
 import {
   chaves,
   useAcao,
+  useConfigPrecoLivre,
   usePrecos,
   useProfissionais,
   useServicos,
@@ -132,6 +133,7 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
               <Plus aria-hidden className="size-5" /> Novo serviço
             </Botao>
           )}
+          {podeEditar && servicos.data!.some((x) => x.precoLivre) && <LiberacaoPrecoLivre />}
           {servicos.data!.length === 0 ? (
             <EstadoVazio
               icone={Scissors}
@@ -235,11 +237,14 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
                           </td>
                         )}
                         <td className={td}>
-                          {s.ehExtra ? (
-                            <Ficha tom="aviso">Extra</Ficha>
-                          ) : (
-                            <Ficha tom="neutro">Principal</Ficha>
-                          )}
+                          <span className="flex flex-wrap gap-1">
+                            {s.ehExtra ? (
+                              <Ficha tom="aviso">Extra</Ficha>
+                            ) : (
+                              <Ficha tom="neutro">Principal</Ficha>
+                            )}
+                            {s.precoLivre && <Ficha tom="acao">Preço livre</Ficha>}
+                          </span>
                         </td>
                         <td
                           className={`${td} text-right font-denso tabular-nums whitespace-nowrap`}
@@ -272,7 +277,16 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
   );
 }
 
-const formServico = servicoSchema.extend({ custoTexto: z.string() }).omit({ custoProduto: true });
+const formServico = servicoSchema
+  .extend({ custoTexto: z.string(), minimoTexto: z.string(), maximoTexto: z.string() })
+  .omit({ custoProduto: true, precoMinimo: true, precoMaximo: true });
+
+/** Campo de valor opcional: vazio = sem limite (null); texto inválido = undefined. */
+function valorOpcional(texto: string): number | null | undefined {
+  if (!texto.trim()) return null;
+  const v = lerMoeda(texto);
+  return v === null || v < 0 ? undefined : v;
+}
 type FormServico = z.input<typeof formServico>;
 
 function FormularioServico({
@@ -299,6 +313,8 @@ function FormularioServico({
           ...atual,
           categoria: atual.categoria ?? '',
           custoTexto: valorParaCampo(atual.custoProduto),
+          minimoTexto: atual.precoMinimo === null ? '' : valorParaCampo(atual.precoMinimo),
+          maximoTexto: atual.precoMaximo === null ? '' : valorParaCampo(atual.precoMaximo),
         }
       : {
           nome: '',
@@ -308,21 +324,37 @@ function FormularioServico({
           ehExtra: false,
           pesoAtendimento: 1,
           ativo: true,
+          precoLivre: false,
+          minimoTexto: '',
+          maximoTexto: '',
         },
   });
   const ehExtra = useWatch({ control, name: 'ehExtra' });
+  const precoLivre = useWatch({ control, name: 'precoLivre' });
 
-  const enviar = handleSubmit(async ({ custoTexto, ...d }) => {
+  const enviar = handleSubmit(async ({ custoTexto, minimoTexto, maximoTexto, ...d }) => {
     setErroGeral(null);
     const custoProduto = lerMoeda(custoTexto);
     if (custoProduto === null || custoProduto < 0)
       return setError('custoTexto', { message: 'Valor inválido. Ex.: 1,50' });
+    const livre = !!d.precoLivre;
+    const precoMinimo = livre ? valorOpcional(minimoTexto) : null;
+    const precoMaximo = livre ? valorOpcional(maximoTexto) : null;
+    if (precoMinimo === undefined)
+      return setError('minimoTexto', { message: 'Valor inválido. Ex.: 80,00' });
+    if (precoMaximo === undefined)
+      return setError('maximoTexto', { message: 'Valor inválido. Ex.: 250,00' });
+    if (precoMinimo !== null && precoMaximo !== null && precoMinimo > precoMaximo)
+      return setError('minimoTexto', { message: 'O mínimo não pode ser maior que o máximo.' });
     try {
       await salvar.mutateAsync({
         ...d,
         categoria: d.categoria || null,
         custoProduto,
         ativo: d.ativo ?? true,
+        precoLivre: livre,
+        precoMinimo,
+        precoMaximo,
       } as Omit<ServicoDetalhe, 'id'>);
       onFechar();
     } catch (e) {
@@ -403,6 +435,38 @@ function FormularioServico({
             />
           )}
         />
+        <Marcador
+          id="servico-preco-livre"
+          rotulo="Preço livre (química e afins): o valor é digitado na comanda"
+          {...register('precoLivre')}
+        />
+        {precoLivre && (
+          <div className="flex flex-col gap-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Campo
+                id="servico-preco-minimo"
+                rotulo="Valor mínimo (R$)"
+                inputMode="decimal"
+                dica="Vazio = sem mínimo"
+                erro={formState.errors.minimoTexto?.message}
+                {...register('minimoTexto')}
+              />
+              <Campo
+                id="servico-preco-maximo"
+                rotulo="Valor máximo (R$)"
+                inputMode="decimal"
+                dica="Vazio = sem máximo"
+                erro={formState.errors.maximoTexto?.message}
+                {...register('maximoTexto')}
+              />
+            </div>
+            <p className="text-sm text-tinta-suave">
+              O preço da tabela continua valendo como sugestão (aparece no agendamento). Na comanda,
+              o balcão troca o valor dentro da faixa; o barbeiro só se você liberar. Cada valor
+              diferente da tabela fica no histórico da comanda.
+            </p>
+          </div>
+        )}
         {!novo && (
           <Marcador
             id="servico-ativo"
@@ -420,6 +484,26 @@ function FormularioServico({
         </div>
       </form>
     </Dialogo>
+  );
+}
+
+/** Só o dono: o barbeiro também digita o valor dos serviços com preço livre? */
+function LiberacaoPrecoLivre() {
+  const config = useConfigPrecoLivre();
+  const salvar = useAcao(
+    (barbeiroDigita: boolean) =>
+      api('servicos/preco-livre', { metodo: 'PUT', corpo: { barbeiroDigita } }),
+    [chaves.precoLivre],
+  );
+  if (!config.data) return null;
+  return (
+    <Marcador
+      id="preco-livre-barbeiro"
+      rotulo="O barbeiro também digita o valor dos serviços com preço livre (sem marcar, só o balcão)"
+      checked={config.data.barbeiroDigita}
+      disabled={salvar.isPending}
+      onChange={(e) => salvar.mutate(e.target.checked)}
+    />
   );
 }
 

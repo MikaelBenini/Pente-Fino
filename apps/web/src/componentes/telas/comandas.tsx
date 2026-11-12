@@ -14,6 +14,7 @@ import {
   type AcaoComanda,
   type ComandaDetalhe,
   type ComandaResumo,
+  type ItemComandaDetalhe,
 } from '@pente-fino/shared';
 import {
   Abas,
@@ -26,7 +27,7 @@ import {
   ModalConfirmacao,
   Selecao,
 } from '@pente-fino/ui';
-import { ArrowLeft, Minus, Plus, Printer, ReceiptText, Trash2 } from 'lucide-react';
+import { ArrowLeft, Minus, Pencil, Plus, Printer, ReceiptText, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -545,12 +546,21 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
                     {i.cobertoClube
                       ? `${i.quantidade} × coberto pelo plano`
                       : `${i.quantidade} × ${formatarMoeda(i.precoUnitario)}`}
+                    {i.precoLivre && ' · preço livre'}
                     {i.desconto > 0 && ` · desconto ${formatarMoeda(i.desconto)}`}
                     {c.status === 'fechada' &&
                       i.comissaoValor > 0 &&
                       ` · comissão ${formatarMoeda(i.comissaoValor)}`}
                   </span>
                 </span>
+                {editavel && i.precoLivre?.podeAlterar && (
+                  <ValorDoItem
+                    item={i}
+                    onSalvar={(precoUnitario) =>
+                      executar(`itens/${i.id}`, { precoUnitario }, 'PATCH')
+                    }
+                  />
+                )}
                 {editavel && (
                   <span className="flex items-center gap-1">
                     <Botao
@@ -727,6 +737,90 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
 }
 
 /** Lançar em poucos toques: um toque no serviço ou produto adiciona à comanda. */
+/**
+ * Preço livre (química e afins): troca o valor do item dentro da faixa do serviço. A API confere
+ * de novo a faixa e quem pode digitar, e guarda no histórico da comanda.
+ */
+function ValorDoItem({
+  item,
+  onSalvar,
+}: {
+  item: ItemComandaDetalhe;
+  onSalvar: (precoUnitario: number) => Promise<void>;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [texto, setTexto] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const faixa = item.precoLivre!;
+  const valor = texto.trim() ? lerMoeda(texto) : null;
+  const erro =
+    texto.trim() && (valor === null || valor < 0)
+      ? 'Valor inválido. Ex.: 120,00'
+      : valor !== null && faixa.minimo !== null && valor < faixa.minimo
+        ? `Mínimo ${formatarMoeda(faixa.minimo)}.`
+        : valor !== null && faixa.maximo !== null && valor > faixa.maximo
+          ? `Máximo ${formatarMoeda(faixa.maximo)}.`
+          : undefined;
+  const dica =
+    faixa.minimo !== null && faixa.maximo !== null
+      ? `De ${formatarMoeda(faixa.minimo)} a ${formatarMoeda(faixa.maximo)}`
+      : faixa.minimo !== null
+        ? `A partir de ${formatarMoeda(faixa.minimo)}`
+        : faixa.maximo !== null
+          ? `Até ${formatarMoeda(faixa.maximo)}`
+          : 'Valor cobrado por unidade';
+
+  if (!aberto)
+    return (
+      <Botao
+        variante="fantasma"
+        className="px-3"
+        aria-label={`Trocar o valor de ${item.descricao}`}
+        onClick={() => {
+          setTexto(valorParaCampo(item.precoUnitario));
+          setAberto(true);
+        }}
+      >
+        <Pencil aria-hidden className="size-4" /> Valor
+      </Botao>
+    );
+  return (
+    <form
+      className="flex w-full flex-wrap items-end gap-2 sm:w-auto"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (erro || valor === null) return;
+        setSalvando(true);
+        try {
+          await onSalvar(valor);
+          setAberto(false);
+        } finally {
+          setSalvando(false);
+        }
+      }}
+    >
+      <div className="w-40">
+        <Campo
+          id={`valor-${item.id}`}
+          rotulo={`Valor de ${item.descricao} (R$)`}
+          inputMode="decimal"
+          autoFocus
+          dica={dica}
+          erro={erro}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+        />
+      </div>
+      <Botao type="submit" carregando={salvando} disabled={!!erro || valor === null}>
+        Salvar
+      </Botao>
+      <Botao variante="secundario" onClick={() => setAberto(false)}>
+        Cancelar
+      </Botao>
+    </form>
+  );
+}
+
 function LancarItens({
   onLancar,
   podeProduto,

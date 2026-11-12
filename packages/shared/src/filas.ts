@@ -38,6 +38,7 @@ export const ROTINAS_WORKER = [
   { rotina: 'automacoes', nome: 'Automações (retorno e aniversário)', prazoMin: 24 * 60 + 30 },
   { rotina: 'cobranca_manual', nome: 'Avisos da assinatura', prazoMin: 24 * 60 + 30 },
   { rotina: 'limpeza', nome: 'Limpeza de dados', prazoMin: 24 * 60 + 30 },
+  { rotina: 'despesas_fixas', nome: 'Despesas que repetem todo mês', prazoMin: 24 * 60 + 30 },
 ] as const;
 export type RotinaWorker = (typeof ROTINAS_WORKER)[number]['rotina'];
 

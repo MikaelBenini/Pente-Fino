@@ -2,6 +2,7 @@
 
 import type {
   CaixaDeAvisos,
+  ConfigPrecoLivre,
   OcupacaoDaUnidade,
   DiaCalendario,
   ProfissionalDetalhe,
@@ -23,6 +24,7 @@ import type {
   ResumoDoDia,
   ResumoDoMes,
   FichaProfissional,
+  FixaParaCopiar,
   DespesaDetalhe,
   DesempenhoBarbeiro,
   ExtratoComissao,
@@ -71,9 +73,17 @@ export const chaves = {
     ['calendario', unidadeId, de, ate] as const,
   usuarios: ['usuarios'] as const,
   servicos: ['servicos'] as const,
+  precoLivre: ['servicos', 'preco-livre'] as const,
   precos: ['precos'] as const,
   profissionais: ['profissionais'] as const,
 };
+
+/** Preço livre: se o barbeiro também digita o valor (Serviços → Catálogo). */
+export const useConfigPrecoLivre = () =>
+  useQuery({
+    queryKey: chaves.precoLivre,
+    queryFn: () => api<ConfigPrecoLivre>('servicos/preco-livre'),
+  });
 
 export const useConta = () =>
   useQuery({ queryKey: chaves.conta, queryFn: () => api<ContaResumo>('conta') });
@@ -241,6 +251,16 @@ export function useDespesas(unidade: string | null, mes: string) {
   return useQuery({
     queryKey: [...chavesResultados.despesas, unidade, mes],
     queryFn: () => api<DespesaDetalhe[]>(`despesas?mes=${mes}${comUnidade(unidade)}`),
+  });
+}
+
+/** Prévia do "Copiar fixas do mês anterior" (só quando o diálogo está aberto). */
+export function useFixasParaCopiar(unidade: string | null, mes: string, ativo: boolean) {
+  return useQuery({
+    queryKey: [...chavesResultados.despesas, 'fixas-para-copiar', unidade, mes],
+    queryFn: () =>
+      api<FixaParaCopiar[]>(`despesas/fixas-para-copiar?mes=${mes}${comUnidade(unidade)}`),
+    enabled: ativo,
   });
 }
 

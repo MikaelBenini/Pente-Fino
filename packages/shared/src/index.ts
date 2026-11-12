@@ -9,6 +9,7 @@ export * from './esquemas-operacao.js';
 export * from './esquemas-resultados.js';
 export * from './fila-offline.js';
 export * from './filas.js';
+export * from './preco-livre.js';
 export * from './formatacao.js';
 export * from './importacao.js';
 export * from './indicadores.js';

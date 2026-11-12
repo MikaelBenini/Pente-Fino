@@ -12,13 +12,16 @@ import {
   apagarContaNaLimpeza,
   avisosDeExclusao,
   configuracaoDoSistema,
+  contasParaAvisos,
   contasParaLimpeza,
   limparDadosDaConta,
   limparSessoesDaAdministracao,
+  repetirDespesasDoMes,
   situacaoDaContaNaLimpeza,
   type PrismaClient,
 } from '@pente-fino/db';
 import {
+  dataLocal,
   DIAS_GUARDA,
   FILA_EMAILS,
   FILA_EVENTOS,
@@ -160,11 +163,31 @@ export class LimpezaProcessor implements OnModuleInit, OnApplicationShutdown {
         { name: 'limpeza', data: {} },
       )
       .catch((e: Error) => this.logger.error(`Agendar a limpeza: ${e.message}`));
+    // Despesas marcadas "Repetir todo mês": a cópia no mês novo, todo dia às 6 h (idempotente).
+    void this.fila
+      .upsertJobScheduler(
+        'despesas-fixas-diaria',
+        { pattern: '0 6 * * *', tz: 'America/Sao_Paulo' },
+        { name: 'despesas_fixas', data: {} },
+      )
+      .catch((e: Error) => this.logger.error(`Agendar as despesas fixas: ${e.message}`));
 
     const emails = this.emails;
     this.worker = new Worker(
       FILA_LIMPEZA,
-      async () => {
+      async (job) => {
+        if (job.name === 'despesas_fixas') {
+          const hoje = dataLocal(new Date());
+          let total = 0;
+          for (const contaId of await contasParaAvisos(this.banco.prisma)) {
+            try {
+              total += await repetirDespesasDoMes(this.banco.prisma, contaId, hoje);
+            } catch (e) {
+              this.logger.error(`Despesas fixas da conta ${contaId}: ${(e as Error).message}`);
+            }
+          }
+          return `despesas_fixas: ${total} lançada(s)`;
+        }
         const r = await executarLimpeza(
           this.banco.prisma,
           {
@@ -192,7 +215,14 @@ export class LimpezaProcessor implements OnModuleInit, OnApplicationShutdown {
       { connection, concurrency: 1 },
     );
     this.worker.on('failed', (_job, erro) => this.logger.error(`Limpeza falhou: ${erro.message}`));
-    this.worker.on('completed', (_job, r) => void this.batimento.registrarRotina('limpeza', r));
+    this.worker.on(
+      'completed',
+      (job, r) =>
+        void this.batimento.registrarRotina(
+          job.name === 'despesas_fixas' ? 'despesas_fixas' : 'limpeza',
+          r,
+        ),
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {

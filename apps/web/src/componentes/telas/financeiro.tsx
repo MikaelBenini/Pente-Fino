@@ -10,6 +10,7 @@ import {
   NOME_GRUPO_DESPESA,
   valorParaCampo,
   type DespesaDetalhe,
+  type FixaParaCopiar,
   type ResumoComissao,
 } from '@pente-fino/shared';
 import {
@@ -22,7 +23,7 @@ import {
   ModalConfirmacao,
   Selecao,
 } from '@pente-fino/ui';
-import { Coins, FileSpreadsheet, FileText, Plus, ReceiptText } from 'lucide-react';
+import { Coins, Copy, FileSpreadsheet, FileText, Plus, ReceiptText } from 'lucide-react';
 import { useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import {
@@ -31,6 +32,7 @@ import {
   useCategoriasDespesa,
   useDespesas,
   useExtrato,
+  useFixasParaCopiar,
   useIndicadores,
   useResumoComissoes,
 } from '@/lib/consultas';
@@ -168,6 +170,7 @@ function Despesas({ mes }: { mes: string }) {
   const { unidadeAtiva, unidades } = useApp();
   const despesas = useDespesas(unidadeAtiva, mes);
   const [editando, setEditando] = useState<DespesaDetalhe | 'nova' | null>(null);
+  const [copiar, setCopiar] = useState(false);
   const [excluir, setExcluir] = useState<DespesaDetalhe | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const invalidar = [chavesResultados.despesas, chavesResultados.indicadores];
@@ -192,9 +195,14 @@ function Despesas({ mes }: { mes: string }) {
                 Total <span className="text-tinta">{formatarMoeda(total)}</span> · a pagar{' '}
                 <span className="text-tinta">{formatarMoeda(aPagar)}</span>
               </p>
-              <Botao onClick={() => setEditando('nova')}>
-                <Plus aria-hidden className="size-5" /> Nova despesa
-              </Botao>
+              <span className="flex flex-wrap gap-2">
+                <Botao variante="secundario" onClick={() => setCopiar(true)}>
+                  <Copy aria-hidden className="size-5" /> Copiar fixas do mês anterior
+                </Botao>
+                <Botao onClick={() => setEditando('nova')}>
+                  <Plus aria-hidden className="size-5" /> Nova despesa
+                </Botao>
+              </span>
             </div>
             {erro && <Aviso tom="erro">{erro}</Aviso>}
             {lista.length === 0 ? (
@@ -227,6 +235,7 @@ function Despesas({ mes }: { mes: string }) {
                           {d.vencimento
                             ? ` · vence ${formatarData(`${d.vencimento}T12:00:00Z`)}`
                             : ''}
+                          {d.repetir && ' · repete todo mês'}
                         </span>
                       </td>
                       <td className={`${td} text-sm`}>{NOME_GRUPO_DESPESA[d.grupo]}</td>
@@ -270,6 +279,12 @@ function Despesas({ mes }: { mes: string }) {
               </Tabela>
             )}
             <FormDespesa mes={mes} despesa={editando} onFechar={() => setEditando(null)} />
+            <CopiarFixas
+              mes={mes}
+              aberto={copiar}
+              nomeUnidade={nomeUnidade}
+              onFechar={() => setCopiar(false)}
+            />
             <ModalConfirmacao
               aberto={excluir !== null}
               titulo={`Excluir "${excluir?.descricao ?? ''}"?`}
@@ -318,6 +333,7 @@ function FormDespesa({
         valor: valorParaCampo(atual.valor),
         vencimento: atual.vencimento ?? '',
         pago: atual.pago,
+        repetir: atual.repetir,
       }
     : {
         descricao: '',
@@ -331,6 +347,7 @@ function FormDespesa({
         valor: '',
         vencimento: '',
         pago: false,
+        repetir: false,
       };
   const [f, setF] = useState<typeof inicial | null>(null);
   const v = f ?? inicial;
@@ -372,6 +389,7 @@ function FormDespesa({
               competencia: atual?.competencia ?? mes,
               vencimento: v.vencimento || null,
               pago: v.pago,
+              repetir: v.repetir,
             });
             fechar();
           } catch (er) {
@@ -437,6 +455,12 @@ function FormDespesa({
           checked={v.pago}
           onChange={(e) => setF({ ...v, pago: e.target.checked })}
         />
+        <Marcador
+          id="despesa-repetir"
+          rotulo="Repetir todo mês (entra sozinha no mês seguinte, a pagar, com o mesmo valor)"
+          checked={v.repetir}
+          onChange={(e) => setF({ ...v, repetir: e.target.checked })}
+        />
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Botao variante="secundario" onClick={fechar}>
             Cancelar
@@ -446,6 +470,143 @@ function FormDespesa({
           </Botao>
         </div>
       </form>
+    </Dialogo>
+  );
+}
+
+/**
+ * "Copiar fixas do mês anterior": as fixas que ainda não vieram para este mês, com o valor e o
+ * vencimento editáveis. Nada é gravado antes de confirmar; o que já veio não duplica.
+ */
+function CopiarFixas({
+  mes,
+  aberto,
+  nomeUnidade,
+  onFechar,
+}: {
+  mes: string;
+  aberto: boolean;
+  nomeUnidade: (id: string | null) => string;
+  onFechar: () => void;
+}) {
+  const { unidadeAtiva } = useApp();
+  const fixas = useFixasParaCopiar(unidadeAtiva, mes, aberto);
+  const [edicao, setEdicao] = useState<Record<string, { marcada: boolean; valor: string }>>({});
+  const [erro, setErro] = useState<string | null>(null);
+  const copiar = useAcao(
+    (corpo: object) => api('despesas/copiar-fixas', { corpo }),
+    [chavesResultados.despesas, chavesResultados.indicadores],
+  );
+  const linha = (f: FixaParaCopiar) =>
+    edicao[f.origemId] ?? { marcada: !f.jaLancada, valor: valorParaCampo(f.valor) };
+  function fechar() {
+    setEdicao({});
+    setErro(null);
+    onFechar();
+  }
+  return (
+    <Dialogo aberto={aberto} titulo="Copiar fixas do mês anterior" onFechar={fechar}>
+      <Estado consulta={fixas}>
+        {() => {
+          const lista = fixas.data!;
+          if (lista.length === 0)
+            return (
+              <div className="flex flex-col gap-4">
+                <p className="text-tinta-suave">
+                  Nenhuma despesa fixa do mês anterior para copiar: ou não houve, ou já foram
+                  copiadas para este mês.
+                </p>
+                <Botao className="self-end" variante="secundario" onClick={fechar}>
+                  Fechar
+                </Botao>
+              </div>
+            );
+          const marcadas = lista.filter((f) => linha(f).marcada);
+          return (
+            <form
+              method="post"
+              noValidate
+              className="flex flex-col gap-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setErro(null);
+                const itens = [];
+                for (const f of marcadas) {
+                  const valor = lerMoeda(linha(f).valor);
+                  if (!valor || valor <= 0)
+                    return setErro(`Informe o valor de "${f.descricao}". Ex.: 1.250,00`);
+                  itens.push({ origemId: f.origemId, valor, vencimento: f.vencimento });
+                }
+                if (itens.length === 0) return setErro('Marque pelo menos uma despesa.');
+                try {
+                  await copiar.mutateAsync({ mes, itens });
+                  fechar();
+                } catch (er) {
+                  setErro(mensagemDe(er));
+                }
+              }}
+            >
+              <p className="text-sm text-tinta-suave">
+                Confira os valores antes de copiar. Elas entram neste mês a pagar, com o vencimento
+                no mesmo dia.
+              </p>
+              {erro && <Aviso tom="erro">{erro}</Aviso>}
+              <ul className="flex flex-col gap-3" aria-label="Despesas fixas do mês anterior">
+                {lista.map((f) => {
+                  const l = linha(f);
+                  const mudar = (novo: Partial<typeof l>) =>
+                    setEdicao({ ...edicao, [f.origemId]: { ...l, ...novo } });
+                  return (
+                    <li
+                      key={f.origemId}
+                      className="flex flex-wrap items-end gap-3 border-b border-borda pb-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <Marcador
+                          id={`copiar-${f.origemId}`}
+                          rotulo={f.descricao}
+                          checked={l.marcada}
+                          onChange={(e) => mudar({ marcada: e.target.checked })}
+                        />
+                        <span className="block pl-8 text-sm text-tinta-suave">
+                          {f.categoria} · {nomeUnidade(f.unidadeId)}
+                          {f.vencimento
+                            ? ` · vence ${formatarData(`${f.vencimento}T12:00:00Z`)}`
+                            : ''}
+                          {f.repetir && ' · repete todo mês'}
+                        </span>
+                        {f.jaLancada && (
+                          <span className="block pl-8 text-sm font-semibold text-aviso-texto">
+                            Já tem uma igual neste mês: marque só se for outra.
+                          </span>
+                        )}
+                      </div>
+                      <div className="w-36">
+                        <Campo
+                          id={`copiar-valor-${f.origemId}`}
+                          rotulo="Valor (R$)"
+                          inputMode="decimal"
+                          disabled={!l.marcada}
+                          value={l.valor}
+                          onChange={(e) => mudar({ valor: e.target.value })}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Botao variante="secundario" onClick={fechar}>
+                  Cancelar
+                </Botao>
+                <Botao type="submit" carregando={copiar.isPending} disabled={marcadas.length === 0}>
+                  Copiar {marcadas.length} {marcadas.length === 1 ? 'despesa' : 'despesas'}
+                </Botao>
+              </div>
+            </form>
+          );
+        }}
+      </Estado>
     </Dialogo>
   );
 }
