@@ -149,7 +149,12 @@ U2 a U5 já feitos (#161).
   - registro no CHANGELOG.
 - [x] Lote 5a (N1): bateria verde e PR aberto (12/11)
 - [ ] Merge pelo dono (lote 5a)
-- [ ] **N2** Páginas de comparação
+- [x] **N2** Páginas de comparação (12/11):
+  - AppBarber, Trinks, Booksy e "Melhor sistema para barbearia";
+  - fontes oficiais conferidas em 12/11; ao mudar um preço, conferir de novo e trocar `CONFERIDO_EM`;
+  - registro no CHANGELOG.
+- [x] Lote 5b (N2): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 5b)
 - [ ] **N3** Ferramentas grátis em URL própria
 - [ ] **N4** Blog
 - [ ] **P4** Coerência com os anúncios do Google já publicados

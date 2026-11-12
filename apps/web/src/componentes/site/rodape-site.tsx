@@ -43,6 +43,14 @@ export function RodapeSite() {
                 </Link>
               </li>
             ))}
+            <li>
+              <Link
+                href="/melhor-sistema-para-barbearia"
+                className="inline-flex min-h-9 items-center text-tinta-suave hover:text-tinta"
+              >
+                Como escolher o sistema
+              </Link>
+            </li>
           </ul>
         </nav>
         <nav aria-label="Rodapé">
