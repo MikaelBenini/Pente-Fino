@@ -1,5 +1,6 @@
 // Administração do sistema (Etapa 15.1): leitura entre contas só pelas funções do banco
 // (migração "plataforma"), com o usuário de banco da plataforma. Nunca dado de cliente.
+import type { ContaNoFunil } from '@pente-fino/shared';
 import type { PrismaClient } from './generated/prisma/client.js';
 
 export interface LinhaContaPlataforma {
@@ -39,6 +40,34 @@ export interface LinhaContaPlataforma {
 /** Todas as contas, das mais novas para as mais antigas (plataforma_contas()). */
 export function contasDaPlataforma(prisma: PrismaClient): Promise<LinhaContaPlataforma[]> {
   return prisma.$queryRaw<LinhaContaPlataforma[]>`SELECT * FROM plataforma_contas()`;
+}
+
+/** Admin F1: por conta, quais etapas do funil de ativação a barbearia já fez. */
+export interface LinhaFunilPlataforma {
+  id: string;
+  criado_em: Date;
+  interna: boolean;
+  servicos: boolean;
+  barbeiros: boolean;
+  agendamento: boolean;
+  comanda: boolean;
+  whatsapp: boolean;
+  pagamento: boolean;
+}
+
+export async function funilDasContas(prisma: PrismaClient): Promise<ContaNoFunil[]> {
+  const linhas = await prisma.$queryRaw<LinhaFunilPlataforma[]>`SELECT * FROM plataforma_funil()`;
+  return linhas.map(({ criado_em, ...l }) => ({ ...l, criadoEm: criado_em.toISOString() }));
+}
+
+/** A etapa do funil de uma conta (ficha da conta); undefined se a conta não existe. */
+export async function funilDaConta(
+  prisma: PrismaClient,
+  contaId: string,
+): Promise<ContaNoFunil | undefined> {
+  const [l] = await prisma.$queryRaw<LinhaFunilPlataforma[]>`
+    SELECT * FROM plataforma_funil() WHERE id = ${contaId}::uuid`;
+  return l && { ...l, criadoEm: l.criado_em.toISOString() };
 }
 
 export interface LinhaFaturaPlataforma {

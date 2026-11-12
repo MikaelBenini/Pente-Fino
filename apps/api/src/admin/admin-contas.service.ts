@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   ativacaoDaContaPlataforma,
+  funilDaConta,
   fichaDaContaPlataforma,
   aplicarSituacaoDaConta,
   marcarContaInterna,
@@ -16,6 +17,7 @@ import {
   formatarMoeda,
   NOME_PLANO,
   origemCadastroSchema,
+  etapaAtualDoFunil,
   problemaFimDoTeste,
   resumoDaOrigem,
   transicaoDaConta,
@@ -76,7 +78,7 @@ export class AdminContasService {
     const f = await fichaDaContaPlataforma(this.banco.prisma, contaId);
     if (!f) throw Erros.naoEncontrado('Conta não encontrada.');
     const situacao = await situacaoDaContaPlataforma(this.banco.prisma, contaId);
-    const [eventos, ativacao, notas] = await Promise.all([
+    const [eventos, ativacao, notas, funil] = await Promise.all([
       this.banco.prisma.auditoriaPlataforma.findMany({
         where: { contaAfetadaId: contaId },
         include: { usuario: { select: { nome: true } } },
@@ -85,6 +87,7 @@ export class AdminContasService {
       }),
       ativacaoDaContaPlataforma(this.banco.prisma, contaId),
       this.notas(contaId),
+      funilDaConta(this.banco.prisma, contaId),
     ]);
     return {
       ...(f as unknown as Omit<
@@ -96,9 +99,11 @@ export class AdminContasService {
         | 'interna'
         | 'origem'
         | 'ativacao'
+        | 'etapaFunil'
         | 'notas'
       >),
       ativacao,
+      etapaFunil: funil ? etapaAtualDoFunil(funil) : null,
       notas,
       statusAnterior: situacao?.statusAnterior ?? null,
       cortesiaAte: situacao?.cortesiaAte ?? null,

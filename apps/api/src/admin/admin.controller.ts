@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Erros } from '../comum/erros.js';
-import { contasDaPlataforma, faturasDaPlataforma } from '@pente-fino/db';
+import { contasDaPlataforma, faturasDaPlataforma, funilDasContas } from '@pente-fino/db';
 import {
   entrarAdminSchema,
   mudarPlanoContaSchema,
@@ -40,6 +40,8 @@ import {
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
+  resumirFunil,
+  type ResumoFunil,
   type MetricasDaPlataforma,
   type ContaNaPlataforma,
   type EntrarAdminEntrada,
@@ -149,6 +151,19 @@ export class AdminController {
         valor: f.valor,
       })),
     });
+  }
+
+  @Get('funil')
+  @PapeisPlataforma('admin')
+  @ApiOperation({
+    summary: 'Funil de ativação: quantas contas fizeram cada etapa, do cadastro ao pagamento',
+  })
+  async funil(@Query('periodo') periodoBruto?: string): Promise<ResumoFunil> {
+    // Admin F1: cadastros dos últimos 30 ou 90 dias, ou desde o início (padrão).
+    const dias = { '30dias': 30, '90dias': 90, todos: null }[periodoBruto ?? 'todos'];
+    if (dias === undefined) throw Erros.requisicaoInvalida('periodo_invalido', 'Período inválido.');
+    const desde = dias ? new Date(Date.now() - dias * 86_400_000).toISOString() : undefined;
+    return resumirFunil(await funilDasContas(this.banco.prisma), desde);
   }
 
   @Get('contas')

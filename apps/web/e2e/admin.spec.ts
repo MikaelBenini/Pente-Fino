@@ -47,6 +47,12 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByRole('heading', { name: 'Precisa de atenção' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Números do negócio' })).toBeVisible();
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
+  // Admin F1: funil de ativação, do cadastro ao pagamento.
+  const funil = page.getByRole('region', { name: 'Funil de ativação' });
+  const etapas = funil.getByRole('list', { name: 'Etapas do funil' });
+  await expect(etapas.getByRole('listitem')).toHaveCount(7);
+  await expect(etapas.getByRole('listitem').first()).toContainText('Cadastro');
+  await expect(etapas.getByRole('listitem').last()).toContainText('1º pagamento');
   await expect(page.getByRole('list', { name: 'Contas por situação' })).toBeVisible();
   // Admin U1: período e números que levam à lista filtrada.
   await page.getByLabel('Período').selectOption('30dias');
@@ -152,9 +158,11 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   const desativar = page.getByRole('dialog', { name: /^Desativar / });
   await desativar.getByLabel('Motivo').fill('Teste da equipe');
   await desativar.getByRole('button', { name: 'Desativar' }).click();
+  // O banco de desenvolvimento acumula a equipe das execuções anteriores (mais de mil linhas):
+  // a tabela leva mais que os 5 s padrão para se redesenhar depois de desativar.
   await expect(
     equipe.getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) }),
-  ).toContainText('Desativado');
+  ).toContainText('Desativado', { timeout: 20_000 });
   await page.getByRole('tab', { name: 'Auditoria' }).click();
   await page.getByRole('combobox', { name: 'Ação', exact: true }).selectOption('criar_membro');
   await expect(page.getByRole('table', { name: 'Auditoria da plataforma' })).toContainText(

@@ -7,13 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
-### Alterado (site: velocidade e acessibilidade)
+### Adicionado (administração: funil de ativação)
 
-- As fotos das telas no site têm uma versão menor, com cerca de um terço do tamanho. O celular baixa a menor, e a página abre mais rápido.
-- A tag do Google Ads não carrega mais duas vezes: ela vem só pelo Google Tag Manager, depois da página.
-- Foco visível pelo teclado em todos os links, botões e campos.
-- As tabelas que rolam para o lado no celular podem ser roladas pelo teclado.
-- A auditoria automática de acessibilidade, com contraste AA, agora passa também pelas páginas do site.
+- Nos números do negócio, o novo bloco "Funil de ativação" mostra quantas contas já fizeram cada etapa e a porcentagem dos cadastros. As etapas são: cadastro, serviços com preço, barbeiros, 1º agendamento, 1ª comanda fechada, WhatsApp conectado e 1º pagamento.
+- O funil filtra por período (desde o início ou cadastros dos últimos 30 e 90 dias) e deixa de fora as contas internas.
+- Na ficha de cada conta aparece a próxima etapa do funil, para saber onde ajudar.
 
 ### Adicionado (site: blog)
 

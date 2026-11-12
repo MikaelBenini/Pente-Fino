@@ -802,7 +802,13 @@ motivo e vai para a auditoria.
 - [x] **U9** Saúde do sistema (feito em 2026-11-12: bloco "Servidor" com a versão em produção e desde quando a API está no ar (`APP_VERSAO` no compose, `process.uptime()`), o último backup (o `backup.sh` grava `estado_backup` em `configuracao_plataforma`, também quando falha; "atrasado" depois de 26 h), disco, memória e validade do certificado (o `vigia.sh` grava `estado_servidor` a cada 5 min; alerta com menos de 14 dias) e o último aviso do Asaas aceito (Redis); na limpeza, o texto explica que conta paga e cortesia nunca saem e a lista das que saem nos próximos 7 dias (`dataDeApagarConta`, gravada pela rotina em `execucao_limpeza.proximas`). Testes em `limpeza.test.ts`, `limpeza.db.test.ts`, `saude-admin.e2e-spec.ts` e `apps/web/e2e/admin.spec.ts`)
 - [x] **Comissões no Básico** (feito em 2026-11-12, decisão do estudo de planos: o recurso `comissoes` vale desde o Básico em `RECURSOS`; selos e tabela de /planos saem da mesma fonte; cartões dos planos, documentação do produto, `planos.test.ts`, `planos.e2e-spec.ts` e `apps/web/e2e/resultados.spec.ts` atualizados)
 - [ ] **U1, U6–U9** usabilidade das outras abas
-- [ ] **F1–F9** funil de ativação, origem do cadastro (com o T2 do site), alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [x] **F1** funil de ativação (feito em 2026-11-12):
+  - migração `funil_ativacao` com `plataforma_funil()` (SECURITY DEFINER), que diz por conta se há serviço com preço, barbeiro ativo, agendamento, comanda fechada, WhatsApp conectado e fatura paga;
+  - regra em `packages/shared/src/funil.ts` (`resumirFunil`, `etapaAtualDoFunil`), com teste;
+  - `GET /admin/funil?periodo=todos|90dias|30dias`, só para o admin;
+  - `etapaFunil` na ficha da conta e o bloco "Funil de ativação" em `metricas-admin.tsx`;
+  - testes em `admin.e2e-spec.ts` e `apps/web/e2e/admin.spec.ts`.
+- [ ] **F2–F9** origem do cadastro (com o T2 do site), alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

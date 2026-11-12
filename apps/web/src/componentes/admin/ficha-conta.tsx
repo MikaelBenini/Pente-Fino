@@ -16,6 +16,7 @@ import {
   LIMITE_TESTE_DIAS,
   NOME_PROXIMO_PASSO,
   PROXIMOS_PASSOS,
+  NOME_ETAPA_FUNIL,
   TOTAL_PASSOS_ATIVACAO,
   diasRestantesDoTeste,
   notaInternaSchema,
@@ -316,6 +317,12 @@ function Conteudo({
               : f.ativacao <= 2
                 ? 'Quase nada configurado: vale uma ligação.'
                 : 'No caminho.'}
+          </dd>
+          {/* Admin F1: em que etapa do funil a conta parou. */}
+          <dd className="text-sm">
+            {f.etapaFunil
+              ? `Próxima etapa do funil: ${NOME_ETAPA_FUNIL[f.etapaFunil]}`
+              : 'Funil completo, até o pagamento.'}
           </dd>
         </div>
       </dl>
