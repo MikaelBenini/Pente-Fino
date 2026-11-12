@@ -705,7 +705,13 @@ opção padrão do briefing, numa constante fácil de trocar.
 - [x] **T1** conversão só no sucesso do cadastro, com `value` (o preço por mês do plano com o cupom) e `currency` BRL, em `cadastro_concluido` (o que o GTM já usa) e em `sign_up`. **Dono:** conferir no Tag Assistant e marcar o valor na conversão do Google Ads
 - [x] **T2** gclid, gbraid, wbraid e utm_* (e o domínio de origem) guardados ao chegar: com o aceite, cookie próprio `pf_origem` por 90 dias; sem, só na visita (`lib/origem.ts`, `origemDaVisita`); enviados no cadastro e gravados em `conta.origem` (só os campos conhecidos, `origemCadastroSchema`). A ficha da administração mostra a origem (admin F2, em parte: Contas, Vendas e Início ficam com U2 e U5). Política de privacidade atualizada
 - [x] **T3** eventos do funil: `view_planos`, `toggle_ciclo`, `click_cta` (com a posição: topo, rodapé ou a seção; um ouvinte só para toda chamada ao cadastro), `begin_sign_up`; `play_video`, `use_calculadora` e `click_whatsapp` já existiam. **T4** consentimento já existia (Consent Mode v2)
-- [ ] **N1–N5** páginas por intenção de busca, comparativos (só fatos com data e fonte), calculadoras em URL própria, blog e Sobre/Contato
+- [x] **N1** páginas por intenção de busca (feito em 2026-11-12):
+  - sete rotas em `app/(site)/<termo>/page.tsx`, com o texto em `src/conteudo/paginas-busca.ts`, desenhadas por `componentes/site/pagina-busca.tsx`;
+  - cada página tem H1 com o termo, resposta direta, telas, "Quanto custa" com o preço de `precoPorMes`, perguntas com `FAQPage`, trilha, canonical, OG e "Veja também";
+  - o selo do plano sai de `RECURSOS`;
+  - as páginas entram no sitemap e no rodapé "Recursos";
+  - teste N1 em `apps/web/e2e/site.spec.ts`.
+- [ ] **N2–N5** comparativos (só fatos com data e fonte), calculadoras em URL própria, blog e Sobre/Contato
 - [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
 
 ## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)

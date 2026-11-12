@@ -75,12 +75,13 @@ test('robots, sitemap e imagem de compartilhamento', async ({ request }) => {
   expect(robots).toContain('Sitemap:');
   const sitemap = await (await request.get('/sitemap.xml')).text();
   expect(sitemap).toContain('/planos');
+  expect(sitemap).toContain('/comissao-de-barbeiro');
   const og = await request.get('/opengraph-image');
   expect(og.ok()).toBe(true);
   expect(og.headers()['content-type']).toContain('image/png');
 });
 
-for (const rota of ['/', '/planos', '/termos', '/privacidade']) {
+for (const rota of ['/', '/planos', '/termos', '/privacidade', '/sistema-para-barbearia']) {
   test(`${rota} não rola para o lado`, async ({ page }) => {
     await page.goto(rota);
     const sobra = await page.evaluate(
@@ -231,4 +232,37 @@ test('do anúncio ao cadastro: origem guardada, eventos do funil e conversão co
   expect(conversao.currency).toBe('BRL');
   expect(conversao.value).toBeGreaterThan(0);
   expect(nomes.indexOf('begin_sign_up')).toBeLessThan(nomes.indexOf('sign_up'));
+});
+
+// ─── Site N1: páginas por termo de busca ─────
+test('N1: página por termo de busca tem H1, canonical, perguntas para o Google e cadastro', async ({
+  page,
+}) => {
+  await page.goto('/comissao-de-barbeiro');
+  await expect(
+    page.getByRole('heading', { level: 1, name: /Comissão de barbeiro calculada sozinha/ }),
+  ).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+    'href',
+    /\/comissao-de-barbeiro$/,
+  );
+  // Comissão vem em todos os planos: sem selo. O preço sai da tabela.
+  await expect(page.getByRole('heading', { name: /Item a item/ })).not.toContainText('Pro');
+  await expect(page.getByText(/A partir de R\$\s66,90 por mês no plano anual/)).toBeVisible();
+  const dados = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const faq = dados.map((d) => JSON.parse(d)).find((d) => d['@type'] === 'FAQPage');
+  expect(faq.mainEntity.length).toBeGreaterThanOrEqual(3);
+  await expect(page.getByRole('link', { name: 'Criar conta grátis' })).toHaveAttribute(
+    'href',
+    /\/cadastro/,
+  );
+  // O bot é do Pro: a página do WhatsApp mostra o selo, e o rodapé liga todas as páginas.
+  await page
+    .getByRole('navigation', { name: 'Veja também' })
+    .getByRole('link', { name: 'WhatsApp para barbearia' })
+    .click();
+  await expect(page.getByRole('heading', { name: /Agenda 24 horas/ })).toContainText(
+    'Pro e Premium',
+  );
+  await expect(page.getByRole('navigation', { name: 'Recursos' }).getByRole('link')).toHaveCount(7);
 });

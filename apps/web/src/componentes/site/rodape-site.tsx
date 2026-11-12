@@ -1,5 +1,6 @@
 import { cacheLife } from 'next/cache';
 import Link from 'next/link';
+import { PAGINAS_BUSCA } from '@/conteudo/paginas-busca';
 import { EMPRESA, linkWhatsappComercial } from '@/lib/contato';
 import { EMAIL_CONTATO } from '@/lib/site';
 import { Marca } from '../marca';
@@ -15,7 +16,7 @@ const LINKS = [
 export function RodapeSite() {
   return (
     <footer className="border-t border-borda bg-superficie">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-[1fr_auto]">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-[1fr_auto_auto]">
         <div className="flex flex-col gap-3">
           <Marca compacta />
           <p className="max-w-sm text-sm text-tinta-suave">
@@ -29,6 +30,21 @@ export function RodapeSite() {
           </a>
           <Contato />
         </div>
+        {/* Site N1: as páginas por termo de busca, para o Google e para quem procura. */}
+        <nav aria-label="Recursos">
+          <ul className="flex flex-col gap-y-1 text-sm">
+            {PAGINAS_BUSCA.map((p) => (
+              <li key={p.caminho}>
+                <Link
+                  href={p.caminho}
+                  className="inline-flex min-h-9 items-center text-tinta-suave hover:text-tinta"
+                >
+                  {p.nome}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <nav aria-label="Rodapé">
           <ul className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:grid-cols-1">
             {LINKS.map((l) => (

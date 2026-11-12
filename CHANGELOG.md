@@ -7,6 +7,24 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (site)
+
+- Sete páginas novas no site, uma por assunto que o barbeiro procura no Google:
+  - sistema para barbearia;
+  - agenda online;
+  - controle financeiro;
+  - comissão de barbeiro;
+  - comanda digital;
+  - WhatsApp;
+  - aplicativo.
+- Cada página tem:
+  - uma resposta direta;
+  - as telas do sistema;
+  - quanto custa (lido da tabela de preços);
+  - dúvidas frequentes;
+  - o botão para o teste grátis.
+- As páginas entram no sitemap e no rodapé ("Recursos").
+
 ### Alterado (planos)
 
 - Comissão automática por item e extrato do barbeiro agora fazem parte de todos os planos, inclusive o Básico. Quem já assina o Básico ganha na hora, sem mudar de plano. A página de planos, os selos do site e a comparação de planos foram atualizados.
