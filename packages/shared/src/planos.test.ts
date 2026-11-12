@@ -80,8 +80,10 @@ describe('diasRestantesTeste', () => {
 
 describe('recursos por plano', () => {
   it('Básico não tem os do Pro; Pro não tem os do Premium', () => {
-    expect(temRecurso('basico', 'comissoes')).toBe(false);
-    expect(temRecurso('pro', 'comissoes')).toBe(true);
+    // Comissões em todos os planos (estudo de planos, 12/11/2026).
+    expect(temRecurso('basico', 'comissoes')).toBe(true);
+    expect(temRecurso('basico', 'metas')).toBe(false);
+    expect(temRecurso('pro', 'metas')).toBe(true);
     expect(temRecurso('pro', 'rede')).toBe(false);
     expect(temRecurso('premium', 'rede')).toBe(true);
     expect(temRecurso('premium', 'listaEspera')).toBe(true);
@@ -137,7 +139,8 @@ describe('troca de plano', () => {
     expect(p.perdas).toContain(
       'Clube da barbearia: assinatura, combos e convênios (12 assinantes continuam cadastrados, sem novas adesões nem baixas)',
     );
-    expect(p.perdas).toHaveLength(8);
+    expect(p.perdas).toHaveLength(7);
+    expect(p.perdas.join(' ')).not.toContain('Comissão automática');
   });
 
   it('descer do Premium para o Pro com duas unidades: bloqueia', () => {

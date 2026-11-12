@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (planos)
+
+- Comissão automática por item e extrato do barbeiro agora fazem parte de todos os planos, inclusive o Básico. Quem já assina o Básico ganha na hora, sem mudar de plano. A página de planos, os selos do site e a comparação de planos foram atualizados.
+
 ### Adicionado (saúde do sistema)
 
 - Saúde do sistema → "Servidor": versão em produção e desde quando está no ar, último backup (com

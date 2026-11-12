@@ -124,8 +124,8 @@ U2 a U5 já feitos (#161).
 - [x] Merge pelo dono (lote 4b, #169, 12/11)
 - [x] Lote 4c (U8): bateria verde, PR #170 (12/11)
 - [x] Merge pelo dono (lote 4c)
-- [x] Lote 4d (U9): bateria verde, PR aberto (12/11)
-- [ ] Merge pelo dono (lote 4d)
+- [x] Lote 4d (U9): bateria verde, PR #171 (12/11)
+- [x] Merge pelo dono (lote 4d)
 - [x] **U6** Equipe (12/11, Etapa 23.4): papéis Suporte e Financeiro, última troca de senha e motivo para desativar
 - [x] **U7** Auditoria (12/11, Etapa 23.4): detalhes legíveis, horário local, paginação além de 300 e CSV
 - [x] **U8** Configurações (12/11, Etapa 23.4): fuso escrito nos campos, prévia do aviso geral, e-mail de teste por
@@ -139,9 +139,10 @@ U2 a U5 já feitos (#161).
   [plano de melhorias](pente-fino-melhorias.md). O dono aprovou só **comissões no Básico**; ficam
   como estão os preços, os lembretes do WhatsApp (Pro), o lucro por serviço (Premium) e o teste
   de 14 dias
-- [ ] **Comissões no Básico** (aprovado em 12/11): o recurso `comissoes` passa a valer desde o
-  Básico (`RECURSOS` em `planos.ts`), com a página de planos, o comparativo e os testes de plano
-  atualizados; quem já assina o Básico ganha na hora
+- [x] **Comissões no Básico** (12/11): `comissoes` desde o Básico em `RECURSOS` (`planos.ts`);
+  cartões de /planos, documentação do produto e testes de plano atualizados (CHANGELOG)
+- [x] Lote 4e (comissões no Básico): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 4e)
 - [ ] **N1** Páginas por intenção de busca (uma por termo dos anúncios)
 - [ ] **N2** Páginas de comparação
 - [ ] **N3** Ferramentas grátis em URL própria
