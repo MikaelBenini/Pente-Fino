@@ -300,6 +300,7 @@ model Conta {
   horarios             HorarioProfissional[]
   bloqueios            BloqueioAgenda[]
   regrasComissao       RegraComissao[]
+  precosProfissional   PrecoProfissional[]
   servicos             Servico[]
   precosServico        PrecoServico[]
   produtos             Produto[]
@@ -533,6 +534,7 @@ model Profissional {
   itensComanda       ItemComanda[]
   pagamentosComissao PagamentoComissao[]
   avaliacoes         Avaliacao[]
+  precosProprios     PrecoProfissional[]
 
   listaEspera ListaEspera[]
 
@@ -627,11 +629,12 @@ model Servico {
   criadoEm        DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm    DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta  Conta              @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  precos PrecoServico[]
-  itens  ItemComanda[]
-  metas  Meta[]
-  clube  ItemClubeServico[]
+  conta              Conta               @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  precos             PrecoServico[]
+  precosProfissional PrecoProfissional[]
+  itens              ItemComanda[]
+  metas              Meta[]
+  clube              ItemClubeServico[]
 
   @@unique([contaId, nome])
   @@index([unidadeIds], type: Gin)
@@ -639,6 +642,26 @@ model Servico {
 }
 
 /// Uma linha por mudança de preço. O preço vigente é a maior vigência até a data.
+/// Preço próprio do barbeiro para um serviço (o barbeiro muda no perfil dele). Vale quando marcam
+/// com ele e na comanda dele; valor nulo a partir de uma data = volta para o preço da unidade.
+model PrecoProfissional {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId        String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  profissionalId String   @map("profissional_id") @db.Uuid
+  servicoId      String   @map("servico_id") @db.Uuid
+  valor          Int?
+  vigenciaInicio DateTime @map("vigencia_inicio") @db.Date
+  criadoEm       DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta        Conta        @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  profissional Profissional @relation(fields: [profissionalId], references: [id], onDelete: Cascade)
+  servico      Servico      @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+
+  @@unique([contaId, profissionalId, servicoId, vigenciaInicio], map: "preco_profissional_conta_id_profissional_id_servico_id_vigen_ke")
+  @@map("preco_profissional")
+}
+
 model PrecoServico {
   id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
   contaId        String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid

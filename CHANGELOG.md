@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (preço por barbeiro)
+
+- Perfil → "Meus preços": o barbeiro que cobra diferente da tabela escreve o próprio preço de cada
+  serviço. Vale de hoje em diante na comanda dele e quando marcam com ele, pela agenda, pelo
+  WhatsApp e pelo link de agendamento (que mostra o preço do barbeiro escolhido). Vazio volta
+  para o preço da unidade.
+
 ### Alterado (catálogo por unidade)
 
 - Serviços e produtos agora são de cada unidade: no cadastro, "Disponível em" escolhe as unidades.

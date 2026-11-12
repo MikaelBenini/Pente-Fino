@@ -5,6 +5,7 @@ import {
   validarHorario,
   comissaoFixaDoClube,
   partesDoServico,
+  precoDoProfissional,
   precoServicoVigente,
   regraComissaoVigente,
   type Transacao,
@@ -427,7 +428,8 @@ export class ComandasService {
       const s = await tx.servico.findUnique({ where: { id: item.servicoId } });
       if (!s || !s.ativo) throw Erros.naoEncontrado('Serviço não encontrado.');
       exigirNaUnidade(s, c.unidadeId);
-      const tabela = await precoServicoVigente(tx, s.id, c.unidadeId, dia);
+      // Preço por barbeiro: o do profissional da comanda, ou o da unidade.
+      const tabela = await precoDoProfissional(tx, s.id, c.profissionalId, c.unidadeId, dia);
       if (tabela === undefined)
         throw Erros.requisicaoInvalida(
           'sem_preco',
@@ -612,9 +614,10 @@ export class ComandasService {
             'Este item tem preço de tabela. Para cobrar menos, dê desconto.',
           );
         const tabela =
-          (await precoServicoVigente(
+          (await precoDoProfissional(
             tx,
             item.servicoId!,
+            comanda.profissionalId,
             comanda.unidadeId,
             diaDaComanda(comanda),
           )) ?? item.precoUnitario;

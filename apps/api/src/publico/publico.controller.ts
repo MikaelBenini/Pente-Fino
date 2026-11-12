@@ -9,6 +9,7 @@ import {
   primeiroHorarioPossivel,
   faltasRecentes,
   usarToken,
+  precoProprioVigente,
   precoServicoVigente,
   Prisma,
   type Transacao,
@@ -325,10 +326,15 @@ export class PublicoController {
         telefone: u.telefone,
         // Só o que tem preço na unidade pode ser agendado pelo cliente.
         servicos: comPreco.filter((s) => s.preco !== null),
-        profissionais: profissionais.map((p) => ({
-          id: p.id,
-          nome: p.usuario.nome.split(' ')[0]!,
-        })),
+        profissionais: await umPorVez(profissionais, async (p) => {
+          // Preço por barbeiro: o próprio de cada serviço (só os que ele mudou).
+          const precos: Record<string, number> = {};
+          for (const s of comPreco) {
+            const proprio = await precoProprioVigente(tx, s.id, p.id, hoje);
+            if (proprio !== null) precos[s.id] = proprio;
+          }
+          return { id: p.id, nome: p.usuario.nome.split(' ')[0]!, precos };
+        }),
         lembretesWhatsapp: !!(await numeroDosLembretes(tx, u.id, u.regrasAgendamento)),
         linkWhatsappAgendar: await linkAgendarPelaConversa(tx, u.id, u.regrasAgendamento),
         listaEspera: temRecurso((await estadoAssinatura(tx)).plano, 'listaEspera'),

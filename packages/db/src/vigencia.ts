@@ -18,6 +18,37 @@ export async function precoServicoVigente(
   return linha?.valor ?? undefined;
 }
 
+/**
+ * Preço que vale para o profissional na data: o dele (preço por barbeiro, mudado no perfil) ou,
+ * sem preço próprio, o da tabela da unidade.
+ */
+export async function precoDoProfissional(
+  tx: Tx,
+  servicoId: string,
+  profissionalId: string,
+  unidadeId: string,
+  data: DataISO,
+): Promise<number | undefined> {
+  const [linha] = await tx.$queryRaw<{ valor: number | null }[]>`
+    SELECT preco_do_profissional(${servicoId}::uuid, ${profissionalId}::uuid, ${unidadeId}::uuid, ${dataParaBanco(data)}::date) AS valor`;
+  return linha?.valor ?? undefined;
+}
+
+/** Preço próprio do profissional na data (sem cair para o da unidade); null = usa o da unidade. */
+export async function precoProprioVigente(
+  tx: Tx,
+  servicoId: string,
+  profissionalId: string,
+  data: DataISO,
+): Promise<number | null> {
+  const [p] = await tx.precoProfissional.findMany({
+    where: { servicoId, profissionalId, vigenciaInicio: { lte: dataParaBanco(data) } },
+    orderBy: { vigenciaInicio: 'desc' },
+    take: 1,
+  });
+  return p?.valor ?? null;
+}
+
 /** Regra de comissão vigente do profissional para o tipo de item na data. */
 export async function regraComissaoVigente(
   tx: Tx,

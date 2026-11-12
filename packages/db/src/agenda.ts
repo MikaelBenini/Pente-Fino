@@ -18,7 +18,7 @@ import {
 } from '@pente-fino/shared';
 import type { OrigemAgendamento, Prisma } from './generated/prisma/client.js';
 import { partesDoServico } from './clube.js';
-import { precoServicoVigente } from './vigencia.js';
+import { precoDoProfissional } from './vigencia.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -308,7 +308,8 @@ export async function criarAgendamentoNoBanco(
         'fora_da_unidade',
         `"${s.nome}" não está disponível nesta unidade. Inclua a unidade no cadastro.`,
       );
-    const preco = await precoServicoVigente(tx, s.id, d.unidadeId, dia);
+    // Preço por barbeiro: o do profissional marcado, ou o da unidade.
+    const preco = await precoDoProfissional(tx, s.id, d.profissionalId, d.unidadeId, dia);
     if (preco === undefined)
       throw new ErroAgenda(
         'sem_preco',
