@@ -718,7 +718,13 @@ opção padrão do briefing, numa constante fácil de trocar.
   - os preços do Pente Fino saem de `precoPorMes` e `LIMITES_PLANO`;
   - páginas desenhadas por `componentes/site/pagina-comparativo.tsx`;
   - teste N2 em `apps/web/e2e/site.spec.ts`.
-- [ ] **N3–N5** calculadoras em URL própria, blog e Sobre/Contato
+- [x] **N3** calculadoras em URL própria (feito em 2026-11-12):
+  - contas em `packages/shared/src/calculadoras.ts` (`sobraDoCorte`, `comissaoDoBarbeiro`, `precoMinimoDoCorte`), com teste;
+  - a calculadora da home passou a usar `sobraDoCorte`;
+  - rotas `/calculadora/lucro-por-corte`, `/calculadora/comissao-de-barbeiro` e `/calculadora/preco-do-corte`, desenhadas por `componentes/site/pagina-calculadora.tsx`;
+  - entram no sitemap e no rodapé;
+  - teste N3 em `apps/web/e2e/site.spec.ts`.
+- [ ] **N4–N5** blog e Sobre/Contato
 - [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
 
 ## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)

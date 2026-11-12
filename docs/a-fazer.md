@@ -155,7 +155,12 @@ U2 a U5 já feitos (#161).
   - registro no CHANGELOG.
 - [x] Lote 5b (N2): bateria verde e PR aberto (12/11)
 - [ ] Merge pelo dono (lote 5b)
-- [ ] **N3** Ferramentas grátis em URL própria
+- [x] **N3** Ferramentas grátis em URL própria (12/11):
+  - calculadoras de lucro por corte, comissão de barbeiro e preço do corte;
+  - contas em `packages/shared`, com teste;
+  - registro no CHANGELOG.
+- [x] Lote 5c (N3): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 5c)
 - [ ] **N4** Blog
 - [ ] **P4** Coerência com os anúncios do Google já publicados
 - [ ] **D1** Imagens do hero no tamanho certo para o celular

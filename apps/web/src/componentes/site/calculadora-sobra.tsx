@@ -1,15 +1,15 @@
 'use client';
 
-import { formatarMoeda, lerMoeda } from '@pente-fino/shared';
+import { formatarMoeda, lerMoeda, sobraDoCorte } from '@pente-fino/shared';
 import { useId, useRef, useState } from 'react';
 import { BotaoTesteOferta } from './oferta-lancamento';
 import { eventoGoogle } from './tag-google';
 
 /** Valor digitado em reais ("45", "45,90", "1.234,56") para centavos; inválido vira 0. */
-const centavos = (t: string) => Math.max(0, lerMoeda(t) ?? 0);
-const inteiro = (t: string) => Math.max(0, Math.round(Number(t.replace(',', '.')) || 0));
+export const centavos = (t: string) => Math.max(0, lerMoeda(t) ?? 0);
+export const inteiro = (t: string) => Math.max(0, Math.round(Number(t.replace(',', '.')) || 0));
 
-function Campo({
+export function Campo({
   rotulo,
   valor,
   onChange,
@@ -66,9 +66,11 @@ export function CalculadoraSobra() {
   };
 
   const p = centavos(preco);
-  const c = Math.round((p * Math.min(100, inteiro(comissao))) / 100);
-  const pr = Math.min(centavos(produto), Math.max(0, p - c));
-  const sobra = Math.max(0, p - c - pr);
+  const {
+    comissao: c,
+    produto: pr,
+    sobra,
+  } = sobraDoCorte({ preco: p, comissaoPct: inteiro(comissao), produto: centavos(produto) });
   const n = inteiro(quantos);
   const pct = (v: number) => (p > 0 ? (v / p) * 100 : 0);
 

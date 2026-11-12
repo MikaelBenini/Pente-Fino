@@ -1,6 +1,7 @@
 import { cacheLife } from 'next/cache';
 import Link from 'next/link';
 import { PAGINAS_BUSCA } from '@/conteudo/paginas-busca';
+import { CALCULADORAS } from './pagina-calculadora';
 import { EMPRESA, linkWhatsappComercial } from '@/lib/contato';
 import { EMAIL_CONTATO } from '@/lib/site';
 import { Marca } from '../marca';
@@ -51,6 +52,16 @@ export function RodapeSite() {
                 Como escolher o sistema
               </Link>
             </li>
+            {CALCULADORAS.map((c) => (
+              <li key={c.caminho}>
+                <Link
+                  href={c.caminho}
+                  className="inline-flex min-h-9 items-center text-tinta-suave hover:text-tinta"
+                >
+                  Calculadora: {c.nome}
+                </Link>
+              </li>
+            ))}
           </ul>
         </nav>
         <nav aria-label="Rodapé">

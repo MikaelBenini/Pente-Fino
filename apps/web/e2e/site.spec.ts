@@ -271,7 +271,9 @@ test('N1: página por termo de busca tem H1, canonical, perguntas para o Google 
   await expect(page.getByRole('heading', { name: /Agenda 24 horas/ })).toContainText(
     'Pro e Premium',
   );
-  await expect(page.getByRole('navigation', { name: 'Recursos' }).getByRole('link')).toHaveCount(8);
+  await expect(page.getByRole('navigation', { name: 'Recursos' }).getByRole('link')).toHaveCount(
+    11,
+  );
 });
 
 // ─── Site N2: comparações justas, com fonte e data ─────
@@ -298,4 +300,28 @@ test('N2: comparação mostra os dois lados, a fonte com data e leva às outras'
   ).toBeVisible();
   // Sem preço claro na fonte, a tabela manda para a página de planos do concorrente.
   await expect(page.getByText('Veja na página de planos').first()).toBeVisible();
+});
+
+// ─── Site N3: calculadoras grátis em endereço próprio ─────
+test('N3: calculadoras de comissão e de preço do corte fazem a conta e explicam', async ({
+  page,
+}) => {
+  await page.goto('/calculadora/comissao-de-barbeiro');
+  const calc = page.getByRole('region', { name: 'Calculadora: Comissão de barbeiro' });
+  // Padrão: R$ 50, 40%, R$ 5 de produto, sobre o preço cheio.
+  await expect(calc.getByText('R$ 20,00').first()).toBeVisible();
+  await calc.getByLabel('Descontar o produto antes da comissão').check();
+  await expect(calc.getByText('40% sobre R$ 45,00')).toBeVisible();
+  await expect(calc.getByText('R$ 18,00').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Como a conta é feita' })).toBeVisible();
+
+  await page
+    .getByRole('navigation', { name: 'Outras calculadoras' })
+    .getByRole('link', { name: 'Calculadora: Preço do corte' })
+    .click();
+  const preco = page.getByRole('region', { name: 'Calculadora: Preço do corte' });
+  await expect(preco.getByText('R$ 52,86')).toBeVisible();
+  // Comissão + margem = 100%: não existe preço possível.
+  await preco.getByLabel('Margem desejada').fill('55');
+  await expect(preco.getByRole('status')).toContainText('não existe preço possível');
 });

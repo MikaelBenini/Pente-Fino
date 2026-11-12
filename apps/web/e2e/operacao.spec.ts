@@ -94,8 +94,9 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   ];
   let quemAtende: (typeof BARBEIROS)[number] | null = null;
   // No fim da tarde o seed lota os três barbeiros: sem ninguém livre agora, encaixa um pouco
-  // antes, ainda hoje (o atendimento já aconteceu, então pode ser recebido).
-  const tentativas = [0, 30, 60, 90].flatMap((antes) =>
+  // antes. Até 25 min: o corte (30 min) já começou, então pode ser recebido, e ainda não
+  // terminou (horário terminado deixa a comanda pendente, e o fluxo abaixo é o da prevista).
+  const tentativas = [0, 5, 10, 15, 20, 25].flatMap((antes) =>
     BARBEIROS.map((b) => ({ b, hora: horaAntes(agora.hora, antes) })),
   );
   for (const { b, hora } of tentativas) {
@@ -123,7 +124,7 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
       break;
     }
   }
-  expect(quemAtende, 'algum barbeiro do Centro livre agora ou até 1h30 antes').not.toBeNull();
+  expect(quemAtende, 'algum barbeiro do Centro livre agora ou até 25 min antes').not.toBeNull();
   await expect(
     recepcao.getByText(/^Agendado para \d{2}\/\d{2}\/\d{4} às \d{2}:\d{2}\.$/),
   ).toBeVisible();

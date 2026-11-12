@@ -7,6 +7,16 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (site: calculadoras)
+
+- Três calculadoras grátis, cada uma no seu endereço:
+  - lucro por corte;
+  - comissão de barbeiro (sobre o preço cheio ou descontando o produto);
+  - quanto cobrar pelo corte (preço mínimo com custos fixos, comissão, produto e margem).
+- Cada uma explica a conta e mostra um exemplo.
+- A home continua com a calculadora de lucro e agora tem link para as outras duas.
+- As páginas entram no sitemap e no rodapé.
+
 ### Adicionado (site: comparações)
 
 - Novas páginas de comparação: "Pente Fino ou AppBarber?", "Pente Fino ou Trinks?" e "Pente Fino ou Booksy?".
