@@ -47,6 +47,8 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByRole('heading', { name: 'Precisa de atenção' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Números do negócio' })).toBeVisible();
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
+  // Admin F2: de onde vieram as contas novas do período.
+  await expect(page.getByRole('region', { name: /^Contas novas por origem/ })).toBeVisible();
   // Admin F1: funil de ativação, do cadastro ao pagamento.
   const funil = page.getByRole('region', { name: 'Funil de ativação' });
   const etapas = funil.getByRole('list', { name: 'Etapas do funil' });

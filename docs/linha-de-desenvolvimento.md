@@ -808,7 +808,13 @@ motivo e vai para a auditoria.
   - `GET /admin/funil?periodo=todos|90dias|30dias`, só para o admin;
   - `etapaFunil` na ficha da conta e o bloco "Funil de ativação" em `metricas-admin.tsx`;
   - testes em `admin.e2e-spec.ts` e `apps/web/e2e/admin.spec.ts`.
-- [ ] **F2–F9** origem do cadastro (com o T2 do site), alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [ ] **F1b–F1d** (aprovadas em 2026-11-12): equipe sem os desativados por padrão; filtro de Contas pela etapa do funil; e-mail para a conta parada há 3 dias na mesma etapa
+- [x] **F2** origem do cadastro (feito em 2026-11-12):
+  - a gravação e a ficha vieram com o T2, e as Contas e Vendas com o U2 e o U5;
+  - agora `novas.porOrigem` em `metricasDaPlataforma` (contas novas do período por origem, com o resumo de `resumoDaOrigem`) aparece nos números do negócio;
+  - testes em `metricas-plataforma.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`;
+  - a exportação de conversões offline fica para quando houver acesso à API do Google Ads.
+- [ ] **F3–F9** alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 
