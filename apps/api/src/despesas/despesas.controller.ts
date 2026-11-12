@@ -14,10 +14,15 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Prisma, type Transacao } from '@pente-fino/db';
 import {
   categoriaDespesaSchema,
+  copiarFixasSchema,
   despesaSchema,
+  mesAnteriorDe,
   podeNaUnidade,
+  vencimentoNoMesSeguinte,
+  type CopiarFixasEntrada,
   type DespesaDetalhe,
   type DespesaEntrada,
+  type FixaParaCopiar,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
@@ -61,6 +66,7 @@ async function detalhe(tx: Transacao, id: string): Promise<DespesaDetalhe> {
     competencia: dataTexto(d.competencia).slice(0, 7),
     vencimento: d.vencimento ? dataTexto(d.vencimento) : null,
     pago: d.pago,
+    repetir: d.repetir,
   };
 }
 
@@ -114,6 +120,94 @@ export class DespesasController {
     });
   }
 
+  @Get('despesas/fixas-para-copiar')
+  @Papeis(...GESTAO)
+  @ApiOperation({
+    summary: 'Prévia do "Copiar fixas do mês anterior": as fixas que ainda não vieram para o mês',
+  })
+  async fixasParaCopiar(
+    @Consulta(consulta) c: z.infer<typeof consulta>,
+  ): Promise<FixaParaCopiar[]> {
+    const { filtro, incluiConta } = escopoUnidades(c.unidadeId, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const origens = await tx.despesa.findMany({
+        where: {
+          competencia: data(`${mesAnteriorDe(c.mes)}-01`),
+          categoria: { grupo: 'fixa' },
+          copia: null,
+          ...(incluiConta && !c.unidadeId ? {} : filtro),
+        },
+        include: { categoria: true },
+        orderBy: [{ vencimento: 'asc' }, { descricao: 'asc' }],
+      });
+      // Lançada à mão neste mês (sem a ligação da cópia): vem desmarcada na prévia.
+      const doMes = await tx.despesa.findMany({
+        where: { competencia: data(`${c.mes}-01`) },
+        select: { categoriaId: true, unidadeId: true, descricao: true },
+      });
+      const chave = (d: { categoriaId: string; unidadeId: string | null; descricao: string }) =>
+        `${d.categoriaId}|${d.unidadeId ?? ''}|${d.descricao.trim().toLowerCase()}`;
+      const existentes = new Set(doMes.map(chave));
+      return origens.map((o) => ({
+        origemId: o.id,
+        unidadeId: o.unidadeId,
+        categoria: o.categoria.nome,
+        descricao: o.descricao,
+        valor: o.valor,
+        vencimento: vencimentoNoMesSeguinte(o.vencimento ? dataTexto(o.vencimento) : null),
+        repetir: o.repetir,
+        jaLancada: existentes.has(chave(o)),
+      }));
+    });
+  }
+
+  @Post('despesas/copiar-fixas')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Copiar para o mês as fixas do mês anterior que a pessoa confirmou' })
+  copiarFixas(@Corpo(copiarFixasSchema) d: CopiarFixasEntrada): Promise<DespesaDetalhe[]> {
+    return this.banco.daConta(async (tx) => {
+      const anterior = data(`${mesAnteriorDe(d.mes)}-01`);
+      const criadas: string[] = [];
+      for (const item of d.itens) {
+        const o = await tx.despesa.findUnique({
+          where: { id: item.origemId },
+          include: { copia: { select: { id: true } } },
+        });
+        if (!o || o.competencia.getTime() !== anterior.getTime())
+          throw Erros.naoEncontrado('Despesa do mês anterior não encontrada.');
+        exigirAlcance(o.unidadeId);
+        // Já veio (cópia manual ou "repetir"): não lança de novo.
+        if (o.copia) continue;
+        const nova = await tx.despesa.create({
+          data: {
+            unidadeId: o.unidadeId,
+            categoriaId: o.categoriaId,
+            descricao: o.descricao,
+            valor: item.valor,
+            competencia: data(`${d.mes}-01`),
+            vencimento: item.vencimento ? data(item.vencimento) : null,
+            repetir: o.repetir,
+            origemId: o.id,
+          },
+        });
+        await auditar(tx, {
+          entidade: 'despesa',
+          entidadeId: nova.id,
+          acao: 'copiar_fixa',
+          antes: { origem: o.id, valor: o.valor },
+          depois: { valor: item.valor, competencia: d.mes },
+        });
+        criadas.push(nova.id);
+      }
+      // Tudo já tinha vindo (clique duplo, ou a rotina do "repetir" chegou antes).
+      if (criadas.length === 0)
+        throw Erros.conflito('Essas despesas já foram copiadas para este mês.');
+      return umPorVez(criadas, (id) => detalhe(tx, id));
+    });
+  }
+
   @Post('despesas')
   @Papeis(...GESTAO)
   @Auditada()
@@ -136,6 +230,7 @@ export class DespesasController {
           vencimento: d.vencimento ? data(d.vencimento) : null,
           pago: d.pago,
           pagoEm: d.pago ? new Date() : null,
+          repetir: d.repetir,
         },
       });
       await auditar(tx, { entidade: 'despesa', entidadeId: nova.id, acao: 'criar', depois: d });
@@ -173,6 +268,7 @@ export class DespesasController {
             d.vencimento === undefined ? undefined : d.vencimento ? data(d.vencimento) : null,
           pago: d.pago,
           pagoEm: d.pago === undefined ? undefined : d.pago ? (antes.pagoEm ?? new Date()) : null,
+          repetir: d.repetir,
         },
       });
       await auditar(tx, { entidade: 'despesa', entidadeId: id, acao: 'alterar', antes, depois: d });

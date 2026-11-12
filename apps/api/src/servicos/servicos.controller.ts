@@ -8,12 +8,15 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Prisma } from '@pente-fino/db';
 import {
   dataLocal,
+  erroNaFaixaPrecoLivre,
   novosPrecosSchema,
+  type ConfigPrecoLivre,
   servicoSchema,
   temAlgumPapel,
   type NovosPrecosEntrada,
@@ -45,6 +48,50 @@ function podeVerCusto(): boolean {
   return temAlgumPapel(Contexto.usuario().papeis, ['dono', 'gestor']);
 }
 
+const configPrecoLivreSchema = z.object({ barbeiroDigita: z.boolean() });
+
+/** O serviço como a tela recebe (o custo de produto só para dono e gestor). */
+function paraDetalhe(
+  s: {
+    id: string;
+    nome: string;
+    categoria: string | null;
+    duracaoMin: number;
+    custoProduto: number;
+    ehExtra: boolean;
+    pesoAtendimento: number;
+    ativo: boolean;
+    precoLivre: boolean;
+    precoMinimo: number | null;
+    precoMaximo: number | null;
+  },
+  custo = true,
+): ServicoDetalhe {
+  return {
+    id: s.id,
+    nome: s.nome,
+    categoria: s.categoria,
+    duracaoMin: s.duracaoMin,
+    custoProduto: custo ? s.custoProduto : 0,
+    ehExtra: s.ehExtra,
+    pesoAtendimento: s.pesoAtendimento,
+    ativo: s.ativo,
+    precoLivre: s.precoLivre,
+    precoMinimo: s.precoMinimo,
+    precoMaximo: s.precoMaximo,
+  };
+}
+
+/** Faixa do preço livre: mínimo até o máximo (400 com o campo, como a validação do formulário). */
+function conferirFaixa(regra: {
+  precoLivre: boolean;
+  precoMinimo: number | null;
+  precoMaximo: number | null;
+}): void {
+  const erro = erroNaFaixaPrecoLivre(regra);
+  if (erro) throw Erros.validacao([{ campo: 'precoMinimo', mensagem: erro }]);
+}
+
 function nomeRepetido(e: unknown): never {
   if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
     throw Erros.conflito('Já existe um serviço com esse nome.');
@@ -66,16 +113,41 @@ export class ServicosController {
       tx.servico.findMany({ orderBy: [{ ativo: 'desc' }, { nome: 'asc' }] }),
     );
     const custo = podeVerCusto();
-    return servicos.map((s) => ({
-      id: s.id,
-      nome: s.nome,
-      categoria: s.categoria,
-      duracaoMin: s.duracaoMin,
-      custoProduto: custo ? s.custoProduto : 0,
-      ehExtra: s.ehExtra,
-      pesoAtendimento: s.pesoAtendimento,
-      ativo: s.ativo,
-    }));
+    return servicos.map((s) => paraDetalhe(s, custo));
+  }
+
+  @Get('servicos/preco-livre')
+  @Papeis(...TODOS)
+  @ApiOperation({ summary: 'Quem digita o valor dos serviços com preço livre' })
+  async configPrecoLivre(): Promise<ConfigPrecoLivre> {
+    const conta = await this.banco.daConta((tx) =>
+      tx.conta.findFirstOrThrow({ select: { precoLivreBarbeiro: true } }),
+    );
+    return { barbeiroDigita: conta.precoLivreBarbeiro };
+  }
+
+  @Put('servicos/preco-livre')
+  @Papeis('dono')
+  @Auditada()
+  @ApiOperation({ summary: 'Liberar (ou não) o barbeiro para digitar o preço livre' })
+  async salvarConfigPrecoLivre(
+    @Corpo(configPrecoLivreSchema) d: ConfigPrecoLivre,
+  ): Promise<ConfigPrecoLivre> {
+    return this.banco.daConta(async (tx) => {
+      const conta = await tx.conta.findFirstOrThrow();
+      await tx.conta.update({
+        where: { id: conta.id },
+        data: { precoLivreBarbeiro: d.barbeiroDigita },
+      });
+      await auditar(tx, {
+        entidade: 'conta',
+        entidadeId: conta.id,
+        acao: 'preco_livre_barbeiro',
+        antes: { barbeiroDigita: conta.precoLivreBarbeiro },
+        depois: d,
+      });
+      return d;
+    });
   }
 
   @Post('servicos')
@@ -84,11 +156,12 @@ export class ServicosController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Novo serviço' })
   async criar(@Corpo(servicoSchema) dados: ServicoEntrada): Promise<ServicoDetalhe> {
+    conferirFaixa(dados);
     return this.banco
       .daConta(async (tx) => {
         const s = await tx.servico.create({ data: dados });
         await auditar(tx, { entidade: 'servico', entidadeId: s.id, acao: 'criar', depois: dados });
-        return { ...dados, id: s.id };
+        return paraDetalhe(s);
       })
       .catch(nomeRepetido);
   }
@@ -105,6 +178,11 @@ export class ServicosController {
       .daConta(async (tx) => {
         const antes = await tx.servico.findUnique({ where: { id } });
         if (!antes) throw Erros.naoEncontrado('Serviço não encontrado.');
+        conferirFaixa({
+          precoLivre: dados.precoLivre ?? antes.precoLivre,
+          precoMinimo: dados.precoMinimo !== undefined ? dados.precoMinimo : antes.precoMinimo,
+          precoMaximo: dados.precoMaximo !== undefined ? dados.precoMaximo : antes.precoMaximo,
+        });
         const s = await tx.servico.update({ where: { id }, data: dados });
         await auditar(tx, {
           entidade: 'servico',
@@ -113,16 +191,7 @@ export class ServicosController {
           antes,
           depois: s,
         });
-        return {
-          id: s.id,
-          nome: s.nome,
-          categoria: s.categoria,
-          duracaoMin: s.duracaoMin,
-          custoProduto: s.custoProduto,
-          ehExtra: s.ehExtra,
-          pesoAtendimento: s.pesoAtendimento,
-          ativo: s.ativo,
-        };
+        return paraDetalhe(s);
       })
       .catch(nomeRepetido);
   }

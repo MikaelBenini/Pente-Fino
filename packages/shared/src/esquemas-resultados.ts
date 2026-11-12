@@ -2,6 +2,8 @@
 import { z } from 'zod';
 import type { Indicadores, LucroProduto, LucroServico, Projecao } from './indicadores.js';
 import type { AgendaItem } from './esquemas-operacao.js';
+import { somarMeses } from './clube.js';
+import type { DataISO } from './vigencia.js';
 
 const uuid = (rotulo: string) => z.uuid({ error: `${rotulo} inválido.` });
 const dataIso = z
@@ -41,8 +43,47 @@ export const despesaSchema = z.object({
   competencia: mesIso,
   vencimento: dataIso.nullable().optional(),
   pago: z.boolean().default(false),
+  /** "Repetir todo mês": a rotina diária lança a cópia no mês seguinte. */
+  repetir: z.boolean().default(false),
 });
 export type DespesaEntrada = z.infer<typeof despesaSchema>;
+
+// ─── Despesas fixas no mês seguinte (pedido do dono em 11/11/2026) ────────
+
+/** Vencimento da cópia: o mesmo dia no mês seguinte (31/01 vira 28 ou 29/02). */
+export function vencimentoNoMesSeguinte(vencimento: string | null): string | null {
+  return vencimento ? somarMeses(vencimento as DataISO, 1) : null;
+}
+
+/** Uma fixa do mês anterior que ainda não veio para este mês (prévia do "Copiar"). */
+export interface FixaParaCopiar {
+  origemId: string;
+  unidadeId: string | null;
+  categoria: string;
+  descricao: string;
+  valor: number;
+  /** Já no mês de destino. */
+  vencimento: string | null;
+  repetir: boolean;
+  /** Já existe neste mês uma igual (mesma categoria, unidade e descrição), lançada à mão. */
+  jaLancada: boolean;
+}
+
+/** O que a pessoa confirmou na prévia: quais copiar e com que valor e vencimento. */
+export const copiarFixasSchema = z.object({
+  mes: mesIso,
+  itens: z
+    .array(
+      z.object({
+        origemId: uuid('Despesa'),
+        valor: centavos.min(1, { error: 'O valor precisa ser maior que zero.' }),
+        vencimento: dataIso.nullable(),
+      }),
+    )
+    .min(1, { error: 'Marque pelo menos uma despesa.' })
+    .max(200),
+});
+export type CopiarFixasEntrada = z.infer<typeof copiarFixasSchema>;
 
 export const categoriaDespesaSchema = z.object({
   nome: z.string().trim().min(2).max(60),
@@ -60,6 +101,7 @@ export interface DespesaDetalhe {
   competencia: string;
   vencimento: string | null;
   pago: boolean;
+  repetir: boolean;
 }
 
 export const pagamentoComissaoSchema = z

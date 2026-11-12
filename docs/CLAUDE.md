@@ -42,9 +42,9 @@ Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linh
 - **Cliente** = comanda fechada com ao menos um serviço. Mesma regra todo mês.
 - **Atendimentos** = soma do `peso_atendimento` dos serviços. Padrão: principal 1, extra 0, combo/convênio = soma dos inclusos.
 - **Receita** tem tipo: serviço, produto ou não operacional (este fica fora do faturamento). A **mensalidade do clube** entra no faturamento no dia em que é paga (o que chega na conta: repasse no online), numa linha própria; o assinante conta como cliente e atendimento, mas o **ticket médio** = (serviços + produtos) ÷ clientes avulsos. O desempenho por barbeiro não leva a mensalidade.
-- **Preço e regra de comissão têm vigência**; o item da comanda grava preço e comissão do momento. Mudar preço nunca altera o passado.
+- **Preço e regra de comissão têm vigência**; o item da comanda grava preço e comissão do momento. Mudar preço nunca altera o passado. Serviço com **preço livre** (desligado por padrão, faixa opcional): o valor é digitado na comanda (balcão; barbeiro só com a liberação do dono), a comissão sai dele e o valor fora da tabela vai para a auditoria; preço fixo não aceita outro valor (cobrar menos é desconto).
 - **Comissão do clube:** sobre o preço de tabela da unidade na data (dono pode trocar por valor fixo).
-- **Despesas:** fixa, variável, manutenção, investimento, retirada do dono, cartão e resgates. Investimento, retirada e cartão ficam fora do % de despesas operacionais.
+- **Despesas:** fixa, variável, manutenção, investimento, retirada do dono, cartão e resgates. Investimento, retirada e cartão ficam fora do % de despesas operacionais. "Repetir todo mês" e "Copiar fixas do mês anterior" lançam no mês seguinte uma cópia por despesa, no máximo (`despesa.origem_id` única).
 - **Projeção** = faturamento até hoje ÷ dias trabalhados até hoje × dias de trabalho do mês (calendário da unidade).
 - **Lucro do serviço** = receita − (custo de produto + comissão).
 - Barbeiro vê só os próprios dados; telefone do cliente pode ser oculto para ele.

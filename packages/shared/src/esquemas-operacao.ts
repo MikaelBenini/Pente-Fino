@@ -196,6 +196,8 @@ export const novoItemSchema = z.discriminatedUnion('tipo', [
     tipo: z.literal('servico'),
     servicoId: uuid('Serviço'),
     quantidade: z.number().int().min(1).max(20).default(1),
+    /** Só para serviço com preço livre; sem ele, vale o preço da tabela. */
+    valor: centavos.optional(),
   }),
   z.object({
     tipo: z.literal('produto'),
@@ -215,6 +217,8 @@ export const alterarItemSchema = z.object({
   desconto: centavos.optional(),
   /** Cliente trocou de serviço na cadeira. */
   servicoId: uuid('Serviço').optional(),
+  /** Valor digitado de um serviço com preço livre. */
+  precoUnitario: centavos.optional(),
 });
 
 export const FORMAS_PAGAMENTO = ['dinheiro', 'pix', 'debito', 'credito'] as const;
@@ -268,6 +272,8 @@ export interface ItemComandaDetalhe {
   /** Coberto pelo plano do clube: entra com valor zero e conta no uso do mês. */
   cobertoClube: boolean;
   comissaoValor: number;
+  /** Serviço com preço livre (fora do clube): a faixa e se quem vê pode trocar o valor. */
+  precoLivre: { minimo: number | null; maximo: number | null; podeAlterar: boolean } | null;
 }
 
 export interface ComandaResumo {

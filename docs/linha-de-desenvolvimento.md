@@ -782,6 +782,15 @@ Fonte: [a-fazer.md](a-fazer.md), seção 2, e os achados V2 a V4 da
 - [x] **V3** batimento do worker a cada 30 s (Redis e arquivo) e última execução de cada rotina (`ROTINAS_WORKER`); Saúde do sistema mostra worker parado e rotina atrasada; healthcheck do worker no `docker-compose.prod.yml` e o `vigia.sh` reinicia contêiner `unhealthy` e avisa o Kuma
 - [x] **V4** lembrete que não entrou na fila: o erro vai para o log e a rotina de 15 min põe de novo os lembretes das próximas 48 h (`lembretesPerdidos`, id fixo, nada duplica; teste em `agendar-bot.db.test.ts`)
 
+## Etapa 23.6 · Escolhas da planilha (respostas do dono em 2026-11-11)
+
+Fonte: [a-fazer.md](a-fazer.md), seção 3 (comparação com a planilha da barbearia).
+
+- [x] **Preço livre na comanda** (feito em 2026-11-12: `servico.preco_livre`, `preco_minimo` e `preco_maximo` (faixa conferida no banco e na API) e `conta.preco_livre_barbeiro`; regra em `packages/shared/src/preco-livre.ts` (`conferirPrecoLivre`, `podeDigitarPrecoLivre`, com teste); a comanda lança com o preço da tabela ou o valor digitado (`valor` no lançamento, `precoUnitario` na edição), recusa fora da faixa e serviço de preço fixo (`preco_fixo`), e audita `preco_livre` quando sai da tabela; a comissão sai do valor digitado. Telas: Serviços (marcar preço livre e a faixa, etiqueta no catálogo e "o barbeiro também digita", só o dono) e a comanda ("Valor" no item, com a faixa). Testes em `apps/api/test/preco-livre.e2e-spec.ts` e `apps/web/e2e/cadastros.spec.ts`)
+- [x] **Despesas fixas no mês seguinte** (feito em 2026-11-12: `despesa.repetir` e `despesa.origem_id` (única: uma cópia por despesa); "Copiar fixas do mês anterior" no Financeiro com prévia editável (`GET /despesas/fixas-para-copiar`, `POST /despesas/copiar-fixas`; a que já tem igual lançada à mão vem desmarcada; já copiada = 409); "Repetir todo mês" no formulário, com a rotina diária das 6 h no worker (`repetirDespesasDoMes`, na fila da limpeza, registrada na Saúde do sistema). Testes em `despesas-fixas.db.test.ts`, `apps/api/test/despesas-fixas.e2e-spec.ts` e `apps/web/e2e/resultados.spec.ts`)
+- [ ] Preço por barbeiro
+- [ ] Receber adiantado (sinal), painel A2
+
 ## Etapa 24 · Premium completo
 
 Depois do lançamento, o que o Premium anuncia como "em breve".

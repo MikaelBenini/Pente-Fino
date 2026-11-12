@@ -248,6 +248,8 @@ model Conta {
   status                  StatusConta   @default(teste)
   /// Esconde o telefone do cliente na tela do barbeiro (docs: matriz de permissões).
   ocultarTelefoneBarbeiro Boolean       @default(true) @map("ocultar_telefone_barbeiro")
+  /// O barbeiro também digita o valor de serviço com preço livre (padrão: só o balcão).
+  precoLivreBarbeiro      Boolean       @default(false) @map("preco_livre_barbeiro")
   /// Quando o dono terminou a configuração guiada (null = ainda não terminou).
   configuradaEm           DateTime?     @map("configurada_em") @db.Timestamptz(3)
   ciclo                   CicloCobranca @default(mensal)
@@ -615,6 +617,11 @@ model Servico {
   ehExtra         Boolean  @default(false) @map("eh_extra")
   pesoAtendimento Int      @default(1) @map("peso_atendimento")
   ativo           Boolean  @default(true)
+  /// Química e afins: o valor é digitado na comanda; a tabela vira o valor sugerido.
+  precoLivre      Boolean  @default(false) @map("preco_livre")
+  /// Faixa do preço livre, em centavos (null = sem limite).
+  precoMinimo     Int?     @map("preco_minimo")
+  precoMaximo     Int?     @map("preco_maximo")
   criadoEm        DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm    DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -933,12 +940,18 @@ model Despesa {
   vencimento   DateTime? @db.Date
   pago         Boolean   @default(false)
   pagoEm       DateTime? @map("pago_em") @db.Timestamptz(3)
+  /// "Repetir todo mês": a rotina diária lança a cópia no mês seguinte.
+  repetir      Boolean   @default(false)
+  /// Despesa do mês anterior de onde esta foi copiada (única: nunca duas cópias da mesma).
+  origemId     String?   @unique @map("origem_id") @db.Uuid
   criadoEm     DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
   conta     Conta            @relation(fields: [contaId], references: [id], onDelete: Cascade)
   unidade   Unidade?         @relation(fields: [unidadeId], references: [id], onDelete: NoAction)
   categoria CategoriaDespesa @relation(fields: [categoriaId], references: [id], onDelete: NoAction)
+  origem    Despesa?         @relation("CopiaDespesa", fields: [origemId], references: [id], onDelete: SetNull)
+  copia     Despesa?         @relation("CopiaDespesa")
 
   @@index([contaId, competencia])
   @@index([unidadeId, competencia])

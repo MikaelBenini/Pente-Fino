@@ -7,6 +7,17 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (escolhas da planilha)
+
+- Preço livre para serviços como química: em Serviços, marque "Preço livre" e, se quiser, o valor
+  mínimo e o máximo. Na comanda, o item ganha o botão "Valor" para digitar o que foi cobrado. A
+  recepção, o gestor e o dono digitam; o barbeiro só se o dono liberar. A comissão sai do valor
+  digitado, e cada valor diferente da tabela fica registrado na comanda.
+- Despesas fixas no mês novo: "Copiar fixas do mês anterior" (Financeiro → Despesas) mostra as
+  fixas do mês passado para conferir e ajustar o valor antes de copiar; a que já foi lançada à mão
+  vem desmarcada. E "Repetir todo mês" na despesa faz ela entrar sozinha no mês seguinte, a pagar.
+  Nada é lançado duas vezes.
+
 ### Segurança e confiabilidade
 
 - Pagamentos e notas fiscais avisados pelo Asaas são conferidos no próprio Asaas antes de valer:

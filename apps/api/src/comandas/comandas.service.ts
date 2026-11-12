@@ -32,6 +32,8 @@ import {
   type NovaComandaEntrada,
   type NovoItemEntrada,
   type StatusComanda,
+  conferirPrecoLivre,
+  podeDigitarPrecoLivre,
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import type { alterarItemSchema } from '@pente-fino/shared';
@@ -71,7 +73,12 @@ type ComandaCompleta = NonNullable<Awaited<ReturnType<Transacao['comanda']['find
     profissionalId: string | null;
     cobertoClube: boolean;
     adesaoId: string | null;
-    servico: { nome: string } | null;
+    servico: {
+      nome: string;
+      precoLivre: boolean;
+      precoMinimo: number | null;
+      precoMaximo: number | null;
+    } | null;
     produto: { nome: string } | null;
   }[];
   pagamentos: { forma: 'dinheiro' | 'pix' | 'debito' | 'credito' | 'clube'; valor: number }[];
@@ -105,7 +112,14 @@ export function resumo(c: ComandaCompleta, agora = new Date()): ComandaResumo {
   };
 }
 
-function detalhe(c: ComandaCompleta): Omit<ComandaDetalhe, 'atrasado' | 'podeDesfazerNaoVeio'> {
+/**
+ * `podeDigitar`: quem está vendo pode trocar o valor de serviço com preço livre (balcão, ou o
+ * barbeiro liberado pelo dono). O item do clube não tem preço livre (o plano cobre).
+ */
+function detalhe(
+  c: ComandaCompleta,
+  podeDigitar = false,
+): Omit<ComandaDetalhe, 'atrasado' | 'podeDesfazerNaoVeio'> {
   return {
     ...resumo(c),
     agendamentoId: c.agendamentoId,
@@ -123,6 +137,14 @@ function detalhe(c: ComandaCompleta): Omit<ComandaDetalhe, 'atrasado' | 'podeDes
       ehExtra: i.ehExtra,
       cobertoClube: i.cobertoClube,
       comissaoValor: i.comissaoValor,
+      precoLivre:
+        i.servico?.precoLivre && !i.cobertoClube
+          ? {
+              minimo: i.servico.precoMinimo,
+              maximo: i.servico.precoMaximo,
+              podeAlterar: podeDigitar,
+            }
+          : null,
     })),
     pagamentos: c.pagamentos.map((p) => ({ forma: p.forma, valor: p.valor })),
     fechadaEm: c.fechadaEm?.toISOString() ?? null,
@@ -211,14 +233,15 @@ export class ComandasService {
 
   async buscar(id: string): Promise<ComandaDetalhe> {
     return this.banco.daConta(async (tx) => {
-      const c = (await this.carregar(tx, id)).comanda;
+      const { comanda: c, papeis } = await this.carregar(tx, id);
+      const podeDigitar = await this.podeDigitarPreco(tx, papeis);
       const ag = c.agendamentoId
         ? await tx.agendamento.findUnique({ where: { id: c.agendamentoId } })
         : null;
       const agora = new Date();
       const regras = ag ? await regrasDaUnidade(tx, c.unidadeId) : null;
       return {
-        ...detalhe(c),
+        ...detalhe(c, podeDigitar),
         atrasado:
           !!ag &&
           estaAtrasado({
@@ -349,21 +372,66 @@ export class ComandasService {
   }
 
   /** Cria o item gravando preço, custo, peso e extra do momento. */
+  /** Preço livre: o balcão digita; o barbeiro, só se o dono liberou (Serviços → Catálogo). */
+  async podeDigitarPreco(
+    tx: Transacao,
+    papeis: ReturnType<typeof papeisNaUnidade>,
+  ): Promise<boolean> {
+    if (papeis.some((p) => p !== 'barbeiro')) return true;
+    const conta = await tx.conta.findFirst({ select: { precoLivreBarbeiro: true } });
+    return podeDigitarPrecoLivre(papeis, conta?.precoLivreBarbeiro ?? false);
+  }
+
+  /**
+   * Confere o valor digitado de um serviço (preço livre e faixa) e grava na auditoria da comanda
+   * quando sai da tabela, para não virar desconto escondido.
+   */
+  private async precoDigitado(
+    tx: Transacao,
+    comandaId: string,
+    s: {
+      id: string;
+      nome: string;
+      precoLivre: boolean;
+      precoMinimo: number | null;
+      precoMaximo: number | null;
+    },
+    tabela: number,
+    valor: number | undefined,
+    podeDigitar: boolean,
+  ): Promise<number> {
+    if (valor !== undefined && valor !== tabela && s.precoLivre && !podeDigitar)
+      throw Erros.semPermissao('O valor do preço livre é digitado pela recepção.');
+    const r = conferirPrecoLivre(s, tabela, valor);
+    if (!r.ok) throw Erros.requisicaoInvalida(r.codigo, r.mensagem);
+    if (r.valor !== tabela)
+      await auditar(tx, {
+        entidade: 'comanda',
+        entidadeId: comandaId,
+        acao: 'preco_livre',
+        antes: { servico: s.nome, tabela },
+        depois: { servico: s.nome, valor: r.valor },
+      });
+    return r.valor;
+  }
+
   async criarItem(
     tx: Transacao,
     c: { id: string; unidadeId: string; profissionalId: string; clienteId: string | null },
     dia: string,
     item: NovoItemEntrada,
+    podeDigitar = false,
   ) {
     if (item.tipo === 'servico') {
       const s = await tx.servico.findUnique({ where: { id: item.servicoId } });
       if (!s || !s.ativo) throw Erros.naoEncontrado('Serviço não encontrado.');
-      const preco = await precoServicoVigente(tx, s.id, c.unidadeId, dia);
-      if (preco === undefined)
+      const tabela = await precoServicoVigente(tx, s.id, c.unidadeId, dia);
+      if (tabela === undefined)
         throw Erros.requisicaoInvalida(
           'sem_preco',
           `"${s.nome}" não tem preço nesta unidade. Defina na tabela de preços.`,
         );
+      const preco = await this.precoDigitado(tx, c.id, s, tabela, item.valor, podeDigitar);
       // Assinante do clube: o que o plano cobre entra com valor zero; o resto, preço normal.
       const partes = await partesDoServico(tx, {
         clienteId: c.clienteId,
@@ -506,7 +574,11 @@ export class ComandasService {
       if (item.tipo === 'nao_operacional' && !papeis.some((p) => p !== 'barbeiro')) {
         throw Erros.semPermissao('Receita não operacional é lançada pela recepção.');
       }
-      await this.criarItem(tx, comanda, diaDaComanda(comanda), item);
+      const podeDigitar =
+        item.tipo === 'servico' && item.valor !== undefined
+          ? await this.podeDigitarPreco(tx, papeis)
+          : false;
+      await this.criarItem(tx, comanda, diaDaComanda(comanda), item, podeDigitar);
       await this.atualizarTotais(tx, id);
     });
     return this.buscar(id);
@@ -529,6 +601,39 @@ export class ComandasService {
         );
       if (d.desconto !== undefined && !papeis.some((p) => p !== 'barbeiro'))
         throw Erros.semPermissao('Desconto é dado pela recepção.');
+      // Preço livre: troca o valor do item (só serviço com preço livre, fora do clube).
+      if (d.precoUnitario !== undefined && d.precoUnitario !== item.precoUnitario) {
+        if (item.tipo !== 'servico' || !item.servico?.precoLivre || item.cobertoClube)
+          throw Erros.requisicaoInvalida(
+            'preco_fixo',
+            'Este item tem preço de tabela. Para cobrar menos, dê desconto.',
+          );
+        const tabela =
+          (await precoServicoVigente(
+            tx,
+            item.servicoId!,
+            comanda.unidadeId,
+            diaDaComanda(comanda),
+          )) ?? item.precoUnitario;
+        const preco = await this.precoDigitado(
+          tx,
+          id,
+          { id: item.servicoId!, ...item.servico },
+          tabela,
+          d.precoUnitario,
+          await this.podeDigitarPreco(tx, papeis),
+        );
+        const desconto = Math.min(
+          d.desconto ?? item.desconto,
+          (d.quantidade ?? item.quantidade) * preco,
+        );
+        await tx.itemComanda.update({
+          where: { id: itemId },
+          data: { precoUnitario: preco, quantidade: d.quantidade ?? item.quantidade, desconto },
+        });
+        await this.atualizarTotais(tx, id);
+        return;
+      }
       // Trocar o serviço, ou mudar a quantidade de um item do clube: lança de novo, e o plano
       // decide outra vez o que cobre (o limite do mês não estoura).
       const mudouQtdClube =

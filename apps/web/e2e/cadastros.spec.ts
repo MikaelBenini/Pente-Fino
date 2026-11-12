@@ -14,6 +14,31 @@ async function entrar(page: Page, email: string) {
 
 test.describe.configure({ mode: 'serial' });
 
+test('preço livre: serviço de química com faixa; mínimo maior que o máximo é recusado', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'cadastro feito no computador');
+  const nome = `Química ${sufixo}`;
+  await entrar(page, 'dono@demo.pentefino.dev');
+  await page.goto('/servicos');
+  await page.getByRole('button', { name: 'Novo serviço' }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Novo serviço' });
+  await dialogo.getByLabel('Nome').fill(nome);
+  await expect(dialogo.getByLabel('Valor mínimo (R$)')).toBeHidden();
+  await dialogo.getByLabel(/Preço livre/).check();
+  await dialogo.getByLabel('Valor mínimo (R$)').fill('250,00');
+  await dialogo.getByLabel('Valor máximo (R$)').fill('80,00');
+  await dialogo.getByRole('button', { name: 'Cadastrar serviço' }).click();
+  await expect(dialogo.getByText('O mínimo não pode ser maior que o máximo.')).toBeVisible();
+  await dialogo.getByLabel('Valor mínimo (R$)').fill('80,00');
+  await dialogo.getByLabel('Valor máximo (R$)').fill('250,00');
+  await dialogo.getByRole('button', { name: 'Cadastrar serviço' }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(page.getByRole('row', { name: new RegExp(nome) })).toContainText('Preço livre');
+  // Com um serviço de preço livre, o dono decide se o barbeiro também digita o valor.
+  await expect(page.getByLabel(/O barbeiro também digita o valor/)).toBeVisible();
+});
+
 test('dono cadastra serviço e grava o preço pela tabela', async ({ page }, info) => {
   test.skip(info.project.name === 'celular', 'cadastro feito no computador');
   const nome = `Barboterapia ${sufixo}`;

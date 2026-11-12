@@ -121,9 +121,11 @@ O produto existe para que cada atendimento seja lançado uma vez só e para que 
 - **RN-02 Atendimento.** Atendimentos = soma do peso de cada serviço da comanda. O peso é cadastrado no serviço; convênio de corte e barba, por exemplo, pode pesar 2.
 - **RN-03 Receita.** Toda receita tem tipo: serviço, produto ou não operacional. Não operacional não entra no faturamento.
 - **RN-04 Preço.** O preço vale a partir da data de vigência. Vendas passadas não mudam.
+- **RN-04a Preço livre.** Desde 2026-11-11, o serviço pode ter "preço livre" (química e afins), desligado por padrão, com faixa opcional (mínimo e máximo). O preço da tabela continua sendo o valor sugerido (agendamento, página pública). Na comanda, dono, gestor e recepção trocam o valor dentro da faixa; o barbeiro só se o dono liberar (Serviços → Catálogo). A comissão sai do valor digitado. Cada valor diferente da tabela fica na auditoria da comanda. Serviço de preço fixo não aceita outro valor: cobrar menos é desconto.
 - **RN-05 Comissão.** A comissão é calculada em cada item, pela regra vigente na data do item.
 - **RN-06 Extra.** Serviço marcado como extra conta em quantidade e em reais nos indicadores de extras.
 - **RN-07 Clube.** O que o plano cobre não é cobrado; o uso é contado no limite do mês.
+- **RN-07a Despesas fixas no mês seguinte.** Desde 2026-11-11, "Copiar fixas do mês anterior" (Financeiro → Despesas) mostra as fixas do mês anterior que ainda não vieram, com o valor editável e o vencimento no mesmo dia do mês seguinte; a que já tem uma igual lançada à mão vem desmarcada. A despesa marcada "Repetir todo mês" entra sozinha no mês seguinte (rotina diária, 6 h), a pagar e com o mesmo valor; desmarcar para de repetir. Cada despesa vira no máximo uma cópia (origem única no banco): a cópia manual e a rotina nunca duplicam.
 - **RN-08 Isolamento.** Nenhuma conta vê dados de outra. Barbeiro vê só os próprios dados.
 
 ### Métricas de sucesso (proposta)

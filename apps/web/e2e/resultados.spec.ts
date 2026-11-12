@@ -121,6 +121,34 @@ test('dono lança uma despesa e ela aparece no mês', async ({ page }, info) => 
   await expect(linha).toContainText('Paga');
 });
 
+test('despesa que repete todo mês e a prévia de "Copiar fixas do mês anterior"', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'cadastro no computador');
+  const descricao = `Aluguel do depósito ${Date.now().toString(36)}`;
+  await entrar(page, 'dono@demo.pentefino.dev');
+  await page.goto('/financeiro');
+  await page.getByRole('tab', { name: 'Despesas' }).click();
+  await page.getByRole('button', { name: 'Nova despesa' }).click();
+  const d = page.getByRole('dialog', { name: 'Nova despesa' });
+  await d.getByLabel('Descrição').fill(descricao);
+  await d.getByLabel('Valor (R$)').fill('900,00');
+  await d.getByLabel(/Repetir todo mês/).check();
+  await d.getByRole('button', { name: 'Lançar despesa' }).click();
+  await expect(page.getByRole('row', { name: new RegExp(descricao) })).toContainText(
+    'repete todo mês',
+  );
+  // A prévia abre sem gravar nada; o que já foi lançado à mão vem desmarcado.
+  await page.getByRole('button', { name: 'Copiar fixas do mês anterior' }).click();
+  const copia = page.getByRole('dialog', { name: 'Copiar fixas do mês anterior' });
+  await expect(copia).toBeVisible();
+  await copia
+    .getByRole('button', { name: /^(Cancelar|Fechar)$/ })
+    .first()
+    .click();
+  await expect(copia).toBeHidden();
+});
+
 test('barbeiro no celular: hoje (com as metas), comissões e desempenho', async ({ page }) => {
   await entrar(page, 'rafael@demo.pentefino.dev');
   await expect(page.getByRole('heading', { name: 'Olá, Rafael' })).toBeVisible();
