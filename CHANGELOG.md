@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (configurações da administração)
+
+- Aviso geral: os campos de data e hora dizem que são no horário de Brasília, e uma prévia mostra o
+  aviso exatamente como a barbearia vai ver no topo do painel.
+- Modelos de e-mail: "Mandar teste para mim" envia o modelo salvo, com dados de exemplo, para o seu
+  e-mail, para conferir como chega.
+- Planos e preços e Cupons mostram as últimas mudanças, com o link para o histórico completo na
+  auditoria (já filtrado).
+
 ### Adicionado (equipe da administração)
 
 - Dois papéis novos na Equipe: **Suporte** (lê as contas e a saúde do sistema, sem cobrança nem

@@ -86,12 +86,18 @@ export async function testarConexaoSmtp(d: DadosSmtp): Promise<ResultadoTesteSmt
 /** Manda um e-mail e devolve o que o servidor respondeu (ex.: "250 Message queued"). */
 export async function enviarTesteSmtp(
   d: DadosSmtp,
-  m: { de: string; para: string; assunto: string; texto: string },
+  m: { de: string; para: string; assunto: string; texto: string; html?: string },
 ): Promise<ResultadoTesteSmtp> {
   const inicio = Date.now();
   const t = transporteSmtp(d);
   try {
-    const r = (await t.sendMail({ from: m.de, to: m.para, subject: m.assunto, text: m.texto })) as {
+    const r = (await t.sendMail({
+      from: m.de,
+      to: m.para,
+      subject: m.assunto,
+      text: m.texto,
+      ...(m.html ? { html: m.html } : {}),
+    })) as {
       response?: string;
     };
     return {

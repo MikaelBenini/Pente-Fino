@@ -120,11 +120,13 @@ U2 a U5 já feitos (#161).
   período selecionável
 - [x] Lote 4a (U1 e U7): bateria verde, PR #168 (12/11)
 - [x] Merge pelo dono (lote 4a, #168, 12/11)
-- [x] Lote 4b (U6): bateria verde (12/11); PR e CI a acompanhar
-- [ ] Merge pelo dono (lote 4b)
+- [x] Lote 4b (U6): bateria verde, PR #169 e CI verde (12/11)
+- [x] Merge pelo dono (lote 4b, #169, 12/11)
+- [x] Lote 4c (U8): bateria verde (12/11); PR e CI a acompanhar
+- [ ] Merge pelo dono (lote 4c)
 - [x] **U6** Equipe (12/11, Etapa 23.4): papéis Suporte e Financeiro, última troca de senha e motivo para desativar
 - [x] **U7** Auditoria (12/11, Etapa 23.4): detalhes legíveis, horário local, paginação além de 300 e CSV
-- [ ] **U8** Configurações: fuso escrito nos campos, prévia do aviso geral, e-mail de teste por
+- [x] **U8** Configurações (12/11, Etapa 23.4): fuso escrito nos campos, prévia do aviso geral, e-mail de teste por
   modelo e histórico de mudanças
 - [ ] **U9** Saúde do sistema: último backup, versão e data do deploy, último evento do webhook
   do Asaas, validade do TLS e espaço em disco

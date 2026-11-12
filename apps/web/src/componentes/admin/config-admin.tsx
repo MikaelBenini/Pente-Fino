@@ -16,6 +16,7 @@ import {
   lerMoeda,
   type TabelaPrecosPlanos,
   type CupomNaTela,
+  type EventoDaAuditoria,
 } from '@pente-fino/shared';
 import { Botao, Campo, CampoTexto, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ import { ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
+import { FaixaAvisoGeral } from '../faixa-aviso-geral';
 import { LimpezaNaSaude } from './limpeza-admin';
 import { NotaFiscalAdmin, NotasNaSaude } from './nota-fiscal-admin';
 import { useTabelasAdmin } from './precos-admin';
@@ -71,7 +73,7 @@ function Salvar({ rotulo, enviar }: { rotulo: string; enviar: () => Promise<void
 }
 
 /** Aviso geral para todas as barbearias e o teste grátis do cadastro pelo site. */
-export function ConfiguracoesAdmin() {
+export function ConfiguracoesAdmin({ onIrPara }: { onIrPara: (aba: string) => void }) {
   const config = useQuery({
     queryKey: ['admin', 'configuracoes'],
     queryFn: () => adminApi<ConfiguracaoPublica>('configuracoes'),
@@ -81,8 +83,8 @@ export function ConfiguracoesAdmin() {
       <Estado consulta={config}>{() => <Formularios c={config.data!} />}</Estado>
       <Estado consulta={config}>{() => <NotaFiscalAdmin atual={config.data!.notaFiscal} />}</Estado>
       <SmtpAdmin />
-      <PrecosAdmin />
-      <CuponsAdmin />
+      <PrecosAdmin onIrPara={onIrPara} />
+      <CuponsAdmin onIrPara={onIrPara} />
       <ModelosEmailAdmin />
     </div>
   );
@@ -137,6 +139,7 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
             id="aviso-inicio"
             rotulo="De"
             type="datetime-local"
+            dica="Horário de Brasília"
             value={inicio}
             onChange={(e) => setInicio(e.target.value)}
           />
@@ -144,10 +147,24 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
             id="aviso-fim"
             rotulo="Até"
             type="datetime-local"
+            dica="Horário de Brasília"
             value={fim}
             onChange={(e) => setFim(e.target.value)}
           />
         </div>
+        {texto.trim() && (
+          <figure aria-label="Prévia do aviso" className="flex flex-col gap-1">
+            <figcaption className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+              Prévia: como a barbearia vê no topo do painel
+            </figcaption>
+            <div className="overflow-hidden rounded-md border border-borda">
+              <FaixaAvisoGeral
+                aviso={{ texto, tom, inicio: deCampo(inicio), fim: deCampo(fim) }}
+                previa
+              />
+            </div>
+          </figure>
+        )}
         <div className="flex flex-wrap gap-3">
           <Salvar
             rotulo="Publicar aviso"
@@ -672,6 +689,45 @@ export function ModelosEmailAdmin() {
   );
 }
 
+/** Admin U8: manda o modelo salvo, com dados de exemplo, para quem está na administração. */
+function TesteDoModelo({ chave }: { chave: ChaveModeloEmail }) {
+  const [r, setR] = useState<ResultadoTesteSmtp | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-2 border-t border-borda pt-3">
+      <Botao
+        variante="secundario"
+        className="self-start"
+        carregando={enviando}
+        onClick={async () => {
+          setErro(null);
+          setR(null);
+          setEnviando(true);
+          try {
+            setR(
+              await adminApi<ResultadoTesteSmtp>(`configuracoes/modelos-email/${chave}/teste`, {
+                corpo: {},
+              }),
+            );
+          } catch (e) {
+            setErro(mensagemDe(e));
+          } finally {
+            setEnviando(false);
+          }
+        }}
+      >
+        Mandar teste para mim
+      </Botao>
+      <p className="text-xs text-tinta-suave">
+        Vai o que está salvo (com dados de exemplo), para o seu e-mail. Salve antes, se mudou algo.
+      </p>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {r && <Aviso tom={r.ok ? 'sucesso' : 'erro'}>{r.mensagem}</Aviso>}
+    </div>
+  );
+}
+
 function EditorModelo({ m }: { m: ModeloEmailNaTela }) {
   const cliente = useQueryClient();
   const base = m.personalizado ?? m.padrao;
@@ -751,6 +807,7 @@ function EditorModelo({ m }: { m: ModeloEmailNaTela }) {
             />
           )}
         </div>
+        <TesteDoModelo chave={m.chave} />
       </div>
       <figure aria-label="Pré-visualização" className="flex flex-col gap-2">
         <figcaption className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
@@ -775,10 +832,53 @@ const NOMES_PLANOS: Record<'basico' | 'pro' | 'premium', string> = {
 const reais = (centavos: number) => (centavos / 100).toFixed(2).replace('.', ',');
 
 /** Planos e preços: tabelas com vigência; quem já assinou segue na tabela que contratou. */
-export function PrecosAdmin() {
+/** Admin U8: as últimas mudanças (da auditoria), com o link para ver todas lá. */
+function HistoricoDaConfiguracao({
+  acao,
+  onIrPara,
+}: {
+  acao: string;
+  onIrPara: (aba: string) => void;
+}) {
+  const q = useQuery({
+    queryKey: ['admin', 'auditoria', `acao=${acao}&limite=3`],
+    queryFn: () => adminApi<EventoDaAuditoria[]>(`auditoria?acao=${acao}&limite=3`),
+  });
+  const lista = q.data ?? [];
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      <span className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+        Últimas mudanças
+      </span>
+      {lista.length === 0 ? (
+        <span className="text-tinta-suave">{q.isPending ? 'Carregando…' : 'Nenhuma ainda.'}</span>
+      ) : (
+        <ul className="flex flex-col gap-0.5" aria-label="Últimas mudanças">
+          {lista.map((e) => (
+            <li key={e.id} className="text-tinta-suave">
+              <span className="tabular-nums">{formatarDataHora(e.quando)}</span> · {e.quem ?? '—'}
+            </li>
+          ))}
+        </ul>
+      )}
+      <button
+        type="button"
+        onClick={() => onIrPara(`auditoria?acao=${acao}`)}
+        className="self-start font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-foco"
+      >
+        Ver o histórico na auditoria
+      </button>
+    </div>
+  );
+}
+
+export function PrecosAdmin({ onIrPara }: { onIrPara: (aba: string) => void }) {
   const cliente = useQueryClient();
   const { consulta, vigente } = useTabelasAdmin();
-  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'precos'] });
+  const atualizar = async () => {
+    await cliente.invalidateQueries({ queryKey: ['admin', 'precos'] });
+    await cliente.invalidateQueries({ queryKey: ['admin', 'auditoria'] });
+  };
   return (
     <section
       aria-labelledby="titulo-precos"
@@ -791,6 +891,7 @@ export function PrecosAdmin() {
         Uma tabela nova vale a partir da data escolhida para quem assina ou troca de plano. Quem já
         assinou continua pagando a tabela que contratou.
       </p>
+      <HistoricoDaConfiguracao acao="configurar_precos" onIrPara={onIrPara} />
       <Estado consulta={consulta}>
         {() => {
           const { tabelas, hoje } = consulta.data!;
@@ -939,7 +1040,7 @@ function NovaTabela({
 }
 
 /** Cupons de desconto: código, desconto, prazo e vagas; o desconto vale enquanto a assinatura existir. */
-export function CuponsAdmin() {
+export function CuponsAdmin({ onIrPara }: { onIrPara: (aba: string) => void }) {
   const cliente = useQueryClient();
   const q = useQuery({
     queryKey: ['admin', 'cupons'],
@@ -950,7 +1051,10 @@ export function CuponsAdmin() {
   const [desconto, setDesconto] = useState('30');
   const [validoAte, setValidoAte] = useState('');
   const [vagas, setVagas] = useState('');
-  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'cupons'] });
+  const atualizar = async () => {
+    await cliente.invalidateQueries({ queryKey: ['admin', 'cupons'] });
+    await cliente.invalidateQueries({ queryKey: ['admin', 'auditoria'] });
+  };
   const salvar = (c: Partial<CupomNaTela> & { codigo: string }) =>
     adminApi('configuracoes/cupons', { metodo: 'PUT', corpo: c }).then(atualizar);
   return (
@@ -965,6 +1069,7 @@ export function CuponsAdmin() {
         Valem no cadastro pelo site (campo ou link com <code>?cupom=</code>) e na venda presencial.
         Desativar não tira o desconto de quem já usa.
       </p>
+      <HistoricoDaConfiguracao acao="configurar_cupons" onIrPara={onIrPara} />
       <Estado consulta={q}>
         {() =>
           q.data!.length === 0 ? (

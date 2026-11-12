@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CHAVES_MODELO_EMAIL,
   EXEMPLO_VARIAVEIS,
+  emailDeTeste,
   emailDoModelo,
   emailPronto,
   lerModelosEmail,
@@ -85,5 +86,23 @@ describe('visual do e-mail', () => {
     expect(emailPronto('c@x.dev', 'pagamento_recebido', {}, EXEMPLO_VARIAVEIS).html).not.toContain(
       '<img',
     );
+  });
+});
+
+describe('e-mail de teste do modelo (admin U8)', () => {
+  it('usa o texto personalizado (ou o padrão) com os valores de exemplo e marca o assunto', () => {
+    const padrao = emailDeTeste('ana@pentefino.dev', 'boas_vindas', {});
+    expect(padrao.assunto).toBe(
+      '[Teste] Bem-vindo ao Pente Fino, Carlos! Seu teste grátis começou',
+    );
+    expect(padrao.texto).toContain('A conta da Barbearia do Carlos está criada');
+    expect(padrao.texto).not.toMatch(/\{\{/);
+    expect(padrao.html).toContain('Confirmar e-mail e começar');
+    expect(padrao.modelo).toBe('boas_vindas');
+    const proprio = emailDeTeste('ana@pentefino.dev', 'boas_vindas', {
+      boas_vindas: { assunto: 'Oi, {{nome}}', corpo: 'Conta {{conta}}.', botao: null },
+    });
+    expect(proprio.assunto).toBe('[Teste] Oi, Carlos');
+    expect(proprio.texto).toContain('Conta Barbearia do Carlos.');
   });
 });
