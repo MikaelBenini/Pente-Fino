@@ -90,13 +90,15 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
 - [x] **Catálogo por unidade** (pedido do dono em 12/11, "Escolher as unidades"; feito antes do
   preço por barbeiro, que depende dele): "Disponível em" em serviços e produtos; unidade nova
   vazia com "Copiar catálogo de outra unidade" (Etapa 23.6 da linha de desenvolvimento)
-- [x] Catálogo por unidade: bateria verde (12/11); PR e CI a acompanhar
-- [ ] Merge pelo dono (catálogo por unidade)
-- [ ] **Preço por barbeiro** (detalhe do dono em 12/11): os serviços e a tabela continuam sendo
+- [x] Catálogo por unidade: bateria verde, PR #165 e CI verde (12/11)
+- [x] Merge pelo dono (catálogo por unidade, #165, 12/11)
+- [x] **Preço por barbeiro** (12/11, Etapa 23.6; Perfil → "Meus preços") (detalhe do dono em 12/11): os serviços e a tabela continuam sendo
   da unidade. O barbeiro muda o próprio preço de um serviço **no perfil dele**; esse preço vale
   quando marcam horário com ele (agenda, bot, site) e na comanda dele. Sem preço próprio, vale o
   da unidade, como hoje. Com vigência, como a tabela (mudar não altera o passado); a comissão do
   clube continua sobre o preço da unidade.
+- [x] Preço por barbeiro: bateria verde (12/11); PR e CI a acompanhar
+- [ ] Merge pelo dono (preço por barbeiro, depois do catálogo por unidade)
 - [ ] **Receber adiantado (sinal)** (painel A2): registra o pagamento na comanda aberta, entra no
   caixa do dia em que foi recebido e abate do total ao fechar; cancelar a comanda pede o que
   fazer com o sinal (devolver ou reter, com motivo).

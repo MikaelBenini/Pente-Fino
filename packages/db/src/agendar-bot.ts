@@ -48,7 +48,7 @@ import { criarLinkDoHorario, remarcarPeloCliente } from './link-horario.js';
 import { criarTokenDeAgendamento } from './token-agendamento.js';
 import { vagaDe } from './espera.js';
 import type { Prisma } from './generated/prisma/client.js';
-import { precoServicoVigente } from './vigencia.js';
+import { precoDoProfissional, precoServicoVigente } from './vigencia.js';
 
 type Tx = Prisma.TransactionClient;
 
@@ -175,8 +175,9 @@ async function resumo(tx: Tx, a: AgendaNaConversa, d: DadosDaConversa): Promise<
   const dia = dataLocal(new Date(inicio));
   const servicos = await tx.servico.findMany({ where: { id: { in: a.servicoIds } } });
   let total = 0;
+  // Com o barbeiro escolhido, o preço dele (ou o da unidade).
   for (const id of a.servicoIds)
-    total += (await precoServicoVigente(tx, id, d.unidadeId, dia)) ?? 0;
+    total += (await precoDoProfissional(tx, id, profissionalId, d.unidadeId, dia)) ?? 0;
   const prof = await tx.profissional.findUniqueOrThrow({
     where: { id: profissionalId },
     include: { usuario: { select: { nome: true } } },

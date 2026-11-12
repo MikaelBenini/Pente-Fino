@@ -6,6 +6,7 @@ import { Botao, Campo, cn } from '@pente-fino/ui';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { AssistenteEquipe } from '@/componentes/assistente-equipe';
+import { MeusPrecos } from '@/componentes/meus-precos';
 import { NotificacoesAparelho } from '@/componentes/notificacoes-aparelho';
 import { PreferenciasDeAvisos } from '@/componentes/preferencias-avisos';
 import { Aviso } from '@/componentes/aviso';
@@ -81,6 +82,8 @@ export default function Perfil() {
           O claro ajuda no balcão com muita luz. Vale só para este aparelho.
         </p>
       </section>
+
+      <MeusPrecos />
 
       <NotificacoesAparelho />
 

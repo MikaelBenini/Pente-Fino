@@ -78,7 +78,8 @@ export interface UnidadePublica {
     preco: number | null;
     ehExtra: boolean;
   }[];
-  profissionais: { id: string; nome: string }[];
+  /** `precos`: preço próprio do barbeiro por serviço (preço por barbeiro); sem ele, o da unidade. */
+  profissionais: { id: string; nome: string; precos: Record<string, number> }[];
   /** WhatsApp da unidade conectado e com lembretes configurados: mostra a caixa de aceite. */
   lembretesWhatsapp: boolean;
   /** "Prefere pelo WhatsApp?": wa.me do bot com "AGENDAR POR AQUI", quando dá para marcar na conversa. */

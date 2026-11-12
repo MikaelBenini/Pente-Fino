@@ -1,22 +1,28 @@
-import { Controller, Get, Inject } from '@nestjs/common';
-import { regrasDaUnidade } from '@pente-fino/db';
+import { Controller, Get, Inject, Put } from '@nestjs/common';
+import { precoProprioVigente, precoServicoVigente, regrasDaUnidade } from '@pente-fino/db';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   calcularIndicadores,
   dataLocal,
   statusEfetivo,
+  meusPrecosSchema,
   type DesempenhoBarbeiro,
+  type MeuPreco,
+  type MeusPrecosEntrada,
   type ExtratoComissao,
   type PainelBarbeiro,
   type StatusComanda,
   estaAtrasado,
 } from '@pente-fino/shared';
 import { z } from 'zod';
+import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { TODOS } from '../comum/escopo.js';
-import { Consulta } from '../comum/validacao.js';
+import { Consulta, Corpo } from '../comum/validacao.js';
+import { data } from '../comum/escopo.js';
+import { Erros } from '../comum/erros.js';
 import { ComissoesService } from '../comissoes/comissoes.service.js';
 import { ResultadosService, somarDias, ultimoDiaDoMes } from '../resultados/resultados.service.js';
 
@@ -41,6 +47,87 @@ export class MeController {
     @Inject(ResultadosService) private readonly resultados: ResultadosService,
     @Inject(ComissoesService) private readonly comissoes: ComissoesService,
   ) {}
+
+  @Get('precos')
+  @Papeis(...TODOS)
+  @ApiOperation({
+    summary: 'Meus preços: os serviços da unidade em que atendo, com o preço dela e o meu',
+  })
+  meusPrecos(): Promise<MeuPreco[]> {
+    const quem = Contexto.usuario();
+    const hoje = dataLocal(new Date());
+    return this.banco.daConta(async (tx) => {
+      const profs = await tx.profissional.findMany({
+        where: { usuarioId: quem.id, ativo: true },
+        include: { unidade: { select: { nome: true } } },
+      });
+      const linhas: MeuPreco[] = [];
+      for (const p of profs) {
+        const servicos = await tx.servico.findMany({
+          where: { ativo: true, unidadeIds: { has: p.unidadeId } },
+          orderBy: [{ ehExtra: 'asc' }, { nome: 'asc' }],
+        });
+        for (const s of servicos)
+          linhas.push({
+            profissionalId: p.id,
+            unidadeId: p.unidadeId,
+            unidade: p.unidade.nome,
+            servicoId: s.id,
+            servico: s.nome,
+            precoUnidade: (await precoServicoVigente(tx, s.id, p.unidadeId, hoje)) ?? null,
+            meuPreco: await precoProprioVigente(tx, s.id, p.id, hoje),
+          });
+      }
+      return linhas;
+    });
+  }
+
+  @Put('precos')
+  @Papeis(...TODOS)
+  @Auditada()
+  @ApiOperation({
+    summary: 'Mudar meus preços (vale de hoje em diante; null volta para o preço da unidade)',
+  })
+  salvarMeusPrecos(@Corpo(meusPrecosSchema) d: MeusPrecosEntrada): Promise<MeuPreco[]> {
+    const quem = Contexto.usuario();
+    const hoje = dataLocal(new Date());
+    return this.banco
+      .daConta(async (tx) => {
+        for (const item of d.precos) {
+          const p = await tx.profissional.findUnique({ where: { id: item.profissionalId } });
+          // Só o próprio barbeiro muda o preço dele.
+          if (!p || p.usuarioId !== quem.id || !p.ativo)
+            throw Erros.semPermissao('Você só muda os seus preços.');
+          const s = await tx.servico.findUnique({ where: { id: item.servicoId } });
+          if (!s || !s.ativo || !s.unidadeIds.includes(p.unidadeId))
+            throw Erros.naoEncontrado('Serviço não encontrado na sua unidade.');
+          await tx.precoProfissional.upsert({
+            where: {
+              contaId_profissionalId_servicoId_vigenciaInicio: {
+                contaId: quem.contaId,
+                profissionalId: p.id,
+                servicoId: s.id,
+                vigenciaInicio: data(hoje),
+              },
+            },
+            create: {
+              profissionalId: p.id,
+              servicoId: s.id,
+              valor: item.valor,
+              vigenciaInicio: data(hoje),
+            },
+            update: { valor: item.valor },
+          });
+        }
+        await auditar(tx, {
+          entidade: 'profissional',
+          entidadeId: d.precos[0]!.profissionalId,
+          acao: 'meus_precos',
+          depois: { vigenciaInicio: hoje, precos: d.precos },
+        });
+      })
+      .then(() => this.meusPrecos());
+  }
 
   @Get('hoje')
   @Papeis(...TODOS)

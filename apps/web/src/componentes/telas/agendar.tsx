@@ -263,10 +263,13 @@ function Formulario({
       for (const i of l.inicios) if (!m.has(i)) m.set(i, l.profissionalId);
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [livres.data]);
-  const total = servicos.reduce(
-    (s, id) => s + (u.servicos.find((x) => x.id === id)?.preco ?? 0),
-    0,
-  );
+  // Preço por barbeiro: o do escolhido (ou o do horário, em "sem preferência"); senão, o da unidade.
+  const barbeiro = u.profissionais.find((p) => p.id === (horario?.profissionalId || profissional));
+  const precoDe = (s: { id: string; preco: number | null }) => barbeiro?.precos[s.id] ?? s.preco;
+  const total = servicos.reduce((soma, id) => {
+    const s = u.servicos.find((x) => x.id === id);
+    return soma + (s ? (precoDe(s) ?? 0) : 0);
+  }, 0);
   const duracao = servicos.reduce(
     (s, id) => s + (u.servicos.find((x) => x.id === id)?.duracaoMin ?? 0),
     0,
@@ -444,7 +447,7 @@ function Formulario({
                       }}
                     />
                     <span className="font-denso text-lg tabular-nums">
-                      {s.preco !== null ? formatarMoeda(s.preco) : ''}
+                      {precoDe(s) !== null ? formatarMoeda(precoDe(s)!) : ''}
                     </span>
                   </div>
                 ))}

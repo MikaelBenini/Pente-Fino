@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   criarPrisma,
   naConta,
+  precoDoProfissional,
   precoServicoVigente,
   regraComissaoVigente,
   type PrismaClient,
@@ -73,6 +74,28 @@ beforeAll(async () => {
 afterAll(async () => {
   await naMinhaConta((tx) => tx.conta.deleteMany({ where: { id: conta } }));
   await prisma.$disconnect();
+});
+
+describe('preço por barbeiro', () => {
+  it('vale o do barbeiro a partir da vigência; antes dela, ou depois de voltar (nulo), o da unidade', async () => {
+    await naMinhaConta(async (tx) => {
+      await tx.precoProfissional.createMany({
+        data: [
+          { profissionalId, servicoId, valor: 6000, vigenciaInicio: dataParaBanco('2026-11-01') },
+          { profissionalId, servicoId, valor: null, vigenciaInicio: dataParaBanco('2026-12-01') },
+        ],
+      });
+      const preco = (dia: string) =>
+        precoDoProfissional(tx, servicoId, profissionalId, unidadeId, dia);
+      expect(await preco('2026-10-20')).toBe(4500); // antes: o da unidade
+      expect(await preco('2026-11-15')).toBe(6000); // o dele
+      expect(await preco('2026-12-10')).toBe(4500); // voltou para o da unidade
+      // Outro barbeiro (sem preço próprio) segue a unidade.
+      expect(await precoDoProfissional(tx, servicoId, randomUUID(), unidadeId, '2026-11-15')).toBe(
+        4500,
+      );
+    });
+  });
 });
 
 describe('vigência de preço e comissão', () => {
