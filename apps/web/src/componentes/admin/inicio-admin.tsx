@@ -103,6 +103,9 @@ export function InicioAdmin({
           rotulo="Para resolver"
           valor={String(pendencias.data?.length ?? '…')}
           detalhe={urgentes ? `${urgentes} urgente${urgentes > 1 ? 's' : ''}` : 'Nada urgente'}
+          onClick={() =>
+            document.getElementById('titulo-pendencias')?.scrollIntoView({ behavior: 'smooth' })
+          }
         />
         <Destaque
           rotulo="Vencido"
@@ -153,7 +156,9 @@ export function InicioAdmin({
           {() =>
             lista.length === 0 ? (
               <p className="rounded-lg border border-borda bg-superficie p-6 text-tinta-suave">
-                Tudo em dia por aqui.
+                {tipo
+                  ? 'Nada deste tipo agora. Escolha "Tudo" para ver o resto.'
+                  : 'Tudo em dia por aqui. Cobranças vencidas, testes acabando, donos sem entrar e contas paradas aparecem aqui assim que acontecerem.'}
               </p>
             ) : (
               <ul aria-label="Pendências" className="flex flex-col gap-2">
@@ -193,7 +198,7 @@ export function InicioAdmin({
         </Estado>
       </section>
 
-      {u.papel === 'admin' && <MetricasAdmin />}
+      {u.papel === 'admin' && <MetricasAdmin onIrPara={onIrPara} />}
     </div>
   );
 }

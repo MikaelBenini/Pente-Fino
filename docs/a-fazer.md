@@ -102,8 +102,8 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
 - [x] **Receber adiantado (sinal)** (painel A2; 12/11, Etapa 23.6; sem devolver na hora, o sinal fica retido e a comanda cancelada mostra "Devolver"): registra o pagamento na comanda aberta, entra no
   caixa do dia em que foi recebido e abate do total ao fechar; cancelar a comanda pede o que
   fazer com o sinal (devolver ou reter, com motivo).
-- [x] Sinal: bateria verde (12/11); PR e CI a acompanhar
-- [ ] Merge pelo dono (sinal, depois do preço por barbeiro)
+- [x] Sinal: bateria verde, PR #167 e CI verde (12/11)
+- [x] Merge pelo dono (sinal, #167, 12/11)
 - [x] **Competência (painel A1)**: decidido em 11/11, o faturamento continua pela data do
   **fechamento** da comanda. Motivos: o dinheiro só fica certo no fechamento; o dia já fechado
   não muda depois; bate com o caixa e com o extrato; a trava do A1 já impede fechar antes do
@@ -116,10 +116,12 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
 
 U2 a U5 já feitos (#161).
 
-- [ ] **U1** Início: estados vazios com orientação, cartões clicáveis para a lista filtrada e
+- [x] **U1** Início (12/11, Etapa 23.4): estados vazios com orientação, cartões clicáveis para a lista filtrada e
   período selecionável
+- [x] Lote 4a (U1 e U7): bateria verde (12/11); PR e CI a acompanhar
+- [ ] Merge pelo dono (lote 4a)
 - [ ] **U6** Equipe: papéis Suporte e Financeiro, última troca de senha e motivo para desativar
-- [ ] **U7** Auditoria: detalhes legíveis, horário local, paginação além de 300 e CSV
+- [x] **U7** Auditoria (12/11, Etapa 23.4): detalhes legíveis, horário local, paginação além de 300 e CSV
 - [ ] **U8** Configurações: fuso escrito nos campos, prévia do aviso geral, e-mail de teste por
   modelo e histórico de mudanças
 - [ ] **U9** Saúde do sistema: último backup, versão e data do deploy, último evento do webhook

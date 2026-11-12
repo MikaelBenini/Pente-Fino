@@ -9,6 +9,7 @@ import {
   type EventoDaAuditoria,
   type MembroDaPlataforma,
   type UsuarioPlataformaSessao,
+  csvDaAuditoria,
 } from '@pente-fino/shared';
 import { Botao, Campo, Dialogo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -292,13 +293,61 @@ export function AuditoriaAdmin({ onAbrirConta }: { onAbrirConta: (id: string) =>
     queryKey: ['admin', 'auditoria', filtro],
     queryFn: () => adminApi<EventoDaAuditoria[]>(`auditoria${filtro ? `?${filtro}` : ''}`),
   });
+  // Admin U7: "Carregar mais" (300 por vez) e exportar até 2000 em CSV, no mesmo filtro.
+  const [mais, setMais] = useState<{ filtro: string; eventos: EventoDaAuditoria[]; fim: boolean }>({
+    filtro: '',
+    eventos: [],
+    fim: false,
+  });
+  const extras = mais.filtro === filtro ? mais.eventos : [];
+  const todos = [...(q.data ?? []), ...extras];
+  const acabou = (mais.filtro === filtro && mais.fim) || (q.data?.length ?? 0) < 300;
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const comFiltro = (extra: Record<string, string>) => {
+    const p = new URLSearchParams(filtro);
+    for (const [k, v] of Object.entries(extra)) p.set(k, v);
+    return `auditoria?${p.toString()}`;
+  };
+  async function carregarMais() {
+    const ultimo = todos.at(-1);
+    if (!ultimo) return;
+    setCarregando(true);
+    setErro(null);
+    try {
+      const novos = await adminApi<EventoDaAuditoria[]>(
+        comFiltro({ antesDe: ultimo.quando, antesDeId: ultimo.id }),
+      );
+      setMais({ filtro, eventos: [...extras, ...novos], fim: novos.length < 300 });
+    } catch (e) {
+      setErro(e instanceof ErroApi ? e.message : 'Não foi possível carregar.');
+    } finally {
+      setCarregando(false);
+    }
+  }
+  async function exportar() {
+    setErro(null);
+    try {
+      const eventos = await adminApi<EventoDaAuditoria[]>(comFiltro({ limite: '2000' }));
+      const url = URL.createObjectURL(
+        new Blob([csvDaAuditoria(eventos)], { type: 'text/csv;charset=utf-8' }),
+      );
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `auditoria-pente-fino-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErro(e instanceof ErroApi ? e.message : 'Não foi possível exportar.');
+    }
+  }
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-semibold">Auditoria</h1>
         <p className="text-tinta-suave">
-          Toda ação da administração fica aqui e não pode ser apagada. Mostra as 300 mais recentes
-          do filtro.
+          Toda ação da administração fica aqui e não pode ser apagada. Horários de Brasília; 300 por
+          vez (use &ldquo;Carregar mais&rdquo;). O CSV leva até 2000 do filtro.
         </p>
       </div>
       <div className="flex flex-wrap items-end gap-3">
@@ -346,7 +395,11 @@ export function AuditoriaAdmin({ onAbrirConta }: { onAbrirConta: (id: string) =>
           value={ate}
           onChange={(e) => setAte(e.target.value)}
         />
+        <Botao variante="secundario" onClick={() => void exportar()}>
+          Exportar CSV
+        </Botao>
       </div>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
       <Estado consulta={q}>
         {() =>
           q.data!.length === 0 ? (
@@ -365,7 +418,7 @@ export function AuditoriaAdmin({ onAbrirConta }: { onAbrirConta: (id: string) =>
                 </tr>
               </thead>
               <tbody>
-                {q.data!.map((e) => (
+                {todos.map((e) => (
                   <tr key={e.id} className="border-b border-borda align-top">
                     <td className={`${td} whitespace-nowrap tabular-nums`}>
                       {formatarDataHora(e.quando)}
@@ -401,6 +454,16 @@ export function AuditoriaAdmin({ onAbrirConta }: { onAbrirConta: (id: string) =>
           )
         }
       </Estado>
+      {(q.data?.length ?? 0) > 0 && !acabou && (
+        <Botao
+          variante="secundario"
+          className="self-start"
+          carregando={carregando}
+          onClick={() => void carregarMais()}
+        >
+          Carregar mais
+        </Botao>
+      )}
     </div>
   );
 }

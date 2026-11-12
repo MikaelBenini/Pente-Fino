@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  intervaloDoPeriodo,
   metricasDaPlataforma,
   situacaoNaPlataforma,
   type ContaParaMetricas,
@@ -66,8 +67,10 @@ describe('métricas da plataforma', () => {
       teste_vencido: 1,
       cancelada: 1,
     });
-    expect(m.novas).toMatchObject({ hoje: 1, ultimos7Dias: 2, noMes: 2 });
-    expect(m.novas.porDia).toHaveLength(30);
+    expect(m.novas).toMatchObject({ hoje: 1, ultimos7Dias: 2, noMes: 2, noPeriodo: 2 });
+    // Padrão: mês atual (1º a 20/11), um ponto por dia.
+    expect(m.periodo).toEqual({ tipo: 'mes', de: '2026-11-01', ate: '2026-11-20' });
+    expect(m.novas.porDia).toHaveLength(20);
     expect(m.novas.porDia.at(-1)).toEqual({ dia: '2026-11-20', contas: 1 });
   });
 
@@ -90,10 +93,36 @@ describe('métricas da plataforma', () => {
     // Base no começo do mês: a, b e e (pagaram antes de novembro).
     expect(m.cancelamentos).toEqual({
       noMes: 1,
+      noPeriodo: 1,
       taxa: 1 / 3,
       motivos: [{ motivo: 'Achou caro', contas: 1 }],
     });
     expect(m.renovaram).toBe(1);
+  });
+
+  // Admin U1: período selecionável (mês atual, 30 dias, mês anterior).
+  it('período: 30 dias e mês anterior mudam novas, cancelamentos e o gráfico', () => {
+    expect(intervaloDoPeriodo('30dias', '2026-11-20')).toEqual({
+      de: '2026-10-22',
+      ate: '2026-11-20',
+    });
+    expect(intervaloDoPeriodo('mes_anterior', '2026-11-20')).toEqual({
+      de: '2026-10-01',
+      ate: '2026-10-31',
+    });
+    expect(intervaloDoPeriodo('mes_anterior', '2026-01-10')).toEqual({
+      de: '2025-12-01',
+      ate: '2025-12-31',
+    });
+    const trinta = metricasDaPlataforma({ contas, faturas, agora, periodo: '30dias' });
+    expect(trinta.novas.porDia).toHaveLength(30);
+    const anterior = metricasDaPlataforma({ contas, faturas, agora, periodo: 'mes_anterior' });
+    expect(anterior.novas.porDia).toHaveLength(31);
+    // O cancelamento foi em novembro: no mês anterior, nenhum.
+    expect(anterior.cancelamentos.noPeriodo).toBe(0);
+    expect(anterior.cancelamentos.motivos).toEqual([]);
+    // O que não depende de data continua igual.
+    expect(anterior.receita.mrr).toBe(m.receita.mrr);
   });
 
   // Admin R5: a auditoria de 10/11 viu MRR R$ 0, "0 pagantes" e "Em dia 1" ao mesmo tempo.

@@ -8,10 +8,12 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Erros } from '../comum/erros.js';
 import { contasDaPlataforma, faturasDaPlataforma } from '@pente-fino/db';
 import {
   entrarAdminSchema,
@@ -108,13 +110,18 @@ export class AdminController {
   @ApiOperation({
     summary: 'Números do negócio: contas, MRR, conversão do teste, cancelamentos e renovações',
   })
-  async metricas(): Promise<MetricasDaPlataforma> {
+  async metricas(@Query('periodo') periodoBruto?: string): Promise<MetricasDaPlataforma> {
+    // Admin U1: mês atual (padrão), últimos 30 dias ou mês anterior.
+    const periodo = (['mes', '30dias', 'mes_anterior'] as const).find((p) => p === periodoBruto);
+    if (periodoBruto && !periodo)
+      throw Erros.requisicaoInvalida('periodo_invalido', 'Período inválido.');
     const [contas, faturas] = await Promise.all([
       contasDaPlataforma(this.banco.prisma),
       faturasDaPlataforma(this.banco.prisma),
     ]);
     return metricasDaPlataforma({
       agora: new Date(),
+      periodo,
       contas: contas.map((c) => ({
         id: c.id,
         plano: c.plano,

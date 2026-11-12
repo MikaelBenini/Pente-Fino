@@ -48,6 +48,13 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByRole('heading', { name: 'Números do negócio' })).toBeVisible();
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Contas por situação' })).toBeVisible();
+  // Admin U1: período e números que levam à lista filtrada.
+  await page.getByLabel('Período').selectOption('30dias');
+  await expect(page.getByText('Contas novas por dia · últimos 30 dias')).toBeVisible();
+  await page.getByRole('list', { name: 'Contas por situação' }).getByRole('button').first().click();
+  await expect(page).toHaveURL(/#contas\?situacao=\w+$/);
+  await expect(page.getByLabel('Situação')).not.toHaveValue('');
+  await page.getByRole('tab', { name: 'Início' }).click();
   await page.getByRole('tab', { name: 'Contas' }).click();
   await expect(page).toHaveURL(/#contas$/);
   await expect(page.getByRole('heading', { name: 'Contas', exact: true })).toBeVisible();
@@ -149,6 +156,15 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByRole('table', { name: 'Auditoria da plataforma' })).toContainText(
     `vitor-${sufixoVenda}@pentefino.dev`,
   );
+  // Admin U7: detalhe legível (sem JSON) e exportação em CSV.
+  await expect(page.getByRole('table', { name: 'Auditoria da plataforma' })).not.toContainText(
+    '{"',
+  );
+  const [csv] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Exportar CSV' }).click(),
+  ]);
+  expect(csv.suggestedFilename()).toMatch(/^auditoria-pente-fino-\d{4}-\d{2}-\d{2}\.csv$/);
 
   // Configurações: aviso geral (vale 15 min) aparece para a barbearia; saúde do sistema.
   await page.getByRole('tab', { name: 'Configurações' }).click();

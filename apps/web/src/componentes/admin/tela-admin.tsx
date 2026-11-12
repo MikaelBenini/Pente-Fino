@@ -232,13 +232,19 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     window.addEventListener('hashchange', seguirEndereco);
     return () => window.removeEventListener('hashchange', seguirEndereco);
   }, []);
+  // Admin U1: o endereço pode levar um filtro (#contas?situacao=teste), vindo dos cartões.
+  const abaId = aba.split('?')[0]!;
   const abas = [
     {
       id: 'inicio',
       rotulo: 'Início',
       conteudo: <InicioAdmin u={u} onAbrirConta={setAberta} onIrPara={setAba} />,
     },
-    { id: 'contas', rotulo: 'Contas', conteudo: <ContasAdmin u={u} onAbrirConta={setAberta} /> },
+    {
+      id: 'contas',
+      rotulo: 'Contas',
+      conteudo: <ContasAdmin key={aba} u={u} onAbrirConta={setAberta} />,
+    },
     { id: 'cobranca', rotulo: 'Cobrança', conteudo: <CobrancaAdmin onAbrirConta={setAberta} /> },
     {
       id: 'vendas',
@@ -262,7 +268,7 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
       </div>
       <Abas
         rotulo="Administração"
-        atual={abas.some((x) => x.id === aba) ? aba : 'inicio'}
+        atual={abas.some((x) => x.id === abaId) ? abaId : 'inicio'}
         onTrocar={setAba}
         abas={abas}
       />
@@ -347,7 +353,12 @@ function ContasAdmin({
   const [ordem, setOrdem] = useState<Ordem>('criada');
   const [busca, setBusca] = useState('');
   const [plano, setPlano] = useState('');
-  const [situacao, setSituacao] = useState('');
+  // Filtro vindo do endereço (#contas?situacao=teste), pelos cartões do Início.
+  const [situacao, setSituacao] = useState(() =>
+    typeof window === 'undefined'
+      ? ''
+      : (new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('situacao') ?? ''),
+  );
   const [vendedor, setVendedor] = useState('');
   const vendas = useQuery({
     queryKey: ['admin', 'vendas'],
