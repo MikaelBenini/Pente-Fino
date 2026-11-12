@@ -6,8 +6,6 @@ import { capturarOrigem, promoverOrigem } from '@/lib/origem';
 
 /** Contêiner do Google Tag Manager (Google Ads). Público: aparece no HTML de qualquer forma. */
 export const ID_GTM = process.env.NEXT_PUBLIC_GTM_ID ?? 'GTM-WKWRDX4R';
-/** Tag do Google Ads (conversões). */
-export const ID_GOOGLE_ADS = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID ?? 'AW-18558704295';
 const CHAVE = 'pf-cookies';
 type Escolha = 'aceito' | 'recusado';
 
@@ -44,7 +42,9 @@ export function eventoGoogle(evento: string, dados: Record<string, unknown> = {}
 }
 
 /**
- * Tag do Google só no site público. Começa com o consentimento negado (LGPD): sem aceite, o Google
+ * Tag do Google só no site público, depois que a página fica interativa (site D2). Só o GTM: o
+ * contêiner já traz a tag do Google Ads (AW-18558704295); carregar o gtag/js dela aqui também
+ * duplicava a tag. O gtag() continua definido para o Consent Mode. Começa com o consentimento negado (LGPD): sem aceite, o Google
  * não grava cookie de anúncio; a escolha anterior do visitante vale desde o primeiro carregamento.
  */
 export function TagGoogle() {
@@ -80,8 +80,7 @@ var e=null;try{e=localStorage.getItem('${CHAVE}')}catch(_){}var v=e==='aceito'?'
 gtag('consent','default',{ad_storage:v,ad_user_data:v,ad_personalization:v,analytics_storage:v,wait_for_update:500});
 gtag('js',new Date());dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});
 function carregar(u){var s=document.createElement('script');s.async=true;s.src=u;document.head.appendChild(s);}
-carregar('https://www.googletagmanager.com/gtm.js?id=${ID_GTM}');
-${ID_GOOGLE_ADS ? `carregar('https://www.googletagmanager.com/gtag/js?id=${ID_GOOGLE_ADS}');gtag('config','${ID_GOOGLE_ADS}');` : ''}`}
+carregar('https://www.googletagmanager.com/gtm.js?id=${ID_GTM}');`}
     </Script>
   );
 }

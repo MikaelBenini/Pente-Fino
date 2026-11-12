@@ -53,7 +53,13 @@ function Tabela({
   linhas: readonly (readonly string[])[];
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-borda">
+    // Site D4: no celular a tabela rola para o lado; a área recebe foco para rolar pelo teclado.
+    <div
+      role="region"
+      aria-label={`${legenda}, role para o lado`}
+      tabIndex={0}
+      className="overflow-x-auto rounded-xl border border-borda focus-visible:outline-2 focus-visible:outline-foco"
+    >
       <table className="w-full min-w-[36rem] text-left text-sm">
         <caption className="sr-only">{legenda}</caption>
         <thead className="bg-superficie-2">

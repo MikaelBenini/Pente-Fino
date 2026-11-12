@@ -732,7 +732,11 @@ opção padrão do briefing, numa constante fácil de trocar.
   - sitemap e rodapé;
   - teste N4 em `apps/web/e2e/site.spec.ts`.
 - [ ] **N5** Sobre/Contato
-- [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
+- [x] **D1, D2, D4** (feito em 2026-11-12):
+  - **D1:** as fotos das telas ganharam a versão com metade da largura (`video/variantes.mjs`, chamado também no fim do `telas.mjs`); `Janela` e `Celular` usam `srcset` e `sizes`, sem o otimizador do Next;
+  - **D2:** o `gtag/js` do Google Ads saiu, porque o contêiner do GTM já traz a tag `AW-18558704295`; ficou só o GTM, com `afterInteractive`;
+  - **D4:** regra geral de `:focus-visible` na camada base do `globals.css`; as áreas com rolagem lateral recebem foco (`tabIndex`, `role="region"`);
+  - `acessibilidade.spec.ts` audita 9 páginas do site (axe, WCAG AA) e confere o foco visível.
 
 ## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)
 

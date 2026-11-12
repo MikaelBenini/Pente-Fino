@@ -80,3 +80,39 @@ test('diálogos abertos sem problema grave de acessibilidade (axe)', async ({ pa
   }
   expect(achados).toEqual({});
 });
+
+// Site D4: as páginas públicas também passam pela auditoria (contraste AA incluso), sem login.
+const PAGINAS_DO_SITE = [
+  '/',
+  '/planos',
+  '/sistema-para-barbearia',
+  '/comparativo/appbarber',
+  '/melhor-sistema-para-barbearia',
+  '/calculadora/preco-do-corte',
+  '/blog',
+  '/blog/faturamento-nao-e-lucro',
+  '/termos',
+];
+
+test('páginas do site sem problema grave de acessibilidade (axe)', async ({ page }) => {
+  test.setTimeout(180_000);
+  // As seções que aparecem ao rolar ("revelar") entram já visíveis na auditoria.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const achados: Record<string, unknown> = {};
+  for (const rota of PAGINAS_DO_SITE) {
+    await page.goto(rota);
+    await page.waitForLoadState('networkidle');
+    const p = await problemasGraves(page);
+    if (p.length) achados[rota] = p;
+  }
+  expect(achados).toEqual({});
+});
+
+test('site: o foco do teclado fica visível nos links e botões', async ({ page }) => {
+  await page.goto('/planos');
+  await page.keyboard.press('Tab');
+  const foco = page.locator(':focus');
+  await expect(foco).toHaveCount(1);
+  const contorno = await foco.evaluate((el) => getComputedStyle(el).outlineStyle);
+  expect(contorno).not.toBe('none');
+});
