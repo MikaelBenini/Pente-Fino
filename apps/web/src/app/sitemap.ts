@@ -1,6 +1,7 @@
 import { linkDeAgendamento, VERSAO_TERMOS } from '@pente-fino/shared';
 import type { MetadataRoute } from 'next';
 import { CALCULADORAS } from '@/componentes/site/pagina-calculadora';
+import { POSTS_PUBLICADOS } from '@/conteudo/blog';
 import { CONCORRENTES } from '@/conteudo/comparativos';
 import { PAGINAS_BUSCA } from '@/conteudo/paginas-busca';
 import { paginasNoGoogle } from '@/lib/servidor/pagina-publica';
@@ -24,6 +25,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${URL_SITE}${p.caminho}`,
       changeFrequency: 'monthly' as const,
       priority: 0.8,
+    })),
+    // Site N4: blog.
+    { url: `${URL_SITE}/blog`, changeFrequency: 'weekly', priority: 0.6 },
+    ...POSTS_PUBLICADOS.map((p) => ({
+      url: `${URL_SITE}/blog/${p.slug}`,
+      lastModified: new Date(`${p.publicadoEm}T12:00:00Z`),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
     })),
     // Site N3: calculadoras grátis.
     ...CALCULADORAS.map((c) => ({

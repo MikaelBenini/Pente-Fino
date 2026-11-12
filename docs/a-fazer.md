@@ -161,7 +161,13 @@ U2 a U5 já feitos (#161).
   - registro no CHANGELOG.
 - [x] Lote 5c (N3): bateria verde e PR aberto (12/11)
 - [ ] Merge pelo dono (lote 5c)
-- [ ] **N4** Blog
+- [x] **N4** Blog (12/11):
+  - estrutura pronta e o post "Faturamento não é lucro" publicado;
+  - cinco rascunhos com título e tópicos em `src/conteudo/blog.ts`;
+  - para publicar um rascunho, escrever o texto, pôr a data e criar a pasta do post;
+  - registro no CHANGELOG.
+- [x] Lote 5d (N4): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 5d)
 - [ ] **P4** Coerência com os anúncios do Google já publicados
 - [ ] **D1** Imagens do hero no tamanho certo para o celular
 - [ ] **D2** Scripts de terceiros carregados depois da página, sem gtag duplicado

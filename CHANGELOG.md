@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (site: blog)
+
+- Blog no site (`/blog`). O primeiro post é "Faturamento não é lucro: como saber quanto sobra na barbearia", com as contas de um mês de barbearia.
+- Cada post tem data, tempo de leitura, chamada para o teste grátis no meio e no fim e "Leia também".
+- Mais cinco posts ficaram como rascunho (título e tópicos), sem ir ao ar.
+- O blog entra no sitemap e no rodapé.
+
 ### Adicionado (site: calculadoras)
 
 - Três calculadoras grátis, cada uma no seu endereço:

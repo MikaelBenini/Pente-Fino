@@ -325,3 +325,29 @@ test('N3: calculadoras de comissão e de preço do corte fazem a conta e explica
   await preco.getByLabel('Margem desejada').fill('55');
   await expect(preco.getByRole('status')).toContainText('não existe preço possível');
 });
+
+// ─── Site N4: blog ─────
+test('N4: blog lista o post publicado; rascunho não vai ao ar', async ({ page, request }) => {
+  await page.goto('/blog');
+  await expect(page.getByRole('link', { name: /Faturamento não é lucro/ })).toHaveAttribute(
+    'href',
+    '/blog/faturamento-nao-e-lucro',
+  );
+  await page.goto('/blog/faturamento-nao-e-lucro');
+  await expect(
+    page.getByRole('heading', { level: 1, name: /Faturamento não é lucro/ }),
+  ).toBeVisible();
+  await expect(page.locator('time')).toHaveAttribute('datetime', '2026-11-12');
+  await expect(page.getByText(/min de leitura/)).toBeVisible();
+  // Chamada no meio do texto e no fim.
+  await expect(page.getByRole('complementary', { name: 'Teste grátis' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Criar conta grátis' })).toBeVisible();
+  const dados = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const artigo = dados.map((d) => JSON.parse(d)).find((d) => d['@type'] === 'Article');
+  expect(artigo.datePublished).toBe('2026-11-12');
+  await expect(
+    page.getByRole('navigation', { name: 'Leia também' }).getByRole('link').first(),
+  ).toBeVisible();
+  // Rascunho (sem data) não tem página.
+  expect((await request.get('/blog/como-calcular-comissao-de-barbeiro')).status()).toBe(404);
+});
