@@ -549,6 +549,17 @@ export default function Pagina() {
             </p>
           </div>
           <CalculadoraSobra />
+          <p className="text-sm text-tinta-suave">
+            Mais contas grátis:{' '}
+            <Link href="/calculadora/comissao-de-barbeiro" className="underline underline-offset-4">
+              comissão de barbeiro
+            </Link>{' '}
+            e{' '}
+            <Link href="/calculadora/preco-do-corte" className="underline underline-offset-4">
+              quanto cobrar pelo corte
+            </Link>
+            .
+          </p>
           <ChamadaTeste />
         </div>
       </section>

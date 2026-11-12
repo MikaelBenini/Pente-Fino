@@ -1,5 +1,6 @@
 import { linkDeAgendamento, VERSAO_TERMOS } from '@pente-fino/shared';
 import type { MetadataRoute } from 'next';
+import { CALCULADORAS } from '@/componentes/site/pagina-calculadora';
 import { CONCORRENTES } from '@/conteudo/comparativos';
 import { PAGINAS_BUSCA } from '@/conteudo/paginas-busca';
 import { paginasNoGoogle } from '@/lib/servidor/pagina-publica';
@@ -23,6 +24,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${URL_SITE}${p.caminho}`,
       changeFrequency: 'monthly' as const,
       priority: 0.8,
+    })),
+    // Site N3: calculadoras grátis.
+    ...CALCULADORAS.map((c) => ({
+      url: `${URL_SITE}${c.caminho}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
     })),
     // Site N2: comparações.
     ...['/melhor-sistema-para-barbearia', ...CONCORRENTES.map((c) => `/comparativo/${c.slug}`)].map(
