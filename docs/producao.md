@@ -96,6 +96,8 @@ privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os va
 
 ## Monitoramento
 
+- **Alertas da equipe (admin F3):** o worker usa a `DATABASE_PLATAFORMA_URL`, que já vem no ambiente comum do compose, para mandar os alertas de hora em hora. Sem ela, os alertas ficam desligados e o log do worker avisa.
+
 - Uptime Kuma em `https://status.seudominio` (registro A `status`). **Crie a conta de administrador
   logo no primeiro acesso.** Depois, na VPS:
 

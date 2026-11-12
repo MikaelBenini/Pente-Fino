@@ -1669,6 +1669,16 @@ enum PapelPlataforma {
 }
 
 /// Quem opera o Pente Fino. Nunca reaproveita o login de uma barbearia.
+/// Admin F3: alertas da equipe que já saíram. O mesmo tipo + chave nunca sai duas vezes.
+model AlertaEquipeEnviado {
+  tipo      String
+  chave     String
+  enviadoEm DateTime @default(now()) @map("enviado_em") @db.Timestamptz(3)
+
+  @@id([tipo, chave])
+  @@map("alerta_equipe_enviado")
+}
+
 model UsuarioPlataforma {
   id               String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
   nome             String
@@ -1684,6 +1694,8 @@ model UsuarioPlataforma {
   ativo            Boolean         @default(true)
   /// Última troca de senha (criação ou redefinição): aparece na equipe (admin U6).
   senhaTrocadaEm   DateTime?       @map("senha_trocada_em") @db.Timestamptz(3)
+  /// Admin F3: tipos de alerta que a pessoa recebe por e-mail (TIPOS_ALERTA_EQUIPE).
+  alertas          String[]        @default([])
   ultimoAcessoEm   DateTime?       @map("ultimo_acesso_em") @db.Timestamptz(3)
   criadoEm         DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime        @updatedAt @map("atualizado_em") @db.Timestamptz(3)

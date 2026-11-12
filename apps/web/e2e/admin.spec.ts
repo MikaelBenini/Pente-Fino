@@ -47,6 +47,16 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByRole('heading', { name: 'Precisa de atenção' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Números do negócio' })).toBeVisible();
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
+  // Admin F3: cada pessoa escolhe os alertas que recebe por e-mail.
+  const alertas = page.getByRole('region', { name: 'Meus alertas por e-mail' });
+  await alertas.getByRole('checkbox', { name: /Cadastro novo/ }).check();
+  await expect(alertas.getByRole('status')).toHaveText('Alertas salvos.');
+  await page.reload();
+  await expect(
+    page
+      .getByRole('region', { name: 'Meus alertas por e-mail' })
+      .getByRole('checkbox', { name: /Cadastro novo/ }),
+  ).toBeChecked();
   // Admin F1: funil de ativação, do cadastro ao pagamento.
   const funil = page.getByRole('region', { name: 'Funil de ativação' });
   const etapas = funil.getByRole('list', { name: 'Etapas do funil' });

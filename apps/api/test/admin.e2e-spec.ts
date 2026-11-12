@@ -602,6 +602,20 @@ describe('administração mais prática (admin U2 a U5)', () => {
     }
   });
 
+  it('alertas da equipe (F3): cada pessoa escolhe os seus; tipo que não existe é recusado', async () => {
+    const v = com(tVend);
+    const put = (corpo: object) =>
+      http().put('/admin/eu/alertas').set('authorization', `Bearer ${tVend}`).send(corpo);
+    expect((await v.get('/admin/eu/alertas').expect(200)).body).toEqual({ alertas: [] });
+    await put({ alertas: ['cobranca_vencida', 'falha_email', 'falha_email'] }).expect(204);
+    expect((await v.get('/admin/eu/alertas').expect(200)).body).toEqual({
+      alertas: ['cobranca_vencida', 'falha_email'],
+    });
+    await put({ alertas: ['nao_existe'] }).expect(400);
+    // A escolha de um não muda a do outro.
+    expect((await com(tChefe).get('/admin/eu/alertas').expect(200)).body).toEqual({ alertas: [] });
+  });
+
   it('funil de ativação (F1): só o admin, etapas do cadastro ao pagamento e a etapa na ficha', async () => {
     const v = com(tVend);
     const adm = com(tChefe);

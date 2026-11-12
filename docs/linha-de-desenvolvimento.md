@@ -808,7 +808,13 @@ motivo e vai para a auditoria.
   - `GET /admin/funil?periodo=todos|90dias|30dias`, só para o admin;
   - `etapaFunil` na ficha da conta e o bloco "Funil de ativação" em `metricas-admin.tsx`;
   - testes em `admin.e2e-spec.ts` e `apps/web/e2e/admin.spec.ts`.
-- [ ] **F2–F9** origem do cadastro (com o T2 do site), alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [x] **F3** alertas para a equipe (feito em 2026-11-12):
+  - regra em `packages/shared/src/alertas-equipe.ts` (`detectarAlertasEquipe`, `emailDeAlertasEquipe`), com teste;
+  - migração `alertas_equipe`: `usuario_plataforma.alertas` (os admins começam com todos), `alerta_equipe_enviado` (tipo + chave, uma vez só) e `plataforma_whatsapp_caido()`;
+  - `AlertasProcessor` no worker roda de hora em hora (aos 5 min), com a conexão da administração (`DATABASE_PLATAFORMA_URL`; sem ela, desligado);
+  - `GET` e `PUT /admin/eu/alertas` para todos os papéis, e a seção "Meus alertas por e-mail" no Início;
+  - testes em `alertas-equipe.test.ts`, `plataforma.db.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [ ] **F2, F4–F9** origem do cadastro (com o T2 do site), saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

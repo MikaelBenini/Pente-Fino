@@ -5,6 +5,7 @@ import { EventosProcessor } from './eventos.processor.js';
 import { NotificacoesProcessor } from './notificacoes.processor.js';
 import { Banco } from './banco.js';
 import { Batimento } from './batimento.js';
+import { AlertasProcessor } from './alertas.processor.js';
 import { LimpezaProcessor } from './limpeza.processor.js';
 import { WhatsappProcessor } from './whatsapp.processor.js';
 
@@ -17,6 +18,7 @@ import { WhatsappProcessor } from './whatsapp.processor.js';
     Banco,
     Batimento,
     LimpezaProcessor,
+    AlertasProcessor,
     WhatsappProcessor,
   ],
 })

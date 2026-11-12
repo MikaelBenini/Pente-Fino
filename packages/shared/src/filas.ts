@@ -10,6 +10,8 @@ export const FILA_WHATSAPP_SAIDA = 'whatsapp-saida';
 export const FILA_NOTIFICACOES = 'notificacoes';
 /** Rotina diária de limpeza de dados (Etapa 15.4). */
 export const FILA_LIMPEZA = 'limpeza';
+/** Admin F3: alertas da equipe da plataforma, de hora em hora. */
+export const FILA_ALERTAS_EQUIPE = 'alertas-equipe';
 
 /**
  * Novas tentativas para o que pode ser repetido sem efeito duplo (V2): a mensagem do cliente

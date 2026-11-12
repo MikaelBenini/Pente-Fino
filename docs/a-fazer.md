@@ -187,7 +187,13 @@ U2 a U5 já feitos (#161).
 - [ ] Merge pelo dono (lote 6a)
 - [ ] **F2** Origem do cadastro: conferir o que falta (a origem já é gravada e aparece na ficha e
   em Vendas, #160 e #161)
-- [ ] **F3** Alertas para a equipe (cadastro novo, teste acabando, cobrança vencida, falhas)
+- [x] **F3** Alertas para a equipe (12/11):
+  - e-mail de hora em hora, pela rotina do worker, com os sete tipos do plano;
+  - cada pessoa escolhe os seus em "Meus alertas por e-mail", no Início;
+  - cada alerta sai uma vez só;
+  - registro no CHANGELOG.
+- [x] Lote 6c (F3): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 6c)
 - [ ] **F4** Nota de saúde da conta (0 a 100) e ordem por risco de cancelamento
 - [ ] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):

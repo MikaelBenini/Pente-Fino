@@ -8,8 +8,11 @@ import {
   criarPrisma,
   faturasDaPlataforma,
   fichaDaContaPlataforma,
+  funilDaConta,
+  guardarAlertasNovos,
   mudarPlanoDaConta,
   naConta,
+  whatsappCaidoDaPlataforma,
   type PrismaClient,
 } from '../src/index.js';
 
@@ -25,7 +28,16 @@ beforeAll(async () => {
   plataforma = criarPrisma(process.env.DATABASE_PLATAFORMA_URL);
   await naConta(app, conta, async (tx) => {
     await tx.conta.create({ data: { id: conta, nome: 'Barbearia Vista Pela Plataforma' } });
-    await tx.unidade.create({ data: { nome: 'Centro' } });
+    const u = await tx.unidade.create({ data: { nome: 'Centro' } });
+    // WhatsApp que caiu há 3 horas e não voltou (admin F3).
+    await tx.botConexao.create({
+      data: {
+        unidadeId: u.id,
+        instancia: `teste-${conta}`,
+        status: 'desconectado',
+        caiuEm: new Date(Date.now() - 3 * 3_600_000),
+      },
+    });
     await tx.cliente.create({ data: { nome: 'Cliente Secreto', telefone: '5511999990000' } });
     await tx.faturaAssinatura.create({
       data: {
@@ -121,5 +133,30 @@ describe('acesso da plataforma', () => {
     await expect(
       plataforma.$executeRaw`DELETE FROM auditoria_plataforma WHERE id = ${a!.id}::uuid`,
     ).rejects.toThrow();
+  });
+
+  it('funil (admin F1): etapas da conta pela função, com a fatura paga', async () => {
+    expect(await funilDaConta(plataforma, conta)).toMatchObject({
+      servicos: false,
+      barbeiros: false,
+      whatsapp: false,
+      pagamento: true,
+    });
+  });
+
+  it('alertas (admin F3): WhatsApp caído pela função; cada alerta é guardado uma vez só', async () => {
+    const caido = (await whatsappCaidoDaPlataforma(plataforma)).find((w) => w.contaId === conta);
+    expect(caido?.conta).toBe('Barbearia Vista Pela Plataforma');
+    const alerta = { tipo: 'whatsapp_caido', chave: `teste-${conta}` };
+    try {
+      expect(await guardarAlertasNovos(plataforma, [alerta])).toEqual([alerta]);
+      // Segunda vez (ou outra rotina ao mesmo tempo): já saiu.
+      expect(await guardarAlertasNovos(plataforma, [alerta])).toEqual([]);
+      // A aplicação das barbearias não enxerga os alertas da equipe.
+      await expect(app.$queryRaw`SELECT * FROM alerta_equipe_enviado`).rejects.toThrow();
+    } finally {
+      await plataforma.$executeRaw`
+        DELETE FROM alerta_equipe_enviado WHERE tipo = ${alerta.tipo} AND chave = ${alerta.chave}`;
+    }
   });
 });

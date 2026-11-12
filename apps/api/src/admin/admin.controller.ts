@@ -40,6 +40,10 @@ import {
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
+  alertasDaEquipeSchema,
+  TIPOS_ALERTA_EQUIPE,
+  type AlertasDaEquipeEntrada,
+  type TipoAlertaEquipe,
   resumirFunil,
   type ResumoFunil,
   type MetricasDaPlataforma,
@@ -100,6 +104,35 @@ export class AdminController {
   @ApiOperation({ summary: 'Quem está na administração' })
   eu(@AdminAtual() a: AdminAutenticado): UsuarioPlataformaSessao {
     return { id: a.id, nome: a.nome, email: a.email, papel: a.papel };
+  }
+
+  @Get('eu/alertas')
+  @PapeisPlataforma('admin', 'vendedor', 'suporte', 'financeiro')
+  @ApiOperation({ summary: 'Alertas que eu recebo por e-mail (admin F3)' })
+  async meusAlertas(@AdminAtual() a: AdminAutenticado): Promise<AlertasDaEquipeEntrada> {
+    const u = await this.banco.prisma.usuarioPlataforma.findUnique({
+      where: { id: a.id },
+      select: { alertas: true },
+    });
+    return {
+      alertas: (u?.alertas ?? []).filter((t): t is TipoAlertaEquipe =>
+        (TIPOS_ALERTA_EQUIPE as readonly string[]).includes(t),
+      ),
+    };
+  }
+
+  @Put('eu/alertas')
+  @PapeisPlataforma('admin', 'vendedor', 'suporte', 'financeiro')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Escolher os alertas que eu recebo por e-mail (admin F3)' })
+  async escolherAlertas(
+    @AdminAtual() a: AdminAutenticado,
+    @Corpo(alertasDaEquipeSchema) d: AlertasDaEquipeEntrada,
+  ): Promise<void> {
+    await this.banco.prisma.usuarioPlataforma.update({
+      where: { id: a.id },
+      data: { alertas: [...new Set(d.alertas)] },
+    });
   }
 
   @Post('auth/sair')
