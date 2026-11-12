@@ -97,11 +97,13 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
   quando marcam horário com ele (agenda, bot, site) e na comanda dele. Sem preço próprio, vale o
   da unidade, como hoje. Com vigência, como a tabela (mudar não altera o passado); a comissão do
   clube continua sobre o preço da unidade.
-- [x] Preço por barbeiro: bateria verde (12/11); PR e CI a acompanhar
-- [ ] Merge pelo dono (preço por barbeiro, depois do catálogo por unidade)
-- [ ] **Receber adiantado (sinal)** (painel A2): registra o pagamento na comanda aberta, entra no
+- [x] Preço por barbeiro: bateria verde, PR #166 e CI verde (12/11)
+- [x] Merge pelo dono (preço por barbeiro, #166, 12/11)
+- [x] **Receber adiantado (sinal)** (painel A2; 12/11, Etapa 23.6; sem devolver na hora, o sinal fica retido e a comanda cancelada mostra "Devolver"): registra o pagamento na comanda aberta, entra no
   caixa do dia em que foi recebido e abate do total ao fechar; cancelar a comanda pede o que
   fazer com o sinal (devolver ou reter, com motivo).
+- [x] Sinal: bateria verde (12/11); PR e CI a acompanhar
+- [ ] Merge pelo dono (sinal, depois do preço por barbeiro)
 - [x] **Competência (painel A1)**: decidido em 11/11, o faturamento continua pela data do
   **fechamento** da comanda. Motivos: o dinheiro só fica certo no fechamento; o dia já fechado
   não muda depois; bate com o caixa e com o extrato; a trava do A1 já impede fechar antes do

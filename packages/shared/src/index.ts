@@ -11,6 +11,7 @@ export * from './fila-offline.js';
 export * from './filas.js';
 export * from './preco-livre.js';
 export * from './preco-profissional.js';
+export * from './sinal.js';
 export * from './formatacao.js';
 export * from './importacao.js';
 export * from './indicadores.js';

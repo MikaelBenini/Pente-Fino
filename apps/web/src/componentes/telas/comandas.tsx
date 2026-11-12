@@ -335,6 +335,11 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
   const [cancelar, setCancelar] = useState(false);
   const [reabrir, setReabrir] = useState(false);
   const [mover, setMover] = useState(false);
+  const [sinal, setSinal] = useState(false);
+  const [devolver, setDevolver] = useState<string | null>(null);
+  // Sinal (receber adiantado): só o balcão recebe e devolve; vale até fechar.
+  const balcao = papeis.some((p) => p !== 'barbeiro');
+  const sinalRetido = c.sinais.filter((s) => !s.devolvidoEm).reduce((t, s) => t + s.valor, 0);
   const movimento = useMoverHorario();
   // Reaberta (fechada por engano) também remarca: o horário pode ter sido o erro.
   const podeMover =
@@ -619,6 +624,30 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
             <dt>Total</dt>
             <dd>{formatarMoeda(c.totalLiquido)}</dd>
           </div>
+          {c.sinais.map((s) => (
+            <div key={s.id} className="flex items-center justify-between gap-4 text-base">
+              <dt className="text-tinta-suave">
+                Sinal · {NOME_FORMA[s.forma]}
+                {s.devolvidoEm ? ' (devolvido)' : ''}
+              </dt>
+              <dd className="flex items-center gap-2">
+                <span className={s.devolvidoEm ? 'text-tinta-suave line-through' : ''}>
+                  −{formatarMoeda(s.valor)}
+                </span>
+                {balcao && !s.devolvidoEm && c.status !== 'fechada' && (
+                  <Botao variante="fantasma" className="px-2" onClick={() => setDevolver(s.id)}>
+                    Devolver
+                  </Botao>
+                )}
+              </dd>
+            </div>
+          ))}
+          {sinalRetido > 0 && c.status !== 'fechada' && c.status !== 'cancelada' && (
+            <div className="flex justify-between gap-8 font-semibold">
+              <dt>A receber</dt>
+              <dd>{formatarMoeda(c.aReceber)}</dd>
+            </div>
+          )}
           {c.pagamentos.map((p) => (
             <div key={p.forma} className="flex justify-between gap-8 text-base text-tinta-suave">
               <dt>{NOME_FORMA[p.forma]}</dt>
@@ -673,6 +702,11 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
               Mover horário
             </Botao>
           )}
+          {balcao && !['fechada', 'cancelada'].includes(c.status) && c.aReceber > 0 && (
+            <Botao variante="secundario" onClick={() => setSinal(true)}>
+              Receber sinal (adiantado)
+            </Botao>
+          )}
           {pode('cancelar') && (
             <Botao variante="fantasma" onClick={() => setCancelar(true)}>
               Cancelar ou marcar falta
@@ -714,8 +748,21 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
           await executar('fechar', corpo);
         }}
       />
+      <ReceberSinal
+        aberto={sinal}
+        aReceber={c.aReceber}
+        onFechar={() => setSinal(false)}
+        onConfirmar={(corpo) => executar('sinal', corpo)}
+      />
+      <DevolverSinal
+        aberto={devolver !== null}
+        valor={c.sinais.find((s) => s.id === devolver)?.valor ?? 0}
+        onFechar={() => setDevolver(null)}
+        onConfirmar={(motivo) => executar(`sinal/${devolver}/devolver`, { motivo })}
+      />
       <Cancelamento
         aberto={cancelar}
+        sinalRetido={sinalRetido}
         inicioAgendado={c.agendamentoId && c.cliente ? c.inicio : null}
         onFechar={() => setCancelar(false)}
         onConfirmar={(corpo) => executar('cancelar', corpo)}
@@ -991,8 +1038,11 @@ function Fechamento({
   >(null);
   const [confirmar, setConfirmar] = useState(false);
   const desconto = descontoTexto.trim() ? (lerMoeda(descontoTexto) ?? -1) : 0;
-  const total = comanda.totalLiquido - Math.max(0, desconto);
-  const atuais = linhas ?? [{ forma: 'pix' as const, valor: valorParaCampo(comanda.totalLiquido) }];
+  // Sinal recebido adiantado (e não devolvido) já entrou: abate do que falta receber.
+  const sinal = comanda.sinais.filter((s) => !s.devolvidoEm).reduce((t, s) => t + s.valor, 0);
+  const total = comanda.totalLiquido - Math.max(0, desconto) - sinal;
+  const sinalCobre = total === 0 && sinal > 0;
+  const atuais = linhas ?? [{ forma: 'pix' as const, valor: valorParaCampo(comanda.aReceber) }];
   const valores = atuais.map((l) => lerMoeda(l.valor));
   const somado = valores.reduce<number>((s, v) => s + (v ?? 0), 0);
   const falta = total - somado;
@@ -1002,8 +1052,7 @@ function Fechamento({
   const valido =
     desconto >= 0 &&
     desconto <= comanda.totalLiquido &&
-    valores.every((v) => v !== null && v > 0) &&
-    falta === 0;
+    (sinalCobre || (valores.every((v) => v !== null && v > 0) && falta === 0));
 
   function fechar() {
     setLinhas(null);
@@ -1041,11 +1090,23 @@ function Fechamento({
               desconto < 0 || desconto > comanda.totalLiquido ? 'Desconto inválido.' : undefined
             }
           />
+          {sinal > 0 && (
+            <p className="flex justify-between font-denso text-lg tabular-nums text-tinta-suave">
+              <span>Sinal já recebido</span>
+              <span>−{formatarMoeda(sinal)}</span>
+            </p>
+          )}
           <p className="flex justify-between font-denso text-2xl font-bold tabular-nums">
             <span>Total a receber</span>
             <span>{formatarMoeda(Math.max(0, total))}</span>
           </p>
-          <fieldset className="min-w-0">
+          {total < 0 && (
+            <Aviso tom="erro">
+              O sinal passa {formatarMoeda(-total)} do total. Devolva o sinal ou lance o que falta.
+            </Aviso>
+          )}
+          {sinalCobre && <p className="text-tinta-suave">O sinal cobre o total: nada a receber.</p>}
+          <fieldset className="min-w-0" hidden={sinalCobre || total < 0}>
             <legend className="mb-1 text-sm font-medium">Formas de pagamento</legend>
             <div className="flex flex-col gap-3">
               {atuais.map((l, i) => (
@@ -1103,7 +1164,7 @@ function Fechamento({
               </Botao>
             </div>
           </fieldset>
-          {falta !== 0 && (
+          {falta !== 0 && !sinalCobre && total >= 0 && (
             <p role="status" className="font-denso text-lg tabular-nums text-aviso-texto">
               {falta > 0
                 ? `Faltam ${formatarMoeda(falta)}`
@@ -1125,7 +1186,13 @@ function Fechamento({
         titulo={`Fechar comanda de ${formatarMoeda(total)}?`}
         descricao={
           <ul className="flex flex-col gap-1 font-denso text-lg tabular-nums">
-            {atuais.map((l, i) => (
+            {sinal > 0 && (
+              <li className="flex justify-between gap-6 text-tinta-suave">
+                <span>Sinal já recebido</span>
+                <span>{formatarMoeda(sinal)}</span>
+              </li>
+            )}
+            {(sinalCobre ? [] : atuais).map((l, i) => (
               <li key={i} className="flex justify-between gap-6">
                 <span>{NOME_FORMA[l.forma]}</span>
                 <span>{formatarMoeda(valores[i] ?? 0)}</span>
@@ -1138,7 +1205,9 @@ function Fechamento({
         onConfirmar={async () => {
           await onConcluir({
             desconto: Math.max(0, desconto),
-            pagamentos: atuais.map((l, i) => ({ forma: l.forma, valor: valores[i]! })),
+            pagamentos: sinalCobre
+              ? []
+              : atuais.map((l, i) => ({ forma: l.forma, valor: valores[i]! })),
           });
           fechar();
         }}
@@ -1147,13 +1216,143 @@ function Fechamento({
   );
 }
 
+/** Receber adiantado (sinal): entra no caixa de hoje e abate do total ao fechar. */
+function ReceberSinal({
+  aberto,
+  aReceber,
+  onFechar,
+  onConfirmar,
+}: {
+  aberto: boolean;
+  aReceber: number;
+  onFechar: () => void;
+  onConfirmar: (corpo: object) => Promise<void>;
+}) {
+  const formas = FORMAS_PAGAMENTO;
+  const [forma, setForma] = useState<(typeof formas)[number]>('pix');
+  const [texto, setTexto] = useState('');
+  const valor = texto.trim() ? lerMoeda(texto) : null;
+  const erro =
+    texto.trim() && (valor === null || valor <= 0)
+      ? 'Valor inválido. Ex.: 30,00'
+      : valor !== null && valor > aReceber
+        ? `Até ${formatarMoeda(aReceber)} (o que falta receber).`
+        : undefined;
+  function fechar() {
+    setTexto('');
+    onFechar();
+  }
+  return (
+    <Dialogo
+      aberto={aberto}
+      titulo="Receber sinal"
+      descricao="Entra no caixa de hoje e abate do total quando a comanda for fechada."
+      onFechar={fechar}
+    >
+      <form
+        method="post"
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (erro || valor === null) return;
+          fechar();
+          await onConfirmar({ forma, valor });
+        }}
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <Selecao
+            id="sinal-forma"
+            rotulo="Forma"
+            value={forma}
+            onChange={(e) => setForma(e.target.value as typeof forma)}
+            opcoes={formas.map((f) => ({ valor: f, rotulo: NOME_FORMA[f] }))}
+          />
+          <Campo
+            id="sinal-valor"
+            rotulo="Valor (R$)"
+            inputMode="decimal"
+            placeholder={valorParaCampo(aReceber)}
+            erro={erro}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Botao variante="secundario" onClick={fechar}>
+            Voltar
+          </Botao>
+          <Botao type="submit" disabled={!!erro || valor === null}>
+            Receber sinal
+          </Botao>
+        </div>
+      </form>
+    </Dialogo>
+  );
+}
+
+/** Devolver o sinal ao cliente: sai do caixa de hoje (o do dia em que entrou não muda). */
+function DevolverSinal({
+  aberto,
+  valor,
+  onFechar,
+  onConfirmar,
+}: {
+  aberto: boolean;
+  valor: number;
+  onFechar: () => void;
+  onConfirmar: (motivo: string) => Promise<void>;
+}) {
+  const [motivo, setMotivo] = useState('');
+  return (
+    <Dialogo
+      aberto={aberto}
+      titulo={`Devolver o sinal de ${formatarMoeda(valor)}?`}
+      descricao="Sai do caixa de hoje. O caixa do dia em que ele entrou não muda."
+      onFechar={onFechar}
+    >
+      <form
+        method="post"
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (motivo.trim().length < 3) return;
+          onFechar();
+          await onConfirmar(motivo.trim());
+          setMotivo('');
+        }}
+      >
+        <Campo
+          id="devolver-sinal-motivo"
+          rotulo="Motivo"
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+          placeholder="Cliente desistiu, combinado no balcão…"
+        />
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Botao variante="secundario" onClick={onFechar}>
+            Voltar
+          </Botao>
+          <Botao type="submit" variante="perigo" disabled={motivo.trim().length < 3}>
+            Devolver sinal
+          </Botao>
+        </div>
+      </form>
+    </Dialogo>
+  );
+}
+
 function Cancelamento({
   aberto,
+  sinalRetido,
   inicioAgendado,
   onFechar,
   onConfirmar,
 }: {
   aberto: boolean;
+  /** Sinal recebido e ainda não devolvido. */
+  sinalRetido: number;
   /** Início do horário com cliente (null = sem agendamento ou sem cliente). */
   inicioAgendado: string | null;
   onFechar: () => void;
@@ -1165,6 +1364,7 @@ function Cancelamento({
   // Antes do horário, o normal é a barbearia desmarcar (avisando); depois, é falta.
   const [falta, setFalta] = useState(!podeAvisar);
   const [avisar, setAvisar] = useState(true);
+  const [devolverSinal, setDevolverSinal] = useState(false);
   return (
     <Dialogo
       aberto={aberto}
@@ -1184,6 +1384,7 @@ function Cancelamento({
             motivo: motivo.trim(),
             falta,
             avisarCliente: podeAvisar && !falta && avisar,
+            devolverSinal: sinalRetido > 0 && devolverSinal,
           });
           setMotivo('');
         }}
@@ -1200,6 +1401,14 @@ function Cancelamento({
             rotulo="Avisar o cliente pelo WhatsApp (com convite para marcar outro horário)"
             checked={avisar}
             onChange={(e) => setAvisar(e.target.checked)}
+          />
+        )}
+        {sinalRetido > 0 && (
+          <Marcador
+            id="cancelar-devolver-sinal"
+            rotulo={`Devolver o sinal de ${formatarMoeda(sinalRetido)} agora (sai do caixa de hoje). Sem marcar, ele fica retido e dá para devolver depois.`}
+            checked={devolverSinal}
+            onChange={(e) => setDevolverSinal(e.target.checked)}
           />
         )}
         <Campo

@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (sinal)
+
+- "Receber sinal (adiantado)" na comanda: a recepção registra um pagamento antes do atendimento.
+  Ele entra no caixa do dia em que foi recebido e é descontado na hora de fechar (se cobrir tudo,
+  fecha sem receber mais nada). Ao cancelar, dá para devolver o sinal na hora ou deixar retido; a
+  comanda cancelada mostra "Devolver" para depois. O caixa do dia mostra os sinais recebidos e os
+  devolvidos.
+
 ### Adicionado (preço por barbeiro)
 
 - Perfil → "Meus preços": o barbeiro que cobra diferente da tabela escreve o próprio preço de cada

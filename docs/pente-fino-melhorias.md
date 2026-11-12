@@ -70,7 +70,7 @@ Itens que se sobrepõem e devem ser feitos juntos:
 | ID | Decisão | Padrão adotado até decidir |
 | --- | --- | --- |
 | Painel A1 | Faturamento, lucro e "última visita" pela data do atendimento (competência) | ✅ decidido em 11/11: continua a data do fechamento (bate com o caixa; o dia fechado não muda) |
-| Painel A2 | "Receber adiantado (sinal)" sem fechar a comanda | ✅ aprovado em 11/11: entra no [a-fazer](a-fazer.md) |
+| Painel A2 | "Receber adiantado (sinal)" sem fechar a comanda | ✅ feito em 12/11 (sinal na comanda, no caixa do dia e no fechamento) |
 | Painel M6 | Depois de agendar, ficar na Agenda com aviso | ✅ fica na Agenda (`DEPOIS_DE_AGENDAR`) |
 | Painel P4 | Indexar páginas de barbearia que ligarem "Aparecer no Google" | ✅ só com a opção ligada (padrão desligado) |
 | Admin R1 | Cupom LANCAMENTO sem limite de vagas | ✅ decidido em 11/11: sem limite |

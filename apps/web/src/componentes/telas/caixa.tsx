@@ -114,6 +114,14 @@ function Caixa({ c }: { c: CaixaDia }) {
           <span>Total recebido</span>
           <span>{formatarMoeda(c.totalRecebido)}</span>
         </p>
+        {(c.sinais.recebidos > 0 || c.sinais.devolvidos > 0) && (
+          <p className="text-sm text-tinta-suave">
+            {c.sinais.recebidos > 0 &&
+              `Inclui ${formatarMoeda(c.sinais.recebidos)} de sinal recebido adiantado. `}
+            {c.sinais.devolvidos > 0 &&
+              `Já descontado ${formatarMoeda(c.sinais.devolvidos)} de sinal devolvido ao cliente.`}
+          </p>
+        )}
         {c.aReceber.quantidade > 0 && (
           <Aviso tom="info">
             {c.aReceber.quantidade}{' '}
