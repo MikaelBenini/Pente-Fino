@@ -81,7 +81,14 @@ test('robots, sitemap e imagem de compartilhamento', async ({ request }) => {
   expect(og.headers()['content-type']).toContain('image/png');
 });
 
-for (const rota of ['/', '/planos', '/termos', '/privacidade', '/sistema-para-barbearia']) {
+for (const rota of [
+  '/',
+  '/planos',
+  '/termos',
+  '/privacidade',
+  '/sistema-para-barbearia',
+  '/melhor-sistema-para-barbearia',
+]) {
   test(`${rota} não rola para o lado`, async ({ page }) => {
     await page.goto(rota);
     const sobra = await page.evaluate(
@@ -264,5 +271,31 @@ test('N1: página por termo de busca tem H1, canonical, perguntas para o Google 
   await expect(page.getByRole('heading', { name: /Agenda 24 horas/ })).toContainText(
     'Pro e Premium',
   );
-  await expect(page.getByRole('navigation', { name: 'Recursos' }).getByRole('link')).toHaveCount(7);
+  await expect(page.getByRole('navigation', { name: 'Recursos' }).getByRole('link')).toHaveCount(8);
+});
+
+// ─── Site N2: comparações justas, com fonte e data ─────
+test('N2: comparação mostra os dois lados, a fonte com data e leva às outras', async ({ page }) => {
+  await page.goto('/comparativo/appbarber');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Pente Fino ou AppBarber?' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Onde o AppBarber é melhor' })).toBeVisible();
+  // Preço do Pente Fino lido da tabela de planos: 5 barbeiros cabem no Pro.
+  const tabela = page.getByRole('table', { name: 'Pente Fino e AppBarber lado a lado' });
+  await expect(tabela.getByRole('row', { name: /5 barbeiros/ })).toContainText('R$ 149,90 (Pro)');
+  await expect(page.getByText(/Conferido em 12\/11\/2026/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'https://appbarber.com.br/' })).toHaveAttribute(
+    'rel',
+    /nofollow/,
+  );
+  await page
+    .getByRole('navigation', { name: 'Outras comparações' })
+    .getByRole('link', { name: 'Como escolher o sistema' })
+    .click();
+  await expect(
+    page.getByRole('table', { name: 'Pente Fino, AppBarber, Trinks e Booksy lado a lado' }),
+  ).toBeVisible();
+  // Sem preço claro na fonte, a tabela manda para a página de planos do concorrente.
+  await expect(page.getByText('Veja na página de planos').first()).toBeVisible();
 });

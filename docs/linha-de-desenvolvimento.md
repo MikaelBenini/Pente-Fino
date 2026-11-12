@@ -711,7 +711,14 @@ opção padrão do briefing, numa constante fácil de trocar.
   - o selo do plano sai de `RECURSOS`;
   - as páginas entram no sitemap e no rodapé "Recursos";
   - teste N1 em `apps/web/e2e/site.spec.ts`.
-- [ ] **N2–N5** comparativos (só fatos com data e fonte), calculadoras em URL própria, blog e Sobre/Contato
+- [x] **N2** comparativos (feito em 2026-11-12):
+  - rotas `/comparativo/appbarber`, `/comparativo/trinks`, `/comparativo/booksy` e `/melhor-sistema-para-barbearia`;
+  - dados em `src/conteudo/comparativos.ts`, com `CONFERIDO_EM` e o link oficial de cada um;
+  - o Trinks fica sem preço porque a página dele não diz qual coluna é o mensal e mostra uma promoção;
+  - os preços do Pente Fino saem de `precoPorMes` e `LIMITES_PLANO`;
+  - páginas desenhadas por `componentes/site/pagina-comparativo.tsx`;
+  - teste N2 em `apps/web/e2e/site.spec.ts`.
+- [ ] **N3–N5** calculadoras em URL própria, blog e Sobre/Contato
 - [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
 
 ## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)

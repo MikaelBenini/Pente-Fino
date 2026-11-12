@@ -7,6 +7,17 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (site: comparações)
+
+- Novas páginas de comparação: "Pente Fino ou AppBarber?", "Pente Fino ou Trinks?" e "Pente Fino ou Booksy?".
+- Cada página mostra:
+  - quanto custa para 1, 3 e 5 barbeiros;
+  - teste grátis, WhatsApp, comissão, lucro por serviço, nota fiscal e app nas lojas;
+  - onde o outro sistema é melhor.
+- Todo dado tem a fonte oficial e a data da conferência.
+- Nova página "Melhor sistema para barbearia", com cinco perguntas para escolher e a tabela com os quatro sistemas.
+- As páginas entram no sitemap e no rodapé.
+
 ### Adicionado (site)
 
 - Sete páginas novas no site, uma por assunto que o barbeiro procura no Google:
