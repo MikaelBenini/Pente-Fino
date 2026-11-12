@@ -1,5 +1,6 @@
 import { linkDeAgendamento, VERSAO_TERMOS } from '@pente-fino/shared';
 import type { MetadataRoute } from 'next';
+import { PAGINAS_BUSCA } from '@/conteudo/paginas-busca';
 import { paginasNoGoogle } from '@/lib/servidor/pagina-publica';
 import { URL_SITE } from '@/lib/site';
 
@@ -16,6 +17,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${URL_SITE}/`, changeFrequency: 'weekly', priority: 1 },
     { url: `${URL_SITE}/planos`, changeFrequency: 'weekly', priority: 0.9 },
     { url: `${URL_SITE}/cadastro`, changeFrequency: 'monthly', priority: 0.7 },
+    // Site N1: páginas por termo de busca.
+    ...PAGINAS_BUSCA.map((p) => ({
+      url: `${URL_SITE}${p.caminho}`,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
     { url: `${URL_SITE}/termos`, lastModified: termos, changeFrequency: 'yearly', priority: 0.2 },
     {
       url: `${URL_SITE}/privacidade`,

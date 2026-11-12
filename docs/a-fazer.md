@@ -142,8 +142,13 @@ U2 a U5 já feitos (#161).
 - [x] **Comissões no Básico** (12/11): `comissoes` desde o Básico em `RECURSOS` (`planos.ts`);
   cartões de /planos, documentação do produto e testes de plano atualizados (CHANGELOG)
 - [x] Lote 4e (comissões no Básico): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 4e)
-- [ ] **N1** Páginas por intenção de busca (uma por termo dos anúncios)
+- [x] Merge pelo dono (lote 4e)
+- [x] **N1** Páginas por intenção de busca (12/11):
+  - sete páginas (sistema, agenda, financeiro, comissão, comanda, WhatsApp e aplicativo);
+  - entram no sitemap e no rodapé "Recursos";
+  - registro no CHANGELOG.
+- [x] Lote 5a (N1): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 5a)
 - [ ] **N2** Páginas de comparação
 - [ ] **N3** Ferramentas grátis em URL própria
 - [ ] **N4** Blog
