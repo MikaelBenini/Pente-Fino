@@ -148,19 +148,19 @@ U2 a U5 já feitos (#161).
   - entram no sitemap e no rodapé "Recursos";
   - registro no CHANGELOG.
 - [x] Lote 5a (N1): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 5a)
+- [x] Merge pelo dono (lote 5a)
 - [x] **N2** Páginas de comparação (12/11):
   - AppBarber, Trinks, Booksy e "Melhor sistema para barbearia";
   - fontes oficiais conferidas em 12/11; ao mudar um preço, conferir de novo e trocar `CONFERIDO_EM`;
   - registro no CHANGELOG.
 - [x] Lote 5b (N2): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 5b)
+- [x] Merge pelo dono (lote 5b)
 - [x] **N3** Ferramentas grátis em URL própria (12/11):
   - calculadoras de lucro por corte, comissão de barbeiro e preço do corte;
   - contas em `packages/shared`, com teste;
   - registro no CHANGELOG.
 - [x] Lote 5c (N3): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 5c)
+- [x] Merge pelo dono (lote 5c)
 - [x] **N4** Blog (12/11):
   - estrutura pronta e o post "Faturamento não é lucro" publicado;
   - cinco rascunhos com título e tópicos em `src/conteudo/blog.ts`;
