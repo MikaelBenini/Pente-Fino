@@ -6,6 +6,7 @@ import {
   type ContaParaMetricas,
   type FaturaParaMetricas,
 } from './metricas-plataforma.js';
+import { SEM_ORIGEM } from './ficha-admin.js';
 
 const agora = new Date('2026-11-20T15:00:00Z'); // 20/11, 12h em São Paulo
 const dia = (iso: string) => new Date(`${iso}T15:00:00Z`);
@@ -72,6 +73,27 @@ describe('métricas da plataforma', () => {
     expect(m.periodo).toEqual({ tipo: 'mes', de: '2026-11-01', ate: '2026-11-20' });
     expect(m.novas.porDia).toHaveLength(20);
     expect(m.novas.porDia.at(-1)).toEqual({ dia: '2026-11-20', contas: 1 });
+  });
+
+  it('admin F2: contas novas do período por origem, das mais para as menos; sem dado à parte', () => {
+    const r = metricasDaPlataforma({
+      agora,
+      faturas: [],
+      contas: [
+        conta('g1', { criadaEm: dia('2026-11-05'), origem: 'Google Ads · lancamento' }),
+        conta('g2', { criadaEm: dia('2026-11-06'), origem: 'Google Ads · lancamento' }),
+        conta('i1', { criadaEm: dia('2026-11-07'), origem: 'instagram' }),
+        conta('s1', { criadaEm: dia('2026-11-08'), origem: null }),
+        // Fora do período (outubro) e interna: não contam.
+        conta('velha', { criadaEm: dia('2026-10-05'), origem: 'instagram' }),
+        conta('int', { criadaEm: dia('2026-11-09'), origem: 'instagram', interna: true }),
+      ],
+    });
+    expect(r.novas.porOrigem).toEqual([
+      { origem: 'Google Ads · lancamento', contas: 2 },
+      { origem: 'instagram', contas: 1 },
+      { origem: SEM_ORIGEM, contas: 1 },
+    ]);
   });
 
   it('MRR por plano e forma, ticket médio e previsão', () => {

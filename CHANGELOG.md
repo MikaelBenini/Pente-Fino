@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: origem das contas novas)
+
+- Os números do negócio mostram as contas novas do período por origem do cadastro (Google Ads com a campanha, Instagram, direto…), da que mais trouxe para a que menos trouxe. As contas internas ficam de fora.
+
 ### Adicionado (administração: funil de ativação)
 
 - Nos números do negócio, o novo bloco "Funil de ativação" mostra quantas contas já fizeram cada etapa e a porcentagem dos cadastros. As etapas são: cadastro, serviços com preço, barbeiros, 1º agendamento, 1ª comanda fechada, WhatsApp conectado e 1º pagamento.

@@ -3,6 +3,7 @@
 // plataforma (só assinatura e contagens, nunca cliente da barbearia).
 import { situacaoAssinatura, type FaturaParaSituacao } from './assinatura.js';
 import { dataLocal } from './datas.js';
+import { SEM_ORIGEM } from './ficha-admin.js';
 import {
   aplicarDesconto,
   DIAS_TESTE,
@@ -33,6 +34,8 @@ export interface ContaParaMetricas {
   interna?: boolean;
   /** Cortesia (sem cobrança) até este dia, AAAA-MM-DD. */
   cortesiaAte?: string | null;
+  /** De onde veio o cadastro, já resumido ("Google Ads · lancamento"); null = sem dado. */
+  origem?: string | null;
 }
 
 /**
@@ -118,6 +121,8 @@ export interface MetricasDaPlataforma {
     noPeriodo: number;
     /** Um ponto por dia do período. */
     porDia: { dia: string; contas: number }[];
+    /** Admin F2: contas criadas no período por origem do cadastro, das mais para as menos. */
+    porOrigem: { origem: string; contas: number }[];
   };
   receita: {
     /** Receita recorrente por mês das contas que pagam (anual dividido por 12). */
@@ -251,6 +256,22 @@ export function metricasDaPlataforma(d: {
       noMes: criadas.filter((x) => x.slice(0, 7) === mes).length,
       noPeriodo: criadas.filter(noIntervalo).length,
       porDia,
+      porOrigem: [
+        ...contas
+          .filter((c) => noIntervalo(dataLocal(c.criadaEm)))
+          .reduce((mapa, c) => {
+            const o = c.origem ?? SEM_ORIGEM;
+            return mapa.set(o, (mapa.get(o) ?? 0) + 1);
+          }, new Map<string, number>()),
+      ]
+        .map(([origem, n]) => ({ origem, contas: n }))
+        // Mais contas primeiro; no empate, "sem dado" por último e o resto em ordem alfabética.
+        .sort(
+          (a, b) =>
+            b.contas - a.contas ||
+            Number(a.origem === SEM_ORIGEM) - Number(b.origem === SEM_ORIGEM) ||
+            a.origem.localeCompare(b.origem),
+        ),
     },
     receita: {
       ...receita,
