@@ -175,6 +175,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   const avisoGeral = page.getByRole('region', { name: 'Aviso geral' });
   const local = (ms: number) => new Date(ms - 3 * 3_600_000).toISOString().slice(0, 16);
   await avisoGeral.getByLabel('Texto').fill(`Novidade do teste ${sufixoVenda}`);
+  // Admin U8: prévia como a barbearia vê.
+  await expect(avisoGeral.getByRole('figure', { name: 'Prévia do aviso' })).toContainText(
+    `Novidade do teste ${sufixoVenda}`,
+  );
   await avisoGeral.getByLabel('De').fill(local(Date.now() - 60_000));
   await avisoGeral.getByLabel('Até').fill(local(Date.now() + 15 * 60_000));
   await avisoGeral.getByRole('button', { name: 'Publicar aviso' }).click();
@@ -233,6 +237,14 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await modelos.getByLabel('Assunto').fill('Pagamento da {{conta}} recebido');
   await expect(modelos.getByRole('figure', { name: 'Pré-visualização' })).toContainText(
     'Pagamento da Barbearia do Carlos recebido',
+  );
+  // Admin U8: o modelo sai para quem está logado; histórico de preços leva à auditoria filtrada.
+  await modelos.getByRole('button', { name: 'Mandar teste para mim' }).click();
+  await expect(modelos.getByText(/O servidor aceitou o e-mail/)).toBeVisible({ timeout: 15_000 });
+  await precos.getByRole('button', { name: 'Ver o histórico na auditoria' }).click();
+  await expect(page).toHaveURL(/#auditoria\?acao=configurar_precos$/);
+  await expect(page.getByRole('combobox', { name: 'Ação', exact: true })).toHaveValue(
+    'configurar_precos',
   );
   await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
   await expect(page.getByRole('table', { name: 'Filas' })).toContainText('E-mails');

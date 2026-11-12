@@ -355,6 +355,27 @@ export function emailPronto(
   };
 }
 
+/**
+ * Admin U8: o modelo (personalizado ou o padrão) preenchido com os exemplos, para quem
+ * está na administração ver como chega. O assunto ganha "[Teste]" e o botão leva ao site.
+ */
+export function emailDeTeste(
+  para: string,
+  chave: ChaveModeloEmail,
+  personalizados: Partial<Record<ChaveModeloEmail, TextoModeloEmail>>,
+  site?: string,
+): TrabalhoEmail {
+  const e = emailPronto(
+    para,
+    chave,
+    personalizados,
+    EXEMPLO_VARIAVEIS,
+    site ?? 'https://seupentefino.com.br',
+    { site },
+  );
+  return { ...e, assunto: `[Teste] ${e.assunto}` };
+}
+
 /** E-mails que, se não saem, travam a conversão (a barbearia não confirma o cadastro). */
 export const EMAILS_CRITICOS: readonly ChaveModeloEmail[] = ['boas_vindas', 'confirmar_email'];
 

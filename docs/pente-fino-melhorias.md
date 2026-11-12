@@ -35,7 +35,7 @@
 | 7 | Painel | M1–M10 | Informação confusa e atrito de uso | ✅ #157 e #158 |
 | 8 | Site | S1–S6, T1–T3 | Base técnica de SEO e medição dos anúncios | ✅ `feat/site-s-t-medicao-e-seo` (S4 com as páginas N; T4 já existia) |
 | 9 | Painel | X1–X4, P1–P6 | Acessibilidade e página pública de agendamento | ✅ X1–X4, P1, P3, P4 e P6 #159; P2 (fotos e nota) e P5 com a página personalizável |
-| 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ U2–U5 #161; U1 e U7 no lote 4a; U6 no lote 4b; falta U8 e U9 |
+| 10 | Admin | U1–U9 | Usabilidade por aba | ⏳ U2–U5 #161; U1 e U7 no lote 4a; U6 no lote 4b; U8 no lote 4c; falta U9 |
 | 11 | Site | N1–N5, P3, P4, D1, D2, D4 | Conteúdo novo e ajustes finos | ⏳ |
 | 12 | Admin | F1–F9 | Recursos novos (F2 junto com o T2 do site) | ⏳ |
 | 13 | Painel | Seção "Melhorias de produto" | Backlog depois dos bugs | ⏳ |

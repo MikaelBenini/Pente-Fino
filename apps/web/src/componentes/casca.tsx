@@ -22,7 +22,6 @@ import {
   MessagesSquare,
   Lock,
   MailCheck,
-  Megaphone,
   Moon,
   SunMedium,
   X,
@@ -33,6 +32,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
 import { useAvisos, useBot, useConversas, useSituacaoConta } from '@/lib/consultas';
 import { notificar, tocarAviso, usePreferenciasAvisos } from '@/lib/avisos';
+import { FaixaAvisoGeral } from './faixa-aviso-geral';
 import { usePushAparelho } from './notificacoes-aparelho';
 import { useFilaOffline } from '@/lib/fila';
 import {
@@ -643,23 +643,7 @@ function AvisoGeral() {
     staleTime: 60_000,
   }).data?.aviso;
   if (!aviso) return null;
-  return (
-    <div
-      role="status"
-      className="border-b border-borda bg-superficie-2 px-[max(1rem,env(safe-area-inset-left))] py-2 text-sm sm:px-8"
-    >
-      <p className="flex items-center gap-2">
-        <Megaphone
-          aria-hidden
-          className={cn(
-            'size-4 shrink-0',
-            aviso.tom === 'manutencao' ? 'text-aviso-texto' : 'text-acao-texto',
-          )}
-        />
-        <span>{aviso.texto}</span>
-      </p>
-    </div>
-  );
+  return <FaixaAvisoGeral aviso={aviso} />;
 }
 
 /** Cadastro pelo site sem e-mail confirmado: o que fica travado e o botão de reenviar o link. */

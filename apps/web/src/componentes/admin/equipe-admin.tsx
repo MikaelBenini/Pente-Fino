@@ -350,7 +350,12 @@ export function AuditoriaAdmin({ onAbrirConta }: { onAbrirConta: (id: string) =>
     queryFn: () => adminApi<ContaNaPlataforma[]>('contas'),
   });
   const [usuario, setUsuario] = useState('');
-  const [acao, setAcao] = useState('');
+  // Filtro vindo do endereço (#auditoria?acao=…), pelo histórico de preços e cupons (admin U8).
+  const [acao, setAcao] = useState(() =>
+    typeof window === 'undefined'
+      ? ''
+      : (new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('acao') ?? ''),
+  );
   const [conta, setConta] = useState('');
   const [de, setDe] = useState('');
   const [ate, setAte] = useState('');

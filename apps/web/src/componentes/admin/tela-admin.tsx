@@ -268,8 +268,16 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
       ),
     },
     { id: 'equipe', rotulo: 'Equipe', conteudo: <EquipeAdmin u={u} /> },
-    { id: 'auditoria', rotulo: 'Auditoria', conteudo: <AuditoriaAdmin onAbrirConta={setAberta} /> },
-    { id: 'configuracoes', rotulo: 'Configurações', conteudo: <ConfiguracoesAdmin /> },
+    {
+      id: 'auditoria',
+      rotulo: 'Auditoria',
+      conteudo: <AuditoriaAdmin key={aba} onAbrirConta={setAberta} />,
+    },
+    {
+      id: 'configuracoes',
+      rotulo: 'Configurações',
+      conteudo: <ConfiguracoesAdmin onIrPara={setAba} />,
+    },
     { id: 'saude', rotulo: 'Saúde do sistema', conteudo: <SaudeAdmin /> },
   ].filter((x) => ABAS_DO_PAPEL[u.papel].includes(x.id));
   return (

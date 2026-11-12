@@ -895,6 +895,14 @@ describe('modelos de e-mail', () => {
     });
   });
 
+  it('admin U8: manda o modelo com valores de exemplo para quem está logado', async () => {
+    const r = await req('post', '/admin/configuracoes/modelos-email/boas_vindas/teste').expect(200);
+    expect(r.body).toMatchObject({ ok: true });
+    expect(r.body.resposta).toMatch(/^250/);
+    expect(r.body.mensagem).toContain(quem.email);
+    await req('post', '/admin/configuracoes/modelos-email/nao_existe/teste').expect(400);
+  });
+
   it('personaliza com as variáveis do modelo, vale no próximo e-mail e volta ao padrão', async () => {
     const lista = (await req('get', '/admin/configuracoes/modelos-email').expect(200)).body as {
       chave: string;

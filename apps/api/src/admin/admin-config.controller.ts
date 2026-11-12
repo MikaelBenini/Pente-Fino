@@ -68,6 +68,7 @@ import {
   CHAVE_BATIMENTO_WORKER,
   CHAVE_ROTINAS_WORKER,
   ROTINAS_WORKER,
+  emailDeTeste,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { z } from 'zod';
@@ -457,6 +458,17 @@ export class AdminConfigController {
     summary: 'Mandar agora um e-mail de teste para quem está na administração (SMTP salvo)',
   })
   async testarSmtp(@AdminAtual() a: AdminAutenticado): Promise<ResultadoTesteSmtp> {
+    const { dados, origem } = await this.smtpParaTeste();
+    return enviarTesteSmtp(dados, {
+      de: dados.remetente,
+      para: a.email,
+      assunto: 'E-mail de teste do Pente Fino',
+      texto: `Oi, ${a.nome}. Se este e-mail chegou, o envio está funcionando (${origem}).`,
+    });
+  }
+
+  /** O SMTP salvo na administração, ou o do .env (o mesmo que os e-mails usam). */
+  private async smtpParaTeste() {
     const g = smtpGuardadoSchema.safeParse(await configuracaoSmtp(this.banco.prisma));
     const env = process.env;
     const dados = g.success
@@ -469,11 +481,27 @@ export class AdminConfigController {
           senha: env.SMTP_PASSWORD ?? '',
           remetente: env.EMAIL_FROM ?? 'Pente Fino <nao-responda@pentefino.dev>',
         };
+    return { dados, origem: g.success ? `SMTP ${g.data.host}` : 'SMTP do .env' };
+  }
+
+  @Post('configuracoes/modelos-email/:chave/teste')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Admin U8: mandar o modelo (com valores de exemplo) para quem está na administração',
+  })
+  async testarModelo(
+    @Param('chave', new ParseEnumPipe(CHAVES_MODELO_EMAIL)) chave: ChaveModeloEmail,
+    @AdminAtual() a: AdminAutenticado,
+  ): Promise<ResultadoTesteSmtp> {
+    const { dados } = await this.smtpParaTeste();
+    const guardados = lerModelosEmail(await this.valor('modelos_email'));
+    const e = emailDeTeste(a.email, chave, guardados, this.config.appUrl);
     return enviarTesteSmtp(dados, {
       de: dados.remetente,
       para: a.email,
-      assunto: 'E-mail de teste do Pente Fino',
-      texto: `Oi, ${a.nome}. Se este e-mail chegou, o envio está funcionando (${g.success ? `SMTP ${g.data.host}` : 'SMTP do .env'}).`,
+      assunto: e.assunto,
+      texto: e.texto,
+      ...(e.html ? { html: e.html } : {}),
     });
   }
 
