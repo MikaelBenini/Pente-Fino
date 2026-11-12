@@ -34,10 +34,10 @@ Aprovado pelo dono em 11/11/2026 (decisões b e d da comparação com a planilha
 - [x] Regra nos documentos: CLAUDE.md, documentação do produto, comentário do `PagamentoClube`,
   CHANGELOG, linha de desenvolvimento e anexo da planilha no plano de melhorias (11/11)
 - [x] Testes de navegador conferidos: nenhum procura os textos que mudaram (11/11)
-- [ ] Bateria completa verde, commit (sem o `.env.example`), PR aberto e CI verde
+- [x] Bateria completa verde, commit (sem o `.env.example`), PR #162 aberto e CI verde (11/11)
 - [ ] Merge pelo dono
 
-## 2. Segurança dos webhooks (pedido do dono em 11/11/2026; correções aprovadas, PR próprio)
+## 2. Segurança dos webhooks e worker vigiado (pedido do dono em 11/11/2026)
 
 Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e nota fiscal) e
 `POST /webhooks/whatsapp` (Evolution API). Teste: alguém chamando com o Postman.
@@ -46,23 +46,30 @@ Rotas públicas: `POST /webhooks/asaas` (cobrança do sistema, clube online e no
   em tempo constante; sem o token configurado, o do Asaas recusa tudo); a ponte `/api` do site
   não repassa o cabeçalho do token nem aceita pedido sem a origem do site; corpo limitado a
   100 KB; testes de 401 em `cobranca.e2e-spec.ts` e `whatsapp.e2e-spec.ts`
-- [ ] **W1** Asaas: não acreditar no corpo. Com o token certo (vazado, por exemplo), hoje dá para
+- [x] **W1** Asaas: não acreditar no corpo. Com o token certo (vazado, por exemplo), hoje dá para
   marcar a assinatura do sistema como paga e criar mensalidade do clube com valor e repasse
   inventados. Buscar a cobrança no Asaas pelo id (`GET /payments/{id}`) e usar só o que vier de
   lá; teste com corpo falso e token certo
-- [ ] **W2** WhatsApp: fechar `/webhooks/whatsapp` no Caddy (`api.{$DOMINIO}` responde 404). Em
+- [x] **W2** WhatsApp: fechar `/webhooks/whatsapp` no Caddy (`api.{$DOMINIO}` responde 404). Em
   produção a Evolution chama por dentro (`http://api:3001`); a assinatura é fixa por instância e
   não cobre o corpo, então quem a obtiver pode mandar mensagem falsa ao bot em nome de qualquer
   telefone
-- [ ] **W3** Registrar as tentativas recusadas (401) com IP e horário, e mostrar a contagem na
+- [x] **W3** Registrar as tentativas recusadas (401) com IP e horário, e mostrar a contagem na
   Saúde do sistema; limite de tentativas só para as recusadas (o Asaas e a Evolution continuam
   sem limite)
-- [ ] **W4** Segredos: exigir 32 caracteres ou mais (hoje 16) em `ASAAS_WEBHOOK_TOKEN` e
+- [x] **W4** Segredos: exigir 32 caracteres ou mais (hoje 16) em `ASAAS_WEBHOOK_TOKEN` e
   `WHATSAPP_WEBHOOK_SEGREDO` (o token de produção já é separado: só existe no servidor; os do
   Codespaces são de teste)
-- [ ] **W5** Teste no Codespaces: a porta 3001 pública abre a API de desenvolvimento inteira
+- [x] **W5** Teste no Codespaces: a porta 3001 pública abre a API de desenvolvimento inteira
   (inclusive `/docs`), não só o webhook. Só dados e tokens de teste, mas deixar pública só durante
   o teste e voltar para privada
+- [x] **V2, V3 e V4** da [verificação final](verificacao-final.md), aprovados para este lote:
+  novas tentativas na mensagem e no lembrete, worker vigiado (batimento, rotinas na Saúde,
+  healthcheck e reinício pelo vigia) e lembretes perdidos repostos pela rotina de 15 min
+- [x] Documentado (11/11): CHANGELOG, linha de desenvolvimento (Etapa 23.5) e `docs/producao.md`
+  ("Segurança dos webhooks" e o worker em "Monitoramento")
+- [x] Bateria completa verde (11/11); PR aberto, CI a acompanhar
+- [ ] Merge pelo dono (depois do #162)
 
 ## 3. Escolhas da planilha aprovadas (respostas do dono em 11/11/2026)
 

@@ -102,6 +102,23 @@ export interface SaudeDoSistema {
    * Docker). Acima de zero, o IP real do visitante se perde antes do Caddy (em geral, IPv6).
    */
   ipsInternos: { acessos: number; ultimo: string | null };
+  /** V3: o worker (bot, lembretes, rotinas) está batendo? */
+  worker: { ultimoBatimento: string | null; parado: boolean };
+  /** V3: última execução de cada rotina agendada. */
+  rotinas: {
+    rotina: string;
+    nome: string;
+    ultima: string | null;
+    resultado: string | null;
+    atrasada: boolean;
+  }[];
+  /** W3: chamadas aos webhooks recusadas (segredo errado) nos últimos 7 dias. */
+  webhooksRecusados: {
+    total7Dias: number;
+    ultimos: { rota: string; ip: string | null; quando: string }[];
+  };
+  /** W4: segredos de webhook com menos de 32 caracteres (nome da variável). */
+  segredosCurtos: string[];
 }
 
 // ─── E-mails que não saíram (admin R7) ────────────────────────────────────

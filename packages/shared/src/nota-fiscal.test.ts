@@ -118,6 +118,7 @@ describe('situação da nota pelo webhook', () => {
     ['INVOICE_AUTHORIZED', 'AUTHORIZED', 'emitida'],
     ['INVOICE_ERROR', 'ERROR', 'erro'],
     ['INVOICE_UPDATED', 'ERROR', 'erro'],
+    ['INVOICE_UPDATED', 'SYNCHRONIZED', 'enviada'],
     ['INVOICE_PROCESSING_CANCELLATION', 'PROCESSING_CANCELLATION', 'cancelando'],
     ['INVOICE_CANCELED', 'CANCELED', 'cancelada'],
     ['INVOICE_CANCELLATION_DENIED', 'CANCELLATION_DENIED', 'emitida'],

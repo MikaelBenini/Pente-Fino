@@ -7,6 +7,18 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Segurança e confiabilidade
+
+- Pagamentos e notas fiscais avisados pelo Asaas são conferidos no próprio Asaas antes de valer:
+  um aviso falso, mesmo com o token certo, não marca pagamento nem cria mensalidade do clube.
+- O endereço do bot do WhatsApp não fica mais aberto na internet (só a Evolution, por dentro, chama).
+- Saúde do sistema: tentativas com o segredo errado (com o IP), worker parado, a última execução de
+  cada rotina automática (com "Atrasada") e aviso de segredo curto. Quem erra demais é bloqueado
+  por 10 minutos.
+- Mensagem do cliente e lembrete do horário não se perdem mais num tropeço do banco: o sistema
+  tenta de novo. Lembrete que não entrou na fila volta na rotina de 15 minutos.
+- O worker travado é reiniciado sozinho pelo vigia do servidor, com aviso no monitoramento.
+
 ### Alterado (clube no resultado do mês)
 
 - A mensalidade do clube entra no faturamento no dia em que é paga (o valor que chega na conta),

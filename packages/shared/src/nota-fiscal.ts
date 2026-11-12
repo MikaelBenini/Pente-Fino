@@ -261,6 +261,9 @@ export function statusDaNotaAsaas(
           return 'emitida';
         case 'SCHEDULED':
           return 'agendada';
+        // Enviada à prefeitura, esperando a resposta (o webhook lê o status atual no Asaas).
+        case 'SYNCHRONIZED':
+          return 'enviada';
         default:
           return null;
       }

@@ -12,6 +12,7 @@ import {
   avisarProximoCliente,
   criarAgendamentoNoBanco,
   lembretesDoAgendamento,
+  lembretesPerdidos,
   primeirasRotinas,
   rodarRotinaEquipe,
   contasComAutomacoes,
@@ -423,6 +424,31 @@ describe('lembretes', () => {
     expect(await fala(tel, '3', depois)).toContain('1. Sim, cancelar\n2. Não, manter');
     expect(await fala(tel, '1', depois)).toContain('Pronto, horário cancelado.');
     expect(await ag(id)).toMatchObject({ status: 'cancelado' });
+  });
+
+  it('V4: lembrete que não entrou na fila volta na varredura; o que já saiu, não', async () => {
+    const inicio = '2026-12-09T14:00:00.000Z'; // qua, 11:00
+    const id = await clienteComHorario('5511966665555', true, inicio);
+    const longe = await clienteComHorario('5511966666666', true, '2026-12-16T14:00:00.000Z');
+    const deste = async (quando: Date) =>
+      (await lembretesPerdidos(prisma, conta, quando)).filter(
+        (t) => t.dados.agendamentoId === id || t.dados.agendamentoId === longe,
+      );
+    // 26 h antes: os dois lembretes deste horário; o da semana seguinte fica para depois.
+    const antes = await deste(new Date('2026-12-08T12:00:00Z'));
+    expect(antes.map((t) => [t.dados.agendamentoId, t.dados.lembrete])).toEqual([
+      [id, '24h'],
+      [id, '2h'],
+    ]);
+    expect(antes[0]!.jobId).toBe(`lembrete_${id}_24h_${Date.parse(inicio)}`);
+    // O de 24 h saiu: a varredura só devolve o de 2 h.
+    const saiu = new Date('2026-12-08T14:00:00Z');
+    expect(await enviarLembrete(prisma, job(id, '24h', inicio), saiu)).toMatchObject({
+      tipo: 'enviar',
+    });
+    expect((await deste(new Date('2026-12-08T14:30:00Z'))).map((t) => t.dados.lembrete)).toEqual([
+      '2h',
+    ]);
   });
 
   it('quem não aceitou avisos não recebe', async () => {

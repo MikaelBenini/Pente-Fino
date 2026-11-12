@@ -11,6 +11,36 @@ export const FILA_NOTIFICACOES = 'notificacoes';
 /** Rotina diária de limpeza de dados (Etapa 15.4). */
 export const FILA_LIMPEZA = 'limpeza';
 
+/**
+ * Novas tentativas para o que pode ser repetido sem efeito duplo (V2): a mensagem do cliente
+ * (o bot descarta a repetida pelo id do WhatsApp) e o lembrete (o worker confere se já saiu).
+ * Sem isso, um tropeço do banco perde a mensagem ou o lembrete.
+ */
+export const TENTATIVAS_REPETIVEIS = {
+  attempts: 4,
+  backoff: { type: 'exponential' as const, delay: 3_000 },
+};
+
+// ─── Batimento do worker e última execução das rotinas (V3) ───────────────
+
+/** Chave do Redis com a hora do último batimento do worker (ISO). */
+export const CHAVE_BATIMENTO_WORKER = 'worker:batimento';
+/** Hash do Redis: rotina → {"quando": ISO, "resultado": texto}. */
+export const CHAVE_ROTINAS_WORKER = 'worker:rotinas';
+/** O worker bate a cada 30 s; sem batimento por mais que isto, está parado. */
+export const BATIMENTO_WORKER_MAX_S = 120;
+/** Arquivo que o healthcheck do Docker confere (data de modificação = último batimento). */
+export const ARQUIVO_BATIMENTO_WORKER = '/tmp/pente-fino-worker-batimento';
+
+/** Rotinas agendadas e o prazo máximo entre duas execuções antes de virar "atrasada". */
+export const ROTINAS_WORKER = [
+  { rotina: 'avisos', nome: 'Central de avisos e lembretes perdidos', prazoMin: 45 },
+  { rotina: 'automacoes', nome: 'Automações (retorno e aniversário)', prazoMin: 24 * 60 + 30 },
+  { rotina: 'cobranca_manual', nome: 'Avisos da assinatura', prazoMin: 24 * 60 + 30 },
+  { rotina: 'limpeza', nome: 'Limpeza de dados', prazoMin: 24 * 60 + 30 },
+] as const;
+export type RotinaWorker = (typeof ROTINAS_WORKER)[number]['rotina'];
+
 /** Uma notificação para todos os aparelhos que a pessoa ligou. */
 export interface TrabalhoNotificacao {
   contaId: string;

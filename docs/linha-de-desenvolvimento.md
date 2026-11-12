@@ -768,6 +768,20 @@ motivo e vai para a auditoria.
 - [ ] **U1, U6–U9** usabilidade das outras abas
 - [ ] **F1–F9** funil de ativação, origem do cadastro (com o T2 do site), alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
+## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
+
+Fonte: [a-fazer.md](a-fazer.md), seção 2, e os achados V2 a V4 da
+[verificação final](verificacao-final.md).
+
+- [x] **W1** webhook do Asaas não acredita no corpo (feito em 2026-11-11: do corpo só o evento e o id; `ProvedorCobranca.pagamento()` e `nota()` buscam no Asaas (`GET /payments/{id}` e `GET /invoices/{id}`, 404 = ignorado); a situação da nota vem do status atual (`SYNCHRONIZED` passou a ser "enviada"); a mensalidade do clube exige também o status pago no Asaas (`STATUS_PAGO`). Testes com o token certo e corpo inventado em `cobranca`, `clube-online` e `nota-fiscal.e2e-spec.ts`; nos testes, `noAsaas()` registra no provedor falso o que o teste manda)
+- [x] **W2** `/webhooks/whatsapp` fechado no Caddy (404 em `api.{$DOMINIO}`); a Evolution chama por dentro
+- [x] **W3** recusas registradas (`WebhooksRecusados`: contagem por dia e as 20 últimas com IP no Redis, log) e mostradas na Saúde do sistema; IP com 20 erros em 10 min leva 429 por 10 min, antes de conferir o segredo
+- [x] **W4** segredo de webhook com menos de 32 caracteres vira aviso na Saúde do sistema (sem derrubar a API, para não parar a produção com um segredo antigo); como trocar em `docs/producao.md`
+- [x] **W5** teste do webhook no Codespaces documentado em `docs/producao.md` (porta pública só durante o teste, token do sandbox)
+- [x] **V2** novas tentativas (`TENTATIVAS_REPETIVEIS`: 4, espera exponencial) na mensagem do cliente e nos lembretes, que já eram seguros de repetir
+- [x] **V3** batimento do worker a cada 30 s (Redis e arquivo) e última execução de cada rotina (`ROTINAS_WORKER`); Saúde do sistema mostra worker parado e rotina atrasada; healthcheck do worker no `docker-compose.prod.yml` e o `vigia.sh` reinicia contêiner `unhealthy` e avisa o Kuma
+- [x] **V4** lembrete que não entrou na fila: o erro vai para o log e a rotina de 15 min põe de novo os lembretes das próximas 48 h (`lembretesPerdidos`, id fixo, nada duplica; teste em `agendar-bot.db.test.ts`)
+
 ## Etapa 24 · Premium completo
 
 Depois do lançamento, o que o Premium anuncia como "em breve".

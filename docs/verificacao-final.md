@@ -20,6 +20,8 @@ Meta do dono: tudo rodando 100%, pensando no tempo do barbeiro.
 ## Achados já vistos (11/11/2026, antes da verificação)
 
 Anotados para não se perderem. Conferir de novo na verificação, porque o código pode ter mudado.
+V2, V3 e V4 foram corrigidos em 11/11 no lote dos webhooks (linha de desenvolvimento, Etapa
+23.5); na verificação, conferir que continuam valendo. O V1 continua aberto.
 
 - [ ] **V1 Bot e rotinas na mesma fila, uma coisa por vez.** A fila `whatsapp-entrada` roda com
   concorrência 1 para todas as barbearias e também executa as rotinas que passam por todas as
@@ -27,15 +29,15 @@ Anotados para não se perderem. Conferir de novo na verificação, porque o cód
   contas, o cliente que manda mensagem espera a rotina acabar, e uma mensagem lenta segura as
   outras barbearias. Ideia: rotinas numa fila própria e mensagens em paralelo, mantendo a ordem só
   por número.
-- [ ] **V2 Mensagem do cliente sem nova tentativa.** A fila de entrada não tem `attempts`: se o
+- [x] **V2 Mensagem do cliente sem nova tentativa.** A fila de entrada não tem `attempts`: se o
   banco piscar, a mensagem do cliente, o lembrete ou a automação somem sem resposta. O atendimento
   já ignora mensagem repetida (`atenderMensagem` confere `idExterno` na transação), então tentar
   de novo é seguro.
-- [ ] **V3 Ninguém percebe se o worker parar.** O worker não tem healthcheck no
+- [x] **V3 Ninguém percebe se o worker parar.** O worker não tem healthcheck no
   `docker-compose.prod.yml` nem batimento. O `/health` confere só banco e Redis, e a Saúde do
   sistema mostra filas e falhas, mas não a última execução de cada rotina (só a da limpeza). Se o
   worker travar, os lembretes e o bot param em silêncio.
-- [ ] **V4 Lembrete perdido em silêncio.** `AgendaService.agendarLembretes` descarta o erro da fila
+- [x] **V4 Lembrete perdido em silêncio.** `AgendaService.agendarLembretes` descarta o erro da fila
   (`.catch(() => undefined)`), sem log, e nenhuma rotina recria o que faltou. Lembrete que não sai
   vira falta e cadeira vazia. Ideia: registrar o erro e incluir na rotina de 15 min uma varredura
   dos horários das próximas 48 h (o `jobId` fixo já evita duplicar).

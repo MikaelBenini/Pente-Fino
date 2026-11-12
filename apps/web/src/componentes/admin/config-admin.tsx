@@ -271,6 +271,30 @@ export function SaudeAdmin() {
                 {d.banco === 'ok' ? 'No ar' : 'Falha'}
               </Ficha>
             </p>
+            <p className="flex items-center gap-2">
+              Worker (bot, lembretes e rotinas):{' '}
+              <Ficha tom={d.worker.parado ? 'perigo' : 'acao'}>
+                {d.worker.parado ? 'Parado' : 'No ar'}
+              </Ficha>
+              {d.worker.ultimoBatimento && (
+                <span className="text-sm text-tinta-suave">
+                  último sinal {formatarDataHora(d.worker.ultimoBatimento)}
+                </span>
+              )}
+            </p>
+            {d.worker.parado && (
+              <Aviso tom="erro">
+                O worker não dá sinal há mais de 2 minutos: o bot não responde e lembretes e rotinas
+                não saem. Veja os logs do contêiner worker na VPS (docs/producao.md).
+              </Aviso>
+            )}
+            {d.segredosCurtos.length > 0 && (
+              <Aviso tom="aviso">
+                Segredo de webhook com menos de 32 caracteres: {d.segredosCurtos.join(', ')}. Gere
+                um novo (openssl rand -hex 32), troque no .env do servidor e, no caso do Asaas,
+                também no webhook do painel do Asaas.
+              </Aviso>
+            )}
             {d.ipsInternos.acessos > 0 && (
               <Aviso tom="aviso">
                 {d.ipsInternos.acessos} acesso(s) à administração nos últimos 7 dias chegaram com IP
@@ -349,6 +373,55 @@ export function SaudeAdmin() {
                         </span>
                       </span>
                       <span className="text-tinta-suave">{e.motivo}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section aria-labelledby="titulo-rotinas" className="flex flex-col gap-2">
+              <h2 id="titulo-rotinas" className="text-lg font-semibold">
+                Rotinas automáticas
+              </h2>
+              <ul className="flex flex-col gap-1 text-sm" aria-label="Rotinas automáticas">
+                {d.rotinas.map((r) => (
+                  <li
+                    key={r.rotina}
+                    className="flex flex-wrap justify-between gap-x-3 border-b border-borda py-1"
+                  >
+                    <span className="flex items-center gap-2">
+                      {r.nome}
+                      {r.atrasada && <Ficha tom="perigo">Atrasada</Ficha>}
+                    </span>
+                    <span className="tabular-nums text-tinta-suave">
+                      {r.ultima
+                        ? `${formatarDataHora(r.ultima)}${r.resultado ? ` · ${r.resultado}` : ''}`
+                        : 'ainda não rodou desde a atualização'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section aria-labelledby="titulo-webhooks" className="flex flex-col gap-2">
+              <h2 id="titulo-webhooks" className="text-lg font-semibold">
+                Webhooks recusados
+              </h2>
+              <p className="text-sm text-tinta-suave">
+                Chamadas ao Asaas ou ao WhatsApp com o segredo errado nos últimos 7 dias:{' '}
+                <strong className="tabular-nums text-tinta">
+                  {d.webhooksRecusados.total7Dias}
+                </strong>
+                . Depois de 20 erros em 10 minutos, o endereço fica bloqueado por 10 minutos.
+              </p>
+              {d.webhooksRecusados.ultimos.length > 0 && (
+                <ul className="flex flex-col gap-1 text-sm" aria-label="Últimas recusas">
+                  {d.webhooksRecusados.ultimos.map((w, i) => (
+                    <li key={i} className="flex justify-between gap-3 border-b border-borda py-1">
+                      <span>
+                        {w.rota === 'asaas' ? 'Asaas' : 'WhatsApp'} · {w.ip ?? 'IP desconhecido'}
+                      </span>
+                      <span className="tabular-nums text-tinta-suave">
+                        {formatarDataHora(w.quando)}
+                      </span>
                     </li>
                   ))}
                 </ul>

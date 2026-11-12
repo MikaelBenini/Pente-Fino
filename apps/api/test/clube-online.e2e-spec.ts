@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { PROVEDOR_COBRANCA, type ProvedorCobrancaFalso } from '../src/cobranca/provedor.js';
-import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
+import { como, criarApp, criarCenario, noAsaas, type Cenario } from './ajudantes.js';
 
 let app: INestApplication<App>;
 let a: Cenario;
@@ -21,12 +21,14 @@ let recepcao: Cliente;
 let planoId = '';
 const slug = `clube-${randomUUID().slice(0, 8)}`;
 const http = () => request(app.getHttpServer());
-const webhook = (corpo: object) =>
-  http()
+const webhook = (corpo: object, registrar = true) => {
+  if (registrar) noAsaas(provedor, corpo);
+  return http()
     .post('/webhooks/asaas')
     .set('asaas-access-token', process.env.ASAAS_WEBHOOK_TOKEN!)
     .send(corpo)
     .expect(200);
+};
 
 const dados = {
   tipo: 'pj',
@@ -185,6 +187,16 @@ describe('clube online', () => {
     expect((await webhook({ event: 'PAYMENT_CONFIRMED', payment: pagamento })).body.resultado).toBe(
       'repetido',
     );
+    // Token certo não basta (segurança W1): cobrança que não existe no Asaas, ou que lá ainda
+    // está pendente, não vira mensalidade.
+    const inventada = { ...pagamento, id: `pay_${randomUUID().slice(0, 8)}`, value: 5000 };
+    expect(
+      (await webhook({ event: 'PAYMENT_RECEIVED', payment: inventada }, false)).body.resultado,
+    ).toBe('ignorado');
+    noAsaas(provedor, { payment: { ...inventada, status: 'PENDING' } });
+    expect(
+      (await webhook({ event: 'PAYMENT_RECEIVED', payment: inventada }, false)).body.resultado,
+    ).toBe('ignorado');
 
     const adesao = await naConta(prisma, a.contaId, (tx) =>
       tx.adesaoClube.findFirstOrThrow({
