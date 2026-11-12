@@ -5,12 +5,12 @@ const SENHA = 'pentefino123';
 const sufixo = Date.now().toString(36);
 
 /** Próximo dia de expediente do Centro (segunda a sábado, fora os feriados do seed). */
-function proximoDiaUtil(): string {
+function proximoDiaUtil(pular = 0): string {
   const d = new Date();
-  for (;;) {
+  for (let achados = 0; ;) {
     d.setUTCDate(d.getUTCDate() + 1);
     const iso = d.toISOString().slice(0, 10);
-    if (d.getUTCDay() !== 0 && !/-11-(02|15)$/.test(iso)) return iso;
+    if (d.getUTCDay() !== 0 && !/-11-(02|15)$/.test(iso) && achados++ === pular) return iso;
   }
 }
 
@@ -30,6 +30,13 @@ function agoraSP(): { dia: string; hora: string } {
       .map((x) => [x.type, x.value]),
   );
   return { dia: `${p.year}-${p.month}-${p.day}`, hora: `${p.hour}:${p.minute}` };
+}
+
+/** HH:MM menos alguns minutos, sem passar da meia-noite. */
+function horaAntes(hora: string, minutos: number): string {
+  const [h, m] = hora.split(':').map(Number);
+  const t = Math.max(0, h! * 60 + m! - minutos);
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 }
 
 async function entrarComo(browser: Browser, email: string, projeto: string): Promise<Page> {
@@ -73,7 +80,6 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await dialogo.getByLabel('Corte · 30 min').check();
   await dialogo.getByLabel('Dia').fill(agora.dia);
   await dialogo.getByLabel(/^Encaixe/).check();
-  await dialogo.getByLabel('Horário do encaixe').fill(agora.hora);
   // O cliente chegou: encaixa agora. Os dados de demonstração têm horários o dia todo; se o
   // barbeiro estiver ocupado neste minuto ("já tem um cliente nesse horário"), vai o próximo,
   // como a recepção faria. O passo 2 entra como quem atendeu.
@@ -87,7 +93,13 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
     { nome: 'Diego Prado', email: 'diego@demo.pentefino.dev' },
   ];
   let quemAtende: (typeof BARBEIROS)[number] | null = null;
-  for (const b of BARBEIROS) {
+  // No fim da tarde o seed lota os três barbeiros: sem ninguém livre agora, encaixa um pouco
+  // antes, ainda hoje (o atendimento já aconteceu, então pode ser recebido).
+  const tentativas = [0, 30, 60, 90].flatMap((antes) =>
+    BARBEIROS.map((b) => ({ b, hora: horaAntes(agora.hora, antes) })),
+  );
+  for (const { b, hora } of tentativas) {
+    await dialogo.getByLabel('Horário do encaixe').fill(hora);
     await dialogo.getByLabel('Barbeiro').selectOption({ label: b.nome });
     if (await mesmoAssim.isVisible()) await mesmoAssim.click();
     else await dialogo.getByRole('button', { name: /^Encaixar \d{2}:\d{2}$/ }).click();
@@ -111,7 +123,7 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
       break;
     }
   }
-  expect(quemAtende, 'algum barbeiro do Centro livre agora').not.toBeNull();
+  expect(quemAtende, 'algum barbeiro do Centro livre agora ou até 1h30 antes').not.toBeNull();
   await expect(
     recepcao.getByText(/^Agendado para \d{2}\/\d{2}\/\d{4} às \d{2}:\d{2}\.$/),
   ).toBeVisible();
@@ -218,12 +230,21 @@ test('A2: atendimento de outro dia não é recebido antes de acontecer', async (
   await dialogo.getByLabel('Nome do cliente').fill(`Futuro E2E ${sufixo}`);
   await dialogo.getByRole('button', { name: 'Usar este cliente' }).click();
   await dialogo.getByLabel('Corte · 30 min').check();
-  await dialogo.getByLabel('Dia').fill(proximoDiaUtil());
   await dialogo.getByLabel('Barbeiro').selectOption({ label: 'Rafael Moura' });
-  await dialogo
-    .getByRole('button', { name: /^\d{2}:\d{2}$/ })
-    .first()
-    .click();
+  // O banco de desenvolvimento guarda os horários das execuções anteriores: procura o primeiro
+  // dia útil com horário livre do Rafael, até 15 dias à frente.
+  const livre = dialogo.getByRole('button', { name: /^\d{2}:\d{2}$/ }).first();
+  for (let i = 0; i < 15; i++) {
+    await dialogo.getByLabel('Dia').fill(proximoDiaUtil(i));
+    if (
+      await livre.waitFor({ timeout: 4000 }).then(
+        () => true,
+        () => false,
+      )
+    )
+      break;
+  }
+  await livre.click();
   await dialogo.getByRole('button', { name: /^Agendar \d{2}:\d{2}$/ }).click();
   await recepcao.getByRole('link', { name: 'Abrir comanda' }).click();
   await recepcao.waitForURL(/\/comandas\?id=/);
