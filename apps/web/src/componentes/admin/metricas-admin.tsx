@@ -7,6 +7,7 @@ import {
   NOME_SITUACAO_NA_PLATAFORMA,
   type MetricasDaPlataforma,
   type PeriodoMetricas,
+  type ResumoFunil,
   type SituacaoNaPlataforma,
 } from '@pente-fino/shared';
 import { Selecao } from '@pente-fino/ui';
@@ -267,6 +268,86 @@ export function MetricasAdmin({ onIrPara }: { onIrPara: (aba: string) => void })
           );
         }}
       </Estado>
+      <FunilAtivacao />
+    </section>
+  );
+}
+
+const PERIODOS_FUNIL = {
+  todos: 'Desde o início',
+  '90dias': 'Cadastros dos últimos 90 dias',
+  '30dias': 'Cadastros dos últimos 30 dias',
+} as const;
+
+/**
+ * Admin F1: funil de ativação. Quantas contas já fizeram cada etapa, do cadastro ao pagamento
+ * (sem as internas). A barra mostra a fatia dos cadastros; a queda entre etapas é onde ajudar.
+ */
+function FunilAtivacao() {
+  const [periodo, setPeriodo] = useState<keyof typeof PERIODOS_FUNIL>('todos');
+  const f = useQuery({
+    queryKey: ['admin', 'funil', periodo],
+    queryFn: () => adminApi<ResumoFunil>(`funil?periodo=${periodo}`),
+  });
+  return (
+    <section
+      aria-labelledby="titulo-funil"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h3 id="titulo-funil" className="text-lg font-semibold">
+          Funil de ativação
+        </h3>
+        <Selecao
+          id="funil-periodo"
+          rotulo="Contas"
+          value={periodo}
+          onChange={(e) => setPeriodo(e.target.value as keyof typeof PERIODOS_FUNIL)}
+          opcoes={(Object.keys(PERIODOS_FUNIL) as (keyof typeof PERIODOS_FUNIL)[]).map((p) => ({
+            valor: p,
+            rotulo: PERIODOS_FUNIL[p],
+          }))}
+        />
+      </div>
+      <Estado consulta={f}>
+        {() => {
+          const d = f.data!;
+          if (d.total === 0)
+            return <p className="text-sm text-tinta-suave">Nenhum cadastro neste período.</p>;
+          return (
+            <ol className="flex flex-col gap-2" aria-label="Etapas do funil">
+              {d.etapas.map((e, i) => {
+                const anterior = i > 0 ? d.etapas[i - 1]!.contas : null;
+                const perdeu = anterior !== null ? anterior - e.contas : 0;
+                return (
+                  <li
+                    key={e.etapa}
+                    className="grid gap-1 sm:grid-cols-[12rem_1fr_7rem] sm:items-center"
+                  >
+                    <span className="text-sm">{e.nome}</span>
+                    <span aria-hidden className="h-3 overflow-hidden rounded-full bg-superficie-3">
+                      <span
+                        className="block h-full rounded-full bg-modulo"
+                        style={{ width: `${e.pct}%` }}
+                      />
+                    </span>
+                    <span className="text-sm tabular-nums">
+                      {e.contas} · {e.pct}%
+                      {perdeu > 0 && (
+                        <span className="sr-only">, {perdeu} a menos que a etapa anterior</span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          );
+        }}
+      </Estado>
+      <p className="text-xs text-tinta-suave">
+        Contas que já fizeram cada etapa, sem as internas. A etapa de cada conta aparece na ficha
+        dela.
+      </p>
     </section>
   );
 }

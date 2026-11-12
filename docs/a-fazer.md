@@ -177,7 +177,12 @@ U2 a U5 já feitos (#161).
 
 ## 6. Administração: recursos novos (F)
 
-- [ ] **F1** Funil de ativação por conta
+- [x] **F1** Funil de ativação por conta (12/11):
+  - bloco "Funil de ativação" nos números do negócio, com as 7 etapas e o filtro de período;
+  - a próxima etapa aparece na ficha da conta;
+  - registro no CHANGELOG.
+- [x] Lote 6a (F1): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 6a)
 - [ ] **F2** Origem do cadastro: conferir o que falta (a origem já é gravada e aparece na ficha e
   em Vendas, #160 e #161)
 - [ ] **F3** Alertas para a equipe (cadastro novo, teste acabando, cobrança vencida, falhas)

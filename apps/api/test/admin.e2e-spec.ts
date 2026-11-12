@@ -6,6 +6,7 @@ import { criarPrisma, naConta, type PrismaClient } from '@pente-fino/db';
 import {
   dataLocal,
   DIAS_TESTE,
+  ETAPAS_FUNIL,
   SEM_ORIGEM,
   TOTAL_PASSOS_ATIVACAO,
   VERSAO_TERMOS,
@@ -17,6 +18,7 @@ import type {
   MetricasDaPlataforma,
   RespostaEntrarAdmin,
   NotaInterna,
+  ResumoFunil,
   VendaCriada,
   VendasDoVendedor,
   VendasPorOrigem,
@@ -598,6 +600,44 @@ describe('administração mais prática (admin U2 a U5)', () => {
       await naConta(app2, contaU, (tx) => tx.conta.deleteMany({ where: { id: contaU } }));
       await app2.$disconnect();
     }
+  });
+
+  it('funil de ativação (F1): só o admin, etapas do cadastro ao pagamento e a etapa na ficha', async () => {
+    const v = com(tVend);
+    const adm = com(tChefe);
+    if (!contaU) {
+      const r = (
+        await v
+          .post('/admin/contas', {
+            barbearia: `Barbearia do Funil ${sufixo}`,
+            dono: {
+              nome: 'Fausto Funil',
+              email: `funil-${sufixo}@e2e.pentefino.dev`,
+              telefone: null,
+            },
+            plano: 'basico',
+            ciclo: 'mensal',
+            diasTeste: 10,
+          })
+          .expect(201)
+      ).body as VendaCriada;
+      contaU = r.contaId;
+    }
+    await v.get('/admin/funil').expect(403);
+    await adm.get('/admin/funil?periodo=ano').expect(400);
+    const f = (await adm.get('/admin/funil?periodo=30dias').expect(200)).body as ResumoFunil;
+    expect(f.etapas.map((e) => e.etapa)).toEqual(ETAPAS_FUNIL.map((e) => e.etapa));
+    expect(f.total).toBeGreaterThanOrEqual(1);
+    // Todo cadastro está na primeira etapa; nenhuma etapa passa do total.
+    expect(f.etapas[0]).toMatchObject({ etapa: 'cadastro', contas: f.total, pct: 100 });
+    expect(f.etapas.every((e) => e.contas <= f.total)).toBe(true);
+    const todos = (await adm.get('/admin/funil').expect(200)).body as ResumoFunil;
+    expect(todos.total).toBeGreaterThanOrEqual(f.total);
+    // Conta recém-vendida ainda não pagou: a ficha mostra a etapa que falta.
+    const ficha = (await adm.get(`/admin/contas/${contaU}`).expect(200))
+      .body as FichaContaPlataforma;
+    expect(ETAPAS_FUNIL.map((e) => e.etapa)).toContain(ficha.etapaFunil);
+    expect(ficha.etapaFunil).not.toBe('cadastro');
   });
 
   it('venda com CPF, ficha com ativação e notas da equipe, lista com origem e vendas por origem', async () => {

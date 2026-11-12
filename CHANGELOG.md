@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: funil de ativação)
+
+- Nos números do negócio, o novo bloco "Funil de ativação" mostra quantas contas já fizeram cada etapa e a porcentagem dos cadastros. As etapas são: cadastro, serviços com preço, barbeiros, 1º agendamento, 1ª comanda fechada, WhatsApp conectado e 1º pagamento.
+- O funil filtra por período (desde o início ou cadastros dos últimos 30 e 90 dias) e deixa de fora as contas internas.
+- Na ficha de cada conta aparece a próxima etapa do funil, para saber onde ajudar.
+
 ### Adicionado (site: blog)
 
 - Blog no site (`/blog`). O primeiro post é "Faturamento não é lucro: como saber quanto sobra na barbearia", com as contas de um mês de barbearia.

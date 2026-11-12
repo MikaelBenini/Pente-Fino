@@ -2,6 +2,7 @@
 import { PASSOS_INICIAIS } from './ajuda.js';
 import { documentoValido } from './assinatura.js';
 import { z } from 'zod';
+import type { EtapaFunil } from './funil.js';
 import type { Ciclo, PlanoConta } from './planos.js';
 
 export const PAPEIS_PLATAFORMA = ['admin', 'vendedor', 'suporte', 'financeiro'] as const;
@@ -255,6 +256,8 @@ export interface FichaContaPlataforma {
   historico: EventoDaConta[];
   /** Quantos dos primeiros passos do tutorial a barbearia fez (de TOTAL_PASSOS_ATIVACAO). */
   ativacao: number;
+  /** Admin F1: a primeira etapa do funil de ativação que falta; null = todas feitas. */
+  etapaFunil: EtapaFunil | null;
   /** Notas da equipe sobre a conta (a barbearia não vê), das mais novas. */
   notas: NotaInterna[];
 }
