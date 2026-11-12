@@ -51,11 +51,12 @@ describe('recursos por plano', () => {
     expect(((await dono.get('/conta/situacao').expect(200)).body as EstadoDaConta).plano).toBe(
       'basico',
     );
-    expect(bloqueado(await dono.get(`/comissoes?de=${hoje}&ate=${hoje}`))).toBe(
-      'Comissão automática por item, com extrato do barbeiro: faz parte do plano Pro. Seu plano é o Básico; mude de plano para usar.',
+    // Comissões vêm em todos os planos (estudo de planos, 12/11/2026).
+    await dono.get(`/comissoes?de=${hoje}&ate=${hoje}`).expect(200);
+    await barbeiro.get(`/me/comissoes?de=${hoje}&ate=${hoje}`).expect(200);
+    expect(bloqueado(await dono.get(`/canais?de=${hoje}&ate=${hoje}`))).toBe(
+      'Agendamentos por canal: balcão, WhatsApp e site: faz parte do plano Pro. Seu plano é o Básico; mude de plano para usar.',
     );
-    bloqueado(await barbeiro.get(`/me/comissoes?de=${hoje}&ate=${hoje}`));
-    bloqueado(await dono.get(`/canais?de=${hoje}&ate=${hoje}`));
     bloqueado(await dono.get(`/avaliacoes?de=${hoje}&ate=${hoje}`));
     bloqueado(await dono.get(`/profissionais/desempenho?de=${hoje}&ate=${hoje}`));
     bloqueado(await dono.put('/metas', {}));

@@ -191,7 +191,7 @@ export function textoEconomiaAnual(tabela: TabelaPrecosPlanos = TABELA_PADRAO): 
 export const LUCRO_POR_SERVICO_NO_PRO = false;
 
 export const RECURSOS = {
-  comissoes: { nome: 'Comissão automática por item, com extrato do barbeiro', desde: 'pro' },
+  comissoes: { nome: 'Comissão automática por item, com extrato do barbeiro', desde: 'basico' },
   metas: { nome: 'Metas por unidade e serviço, com ritmo e projeção', desde: 'pro' },
   clube: { nome: 'Clube da barbearia: assinatura, combos e convênios', desde: 'pro' },
   bot: { nome: 'Bot de WhatsApp sem custo por mensagem', desde: 'pro' },

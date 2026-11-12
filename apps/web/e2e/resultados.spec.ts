@@ -241,9 +241,11 @@ test('plano Básico: recursos do Pro e do Premium aparecem com convite, sem queb
       name: 'Margem',
     }),
   ).toHaveCount(0);
+  // Comissões vêm em todos os planos: o Básico abre a aba sem convite.
   await page.goto('/financeiro');
   await page.getByRole('tab', { name: 'Comissões' }).click();
-  await expect(page.getByRole('note', { name: 'Disponível no plano Pro' })).toBeVisible();
+  await expect(page.getByRole('tabpanel')).toBeVisible();
+  await expect(page.getByRole('note', { name: /Disponível no plano/ })).toHaveCount(0);
 });
 
 test('o dono muda de plano sozinho: sobe na hora e desce confirmando o que perde', async ({
@@ -266,9 +268,9 @@ test('o dono muda de plano sozinho: sobe na hora e desce confirmando o que perde
   await page.goto('/configuracoes?aba=assinatura');
   const de_novo = page.getByRole('region', { name: 'Mudar de plano' });
   await de_novo.getByRole('radio', { name: 'Básico' }).click();
-  await expect(de_novo.getByRole('list', { name: 'O que deixa de usar' })).toContainText(
-    'Comissão automática',
-  );
+  const perde = de_novo.getByRole('list', { name: 'O que deixa de usar' });
+  await expect(perde).toContainText('Metas por unidade');
+  await expect(perde).not.toContainText('Comissão automática');
   await de_novo.getByRole('button', { name: 'Mudar para o Básico' }).click();
   await page
     .getByRole('dialog', { name: 'Mudar para o Básico?' })

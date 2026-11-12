@@ -65,7 +65,7 @@ O produto existe para que cada atendimento seja lançado uma vez só e para que 
 | Clube da barbearia | Assinatura, combos, convênios | Pro |
 | Produtos e estoque | Catálogo, venda, estoque, fornecedores | Básico a Premium |
 | Clientes | Perfil, leads, fidelidade, recorrência | Básico a Premium |
-| Equipe e comissões | Profissional com data de entrada, regra de comissão com vigência, ficha de desempenho do profissional | Básico (comissões: Pro) |
+| Equipe e comissões | Profissional com data de entrada, regra de comissão com vigência, ficha de desempenho do profissional | Básico (comissões em todos os planos) |
 | Financeiro | Caixa, receitas separadas, despesas por categoria, lucro real | Básico (lucro real: Premium) |
 | Resultados do mês | O mês contra o anterior (uma só base de comparação), metas, projeção, 12 meses, unidades lado a lado, o mês dia a dia, barbeiros (custo, lucro, pontos fortes e fracos), serviços e produtos (peso e lucro), canais, agenda hora a hora e avaliações; baixa em PDF e planilha | Básico (metas, barbeiros, canais completos e avaliações: Pro · lucro por item e unidades: Premium) |
 | App do barbeiro | Agenda, comandas, clientes, desempenho, comissão, metas | Básico a Premium |
@@ -654,14 +654,14 @@ Preços de tabela no plano mensal, levantados em novembro de 2026. Vários conco
 
 O que cada plano destrava:
 
-- **Básico:** agenda, comanda automática, caixa, despesas, indicadores, app do barbeiro e comanda impressa.
-- **Pro:** tudo do Básico, mais comissões, clube, metas, ritmo e projeção, lista de espera e bot de WhatsApp.
+- **Básico:** agenda, comanda automática, caixa, despesas, indicadores, comissão automática com extrato do barbeiro, app do barbeiro e comanda impressa.
+- **Pro:** tudo do Básico, mais clube, metas, ritmo e projeção, lista de espera e bot de WhatsApp.
 - **Premium:** tudo do Pro, mais várias unidades, painel da rede, preço por unidade, lucro real e margem, campeonato dos barbeiros, automações do bot e cobrança automática do clube.
 
 ### Por que esses valores
 
 - **Básico vale pelos 3 profissionais.** A R$ 79,90 sai a R$ 26,63 por barbeiro: o mesmo preço que AppBarber e BarberCode cobram por 1 profissional só, e menos que a Avec (R$ 88,90 por até 2). No anual, a partir de R$ 66,90.
-- **Pro é onde está o lucro.** Fica R$ 14,60 abaixo do AppBarber para 2 a 5 profissionais e cobre até 10, com bot e clube que outros cobram à parte. O salto de R$ 70 sobre o Básico é pago por comissão automática e clube.
+- **Pro é onde está o lucro.** Fica R$ 14,60 abaixo do AppBarber para 2 a 5 profissionais e cobre até 10, com bot e clube que outros cobram à parte. O salto de R$ 70 sobre o Básico é pago por metas, clube, bot e ficha dos barbeiros (a comissão automática vem desde o Básico, decisão de 12/11/2026).
 - **Premium cobra pela rede.** Uma rede de 4 unidades paga R$ 549,60 por mês, ou R$ 456,60 no anual, e recebe o painel de lucro que nenhuma planilha entrega.
 - **Anual com 2 meses grátis.** Desconto de cerca de 17%, no padrão do mercado (Trinks e Modo Gestor dão desconto no anual). Recebe adiantado e reduz cancelamento.
 - **Sem cobrança por profissional.** O limite muda por plano, não por cabeça.

@@ -21,21 +21,21 @@ import { LinkCadastro } from './oferta-lancamento';
 
 const CHAMADA: Record<PlanoConta, string> = {
   basico: 'Para quem trabalha sozinho ou com um ou dois parceiros.',
-  pro: 'Para a barbearia com equipe, comissão e meta.',
+  pro: 'Para a barbearia com equipe, meta e clube.',
   premium: 'Para a rede: várias unidades e o lucro de cada uma.',
 };
 
 const DESTAQUES: Record<PlanoConta, readonly string[]> = {
   basico: [
-    'Agenda, comanda e caixa',
-    'Link de agendamento online',
+    'Agenda online, comanda e caixa',
+    'Comissão automática e extrato do barbeiro',
     'App do barbeiro no celular',
     'Indicadores do mês',
   ],
   pro: [
     'Tudo do Básico',
-    'Comissão automática e extrato do barbeiro',
     'Metas com ritmo e projeção',
+    'Ficha e ranking dos barbeiros',
     'Clube de assinatura e bot de WhatsApp',
   ],
   premium: [
