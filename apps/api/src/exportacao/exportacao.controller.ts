@@ -89,7 +89,8 @@ export class ExportacaoController {
         ['data', 'tipo', 'descricao', 'unidade', 'forma_ou_grupo', 'valor'].join(';'),
       ];
       for (const cm of dados.comandas) {
-        for (const p of cm.pagamentos) {
+        // Sinal devolvido ao cliente não é receita da comanda.
+        for (const p of cm.pagamentos.filter((x) => !x.devolvidoEm)) {
           linhas.push(
             [
               dataTexto(new Date(cm.fechadaEm!.getTime() - 3 * 3_600_000)),
@@ -146,7 +147,7 @@ export class ExportacaoController {
       { mensalidades: dados.mensalidades.reduce((s, m) => s + m.valor, 0) },
     );
     const porForma = new Map<string, number>();
-    for (const p of dados.comandas.flatMap((x) => x.pagamentos))
+    for (const p of dados.comandas.flatMap((x) => x.pagamentos.filter((y) => !y.devolvidoEm)))
       porForma.set(p.forma, (porForma.get(p.forma) ?? 0) + p.valor);
     const { doc, fonte, negrito } = await novoDocumento(`Relatório ${c.mes}`);
     const pagina = doc.addPage([A4.largura, A4.altura]);

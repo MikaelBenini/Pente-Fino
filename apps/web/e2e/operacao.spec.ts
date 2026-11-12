@@ -140,9 +140,18 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
     barbeiro.getByText('Confirmada', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
   await expect(barbeiro.getByRole('button', { name: 'Receber e fechar' })).toHaveCount(0);
+  // Sinal (receber adiantado) é do balcão.
+  await expect(barbeiro.getByRole('button', { name: /Receber sinal/ })).toHaveCount(0);
 
   // 3. Recepção recebe dividido (Pix + dinheiro) e fecha.
   await recepcao.reload();
+  // O sinal não passa do que falta receber (só confere; não grava).
+  await recepcao.getByRole('button', { name: /Receber sinal/ }).click();
+  const sinal = recepcao.getByRole('dialog', { name: 'Receber sinal' });
+  await sinal.getByLabel('Valor (R$)').fill('999,00');
+  await expect(sinal.getByText(/^Até R\$ 65,00/)).toBeVisible();
+  await sinal.getByRole('button', { name: 'Voltar' }).click();
+  await expect(sinal).toBeHidden();
   await recepcao.getByRole('button', { name: 'Receber e fechar' }).click();
   const fechar = recepcao.getByRole('dialog', { name: 'Receber e fechar' });
   await expect(fechar).toContainText('R$ 65,00');

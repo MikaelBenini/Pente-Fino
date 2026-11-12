@@ -11,6 +11,8 @@ import {
   type FormaPagamento,
   type StatusComanda,
   type TrabalhoNotificacao,
+  entradasDoCaixa,
+  restanteAposSinal,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
@@ -65,16 +67,25 @@ export class CaixaController {
     };
     if (!(await tx.unidade.findUnique({ where: { id: unidadeId } })))
       throw Erros.naoEncontrado('Unidade não encontrada.');
-    const [caixa, comandas, fechadas] = await emSequencia([
+    const [caixa, comandas, fechadas, sinaisRecebidos, sinaisDevolvidos] = await emSequencia([
       tx.caixaDia.findUnique({ where: { unidadeId_data: { unidadeId, data: data(dia) } } }),
       tx.comanda.findMany({ where: doDia, include: { pagamentos: true, agendamento: true } }),
       tx.comanda.findMany({ where: recebidasNoDia, include: { pagamentos: true } }),
+      // Sinal (receber adiantado): entra no dia em que foi recebido e sai no dia da devolução.
+      tx.pagamento.findMany({
+        where: { sinal: true, criadoEm: { gte: inicio, lt: fim }, comanda: { unidadeId } },
+      }),
+      tx.pagamento.findMany({
+        where: { sinal: true, devolvidoEm: { gte: inicio, lt: fim }, comanda: { unidadeId } },
+      }),
     ]);
-    const pagamentos = fechadas.flatMap((c) => c.pagamentos);
-    const porForma = FORMAS.map((forma) => {
-      const desta = pagamentos.filter((p) => p.forma === forma);
-      return { forma, total: desta.reduce((s, p) => s + p.valor, 0), quantidade: desta.length };
-    }).filter((f) => f.quantidade > 0);
+    const entradas = entradasDoCaixa({
+      // Os sinais já entraram no dia em que foram recebidos.
+      fechadas: fechadas.flatMap((c) => c.pagamentos.filter((p) => !p.sinal)),
+      sinaisRecebidos,
+      sinaisDevolvidos,
+    });
+    const porForma = entradas.porForma.filter((f) => FORMAS.includes(f.forma));
     const agora = new Date();
     const abertas = comandas.filter((c) => {
       const s = statusEfetivo(c.status as StatusComanda, c.agendamento?.fim ?? null, agora);
@@ -89,7 +100,7 @@ export class CaixaController {
       situacao: !caixa ? 'nao_aberto' : caixa.fechadoEm ? 'fechado' : 'aberto',
       valorAbertura,
       porForma,
-      totalRecebido: pagamentos.reduce((s, p) => s + p.valor, 0),
+      totalRecebido: entradas.total,
       dinheiroEsperado: caixa?.fechadoEm
         ? (caixa.totalSistema ?? dinheiroEsperado)
         : dinheiroEsperado,
@@ -97,9 +108,22 @@ export class CaixaController {
       divergencia: caixa?.divergencia ?? null,
       aReceber: {
         quantidade: abertas.length,
-        total: abertas.reduce((s, c) => s + c.totalLiquido, 0),
+        // Menos o sinal que já entrou (e não foi devolvido).
+        total: abertas.reduce(
+          (s, c) =>
+            s +
+            Math.max(
+              0,
+              restanteAposSinal(
+                c.totalLiquido,
+                c.pagamentos.filter((p) => p.sinal && !p.devolvidoEm),
+              ),
+            ),
+          0,
+        ),
       },
       fechadas: fechadas.length,
+      sinais: entradas.sinais,
     };
   }
 

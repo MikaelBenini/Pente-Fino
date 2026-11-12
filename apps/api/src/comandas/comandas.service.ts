@@ -35,6 +35,7 @@ import {
   type StatusComanda,
   conferirPrecoLivre,
   podeDigitarPrecoLivre,
+  restanteAposSinal,
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import type { alterarItemSchema } from '@pente-fino/shared';
@@ -83,7 +84,14 @@ type ComandaCompleta = NonNullable<Awaited<ReturnType<Transacao['comanda']['find
     } | null;
     produto: { nome: string } | null;
   }[];
-  pagamentos: { forma: 'dinheiro' | 'pix' | 'debito' | 'credito' | 'clube'; valor: number }[];
+  pagamentos: {
+    id: string;
+    forma: 'dinheiro' | 'pix' | 'debito' | 'credito' | 'clube';
+    valor: number;
+    sinal: boolean;
+    devolvidoEm: Date | null;
+    criadoEm: Date;
+  }[];
   cliente: { id: string; nome: string } | null;
   profissional: { id: string; usuarioId: string; usuario: { nome: string } };
   agendamento: { id: string; inicio: Date; fim: Date } | null;
@@ -148,7 +156,25 @@ function detalhe(
             }
           : null,
     })),
-    pagamentos: c.pagamentos.map((p) => ({ forma: p.forma, valor: p.valor })),
+    pagamentos: c.pagamentos
+      .filter((p) => !p.sinal)
+      .map((p) => ({ forma: p.forma, valor: p.valor })),
+    sinais: c.pagamentos
+      .filter((p) => p.sinal)
+      .map((p) => ({
+        id: p.id,
+        forma: p.forma,
+        valor: p.valor,
+        recebidoEm: p.criadoEm.toISOString(),
+        devolvidoEm: p.devolvidoEm?.toISOString() ?? null,
+      })),
+    aReceber: Math.max(
+      0,
+      restanteAposSinal(
+        c.totalLiquido,
+        c.pagamentos.filter((p) => p.sinal && !p.devolvidoEm),
+      ),
+    ),
     fechadaEm: c.fechadaEm?.toISOString() ?? null,
     motivoCancelamento: c.motivoCancelamento,
   };
@@ -742,20 +768,7 @@ export class ComandasService {
           'atendimento_futuro',
           `O atendimento é em ${formatarDataHora(inicioMarcado)}: receba depois que ele começar.`,
         );
-      const caixa = await tx.caixaDia.findUnique({
-        where: { unidadeId_data: { unidadeId: comanda.unidadeId, data: data(hoje) } },
-      });
-      // O caixa nunca abre sozinho: quem recebe abre (com o troco) e tenta de novo.
-      if (!caixa)
-        throw new ErroApp(
-          HttpStatus.CONFLICT,
-          'caixa_nao_aberto',
-          'O caixa de hoje não foi aberto. Abra o caixa com o troco da gaveta para receber.',
-        );
-      if (caixa.fechadoEm)
-        throw Erros.conflito(
-          'O caixa de hoje já foi fechado. Peça ao gestor para reabrir o caixa.',
-        );
+      await this.exigirCaixaAberto(tx, comanda.unidadeId, hoje);
 
       let itens;
       try {
@@ -767,15 +780,24 @@ export class ComandasService {
         );
       }
       const totais = totaisComanda(itens);
-      const falta = faltaReceber(totais.totalLiquido, d.pagamentos);
+      // Sinal recebido adiantado (e não devolvido) abate do total: os pagamentos cobrem o resto.
+      const sinais = comanda.pagamentos.filter((p) => p.sinal && !p.devolvidoEm);
+      const restante = restanteAposSinal(totais.totalLiquido, sinais);
+      if (restante < 0)
+        throw Erros.requisicaoInvalida(
+          'sinal_maior',
+          `O sinal passa ${formatarMoeda(-restante)} do total. Devolva o sinal ou lance o que falta antes de fechar.`,
+        );
+      const falta = faltaReceber(restante, d.pagamentos);
       if (falta !== 0) {
+        const doSinal = sinais.length ? ` (já descontado o sinal)` : '';
         throw Erros.validacao([
           {
             campo: 'pagamentos',
             mensagem:
               falta > 0
-                ? `Faltam ${formatarMoeda(falta)} para fechar o total de ${formatarMoeda(totais.totalLiquido)}.`
-                : `Os pagamentos passam ${formatarMoeda(-falta)} do total.`,
+                ? `Faltam ${formatarMoeda(falta)} para fechar o total de ${formatarMoeda(restante)}${doSinal}.`
+                : `Os pagamentos passam ${formatarMoeda(-falta)} do total${doSinal}.`,
           },
         ]);
       }
@@ -828,7 +850,7 @@ export class ComandasService {
           data: { desconto: item.desconto, ...comissao },
         });
       }
-      await tx.pagamento.deleteMany({ where: { comandaId: id } });
+      await tx.pagamento.deleteMany({ where: { comandaId: id, sinal: false } });
       await tx.pagamento.createMany({
         data: d.pagamentos.map((p) => ({
           comandaId: id,
@@ -885,6 +907,7 @@ export class ComandasService {
     motivo: string,
     falta: boolean,
     avisarCliente = false,
+    devolverSinal = false,
   ): Promise<ComandaDetalhe> {
     let liberado: { unidadeId: string; profissionalId: string; inicio: Date; fim: Date } | null =
       null;
@@ -895,6 +918,14 @@ export class ComandasService {
         ? await tx.agendamento.findUnique({ where: { id: comanda.agendamentoId } })
         : null;
       if (ag && ['agendado', 'confirmado'].includes(ag.status)) liberado = ag;
+      // Sinal: devolve agora (sai do caixa hoje) ou fica retido (pode devolver depois).
+      if (devolverSinal)
+        await this.devolverSinais(
+          tx,
+          comanda,
+          comanda.pagamentos.filter((p) => p.sinal && !p.devolvidoEm).map((p) => p.id),
+          motivo,
+        );
       await tx.comanda.update({
         where: { id },
         data: { status: 'cancelada', canceladaEm: new Date(), motivoCancelamento: motivo },
@@ -939,6 +970,117 @@ export class ComandasService {
     return this.buscar(id);
   }
 
+  /** O caixa de hoje da unidade precisa estar aberto para o dinheiro entrar ou sair. */
+  private async exigirCaixaAberto(tx: Transacao, unidadeId: string, hoje: string): Promise<void> {
+    const caixa = await tx.caixaDia.findUnique({
+      where: { unidadeId_data: { unidadeId, data: data(hoje) } },
+    });
+    // O caixa nunca abre sozinho: quem recebe abre (com o troco) e tenta de novo.
+    if (!caixa)
+      throw new ErroApp(
+        HttpStatus.CONFLICT,
+        'caixa_nao_aberto',
+        'O caixa de hoje não foi aberto. Abra o caixa com o troco da gaveta para receber.',
+      );
+    if (caixa.fechadoEm)
+      throw Erros.conflito('O caixa de hoje já foi fechado. Peça ao gestor para reabrir o caixa.');
+  }
+
+  /**
+   * Receber adiantado (sinal, painel A2): o pagamento fica na comanda aberta e entra no caixa
+   * de hoje; ao fechar, abate do total. Só o balcão, e até o que falta receber.
+   */
+  async receberSinal(
+    id: string,
+    d: { forma: 'dinheiro' | 'pix' | 'debito' | 'credito'; valor: number },
+  ): Promise<ComandaDetalhe> {
+    const quem = Contexto.usuario();
+    await this.banco.daConta(async (tx) => {
+      const { comanda, papeis } = await this.carregar(tx, id);
+      if (!papeis.some((p) => p !== 'barbeiro'))
+        throw Erros.semPermissao('O sinal é recebido pela recepção.');
+      if (['fechada', 'cancelada'].includes(comanda.status))
+        throw Erros.requisicaoInvalida(
+          'comanda_encerrada',
+          'Comanda fechada ou cancelada não recebe sinal.',
+        );
+      const restante = restanteAposSinal(
+        comanda.totalLiquido,
+        comanda.pagamentos.filter((p) => p.sinal && !p.devolvidoEm),
+      );
+      if (d.valor > restante)
+        throw Erros.validacao([
+          {
+            campo: 'valor',
+            mensagem:
+              restante > 0
+                ? `O sinal pode ser de até ${formatarMoeda(restante)} (o que falta receber).`
+                : 'Não falta nada para receber nesta comanda.',
+          },
+        ]);
+      await this.exigirCaixaAberto(tx, comanda.unidadeId, dataLocal(new Date()));
+      const p = await tx.pagamento.create({
+        data: {
+          comandaId: id,
+          forma: d.forma,
+          valor: d.valor,
+          sinal: true,
+          recebidoPorId: quem.id,
+        },
+      });
+      await auditar(tx, {
+        entidade: 'comanda',
+        entidadeId: id,
+        acao: 'receber_sinal',
+        depois: { pagamento: p.id, forma: d.forma, valor: d.valor },
+      });
+    });
+    return this.buscar(id);
+  }
+
+  /** Devolver o sinal ao cliente: sai do caixa de hoje (o do dia em que entrou não muda). */
+  async devolverSinal(id: string, pagamentoId: string, motivo: string): Promise<ComandaDetalhe> {
+    await this.banco.daConta(async (tx) => {
+      const { comanda, papeis } = await this.carregar(tx, id);
+      if (!papeis.some((p) => p !== 'barbeiro'))
+        throw Erros.semPermissao('O sinal é devolvido pela recepção.');
+      if (comanda.status === 'fechada')
+        throw Erros.requisicaoInvalida(
+          'comanda_encerrada',
+          'Comanda fechada: o sinal já abateu do total. Reabra a comanda para devolver.',
+        );
+      await this.devolverSinais(tx, comanda, [pagamentoId], motivo);
+    });
+    return this.buscar(id);
+  }
+
+  private async devolverSinais(
+    tx: Transacao,
+    comanda: ComandaCompleta,
+    ids: string[],
+    motivo: string,
+  ): Promise<void> {
+    if (ids.length === 0) return;
+    for (const pid of ids) {
+      const p = comanda.pagamentos.find((x) => x.id === pid);
+      if (!p || !p.sinal) throw Erros.naoEncontrado('Sinal não encontrado.');
+      if (p.devolvidoEm)
+        throw Erros.requisicaoInvalida('ja_devolvido', 'Este sinal já foi devolvido.');
+    }
+    await this.exigirCaixaAberto(tx, comanda.unidadeId, dataLocal(new Date()));
+    await tx.pagamento.updateMany({
+      where: { id: { in: ids }, comandaId: comanda.id },
+      data: { devolvidoEm: new Date() },
+    });
+    await auditar(tx, {
+      entidade: 'comanda',
+      entidadeId: comanda.id,
+      acao: 'devolver_sinal',
+      depois: { pagamentos: ids },
+      motivo,
+    });
+  }
+
   /** Reabrir: sai do faturamento e da comissão até fechar de novo. Exige motivo e fica auditado. */
   async reabrir(id: string, motivo: string): Promise<ComandaDetalhe> {
     const contaId = Contexto.usuario().contaId;
@@ -954,7 +1096,8 @@ export class ComandasService {
         throw Erros.conflito(
           'O caixa do dia em que a comanda foi recebida já foi fechado. Reabra esse caixa antes de reabrir a comanda.',
         );
-      await tx.pagamento.deleteMany({ where: { comandaId: id } });
+      // O sinal fica: entrou no caixa do dia em que foi recebido e continua abatendo do total.
+      await tx.pagamento.deleteMany({ where: { comandaId: id, sinal: false } });
       await tx.itemComanda.updateMany({ where: { comandaId: id }, data: { comissaoValor: 0 } });
       await tx.comanda.update({
         where: { id },

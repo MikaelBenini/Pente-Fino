@@ -898,6 +898,10 @@ model Pagamento {
   forma         FormaPagamento
   valor         Int
   recebidoPorId String?        @map("recebido_por_id") @db.Uuid
+  /// Sinal (receber adiantado): entra no caixa do dia em que foi recebido (criado_em).
+  sinal         Boolean        @default(false)
+  /// Sinal devolvido ao cliente: sai do caixa neste dia.
+  devolvidoEm   DateTime?      @map("devolvido_em") @db.Timestamptz(3)
   criadoEm      DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm  DateTime       @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 

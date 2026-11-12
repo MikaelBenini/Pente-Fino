@@ -116,6 +116,23 @@ export const cancelarSchema = z.object({
   falta: z.boolean().default(false),
   /** Cancelado pela barbearia (não falta): manda o aviso ao cliente pelo WhatsApp. */
   avisarCliente: z.boolean().default(false),
+  /** Com sinal: devolve agora (sai do caixa hoje). Sem marcar, o sinal fica retido. */
+  devolverSinal: z.boolean().default(false),
+});
+
+/** Receber adiantado (sinal), com a comanda aberta. */
+export const receberSinalSchema = z.object({
+  forma: z.enum(['dinheiro', 'pix', 'debito', 'credito'], { error: 'Escolha a forma.' }),
+  valor: z
+    .number({ error: 'Informe o valor.' })
+    .int()
+    .min(1, { error: 'Informe o valor.' })
+    .max(100_000_000),
+});
+
+/** Devolver o sinal ao cliente (sai do caixa hoje). */
+export const devolverSinalSchema = z.object({
+  motivo: z.string().trim().min(3, { error: 'Diga o motivo.' }).max(200),
 });
 
 export const consultaAgendaSchema = z.object({
@@ -295,7 +312,18 @@ export interface ComandaDetalhe extends ComandaResumo {
   totalBruto: number;
   desconto: number;
   itens: ItemComandaDetalhe[];
+  /** Pagamentos do fechamento (sem os sinais). */
   pagamentos: { forma: FormaPagamento; valor: number }[];
+  /** Sinais recebidos adiantado (devolvidoEm preenchido = devolvido ao cliente). */
+  sinais: {
+    id: string;
+    forma: FormaPagamento;
+    valor: number;
+    recebidoEm: string;
+    devolvidoEm: string | null;
+  }[];
+  /** Total menos os sinais que não foram devolvidos (o que falta receber no fechamento). */
+  aReceber: number;
   fechadaEm: string | null;
   motivoCancelamento: string | null;
   /** Passou da tolerância sem começar: mostra "Cliente não chegou?" (Chegou / Não veio). */
@@ -355,4 +383,6 @@ export interface CaixaDia {
   divergencia: number | null;
   aReceber: { quantidade: number; total: number };
   fechadas: number;
+  /** Sinais recebidos no dia (já nas entradas) e devolvidos no dia (já descontados). */
+  sinais: { recebidos: number; devolvidos: number };
 }

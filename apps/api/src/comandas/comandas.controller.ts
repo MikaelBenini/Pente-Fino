@@ -16,6 +16,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   alterarItemSchema,
   cancelarSchema,
+  devolverSinalSchema,
+  receberSinalSchema,
   consultaComandasSchema,
   fecharComandaSchema,
   novaComandaSchema,
@@ -174,7 +176,32 @@ export class ComandasController {
     @Param('id', ParseUUIDPipe) id: string,
     @Corpo(cancelarSchema) d: z.infer<typeof cancelarSchema>,
   ) {
-    return this.servico.cancelar(id, d.motivo, d.falta, d.avisarCliente);
+    return this.servico.cancelar(id, d.motivo, d.falta, d.avisarCliente, d.devolverSinal);
+  }
+
+  @Post(':id/sinal')
+  @Papeis('dono', 'gestor', 'recepcao')
+  @Auditada()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Receber adiantado (sinal): entra no caixa de hoje e abate ao fechar' })
+  receberSinal(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(receberSinalSchema) d: z.infer<typeof receberSinalSchema>,
+  ) {
+    return this.servico.receberSinal(id, d);
+  }
+
+  @Post(':id/sinal/:pagamentoId/devolver')
+  @Papeis('dono', 'gestor', 'recepcao')
+  @Auditada()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Devolver o sinal ao cliente (sai do caixa de hoje)' })
+  devolverSinal(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('pagamentoId', ParseUUIDPipe) pagamentoId: string,
+    @Corpo(devolverSinalSchema) d: z.infer<typeof devolverSinalSchema>,
+  ) {
+    return this.servico.devolverSinal(id, pagamentoId, d.motivo);
   }
 
   @Post(':id/reabrir')
