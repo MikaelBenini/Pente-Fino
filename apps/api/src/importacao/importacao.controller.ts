@@ -17,6 +17,7 @@ import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 import { data } from '../comum/escopo.js';
+import { unidadesDoCatalogo } from '../comum/catalogo.js';
 import { Corpo, PipeZod } from '../comum/validacao.js';
 import { ProfissionaisService } from '../profissionais/profissionais.service.js';
 
@@ -121,6 +122,8 @@ export class ImportacaoController {
         } else if (x.tipo === 'servicos') {
           await tx.servico.create({
             data: {
+              // Importado vale em todas as unidades de hoje (ajusta em Serviços → Disponível em).
+              unidadeIds: await unidadesDoCatalogo(tx),
               nome: x.nome,
               categoria: x.categoria,
               duracaoMin: x.duracaoMin,

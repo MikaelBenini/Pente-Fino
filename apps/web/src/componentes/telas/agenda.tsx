@@ -14,6 +14,7 @@ import {
   minutosDoArrasto,
   nomeCurto,
   recorteDoDia,
+  disponivelNaUnidade,
 } from '@pente-fino/shared';
 import {
   BlocoAgenda,
@@ -812,7 +813,7 @@ function NovoAgendamento({
           <div className="flex flex-col gap-1">
             <div className="grid gap-x-4 sm:grid-cols-2">
               {(servicos.data ?? [])
-                .filter((s) => s.ativo)
+                .filter((s) => s.ativo && disponivelNaUnidade(s, unidadeId))
                 .map((s) => (
                   <Marcador
                     key={s.id}

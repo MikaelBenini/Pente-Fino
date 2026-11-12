@@ -301,7 +301,7 @@ export class PublicoController {
       const [conta, servicos, profissionais] = await emSequencia([
         tx.conta.findUniqueOrThrow({ where: { id: u.contaId } }),
         tx.servico.findMany({
-          where: { ativo: true },
+          where: { ativo: true, unidadeIds: { has: u.id } },
           orderBy: [{ ehExtra: 'asc' }, { nome: 'asc' }],
         }),
         tx.profissional.findMany({
@@ -386,7 +386,7 @@ export class PublicoController {
     const regras = lerRegrasAgendamento(u.regrasAgendamento);
     this.exigirJanela(c.data, regras.janelaDias);
     return this.banco.naConta(u.contaId, async (tx) => {
-      const duracao = await this.duracao(tx, c.servicoIds);
+      const duracao = await this.duracao(tx, c.servicoIds, u.id);
       return this.agenda.calcularLivres(tx, u.id, c.data, duracao, c.profissionalId, {
         antecedenciaMin: regras.antecedenciaMin,
       });
@@ -645,8 +645,10 @@ export class PublicoController {
     }
   }
 
-  private async duracao(tx: Transacao, servicoIds: string[]): Promise<number> {
-    const servicos = await tx.servico.findMany({ where: { id: { in: servicoIds }, ativo: true } });
+  private async duracao(tx: Transacao, servicoIds: string[], unidadeId: string): Promise<number> {
+    const servicos = await tx.servico.findMany({
+      where: { id: { in: servicoIds }, ativo: true, unidadeIds: { has: unidadeId } },
+    });
     if (servicos.length !== new Set(servicoIds).size)
       throw Erros.naoEncontrado('Serviço não encontrado.');
     return servicos.reduce((s, x) => s + x.duracaoMin, 0);

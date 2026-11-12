@@ -116,8 +116,12 @@ beforeAll(async () => {
         fimMin: 12 * 60,
       })),
     });
-    const s1 = await tx.servico.create({ data: { nome: 'Corte', duracaoMin: 30 } });
-    const s2 = await tx.servico.create({ data: { nome: 'Barba', duracaoMin: 30 } });
+    const s1 = await tx.servico.create({
+      data: { nome: 'Corte', duracaoMin: 30, unidadeIds: [unidadeId] },
+    });
+    const s2 = await tx.servico.create({
+      data: { nome: 'Barba', duracaoMin: 30, unidadeIds: [unidadeId] },
+    });
     corte = s1.id;
     await tx.precoServico.createMany({
       data: [

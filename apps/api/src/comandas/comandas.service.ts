@@ -38,6 +38,7 @@ import {
 import type { z } from 'zod';
 import type { alterarItemSchema } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
+import { exigirNaUnidade } from '../comum/catalogo.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { ErroApp, Erros } from '../comum/erros.js';
@@ -425,6 +426,7 @@ export class ComandasService {
     if (item.tipo === 'servico') {
       const s = await tx.servico.findUnique({ where: { id: item.servicoId } });
       if (!s || !s.ativo) throw Erros.naoEncontrado('Serviço não encontrado.');
+      exigirNaUnidade(s, c.unidadeId);
       const tabela = await precoServicoVigente(tx, s.id, c.unidadeId, dia);
       if (tabela === undefined)
         throw Erros.requisicaoInvalida(
@@ -463,6 +465,7 @@ export class ComandasService {
     if (item.tipo === 'produto') {
       const p = await tx.produto.findUnique({ where: { id: item.produtoId } });
       if (!p || !p.ativo) throw Erros.naoEncontrado('Produto não encontrado.');
+      exigirNaUnidade(p, c.unidadeId);
       return tx.itemComanda.create({
         data: {
           comandaId: c.id,

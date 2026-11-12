@@ -25,7 +25,7 @@ type Tx = Prisma.TransactionClient;
 /** Erro de regra da agenda; quem chama traduz (a API para HTTP, o bot para uma frase). */
 export class ErroAgenda extends Error {
   constructor(
-    readonly codigo: 'nao_encontrado' | 'conflito' | 'sem_preco',
+    readonly codigo: 'nao_encontrado' | 'conflito' | 'sem_preco' | 'fora_da_unidade',
     mensagem: string,
   ) {
     super(mensagem);
@@ -302,6 +302,12 @@ export async function criarAgendamentoNoBanco(
   let total = 0;
   for (const servicoId of d.servicoIds) {
     const s = await tx.servico.findUniqueOrThrow({ where: { id: servicoId } });
+    // Catálogo por unidade: só o que está na unidade do horário.
+    if (!s.unidadeIds.includes(d.unidadeId))
+      throw new ErroAgenda(
+        'fora_da_unidade',
+        `"${s.nome}" não está disponível nesta unidade. Inclua a unidade no cadastro.`,
+      );
     const preco = await precoServicoVigente(tx, s.id, d.unidadeId, dia);
     if (preco === undefined)
       throw new ErroAgenda(

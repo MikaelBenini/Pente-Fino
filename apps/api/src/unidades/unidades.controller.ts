@@ -27,6 +27,7 @@ import {
   type DiaCalendarioEntrada,
   type UnidadeDetalhe,
   type UnidadeEntrada,
+  copiarCatalogoSchema,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
@@ -144,6 +145,67 @@ export class UnidadesController {
     });
   }
 
+  @Post(':id/copiar-catalogo')
+  @Papeis('dono')
+  @Auditada()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Copiar o catálogo de outra unidade: serviços (com os preços de hoje) e produtos',
+  })
+  async copiarCatalogo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(copiarCatalogoSchema) d: z.infer<typeof copiarCatalogoSchema>,
+  ): Promise<{ servicos: number; produtos: number; precos: number }> {
+    if (d.deUnidadeId === id)
+      throw Erros.requisicaoInvalida('mesma_unidade', 'Escolha outra unidade para copiar.');
+    return this.banco.daConta(async (tx) => {
+      const [destino, origem] = await Promise.all([
+        tx.unidade.findUnique({ where: { id } }),
+        tx.unidade.findUnique({ where: { id: d.deUnidadeId } }),
+      ]);
+      if (!destino || !origem) throw Erros.naoEncontrado('Unidade não encontrada.');
+      const hoje = dataLocal(new Date());
+      let servicos = 0;
+      let precos = 0;
+      for (const sv of await tx.servico.findMany({ where: { unidadeIds: { has: origem.id } } })) {
+        if (!sv.unidadeIds.includes(id)) {
+          await tx.servico.update({
+            where: { id: sv.id },
+            data: { unidadeIds: [...sv.unidadeIds, id] },
+          });
+          servicos++;
+        }
+        // O preço de hoje da outra unidade, se esta ainda não tem preço para o serviço.
+        if ((await precoServicoVigente(tx, sv.id, id, hoje)) === undefined) {
+          const valor = await precoServicoVigente(tx, sv.id, origem.id, hoje);
+          if (valor !== undefined) {
+            await tx.precoServico.create({
+              data: { servicoId: sv.id, unidadeId: id, valor, vigenciaInicio: data(hoje) },
+            });
+            precos++;
+          }
+        }
+      }
+      let produtos = 0;
+      for (const p of await tx.produto.findMany({ where: { unidadeIds: { has: origem.id } } }))
+        if (!p.unidadeIds.includes(id)) {
+          await tx.produto.update({
+            where: { id: p.id },
+            data: { unidadeIds: [...p.unidadeIds, id] },
+          });
+          produtos++;
+        }
+      const r = { servicos, produtos, precos };
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'copiar_catalogo',
+        depois: { de: origem.id, ...r },
+      });
+      return r;
+    });
+  }
+
   @Patch(':unidadeId')
   @Papeis('dono')
   @Auditada()
@@ -207,7 +269,10 @@ export class UnidadesController {
 
   private async faltaParaOLink(tx: Prisma.TransactionClient, unidadeId: string) {
     const hoje = dataLocal(new Date());
-    const servicos = await tx.servico.findMany({ where: { ativo: true }, select: { id: true } });
+    const servicos = await tx.servico.findMany({
+      where: { ativo: true, unidadeIds: { has: unidadeId } },
+      select: { id: true },
+    });
     const profissionaisComHorario = await tx.profissional.count({
       where: { unidadeId, ativo: true, horarios: { some: {} } },
     });

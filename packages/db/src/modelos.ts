@@ -185,7 +185,7 @@ export async function aplicarModelosIniciais(
 ): Promise<Map<string, string>> {
   const servicos = new Map<string, string>();
   for (const { precoSugerido, ...dados } of incluirServicos ? MODELO_SERVICOS : []) {
-    const servico = await tx.servico.create({ data: dados });
+    const servico = await tx.servico.create({ data: { ...dados, unidadeIds: [...unidadeIds] } });
     servicos.set(servico.nome, servico.id);
     await tx.precoServico.createMany({
       data: unidadeIds.map((unidadeId) => ({

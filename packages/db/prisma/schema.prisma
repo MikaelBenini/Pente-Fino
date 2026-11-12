@@ -622,6 +622,8 @@ model Servico {
   /// Faixa do preço livre, em centavos (null = sem limite).
   precoMinimo     Int?     @map("preco_minimo")
   precoMaximo     Int?     @map("preco_maximo")
+  /// Unidades em que o serviço está ("Disponível em"). Vazio = em nenhuma.
+  unidadeIds      String[] @default([]) @map("unidade_ids") @db.Uuid
   criadoEm        DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm    DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -632,6 +634,7 @@ model Servico {
   clube  ItemClubeServico[]
 
   @@unique([contaId, nome])
+  @@index([unidadeIds], type: Gin)
   @@map("servico")
 }
 
@@ -663,6 +666,8 @@ model Produto {
   precoVenda   Int      @map("preco_venda")
   custo        Int      @default(0)
   ativo        Boolean  @default(true)
+  /// Unidades em que o produto está ("Disponível em"). Vazio = em nenhuma.
+  unidadeIds   String[] @default([]) @map("unidade_ids") @db.Uuid
   criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -670,6 +675,7 @@ model Produto {
   itens ItemComanda[]
 
   @@unique([contaId, nome])
+  @@index([unidadeIds], type: Gin)
   @@map("produto")
 }
 

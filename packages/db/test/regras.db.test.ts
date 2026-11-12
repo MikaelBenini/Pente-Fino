@@ -36,7 +36,9 @@ beforeAll(async () => {
         data: { usuarioId, unidadeId, dataEntrada: dataParaBanco('2026-01-01') },
       })
     ).id;
-    servicoId = (await tx.servico.create({ data: { nome: 'Corte', duracaoMin: 30 } })).id;
+    servicoId = (
+      await tx.servico.create({ data: { nome: 'Corte', duracaoMin: 30, unidadeIds: [unidadeId] } })
+    ).id;
     await tx.precoServico.createMany({
       data: [
         { servicoId, unidadeId, valor: 4000, vigenciaInicio: dataParaBanco('2026-01-01') },

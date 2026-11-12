@@ -115,7 +115,9 @@ export class ClubeOnlineController {
   ): Promise<{ criados: number }> {
     return this.banco.daConta(async (tx) => {
       exigirUnidade(d.unidadeId, ['dono']);
-      const servicos = await tx.servico.findMany({ where: { ativo: true, ehExtra: false } });
+      const servicos = await tx.servico.findMany({
+        where: { ativo: true, ehExtra: false, unidadeIds: { has: d.unidadeId } },
+      });
       const hoje = dataLocal(new Date());
       const comPreco: { id: string; nome: string; preco: number }[] = [];
       for (const s of servicos) {

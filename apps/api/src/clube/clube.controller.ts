@@ -38,6 +38,7 @@ import { ExigeRecurso, Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
+import { exigirNaUnidade } from '../comum/catalogo.js';
 import { data, exigirUnidade, filtroUnidade } from '../comum/escopo.js';
 import { Consulta, Corpo } from '../comum/validacao.js';
 import { ClubeOnlineService } from './clube-online.service.js';
@@ -104,6 +105,18 @@ export class ClubeController {
     });
   }
 
+  /** Catálogo por unidade: o plano só cobre serviço que está na unidade dele. */
+  private async servicosNaUnidade(
+    tx: Transacao,
+    servicos: { servicoId: string }[],
+    unidadeId: string,
+  ): Promise<void> {
+    const ids = [...new Set(servicos.map((s) => s.servicoId))];
+    const lista = await tx.servico.findMany({ where: { id: { in: ids } } });
+    if (lista.length !== ids.length) throw Erros.naoEncontrado('Serviço não encontrado.');
+    for (const sv of lista) exigirNaUnidade(sv, unidadeId);
+  }
+
   @Post('itens')
   @Papeis('dono')
   @Auditada()
@@ -113,6 +126,7 @@ export class ClubeController {
     exigirUnidade(d.unidadeId, ['dono']);
     return this.banco.daConta(async (tx) => {
       const { servicos, ...dados } = d;
+      await this.servicosNaUnidade(tx, servicos, d.unidadeId);
       const p = await tx.itemClube.create({
         data: { ...dados, servicos: { create: servicos.map((s) => ({ ...s })) } },
       });
@@ -136,6 +150,7 @@ export class ClubeController {
       if (d.unidadeId !== antes.unidadeId)
         throw Erros.requisicaoInvalida('unidade', 'O plano não muda de unidade. Crie outro.');
       const { servicos, ...dados } = d;
+      await this.servicosNaUnidade(tx, servicos, d.unidadeId);
       await tx.itemClubeServico.deleteMany({ where: { itemClubeId: id } });
       await tx.itemClube.update({
         where: { id },

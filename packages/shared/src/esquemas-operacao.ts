@@ -312,11 +312,21 @@ export const produtoSchema = z.object({
   precoVenda: centavos,
   custo: centavos,
   ativo: z.boolean().default(true),
+  /** Unidades em que o produto está. Sem a lista, a API usa todas as que existem agora. */
+  unidadeIds: z
+    .array(uuid('Unidade'))
+    .min(1, { error: 'Escolha pelo menos uma unidade.' })
+    .max(200)
+    .optional(),
 });
 export type ProdutoEntrada = z.infer<typeof produtoSchema>;
-export interface ProdutoDetalhe extends ProdutoEntrada {
+export interface ProdutoDetalhe extends Omit<ProdutoEntrada, 'unidadeIds'> {
   id: string;
+  unidadeIds: string[];
 }
+
+/** "Copiar catálogo de outra unidade": serviços (com os preços de hoje) e produtos. */
+export const copiarCatalogoSchema = z.object({ deUnidadeId: uuid('Unidade') });
 
 // ─── Caixa ────────────────────────────────────────────────────────────────
 

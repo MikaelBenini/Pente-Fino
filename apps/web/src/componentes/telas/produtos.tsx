@@ -1,6 +1,12 @@
 'use client';
 
-import { formatarMoeda, lerMoeda, valorParaCampo, type ProdutoDetalhe } from '@pente-fino/shared';
+import {
+  disponivelNaUnidade,
+  formatarMoeda,
+  lerMoeda,
+  valorParaCampo,
+  type ProdutoDetalhe,
+} from '@pente-fino/shared';
 import { Botao, Campo, Dialogo, EstadoVazio, Marcador } from '@pente-fino/ui';
 import { Package, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -9,11 +15,19 @@ import { chavesOperacao, useAcao, useProdutos } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
+import { CopiarCatalogo } from './servicos';
 
 export function TelaProdutos() {
-  const { papeis } = useApp();
+  const { papeis, unidadeAtiva, unidades } = useApp();
   const ehDono = papeis.includes('dono');
   const produtos = useProdutos();
+  // Catálogo por unidade: só o que está na unidade escolhida ("todas" mostra tudo).
+  const visiveis = (produtos.data ?? []).filter((p) => disponivelNaUnidade(p, unidadeAtiva));
+  const nomes = (ids: string[]) =>
+    unidades
+      .filter((u) => ids.includes(u.id))
+      .map((u) => u.nome)
+      .join(', ');
   const [editando, setEditando] = useState<ProdutoDetalhe | 'novo' | null>(null);
   return (
     <div className="flex flex-col gap-6">
@@ -30,7 +44,18 @@ export function TelaProdutos() {
       />
       <Estado consulta={produtos}>
         {() =>
-          produtos.data!.length === 0 ? (
+          produtos.data!.length > 0 && visiveis.length === 0 ? (
+            <div className="flex flex-col gap-4">
+              <EstadoVazio
+                icone={Package}
+                titulo="Nenhum produto nesta unidade"
+                texto="Cadastre os produtos desta unidade ou traga o catálogo de outra."
+              />
+              {ehDono && unidadeAtiva && unidadeAtiva !== 'todas' && (
+                <CopiarCatalogo unidadeId={unidadeAtiva} />
+              )}
+            </div>
+          ) : produtos.data!.length === 0 ? (
             <EstadoVazio
               icone={Package}
               titulo="Cadastre seus produtos"
@@ -52,10 +77,15 @@ export function TelaProdutos() {
                 </tr>
               </thead>
               <tbody>
-                {produtos.data!.map((p) => (
+                {visiveis.map((p) => (
                   <tr key={p.id} className="border-t border-borda">
                     <td className={`${td} font-semibold`}>
                       {p.nome} {!p.ativo && <Ficha tom="neutro">Inativo</Ficha>}
+                      {unidadeAtiva === 'todas' && unidades.length > 1 && (
+                        <span className="block text-sm font-normal text-tinta-suave">
+                          {p.unidadeIds.length ? nomes(p.unidadeIds) : 'Em nenhuma unidade'}
+                        </span>
+                      )}
                     </td>
                     <td className={`${td} text-right font-denso tabular-nums`}>
                       {formatarMoeda(p.precoVenda)}
@@ -93,9 +123,17 @@ function FormProduto({
   onFechar: () => void;
 }) {
   const atual = produto && produto !== 'novo' ? produto : null;
+  const { unidades, unidadeAtiva } = useApp();
+  const ativas = unidades.filter((u) => u.ativa);
   const [f, setF] = useState<{ nome: string; preco: string; custo: string; ativo: boolean } | null>(
     null,
   );
+  // "Disponível em": nasce na unidade escolhida (ou em todas, com "todas" no topo).
+  const [unidadesEscolhidas, setUnidadesEscolhidas] = useState<string[] | null>(null);
+  const escolhidas =
+    unidadesEscolhidas ??
+    atual?.unidadeIds ??
+    (unidadeAtiva && unidadeAtiva !== 'todas' ? [unidadeAtiva] : ativas.map((u) => u.id));
   const v =
     f ??
     (atual
@@ -115,6 +153,7 @@ function FormProduto({
   function fechar() {
     setF(null);
     setErro(null);
+    setUnidadesEscolhidas(null);
     onFechar();
   }
   return (
@@ -134,8 +173,15 @@ function FormProduto({
           const custo = lerMoeda(v.custo || '0');
           if (precoVenda === null || custo === null)
             return setErro('Preço ou custo inválido. Ex.: 45,00');
+          if (escolhidas.length === 0) return setErro('Escolha pelo menos uma unidade.');
           try {
-            await salvar.mutateAsync({ nome: v.nome, precoVenda, custo, ativo: v.ativo });
+            await salvar.mutateAsync({
+              nome: v.nome,
+              precoVenda,
+              custo,
+              ativo: v.ativo,
+              unidadeIds: escolhidas,
+            });
             fechar();
           } catch (er) {
             setErro(
@@ -169,6 +215,24 @@ function FormProduto({
             onChange={(e) => setF({ ...v, custo: e.target.value })}
           />
         </div>
+        {ativas.length > 1 && (
+          <fieldset className="flex flex-col gap-1">
+            <legend className="mb-1 text-sm font-medium">Disponível em</legend>
+            {ativas.map((u) => (
+              <Marcador
+                key={u.id}
+                id={`produto-unidade-${u.id}`}
+                rotulo={u.nome}
+                checked={escolhidas.includes(u.id)}
+                onChange={(e) =>
+                  setUnidadesEscolhidas(
+                    e.target.checked ? [...escolhidas, u.id] : escolhidas.filter((x) => x !== u.id),
+                  )
+                }
+              />
+            ))}
+          </fieldset>
+        )}
         {atual && (
           <Marcador
             id="produto-ativo"

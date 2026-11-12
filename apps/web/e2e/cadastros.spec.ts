@@ -39,6 +39,35 @@ test('preço livre: serviço de química com faixa; mínimo maior que o máximo 
   await expect(page.getByLabel(/O barbeiro também digita o valor/)).toBeVisible();
 });
 
+test('catálogo por unidade: serviço criado no Centro não aparece no Jardins', async ({
+  page,
+}, info) => {
+  test.skip(info.project.name === 'celular', 'cadastro feito no computador');
+  const nome = `Só no Centro ${sufixo}`;
+  const trocar = async (unidade: string) => {
+    await page.goto('/unidade');
+    await page.getByRole('button', { name: new RegExp(`^${unidade}`) }).click();
+    await page.waitForURL(/\/(app|inicio|hoje|agenda)/);
+  };
+  await entrar(page, 'dono@demo.pentefino.dev');
+  await trocar('Centro');
+  await page.goto('/servicos');
+  await page.getByRole('button', { name: 'Novo serviço' }).click();
+  const dialogo = page.getByRole('dialog', { name: 'Novo serviço' });
+  await dialogo.getByLabel('Nome').fill(nome);
+  // Nasce na unidade escolhida.
+  await expect(dialogo.getByLabel('Centro', { exact: true })).toBeChecked();
+  await expect(dialogo.getByLabel('Jardins', { exact: true })).not.toBeChecked();
+  await dialogo.getByRole('button', { name: 'Cadastrar serviço' }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(page.getByRole('row', { name: new RegExp(nome) })).toBeVisible();
+
+  await trocar('Jardins');
+  await page.goto('/servicos');
+  await expect(page.getByRole('table', { name: 'Serviços cadastrados' })).toBeVisible();
+  await expect(page.getByRole('row', { name: new RegExp(nome) })).toHaveCount(0);
+});
+
 test('dono cadastra serviço e grava o preço pela tabela', async ({ page }, info) => {
   test.skip(info.project.name === 'celular', 'cadastro feito no computador');
   const nome = `Barboterapia ${sufixo}`;

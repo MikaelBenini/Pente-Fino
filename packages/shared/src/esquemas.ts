@@ -151,11 +151,26 @@ export const servicoSchema = z.object({
   /** Faixa do preço livre, em centavos (null = sem limite). */
   precoMinimo: centavos.nullable().default(null),
   precoMaximo: centavos.nullable().default(null),
+  /** Unidades em que o serviço está. Sem a lista, a API usa todas as que existem agora. */
+  unidadeIds: z
+    .array(uuid('Unidade'))
+    .min(1, { error: 'Escolha pelo menos uma unidade.' })
+    .max(200)
+    .optional(),
 });
 export type ServicoEntrada = z.infer<typeof servicoSchema>;
 
-export interface ServicoDetalhe extends ServicoEntrada {
+export interface ServicoDetalhe extends Omit<ServicoEntrada, 'unidadeIds'> {
   id: string;
+  unidadeIds: string[];
+}
+
+/** O item está disponível na unidade? ("todas" ou nenhuma unidade escolhida = sim.) */
+export function disponivelNaUnidade(
+  item: { unidadeIds: readonly string[] },
+  unidade: string | null | undefined,
+): boolean {
+  return !unidade || unidade === 'todas' || item.unidadeIds.includes(unidade);
 }
 
 /** Novos preços da tabela, todos valendo a partir da mesma data. */

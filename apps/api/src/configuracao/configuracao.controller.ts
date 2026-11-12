@@ -77,7 +77,9 @@ export class ConfiguracaoController {
         .map((s) => s.nome);
       if (repetidos.length) throw Erros.conflito(`Já cadastrado: ${repetidos.join(', ')}.`);
       for (const { preco, ...dados } of servicos) {
-        const s = await tx.servico.create({ data: dados });
+        const s = await tx.servico.create({
+          data: { ...dados, unidadeIds: unidades.map((u) => u.id) },
+        });
         await tx.precoServico.createMany({
           data: unidades.map((u) => ({
             servicoId: s.id,
