@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (site: velocidade e acessibilidade)
+
+- As fotos das telas no site têm uma versão menor, com cerca de um terço do tamanho. O celular baixa a menor, e a página abre mais rápido.
+- A tag do Google Ads não carrega mais duas vezes: ela vem só pelo Google Tag Manager, depois da página.
+- Foco visível pelo teclado em todos os links, botões e campos.
+- As tabelas que rolam para o lado no celular podem ser roladas pelo teclado.
+- A auditoria automática de acessibilidade, com contraste AA, agora passa também pelas páginas do site.
+
 ### Adicionado (site: blog)
 
 - Blog no site (`/blog`). O primeiro post é "Faturamento não é lucro: como saber quanto sobra na barbearia", com as contas de um mês de barbearia.

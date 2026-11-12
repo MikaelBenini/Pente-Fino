@@ -6,6 +6,7 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { gerarVariantes } from './variantes.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const DESTINO = path.resolve(AQUI, '../public/site');
@@ -141,3 +142,5 @@ const desktop = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 }
 }
 
 await navegador.close();
+// Site D1: a versão menor de cada foto, para o celular.
+await gerarVariantes();
