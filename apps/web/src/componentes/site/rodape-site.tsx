@@ -8,6 +8,7 @@ import { Marca } from '../marca';
 
 const LINKS = [
   { href: '/planos', rotulo: 'Planos e preços' },
+  { href: '/blog', rotulo: 'Blog' },
   { href: '/cadastro', rotulo: 'Criar conta' },
   { href: '/entrar', rotulo: 'Entrar' },
   { href: '/termos', rotulo: 'Termos de uso' },

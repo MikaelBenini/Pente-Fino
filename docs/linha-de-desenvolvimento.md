@@ -724,7 +724,14 @@ opção padrão do briefing, numa constante fácil de trocar.
   - rotas `/calculadora/lucro-por-corte`, `/calculadora/comissao-de-barbeiro` e `/calculadora/preco-do-corte`, desenhadas por `componentes/site/pagina-calculadora.tsx`;
   - entram no sitemap e no rodapé;
   - teste N3 em `apps/web/e2e/site.spec.ts`.
-- [ ] **N4–N5** blog e Sobre/Contato
+- [x] **N4** blog (feito em 2026-11-12):
+  - posts em `src/conteudo/blog.ts`; post sem `publicadoEm` é rascunho;
+  - cada post publicado tem a própria pasta em `app/(site)/blog/<slug>/`, para que um endereço inexistente responda 404;
+  - lista e post desenhados por `componentes/site/pagina-blog.tsx`, com `Article` e trilha no JSON-LD, tempo de leitura e chamada no meio e no fim;
+  - um post publicado e cinco rascunhos;
+  - sitemap e rodapé;
+  - teste N4 em `apps/web/e2e/site.spec.ts`.
+- [ ] **N5** Sobre/Contato
 - [ ] **D1, D2, D4** imagens com `sizes`, scripts de terceiros, contraste AA conferido
 
 ## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)
