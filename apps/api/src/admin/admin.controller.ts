@@ -45,6 +45,7 @@ import {
   type EntrarAdminEntrada,
   type RespostaEntrarAdmin,
   type UsuarioPlataformaSessao,
+  veTodasAsContas,
 } from '@pente-fino/shared';
 import type { Request } from 'express';
 import { LimiteAutenticacao, Publico } from '../auth/decoradores.js';
@@ -93,12 +94,14 @@ export class AdminController {
   ) {}
 
   @Get('eu')
+  @PapeisPlataforma('admin', 'vendedor', 'suporte', 'financeiro')
   @ApiOperation({ summary: 'Quem está na administração' })
   eu(@AdminAtual() a: AdminAutenticado): UsuarioPlataformaSessao {
     return { id: a.id, nome: a.nome, email: a.email, papel: a.papel };
   }
 
   @Post('auth/sair')
+  @PapeisPlataforma('admin', 'vendedor', 'suporte', 'financeiro')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Encerrar a sessão da administração' })
   sair(@AdminAtual() a: AdminAutenticado, @IpDaRequisicao() ip: string | null): Promise<void> {
@@ -149,18 +152,20 @@ export class AdminController {
   }
 
   @Get('contas')
+  @PapeisPlataforma('admin', 'vendedor', 'suporte', 'financeiro')
   @ApiOperation({
     summary: 'Contas das barbearias: plano, situação, datas e uso (sem dado de cliente)',
   })
   async contas(@AdminAtual() a: AdminAutenticado): Promise<ContaNaPlataforma[]> {
     // Vendedor vê só as contas que vendeu.
     const linhas = (await contasDaPlataforma(this.banco.prisma)).filter(
-      (c) => a.papel === 'admin' || c.vendedor_id === a.id,
+      (c) => veTodasAsContas(a.papel) || c.vendedor_id === a.id,
     );
     return linhas.map(contaParaTela);
   }
 
   @Get('contas/:id')
+  @PapeisPlataforma('admin', 'vendedor', 'suporte', 'financeiro')
   @ApiOperation({ summary: 'Ficha da conta: donos, unidades, plano, datas, cobrança e histórico' })
   async ficha(
     @Param('id', ParseUUIDPipe) id: string,
@@ -227,6 +232,7 @@ export class AdminController {
   }
 
   @Post('contas/:id/pagamentos')
+  @PapeisPlataforma('admin', 'vendedor', 'financeiro')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Registrar pagamento manual (Pix, dinheiro, maquininha, boleto, transferência)',
@@ -255,6 +261,7 @@ export class AdminController {
   }
 
   @Post('contas')
+  @PapeisPlataforma('admin', 'vendedor')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Venda presencial: cria a conta e manda ao dono o convite para criar a senha',

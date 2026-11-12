@@ -1300,10 +1300,16 @@ describe('administração prática (etapa 15.2)', () => {
     // A pessoa nova entra (configura o autenticador) e é desativada: a sessão cai na hora.
     const { token } = await entrarComSegundoFator({ email, senha: criado.senha });
     await como(token).get('/admin/eu').expect(200);
-    await como(tChefe).put(`/admin/equipe/${criado.id}`, { ativo: false }).expect(204);
+    // Admin U6: desativar pede o motivo.
+    await como(tChefe).put(`/admin/equipe/${criado.id}`, { ativo: false }).expect(400);
+    await como(tChefe)
+      .put(`/admin/equipe/${criado.id}`, { ativo: false, motivo: 'Saiu da empresa' })
+      .expect(204);
     await como(token).get('/admin/eu').expect(401);
     const eu = (await como(tChefe).get('/admin/eu').expect(200)).body as { id: string };
-    await como(tChefe).put(`/admin/equipe/${eu.id}`, { ativo: false }).expect(409);
+    await como(tChefe)
+      .put(`/admin/equipe/${eu.id}`, { ativo: false, motivo: 'Teste do próprio acesso' })
+      .expect(409);
 
     // Redefinir: senha nova, autenticador do zero e reativa.
     const novo = (await como(tChefe).post(`/admin/equipe/${criado.id}/redefinir`).expect(200))
@@ -1337,6 +1343,86 @@ describe('administração prática (etapa 15.2)', () => {
       true,
     );
     await como(tChefe).get('/admin/auditoria?limite=5000').expect(400);
+  });
+
+  it('papéis suporte e financeiro: cada um só entra onde é listado (admin U6)', async () => {
+    const sup = { email: `suporte-${sufixo}@pentefino.dev`, senha: 'senha-do-suporte-1' };
+    const fin = { email: `financeiro-${sufixo}@pentefino.dev`, senha: 'senha-do-financeiro-1' };
+    novos.push(sup.email, fin.email);
+    await plataforma.usuarioPlataforma.createMany({
+      data: [
+        {
+          email: sup.email,
+          nome: 'Sofia Suporte',
+          papel: 'suporte',
+          senhaHash: await hash(sup.senha),
+        },
+        {
+          email: fin.email,
+          nome: 'Fábio Financeiro',
+          papel: 'financeiro',
+          senhaHash: await hash(fin.senha),
+        },
+      ],
+    });
+    const tSup = (await entrarComSegundoFator(sup)).token;
+    const tFin = (await entrarComSegundoFator(fin)).token;
+    const conta = a.contaId;
+
+    // Suporte: lê contas (todas), pendências e a saúde; nada de cobrança, configurações ou equipe.
+    expect((await como(tSup).get('/admin/eu').expect(200)).body.papel).toBe('suporte');
+    const contas = (await como(tSup).get('/admin/contas').expect(200)).body as { id: string }[];
+    expect(contas.some((c) => c.id === conta)).toBe(true);
+    await como(tSup).get(`/admin/contas/${conta}`).expect(200);
+    await como(tSup).get('/admin/pendencias').expect(200);
+    await como(tSup).get('/admin/saude').expect(200);
+    for (const rota of [
+      '/admin/cobrancas',
+      '/admin/equipe',
+      '/admin/configuracoes',
+      '/admin/auditoria',
+      '/admin/metricas',
+      '/admin/vendas',
+      '/admin/configuracoes/nota-fiscal',
+    ])
+      await como(tSup).get(rota).expect(403);
+    await como(tSup).post(`/admin/contas/${conta}/pagamentos`, {}).expect(403);
+    await como(tSup).put(`/admin/contas/${conta}/plano`, {}).expect(403);
+    await como(tSup).post('/admin/contas', {}).expect(403);
+
+    // Financeiro: cobranças, pagamento e nota fiscal; sem saúde, equipe nem configurações gerais.
+    await como(tFin).get('/admin/cobrancas').expect(200);
+    await como(tFin).get('/admin/configuracoes/nota-fiscal').expect(200);
+    // Passou da guarda (o corpo vazio é que é recusado).
+    await como(tFin).post(`/admin/contas/${conta}/pagamentos`, {}).expect(400);
+    for (const rota of ['/admin/saude', '/admin/equipe', '/admin/configuracoes', '/admin/metricas'])
+      await como(tFin).get(rota).expect(403);
+    await como(tFin).put(`/admin/contas/${conta}/plano`, {}).expect(403);
+    await como(tFin).post('/admin/contas', {}).expect(403);
+
+    // Equipe mostra a última troca de senha.
+    const equipe = (await como(tChefe).get('/admin/equipe').expect(200)).body as {
+      email: string;
+      senhaTrocadaEm: string | null;
+    }[];
+    const novoMembro = (
+      await como(tChefe)
+        .post('/admin/equipe', {
+          nome: 'Sara Suporte',
+          email: `sara-${sufixo}@pentefino.dev`,
+          papel: 'suporte',
+        })
+        .expect(201)
+    ).body as { id: string };
+    novos.push(`sara-${sufixo}@pentefino.dev`);
+    const depois = (await como(tChefe).get('/admin/equipe').expect(200)).body as {
+      id: string;
+      papel: string;
+      senhaTrocadaEm: string | null;
+    }[];
+    expect(depois.find((m) => m.id === novoMembro.id)).toMatchObject({ papel: 'suporte' });
+    expect(depois.find((m) => m.id === novoMembro.id)?.senhaTrocadaEm).not.toBeNull();
+    expect(equipe.length).toBeGreaterThan(0);
   });
 
   it('pendências e cobranças: admin vê todas; vendedor só as contas dele', async () => {

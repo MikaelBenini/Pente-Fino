@@ -14,6 +14,7 @@ import {
   type VendasDoVendedor,
   type VenderContaEntrada,
   vendasPorVendedor,
+  veTodasAsContas,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { gerarTokenOpaco, hashToken } from '../auth/tokens.js';
@@ -148,7 +149,7 @@ export class AdminVendasService {
 
   /** Vendedor só mexe nas contas que vendeu; admin, em todas. */
   async exigirAcesso(contaId: string, quem: AdminAutenticado): Promise<void> {
-    if (quem.papel === 'admin') return;
+    if (veTodasAsContas(quem.papel)) return;
     const conta = (await contasDaPlataforma(this.plataforma.prisma)).find((c) => c.id === contaId);
     if (!conta || conta.vendedor_id !== quem.id) throw Erros.naoEncontrado('Conta não encontrada.');
   }

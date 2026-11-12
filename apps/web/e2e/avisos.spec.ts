@@ -9,22 +9,48 @@ async function entrar(page: Page, email: string) {
   await page.waitForURL(/inicio|agenda|hoje/);
 }
 
-/** Um dia passado ainda sem caixa fechado: cada execução usa um dia diferente. */
-function diaPassado() {
+/** Um dia passado para começar a procura: cada execução começa num dia diferente. */
+function diaPassado(antes = 0) {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() - 200 - (Math.floor(Date.now() / 1000) % 150));
+  d.setUTCDate(d.getUTCDate() - 200 - (Math.floor(Date.now() / 1000) % 150) - antes);
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Abre o caixa de um dia passado que ainda não tem caixa. O banco de desenvolvimento guarda os
+ * caixas das execuções anteriores: em vez de sortear um dia só (e às vezes cair num já fechado),
+ * procura até 20 dias seguidos.
+ */
+async function diaSemCaixa(page: Page): Promise<string> {
+  for (let i = 0; i < 20; i++) {
+    const dia = diaPassado(i);
+    await page.goto(`/caixa?dia=${dia}`);
+    await expect(page.getByLabel('Dia', { exact: true })).toHaveValue(dia);
+    // Espera a tela decidir: sem caixa (campo do troco), fechado ou aberto.
+    const troco = page.getByLabel('Troco na gaveta (R$)');
+    // As esperas que perdem a corrida terminam em erro quando a página muda: não importam.
+    const esperar = (l: ReturnType<Page['getByText']>, r: 'livre' | 'usado') =>
+      l.waitFor({ timeout: 10_000 }).then(
+        () => r,
+        () => null,
+      );
+    const estado = await Promise.race([
+      esperar(troco, 'livre'),
+      esperar(page.getByText('Caixa fechado').first(), 'usado'),
+      esperar(page.getByRole('button', { name: 'Fechar caixa' }), 'usado'),
+    ]);
+    if (estado === 'livre') return dia;
+  }
+  throw new Error('nenhum dia sem caixa nos 20 procurados');
 }
 
 test('caixa com diferença: o gestor recebe o aviso e abre o caixa pelo link', async ({
   browser,
 }, info) => {
   test.skip(info.project.name === 'celular', 'balcão no computador; o sino é o mesmo');
-  const dia = diaPassado();
   const recepcao = await (await browser.newContext()).newPage();
   await entrar(recepcao, 'recepcao.centro@demo.pentefino.dev');
-  await recepcao.goto(`/caixa?dia=${dia}`);
-  await expect(recepcao.getByLabel('Dia', { exact: true })).toHaveValue(dia);
+  const dia = await diaSemCaixa(recepcao);
   await recepcao.getByLabel('Troco na gaveta (R$)').fill('0');
   await recepcao.getByRole('button', { name: 'Abrir caixa' }).click();
   await recepcao.getByLabel('Dinheiro contado na gaveta (R$)').fill('12,34');

@@ -4,12 +4,48 @@ import { documentoValido } from './assinatura.js';
 import { z } from 'zod';
 import type { Ciclo, PlanoConta } from './planos.js';
 
-export const PAPEIS_PLATAFORMA = ['admin', 'vendedor'] as const;
+export const PAPEIS_PLATAFORMA = ['admin', 'vendedor', 'suporte', 'financeiro'] as const;
 export type PapelPlataforma = (typeof PAPEIS_PLATAFORMA)[number];
 export const NOME_PAPEL_PLATAFORMA: Readonly<Record<PapelPlataforma, string>> = {
   admin: 'Administrador',
   vendedor: 'Vendedor',
+  suporte: 'Suporte',
+  financeiro: 'Financeiro',
 };
+
+/** Admin U6: o que cada papel faz, como aparece na Equipe. */
+export const DESCRICAO_PAPEL_PLATAFORMA: Readonly<Record<PapelPlataforma, string>> = {
+  admin: 'Tudo na administração.',
+  vendedor: 'Cria contas, registra pagamentos e vê só as contas dele.',
+  suporte: 'Lê as contas e a saúde do sistema. Sem cobrança, configurações nem equipe.',
+  financeiro:
+    'Cobranças, pagamentos e nota fiscal de todas as contas. Sem equipe nem configurações.',
+};
+
+/**
+ * Abas da administração por papel (admin U6). A API confere cada rota com os mesmos papéis:
+ * suporte e financeiro só entram onde são listados (o padrão das rotas é admin e vendedor).
+ */
+export const ABAS_DO_PAPEL: Readonly<Record<PapelPlataforma, readonly string[]>> = {
+  admin: [
+    'inicio',
+    'contas',
+    'cobranca',
+    'vendas',
+    'equipe',
+    'auditoria',
+    'configuracoes',
+    'saude',
+  ],
+  vendedor: ['inicio', 'contas', 'cobranca'],
+  suporte: ['inicio', 'contas', 'saude'],
+  financeiro: ['inicio', 'contas', 'cobranca'],
+};
+
+/** Papéis que veem todas as contas (o vendedor vê só as dele). */
+export function veTodasAsContas(papel: PapelPlataforma): boolean {
+  return papel !== 'vendedor';
+}
 
 export const entrarAdminSchema = z.object({
   email: z

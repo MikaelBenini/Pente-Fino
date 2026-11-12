@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (equipe da administração)
+
+- Dois papéis novos na Equipe: **Suporte** (lê as contas e a saúde do sistema, sem cobrança nem
+  configurações) e **Financeiro** (cobranças, pagamentos e nota fiscal de todas as contas, sem
+  equipe nem configurações). Cada um vê só as abas e os botões do seu papel.
+- A Equipe mostra quando cada pessoa trocou a senha pela última vez, e desativar alguém pede o
+  motivo (fica na auditoria). O papel muda direto na lista.
+
 ### Alterado (administração mais legível)
 
 - Auditoria em português: o detalhe de cada ação mostra nomes, valores em reais, datas no horário

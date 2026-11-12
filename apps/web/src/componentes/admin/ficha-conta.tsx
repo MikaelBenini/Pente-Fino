@@ -209,7 +209,13 @@ export function FichaConta({
     >
       <Estado consulta={ficha}>
         {() => (
-          <Conteudo f={ficha.data!} contaId={id!} atualizar={atualizar} admin={papel === 'admin'} />
+          <Conteudo
+            f={ficha.data!}
+            contaId={id!}
+            atualizar={atualizar}
+            admin={papel === 'admin'}
+            podePagar={papel !== 'suporte'}
+          />
         )}
       </Estado>
     </Dialogo>
@@ -221,12 +227,15 @@ function Conteudo({
   contaId,
   atualizar,
   admin,
+  podePagar,
 }: {
   f: FichaContaPlataforma;
   contaId: string;
   atualizar: () => Promise<void>;
-  /** Vendedor só registra pagamento; o resto é do admin. */
+  /** Vendedor e financeiro só registram pagamento; o resto é do admin. */
   admin: boolean;
+  /** Admin U6: o suporte só lê a ficha. */
+  podePagar: boolean;
 }) {
   const hoje = dataLocal(new Date());
   const [plano, setPlano] = useState(f.plano);
@@ -414,65 +423,67 @@ function Conteudo({
       </dl>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Acao
-          titulo="Registrar pagamento"
-          textoBotao="Registrar pagamento"
-          podeEnviar={(lerMoeda(valor) ?? 0) > 0}
-          enviar={async () => {
-            await adminApi(`${base}/pagamentos`, {
-              corpo: {
-                valor: lerMoeda(valor),
-                forma,
-                pagoEm,
-                periodoInicio: inicio,
-                comprovante: comprovante.trim() || null,
-              },
-            });
-            await atualizar();
-          }}
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
+        {podePagar && (
+          <Acao
+            titulo="Registrar pagamento"
+            textoBotao="Registrar pagamento"
+            podeEnviar={(lerMoeda(valor) ?? 0) > 0}
+            enviar={async () => {
+              await adminApi(`${base}/pagamentos`, {
+                corpo: {
+                  valor: lerMoeda(valor),
+                  forma,
+                  pagoEm,
+                  periodoInicio: inicio,
+                  comprovante: comprovante.trim() || null,
+                },
+              });
+              await atualizar();
+            }}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Campo
+                id="pag-valor"
+                rotulo="Valor (R$)"
+                inputMode="decimal"
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+              />
+              <Selecao
+                id="pag-forma"
+                rotulo="Forma"
+                value={forma}
+                onChange={(e) => setForma(e.target.value as typeof forma)}
+                opcoes={FORMAS_PAGAMENTO_MANUAL.map((x) => ({
+                  valor: x,
+                  rotulo: NOME_FORMA_MANUAL[x],
+                }))}
+              />
+              <Campo
+                id="pag-data"
+                rotulo="Pago em"
+                type="date"
+                value={pagoEm}
+                onChange={(e) => setPagoEm(e.target.value)}
+              />
+              <Campo
+                id="pag-inicio"
+                rotulo="Cobre a partir de"
+                type="date"
+                value={inicio}
+                onChange={(e) => setInicio(e.target.value)}
+                dica={`Até ${formatarData(`${fimDoPeriodo(inicio, f.ciclo)}T12:00:00Z`)} (${f.ciclo})`}
+              />
+            </div>
             <Campo
-              id="pag-valor"
-              rotulo="Valor (R$)"
-              inputMode="decimal"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
+              id="pag-comprovante"
+              rotulo="Comprovante (opcional)"
+              dica="Código do Pix, número do recibo ou do boleto."
+              value={comprovante}
+              onChange={(e) => setComprovante(e.target.value)}
             />
-            <Selecao
-              id="pag-forma"
-              rotulo="Forma"
-              value={forma}
-              onChange={(e) => setForma(e.target.value as typeof forma)}
-              opcoes={FORMAS_PAGAMENTO_MANUAL.map((x) => ({
-                valor: x,
-                rotulo: NOME_FORMA_MANUAL[x],
-              }))}
-            />
-            <Campo
-              id="pag-data"
-              rotulo="Pago em"
-              type="date"
-              value={pagoEm}
-              onChange={(e) => setPagoEm(e.target.value)}
-            />
-            <Campo
-              id="pag-inicio"
-              rotulo="Cobre a partir de"
-              type="date"
-              value={inicio}
-              onChange={(e) => setInicio(e.target.value)}
-              dica={`Até ${formatarData(`${fimDoPeriodo(inicio, f.ciclo)}T12:00:00Z`)} (${f.ciclo})`}
-            />
-          </div>
-          <Campo
-            id="pag-comprovante"
-            rotulo="Comprovante (opcional)"
-            dica="Código do Pix, número do recibo ou do boleto."
-            value={comprovante}
-            onChange={(e) => setComprovante(e.target.value)}
-          />
-        </Acao>
+          </Acao>
+        )}
 
         {admin && (
           <Acao

@@ -1660,6 +1660,10 @@ enum PapelPlataforma {
   admin
   /// Cria conta, registra pagamento e vê só as contas dele.
   vendedor
+  /// Lê as contas e a saúde do sistema; sem cobrança, configurações nem equipe (admin U6).
+  suporte
+  /// Cobranças, pagamentos e nota fiscal de todas as contas; sem equipe nem configurações (admin U6).
+  financeiro
 
   @@map("papel_plataforma")
 }
@@ -1678,6 +1682,8 @@ model UsuarioPlataforma {
   /// Último código aceito (passo de 30 s): o mesmo código não entra duas vezes.
   totpUltimoPasso  BigInt?         @map("totp_ultimo_passo")
   ativo            Boolean         @default(true)
+  /// Última troca de senha (criação ou redefinição): aparece na equipe (admin U6).
+  senhaTrocadaEm   DateTime?       @map("senha_trocada_em") @db.Timestamptz(3)
   ultimoAcessoEm   DateTime?       @map("ultimo_acesso_em") @db.Timestamptz(3)
   criadoEm         DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime        @updatedAt @map("atualizado_em") @db.Timestamptz(3)
