@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: resultado dos cupons)
+
+- Em Configurações → Cupons, a nova tabela "Resultado dos cupons" mostra para cada cupom:
+  - quantas contas se cadastraram com ele e quantas pagam;
+  - a receita das faturas pagas dessas contas;
+  - o desconto concedido nelas;
+  - o uso por mês nos últimos 6 meses, em barras.
+- O cupom com vagas aparece como "Perto de esgotar" ao usar 80% delas e como "Esgotou" no fim. O alerta por e-mail para a equipe continua valendo.
+
 ### Adicionado (administração: aviso geral segmentado)
 
 - O aviso geral pode ir só para parte das barbearias: por plano (Básico, Pro, Premium), por situação (em teste ou pagantes) e para contas escolhidas. Os filtros se combinam, por exemplo "Pro e Premium em teste".
