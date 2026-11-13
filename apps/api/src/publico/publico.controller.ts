@@ -9,7 +9,7 @@ import {
   primeiroHorarioPossivel,
   faltasRecentes,
   usarToken,
-  precoProprioVigente,
+  precosPropriosVigentes,
   precoServicoVigente,
   Prisma,
   type Transacao,
@@ -49,6 +49,8 @@ import {
   lerConfiguracaoPublica,
   type TabelaPrecosPlanos,
   temRecurso,
+  lerSite,
+  type SitePublico,
 } from '@pente-fino/shared';
 import type { Request } from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -68,6 +70,7 @@ import { EventosService } from '../filas/filas.module.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { emSequencia, umPorVez } from '../comum/sequencia.js';
 import { ChatService } from '../chat/chat.service.js';
+import { montarSitePublico } from './site.js';
 
 const slugParam = new PipeZod(slugSchema);
 
@@ -331,15 +334,22 @@ export class PublicoController {
         telefone: u.telefone,
         // Só o que tem preço na unidade pode ser agendado pelo cliente.
         servicos: comPreco.filter((s) => s.preco !== null),
-        profissionais: await umPorVez(profissionais, async (p) => {
-          // Preço por barbeiro: o próprio de cada serviço (só os que ele mudou).
-          const precos: Record<string, number> = {};
-          for (const s of comPreco) {
-            const proprio = await precoProprioVigente(tx, s.id, p.id, hoje);
-            if (proprio !== null) precos[s.id] = proprio;
-          }
-          return { id: p.id, nome: p.usuario.nome.split(' ')[0]!, precos };
-        }),
+        profissionais: await (async () => {
+          // Preço por barbeiro: o próprio de cada serviço (só os que ele mudou), numa consulta só.
+          const proprios = await precosPropriosVigentes(
+            tx,
+            profissionais.map((p) => p.id),
+            hoje,
+          );
+          const doCatalogo = new Set(comPreco.map((s) => s.id));
+          return profissionais.map((p) => ({
+            id: p.id,
+            nome: p.usuario.nome.split(' ')[0]!,
+            precos: Object.fromEntries(
+              Object.entries(proprios.get(p.id) ?? {}).filter(([id]) => doCatalogo.has(id)),
+            ),
+          }));
+        })(),
         lembretesWhatsapp: !!(await numeroDosLembretes(tx, u.id, u.regrasAgendamento)),
         linkWhatsappAgendar: await linkAgendarPelaConversa(tx, u.id, u.regrasAgendamento),
         listaEspera: temRecurso((await estadoAssinatura(tx)).plano, 'listaEspera'),
@@ -356,6 +366,20 @@ export class PublicoController {
           })
         ).map((o) => ({ slug: o.slug!, nome: o.nome, endereco: o.endereco })),
       };
+    });
+  }
+
+  @Get('site/:slug')
+  @Publico()
+  @ApiOperation({
+    summary: 'Site publicado da barbearia (blocos do dono e dados vivos); 404 sem site publicado',
+  })
+  async site(@Param('slug', slugParam) slug: string): Promise<SitePublico> {
+    const u = await this.unidade(slug);
+    if (!u.sitePublicado) throw Erros.naoEncontrado('Esta barbearia ainda não publicou o site.');
+    return this.banco.naConta(u.contaId, async (tx) => {
+      const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
+      return montarSitePublico(tx, u, lerSite(u.sitePublicado, conta.nome));
     });
   }
 

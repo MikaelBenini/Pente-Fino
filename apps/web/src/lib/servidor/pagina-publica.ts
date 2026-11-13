@@ -1,6 +1,6 @@
 import 'server-only';
-import type { UnidadePublica } from '@pente-fino/shared';
-import { cacheLife } from 'next/cache';
+import type { SitePublico, UnidadePublica } from '@pente-fino/shared';
+import { cacheLife, cacheTag } from 'next/cache';
 import { urlDaApi } from './sessao';
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -30,5 +30,22 @@ export async function paginasNoGoogle(): Promise<{ slug: string; atualizadoEm: s
     return r.ok ? ((await r.json()) as { slug: string; atualizadoEm: string }[]) : [];
   } catch {
     return [];
+  }
+}
+
+/**
+ * Site publicado da barbearia (seção 7). Cache curto, com a etiqueta `site-<slug>` para o painel
+ * renovar na hora em que o dono publica. null = sem site publicado (a página é a de agendamento).
+ */
+export async function sitePublico(slug: string): Promise<SitePublico | null> {
+  'use cache';
+  cacheLife({ stale: 30, revalidate: 60, expire: 300 });
+  cacheTag(`site-${slug}`);
+  if (!SLUG.test(slug) || slug.length > 60) return null;
+  try {
+    const r = await fetch(`${urlDaApi()}/publico/site/${slug}`);
+    return r.ok ? ((await r.json()) as SitePublico) : null;
+  } catch {
+    return null;
   }
 }

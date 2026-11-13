@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (página de agendamento)
+
+- A página de agendamento de barbearia com muitos barbeiros abre bem mais rápido e não falha mais quando vários clientes entram ao mesmo tempo. O preço de cada barbeiro agora sai de uma consulta só.
+
 ### Adicionado (administração: aviso geral segmentado)
 
 - O aviso geral pode ir só para parte das barbearias: por plano (Básico, Pro, Premium), por situação (em teste ou pagantes) e para contas escolhidas. Os filtros se combinam, por exemplo "Pro e Premium em teste".
