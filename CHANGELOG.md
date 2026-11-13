@@ -15,6 +15,17 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - Na administração, a aba "Chat" mostra a fila e as conversas em atendimento. Quem atende assume, responde, encerra e consulta as encerradas. O botão "Chamar no WhatsApp" aparece quando o contato é um telefone.
 - O novo alerta "Conversa nova no chat" chega por e-mail na hora para quem marcar em Meus alertas.
 
+### Adicionado (acesso de suporte com a permissão do dono)
+
+- Em Configurações → Acesso do suporte, o dono libera a equipe do Pente Fino a ver o painel por 24 horas, sem passar a senha, e pode cancelar antes.
+- Na administração, o admin ou o suporte abre o painel pela ficha da conta ("Abrir painel em modo suporte"), em outra aba.
+- No modo suporte:
+  - a sessão dura até 1 hora e nunca passa do fim da liberação;
+  - é só leitura, e a API recusa qualquer gravação;
+  - os telefones e WhatsApp dos clientes ficam escondidos, e as conversas do bot ficam fechadas;
+  - uma faixa no topo avisa quem está vendo e até quando.
+- Cada liberação e cada entrada ficam na auditoria da barbearia e na da administração.
+
 ### Adicionado (administração: nota de saúde da conta)
 
 - Cada conta da lista tem uma nota de saúde de 0 a 100: verde a partir de 70, amarela de 40 a 69 e vermelha abaixo de 40. Embaixo da nota aparece o que mais tira pontos.

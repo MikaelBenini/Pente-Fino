@@ -9,6 +9,7 @@ import {
   mudarTesteDaConta,
   situacaoDaContaPlataforma,
   registrarPagamentoManual,
+  suporteLiberadoDaConta,
 } from '@pente-fino/db';
 import {
   dataLocal,
@@ -30,11 +31,15 @@ import {
   type NotaInterna,
   type NotaInternaEntrada,
   type RegistrarPagamentoEntrada,
+  fimDaSessaoSuporte,
+  type SessaoSuporteAberta,
 } from '@pente-fino/shared';
 import { AssinaturaGuard } from '../assinatura/assinatura.guard.js';
 import { PlanoGuard } from '../assinatura/plano.guard.js';
 import { ErroCobranca, PROVEDOR_COBRANCA, type ProvedorCobranca } from '../cobranca/provedor.js';
+import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
+import { TokensAcesso } from '../auth/tokens.js';
 import { EmailsService } from '../emails/emails.service.js';
 import { PrecosService } from '../comum/precos.service.js';
 import { AdminAuthService, type AdminAutenticado } from './admin-auth.service.js';
@@ -67,7 +72,45 @@ export class AdminContasService {
     @Inject(PROVEDOR_COBRANCA) private readonly provedor: ProvedorCobranca,
     @Inject(EmailsService) private readonly emails: EmailsService,
     @Inject(PrecosService) private readonly precos: PrecosService,
+    @Inject(BancoService) private readonly bancoApp: BancoService,
+    @Inject(TokensAcesso) private readonly tokens: TokensAcesso,
   ) {}
+
+  /**
+   * Admin F5: abre o painel da barbearia em modo suporte (só leitura), se o dono liberou.
+   * A sessão dura 1 h, nunca depois do fim da liberação, e fica nas duas auditorias.
+   */
+  async abrirSuporte(contaId: string, a: AdminAutenticado): Promise<SessaoSuporteAberta> {
+    const conta = await suporteLiberadoDaConta(this.banco.prisma, contaId);
+    if (!conta) throw Erros.naoEncontrado('Conta não encontrada.');
+    const agora = new Date();
+    const ate = fimDaSessaoSuporte(conta.liberadoAte, agora);
+    if (!ate)
+      throw Erros.conflito(
+        'O dono não liberou o acesso de suporte, ou a liberação já venceu. Ele libera em Configurações → Acesso do suporte.',
+      );
+    const token = await this.tokens.emitirSuporte(contaId, { id: a.id, nome: a.nome }, ate);
+    await this.auth.auditar({
+      usuarioId: a.id,
+      acao: 'abrir_modo_suporte',
+      contaId,
+      depois: { ate: ate.toISOString() },
+      ip: a.ip,
+    });
+    // Na auditoria da barbearia: o dono vê quem do Pente Fino entrou e até quando.
+    await this.bancoApp.naConta(contaId, (tx) =>
+      tx.auditoria.create({
+        data: {
+          usuarioId: null,
+          entidade: 'conta',
+          entidadeId: contaId,
+          acao: 'acesso_suporte',
+          depois: { quem: a.nome, ate: ate.toISOString() },
+        },
+      }),
+    );
+    return { token, ate: ate.toISOString() };
+  }
 
   private valeNaHora(contaId: string) {
     this.trava.esquecer(contaId);
@@ -78,7 +121,7 @@ export class AdminContasService {
     const f = await fichaDaContaPlataforma(this.banco.prisma, contaId);
     if (!f) throw Erros.naoEncontrado('Conta não encontrada.');
     const situacao = await situacaoDaContaPlataforma(this.banco.prisma, contaId);
-    const [eventos, ativacao, notas, funil] = await Promise.all([
+    const [eventos, ativacao, notas, funil, suporte] = await Promise.all([
       this.banco.prisma.auditoriaPlataforma.findMany({
         where: { contaAfetadaId: contaId },
         include: { usuario: { select: { nome: true } } },
@@ -88,6 +131,7 @@ export class AdminContasService {
       ativacaoDaContaPlataforma(this.banco.prisma, contaId),
       this.notas(contaId),
       funilDaConta(this.banco.prisma, contaId),
+      suporteLiberadoDaConta(this.banco.prisma, contaId),
     ]);
     return {
       ...(f as unknown as Omit<
@@ -101,7 +145,12 @@ export class AdminContasService {
         | 'ativacao'
         | 'etapaFunil'
         | 'notas'
+        | 'suporteLiberadoAte'
       >),
+      suporteLiberadoAte:
+        suporte?.liberadoAte && suporte.liberadoAte > new Date()
+          ? suporte.liberadoAte.toISOString()
+          : null,
       ativacao,
       etapaFunil: funil ? etapaAtualDoFunil(funil) : null,
       notas,

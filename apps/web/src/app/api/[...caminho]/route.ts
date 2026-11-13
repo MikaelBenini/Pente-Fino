@@ -8,7 +8,10 @@ import {
   COOKIE_ACESSO,
   COOKIE_SESSAO,
   gravarSessao,
+  gravarSessaoSuporte,
   renovar,
+  SESSAO_SUPORTE,
+  segundosAteVencer,
   urlDaApi,
 } from '@/lib/servidor/sessao';
 import {
@@ -81,7 +84,26 @@ async function encaminhar(
     );
   }
 
-  const refresh = req.cookies.get(COOKIE_SESSAO)?.value;
+  // Admin F5: a página /suporte entrega aqui o token de suporte vindo da administração. Ele
+  // vira cookie httpOnly; quem confere o token (e recusa gravação) é a API.
+  if (caminho === 'suporte/entrar') {
+    if (req.method !== 'POST') return NextResponse.json({}, { status: 405 });
+    const { token } = ((await req.json().catch(() => ({}))) ?? {}) as { token?: unknown };
+    const segundos = typeof token === 'string' ? segundosAteVencer(token) : 0;
+    if (typeof token !== 'string' || segundos < 30)
+      return NextResponse.json(
+        { erro: { codigo: 'suporte_invalido', mensagem: 'O link de suporte venceu.' } },
+        { status: 400 },
+      );
+    const res = new NextResponse(null, { status: 204 });
+    gravarSessaoSuporte(req, res, token, segundos);
+    return res;
+  }
+
+  const sessao = req.cookies.get(COOKIE_SESSAO)?.value;
+  // Sessão de suporte não tem token de renovação: vale até o de acesso vencer.
+  const refresh = sessao === SESSAO_SUPORTE ? undefined : sessao;
+  const suporte = sessao === SESSAO_SUPORTE;
 
   // Sair: a API encerra a sessão do refreshToken; aqui os cookies são apagados.
   if (caminho === 'auth/sair') {
@@ -167,8 +189,8 @@ async function encaminhar(
   const idRequisicao = resposta.headers.get('x-request-id');
   if (idRequisicao) res.headers.set('x-request-id', idRequisicao);
   if (renovada && !res.cookies.get(COOKIE_SESSAO)) gravarSessao(req, res, renovada);
-  // Sessão perdida (renovação recusada): limpa os cookies para o proxy mandar ao login.
-  if (resposta.status === 401 && refresh && !renovada) apagarSessao(res, req);
+  // Sessão perdida (renovação recusada ou suporte vencido): limpa os cookies para o proxy mandar ao login.
+  if (resposta.status === 401 && ((refresh && !renovada) || suporte)) apagarSessao(res, req);
   return res;
 }
 

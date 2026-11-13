@@ -210,8 +210,14 @@ U2 a U5 já feitos (#161).
   - coluna "Saúde" nas Contas, com o motivo principal, e a ordem "Risco de cancelamento";
   - registro no CHANGELOG.
 - [x] Lote 6f (F4): bateria verde e PR aberto (13/11)
-- [ ] Merge pelo dono (lote 6f)
-- [ ] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado
+- [x] Merge pelo dono (lote 6f)
+- [x] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado (13/11):
+  - o dono libera por 24 h em Configurações → Acesso do suporte;
+  - o admin ou o suporte abre o painel pela ficha, por até 1 h, só leitura;
+  - telefones e conversas escondidos; registro nas duas auditorias;
+  - registro no CHANGELOG.
+- [x] Lote 6g (F5): bateria verde e PR aberto (13/11)
+- [x] Merge pelo dono (lote 6g)
 - [x] **F6, entrega 1** (13/11, prioridade do dono para reter interessados): chat do visitante no
   site com fila, aba Chat na administração (assumir, responder, encerrar, histórico) e alerta na hora
   de conversa nova; fora do horário a mensagem fica guardada; registro no CHANGELOG

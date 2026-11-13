@@ -19,6 +19,8 @@ export function hashToken(token: string): string {
 interface Carga {
   conta: string;
   papeis: { p: Papel; u: string | null }[];
+  /** Admin F5: sessão de suporte (quem da equipe e até quando), só leitura. */
+  sup?: { n: string; ate: string };
 }
 
 export class TokensAcesso {
@@ -47,6 +49,26 @@ export class TokensAcesso {
       .sign(this.chave);
   }
 
+  /**
+   * Admin F5: sessão de suporte na conta, como dono e só leitura (a guarda recusa gravação).
+   * `sub` é o id da pessoa da equipe; vale até `ate` (no máximo 1 h, nunca depois do dono).
+   */
+  emitirSuporte(contaId: string, admin: { id: string; nome: string }, ate: Date): Promise<string> {
+    const carga: Carga = {
+      conta: contaId,
+      papeis: [{ p: 'dono', u: null }],
+      sup: { n: admin.nome, ate: ate.toISOString() },
+    };
+    return new SignJWT({ ...carga })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(admin.id)
+      .setIssuer(EMISSOR)
+      .setAudience(PUBLICO)
+      .setIssuedAt()
+      .setExpirationTime(Math.floor(ate.getTime() / 1000))
+      .sign(this.chave);
+  }
+
   /** Devolve o usuário ou null se o token for inválido, expirado ou adulterado. */
   async verificar(token: string): Promise<UsuarioAutenticado | null> {
     try {
@@ -58,7 +80,15 @@ export class TokensAcesso {
       if (!payload.sub || typeof payload.conta !== 'string' || !Array.isArray(payload.papeis))
         return null;
       const papeis: PapelAtribuido[] = payload.papeis.map((p) => ({ papel: p.p, unidadeId: p.u }));
-      return { id: payload.sub, contaId: payload.conta, papeis };
+      const sup = payload.sup;
+      return {
+        id: payload.sub,
+        contaId: payload.conta,
+        papeis,
+        ...(sup && typeof sup.n === 'string' && typeof sup.ate === 'string'
+          ? { suporte: { adminId: payload.sub, nome: sup.n, ate: sup.ate } }
+          : {}),
+      };
     } catch {
       return null;
     }

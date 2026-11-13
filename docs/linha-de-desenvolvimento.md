@@ -834,6 +834,15 @@ motivo e vai para a auditoria.
   - `saude` em `ContaNaPlataforma`, calculada na lista de contas da API (fatura aberta ou recusada vencida conta como cobrança vencida);
   - coluna "Saúde", ordem "Risco de cancelamento" e CSV;
   - testes em `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [x] **F5** acesso de suporte com consentimento (feito em 2026-11-13):
+  - migração `acesso_suporte`: `conta.suporte_liberado_ate` e `plataforma_suporte_liberado()`;
+  - `GET`/`PUT /conta/suporte`, só o dono, auditado;
+  - `POST /admin/contas/:id/suporte` (admin e suporte) emite o token com `TokensAcesso.emitirSuporte`: papel dono, marca `sup`, até `fimDaSessaoSuporte` (1 h, nunca depois da liberação);
+  - a `AutenticacaoGuard` recusa gravação e as conversas;
+  - `OcultarContatoInterceptor` troca telefone e WhatsApp das respostas;
+  - `auth/eu` devolve `modoSuporte`;
+  - na web: a ponte grava a sessão sem renovação (`/api/suporte/entrar`), a página `/suporte`, a faixa na casca, o bloco na ficha e a aba do dono;
+  - testes em `acesso-suporte.test.ts`, `ocultar-contato.spec.ts`, `suporte.e2e-spec.ts` e `apps/web/e2e/suporte.spec.ts`.
 - [x] **F6, entrega 1** chat do site (feito em 2026-11-13):
   - regra e formatos em `packages/shared/src/chat-suporte.ts` (horário, `avisoDoChat`, esquemas), com teste;
   - migração `chat_suporte` (`conversa_suporte` e `mensagem_suporte`, só a administração acessa; o visitante usa o segredo da conversa, guardado como hash);
@@ -842,7 +851,7 @@ motivo e vai para a auditoria.
   - `ChatSite` no lugar do botão do WhatsApp e `ChatAdmin` na aba Chat;
   - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts`, `site.spec.ts` e `admin.spec.ts`.
 - [ ] **F6, entrega 2**: chat no painel para quem já é cliente e notificação no celular da equipe
-- [ ] **F5–F9** acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [ ] **F7–F9** métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

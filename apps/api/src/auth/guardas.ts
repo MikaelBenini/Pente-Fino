@@ -32,8 +32,20 @@ export class AutenticacaoGuard implements CanActivate {
     const contexto = Contexto.atual();
     if (!contexto) throw new Error('ContextoMiddleware não rodou antes da guarda');
     contexto.usuario = usuario;
+    if (usuario.suporte) exigirLeituraDeSuporte(ctx.switchToHttp().getRequest<Request>());
     return true;
   }
+}
+
+/**
+ * Admin F5: a sessão de suporte só lê. Gravação é recusada, e as conversas do bot ficam
+ * fechadas (o texto dos clientes pode ter telefone e assunto pessoal).
+ */
+function exigirLeituraDeSuporte(req: Request): void {
+  if (req.method !== 'GET' && req.method !== 'HEAD')
+    throw Erros.semPermissao('Modo suporte: só leitura. Nada pode ser gravado nesta sessão.');
+  if (/^\/(api\/)?conversas(\/|$|\?)/.test(req.path ?? req.url))
+    throw Erros.semPermissao('Modo suporte: as conversas do bot ficam fechadas.');
 }
 
 /** Unidade alvo da requisição: parâmetro de rota, query ou corpo. */
