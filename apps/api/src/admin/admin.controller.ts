@@ -40,6 +40,8 @@ import {
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
+  metricasSaas,
+  type MetricasSaas,
   type SessaoSuporteAberta,
   dataLocal,
   saudeDaConta,
@@ -189,6 +191,35 @@ export class AdminController {
         status: f.status,
         vencimento: f.vencimento.toISOString().slice(0, 10),
         valor: f.valor,
+      })),
+    });
+  }
+
+  @Get('metricas/saas')
+  @PapeisPlataforma('admin')
+  @ApiOperation({
+    summary:
+      'Métricas de SaaS: MRR por mês (novo, upgrade, downgrade, perdido), churn, LTV e coortes',
+  })
+  async metricasSaas(): Promise<MetricasSaas> {
+    const [contas, faturas] = await Promise.all([
+      contasDaPlataforma(this.banco.prisma),
+      faturasDaPlataforma(this.banco.prisma),
+    ]);
+    return metricasSaas({
+      agora: new Date(),
+      contas: contas.map((c) => ({
+        id: c.id,
+        criadaEm: c.criado_em.toISOString(),
+        interna: c.interna,
+      })),
+      faturas: faturas.map((f) => ({
+        contaId: f.conta_id,
+        plano: f.plano,
+        ciclo: f.ciclo,
+        valor: f.valor,
+        status: f.status,
+        vencimento: f.vencimento.toISOString().slice(0, 10),
       })),
     });
   }

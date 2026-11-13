@@ -871,7 +871,12 @@ motivo e vai para a auditoria.
   - `enviarPushEquipe` no `AlertasProcessor` (admin, vendedor e suporte ativos; tira 404 e 410);
   - botão "Avisar no celular" na aba Chat;
   - testes em `plataforma.db.test.ts` e `chat.e2e-spec.ts`.
-- [ ] **F7–F9** métricas de SaaS, aviso segmentado e gestão de cupons
+- [x] **F7** métricas de SaaS (feito em 2026-11-13):
+  - regra em `packages/shared/src/metricas-saas.ts` (`metricasSaas`): MRR por conta e mês das faturas pagas (a anual vale 1/12 por 12 meses), novo, upgrade, downgrade, perdido, churn, ARPA, LTV, MRR por plano e coortes; só meses fechados, sem as internas; com teste;
+  - `GET /admin/metricas/saas`, só o admin;
+  - `metricas-saas-admin.tsx`;
+  - testes em `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [ ] **F8–F9** aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

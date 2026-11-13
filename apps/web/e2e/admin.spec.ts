@@ -61,6 +61,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   ).toBeChecked();
   // Admin F2: de onde vieram as contas novas do período.
   await expect(page.getByRole('region', { name: /^Contas novas por origem/ })).toBeVisible();
+  // Admin F7: métricas de SaaS, com 6 meses fechados na tabela.
+  const saas = page.getByRole('region', { name: 'Métricas de SaaS' });
+  await expect(saas.getByRole('table', { name: 'MRR mês a mês' }).getByRole('row')).toHaveCount(7);
+  await expect(saas.getByRole('table', { name: 'Coortes por mês de cadastro' })).toBeVisible();
   // Admin F1: funil de ativação, do cadastro ao pagamento.
   const funil = page.getByRole('region', { name: 'Funil de ativação' });
   const etapas = funil.getByRole('list', { name: 'Etapas do funil' });

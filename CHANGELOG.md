@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: métricas de SaaS)
+
+- Os números do negócio ganharam o bloco "Métricas de SaaS", calculado das faturas pagas e só com meses fechados:
+  - MRR do último mês, ARPA (média por conta pagante), churn mensal (média de 6 meses) e LTV;
+  - tabela do MRR mês a mês, com o que entrou (novo, upgrade) e o que saiu (downgrade, perdido), os pagantes e o churn;
+  - MRR e ticket por plano;
+  - coortes por mês de cadastro: a fatia das contas que estava pagando em cada mês seguinte.
+
 ### Adicionado (chat: aviso no celular da equipe)
 
 - Na aba Chat da administração, o botão "Avisar no celular" liga a notificação no aparelho. Conversa nova e mensagem nova de visitante ou de cliente chegam no celular de quem atende, mesmo com o navegador fechado, uma notificação por conversa.

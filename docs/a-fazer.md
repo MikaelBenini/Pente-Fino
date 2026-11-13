@@ -245,7 +245,7 @@ U2 a U5 já feitos (#161).
   - conversa e mensagem nova chegam por push a quem atende o chat;
   - registro no CHANGELOG.
 - [x] Lote 6k (push do chat): bateria verde e PR aberto (13/11)
-- [ ] Merge pelo dono (lote 6k)
+- [x] Merge pelo dono (lote 6k)
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
   - **Quem chama:** ícone flutuante no canto da tela, no site (visitante, que informa nome e
     contato) e no painel da barbearia (já logado: a conversa fica ligada à conta).
@@ -257,7 +257,11 @@ U2 a U5 já feitos (#161).
   - **No celular:** notificação de conversa nova e de mensagem nova para a equipe (push do PWA no
     `/admin` instalado), para atender sem estar no computador.
   - Substitui o WhatsApp de suporte no site e na Ajuda.
-- [ ] **F7** Métricas de SaaS (churn, MRR por tipo, LTV, coortes)
+- [x] **F7** Métricas de SaaS (churn, MRR por tipo, LTV, coortes) (13/11):
+  - bloco "Métricas de SaaS" nos números do negócio;
+  - registro no CHANGELOG.
+- [x] Lote 6l (F7): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6l)
 - [x] **F1b** Equipe da administração: membros desativados escondidos por padrão, com a caixa
   "Mostrar desativados" (13/11)
 - [x] **F1c** Lista de Contas com o filtro "Parou em", pela etapa do funil (13/11)
