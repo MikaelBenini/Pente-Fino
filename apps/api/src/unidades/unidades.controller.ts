@@ -379,11 +379,8 @@ export class UnidadesController {
     exigirUnidade(id, GESTAO);
     return this.banco.daConta(async (tx) => {
       const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
-      if (!u.slug || !u.agendamentoPublico)
-        throw Erros.requisicaoInvalida(
-          'link_desligado',
-          'Ligue o link de agendamento da unidade antes de publicar o site.',
-        );
+      // O site não depende do link de agendamento (decisão do dono, 13/11): sem link ligado, os
+      // botões "Agendar" dão lugar ao WhatsApp da unidade.
       const siteSlug =
         u.siteSlug ?? (await siteSlugLivre(tx, sugestaoDeSiteSlug(u.slug, barbearia), id));
       const salvo = await tx.unidade.update({

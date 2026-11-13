@@ -410,7 +410,7 @@ export class PublicoController {
   async dominio(@Param('host') host: string): Promise<DominioPublico> {
     const u = await this.unidadePeloDominio(host);
     if (!u) throw Erros.naoEncontrado('Domínio não cadastrado.');
-    return { siteSlug: u.siteSlug!, slugAgendamento: u.slug ?? '' };
+    return { siteSlug: u.siteSlug!, slugAgendamento: u.agendamentoPublico && u.slug ? u.slug : '' };
   }
 
   @Get('dominio-liberado')

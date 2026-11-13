@@ -47,7 +47,7 @@ async function Conteudo({ params }: Props) {
       dados={site}
       pagina={p}
       base={noDominio ? '' : `/s/${slug}`}
-      agendar={noDominio ? '/agendar' : undefined}
+      agendar={noDominio && site.slugAgendamento ? '/agendar' : undefined}
     />
   );
 }

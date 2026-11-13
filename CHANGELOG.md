@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (site sem o link de agendamento)
+
+- O site da barbearia pode ser publicado e funciona mesmo com o link de agendamento desligado. Nesse caso, no lugar de "Agendar horário" aparece "Falar no WhatsApp", com o telefone da unidade; os "Agendar" de cada serviço e barbeiro somem. Ligando o link depois, os botões voltam sozinhos.
+
 ### Alterado (site da barbearia mais moderno, com movimento)
 
 - O banner entra em etapas (título, texto e botões), com um zoom lento na foto. Embaixo, uma faixa com os serviços e preços corre devagar e para no toque, no mouse ou no botão "Pausar".
