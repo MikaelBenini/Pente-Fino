@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCOS_SITE,
+  adicionarBloco,
+  blocosParaAdicionar,
+  editarBloco,
+  moverBloco,
+  removerBloco,
   CORES_SITE,
   PAGINAS_SITE,
   blocosVisiveis,
@@ -151,5 +156,39 @@ describe('site da barbearia (lote 7a)', () => {
       ['Serviços', 1],
       ['Adicionais', 1],
     ]);
+  });
+});
+
+describe('operações do painel (lote 7b)', () => {
+  const base = siteInicial('Navalha');
+  const tipos = (s: ReturnType<typeof siteInicial>, p: 'inicio' | 'contato' = 'inicio') =>
+    s.paginas[p].map((b) => b.tipo);
+
+  it('move para cima e para baixo, parando nas pontas', () => {
+    const s = moverBloco(base, 'inicio', 'sobre', -1);
+    expect(tipos(s).slice(0, 3)).toEqual(['banner', 'sobre', 'destaques']);
+    expect(moverBloco(base, 'inicio', 'banner', -1)).toBe(base);
+    expect(moverBloco(base, 'inicio', 'agendar', 1)).toBe(base);
+  });
+
+  it('edita, esconde, remove e põe de volta com o texto sugerido, antes da faixa de agendar', () => {
+    let s = editarBloco(base, 'inicio', 'sobre', { titulo: 'Nossa casa', visivel: false });
+    expect(s.paginas.inicio.find((b) => b.id === 'sobre')).toMatchObject({
+      titulo: 'Nossa casa',
+      visivel: false,
+    });
+    s = removerBloco(s, 'inicio', 'sobre');
+    expect(blocosParaAdicionar(s, 'inicio')).toEqual(['sobre']);
+    s = adicionarBloco(s, 'inicio', 'sobre', 'Navalha');
+    expect(tipos(s).slice(-2)).toEqual(['sobre', 'agendar']);
+    expect(s.paginas.inicio.find((b) => b.tipo === 'sobre')?.titulo).toBe('Conheça a Navalha');
+    expect(siteBarbeariaSchema.safeParse(s).success).toBe(true);
+  });
+
+  it('não repete bloco nem põe bloco de outra página', () => {
+    expect(blocosParaAdicionar(base, 'inicio')).toEqual([]);
+    expect(adicionarBloco(base, 'inicio', 'tabela', 'X')).toBe(base);
+    const sem = removerBloco(base, 'contato', 'perguntas');
+    expect(blocosParaAdicionar(sem, 'contato')).toEqual(['perguntas']);
   });
 });

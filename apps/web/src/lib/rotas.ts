@@ -23,6 +23,7 @@ export const ROTAS_DO_APP = [
   'inicio',
   'metas',
   'metricas',
+  'pagina',
   'perfil',
   'produtos',
   'rede',

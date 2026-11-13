@@ -439,3 +439,81 @@ export interface SitePainel {
   slug: string | null;
   linkLigado: boolean;
 }
+
+// ─── Operações do painel (lote 7b) ──────────────────────────────────────────
+
+const comPagina = (
+  site: SiteBarbearia,
+  pagina: PaginaSite,
+  blocos: BlocoSite[],
+): SiteBarbearia => ({
+  ...site,
+  paginas: { ...site.paginas, [pagina]: blocos },
+});
+
+/** Sobe (-1) ou desce (+1) o bloco na página; nas pontas, fica onde está. */
+export function moverBloco(
+  site: SiteBarbearia,
+  pagina: PaginaSite,
+  id: string,
+  delta: -1 | 1,
+): SiteBarbearia {
+  const blocos = [...site.paginas[pagina]];
+  const i = blocos.findIndex((b) => b.id === id);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= blocos.length) return site;
+  [blocos[i], blocos[j]] = [blocos[j]!, blocos[i]!];
+  return comPagina(site, pagina, blocos);
+}
+
+/** Muda campos de um bloco (visível, título, texto, itens). */
+export function editarBloco(
+  site: SiteBarbearia,
+  pagina: PaginaSite,
+  id: string,
+  mudanca: Partial<Omit<BlocoSite, 'id' | 'tipo'>>,
+): SiteBarbearia {
+  return comPagina(
+    site,
+    pagina,
+    site.paginas[pagina].map((b) => (b.id === id ? { ...b, ...mudanca } : b)),
+  );
+}
+
+export function removerBloco(site: SiteBarbearia, pagina: PaginaSite, id: string): SiteBarbearia {
+  return comPagina(
+    site,
+    pagina,
+    site.paginas[pagina].filter((b) => b.id !== id),
+  );
+}
+
+/** Tipos que ainda dá para pôr na página (cada bloco aparece uma vez por página). */
+export function blocosParaAdicionar(site: SiteBarbearia, pagina: PaginaSite): TipoBloco[] {
+  const presentes = new Set(site.paginas[pagina].map((b) => b.tipo));
+  return TIPOS.filter(
+    (t) => (BLOCOS_SITE[t].paginas as readonly string[]).includes(pagina) && !presentes.has(t),
+  );
+}
+
+/**
+ * Põe o bloco de volta no fim da página (antes da faixa de agendamento, que fecha a página),
+ * com os textos sugeridos da página inicial quando houver.
+ */
+export function adicionarBloco(
+  site: SiteBarbearia,
+  pagina: PaginaSite,
+  tipo: TipoBloco,
+  barbearia: string,
+): SiteBarbearia {
+  if (!blocosParaAdicionar(site, pagina).includes(tipo)) return site;
+  const modelo = siteInicial(barbearia).paginas[pagina].find((b) => b.tipo === tipo);
+  const usados = new Set(site.paginas[pagina].map((b) => b.id));
+  let id: string = tipo;
+  for (let n = 2; usados.has(id); n++) id = `${tipo}-${n}`;
+  const novo: BlocoSite = { ...(modelo ?? { tipo, visivel: true }), id, visivel: true };
+  const blocos = [...site.paginas[pagina]];
+  const fim = blocos.findIndex((b) => b.tipo === 'agendar');
+  blocos.splice(fim < 0 || tipo === 'agendar' ? blocos.length : fim, 0, novo);
+  return comPagina(site, pagina, blocos);
+}

@@ -13,6 +13,7 @@ export type IdMenu =
   | 'resultados'
   | 'equipe'
   | 'clube'
+  | 'pagina'
   | 'servicos'
   | 'produtos'
   | 'clientes'
@@ -79,6 +80,7 @@ export const ITENS_MENU: readonly ItemMenu[] = [
   { id: 'servicos', rotulo: 'Serviços', rota: '/servicos', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'produtos', rotulo: 'Produtos', rota: '/produtos', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'clube', rotulo: 'Clube', rota: '/clube', papeis: GESTAO, grupo: 'Cadastros' },
+  { id: 'pagina', rotulo: 'Minha página', rota: '/pagina', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'bot', rotulo: 'Bot', rota: '/bot', papeis: GESTAO, grupo: 'WhatsApp' },
   {
     id: 'conversas',

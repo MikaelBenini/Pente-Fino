@@ -26,7 +26,7 @@ const TITULO = 'font-[family-name:var(--site-titulo)] font-normal';
 const BOTAO =
   'inline-flex min-h-11 items-center justify-center rounded-[var(--site-raio)] px-6 py-3 font-semibold transition-[filter] duration-[var(--ritmo-rapido)] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2';
 const BOTAO_DESTAQUE = `${BOTAO} bg-[var(--site-destaque)] text-[#14271C] focus-visible:outline-[var(--site-destaque)]`;
-const LARGURA = 'mx-auto w-full max-w-6xl px-4 sm:px-6';
+const LARGURA = 'mx-auto w-full max-w-6xl px-4 @2xl:px-6';
 
 const RAIO = { retos: '0px', arredondados: '8px', pilula: '999px' } as const;
 
@@ -91,7 +91,7 @@ export function SiteDaBarbearia({ dados, pagina, base }: Props) {
   const temH1 = blocos.some((b) => b.tipo === 'banner' || b.tipo === 'cabecalho');
   return (
     <div
-      className={`${CLASSES_FONTES} min-h-dvh bg-[#F5F4F0] font-[family-name:var(--site-fonte-texto)] text-[17px] leading-relaxed text-[#1A221D]`}
+      className={`${CLASSES_FONTES} @container min-h-dvh bg-[#F5F4F0] font-[family-name:var(--site-fonte-texto)] text-[17px] leading-relaxed text-[#1A221D]`}
       style={estilo}
     >
       <Cabecalho dados={dados} pagina={pagina} base={base} />
@@ -137,11 +137,11 @@ function Cabecalho({ dados, pagina, base }: Props) {
       <div className={`${LARGURA} flex items-center justify-between gap-4 py-4`}>
         <Link href={base || '/'} className="flex min-h-11 items-center gap-3 text-[#F2F1EC]">
           <Monograma nome={dados.barbearia} className="size-11 text-[22px]" />
-          <span className={`${TITULO} text-[22px] leading-tight sm:text-[24px]`}>
+          <span className={`${TITULO} text-[22px] leading-tight @2xl:text-[24px]`}>
             {dados.barbearia}
           </span>
         </Link>
-        <nav aria-label="Principal" className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Principal" className="hidden items-center gap-7 @3xl:flex">
           {links.map((l) => (
             <Link
               key={l.p}
@@ -154,7 +154,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
           ))}
           {agendar}
         </nav>
-        <details className="group relative md:hidden">
+        <details className="group relative @3xl:hidden">
           <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-[var(--site-raio)] border border-[#4E6A57] px-4 [&::-webkit-details-marker]:hidden">
             <Menu aria-hidden className="size-5" strokeWidth={1.75} />
             Menu
@@ -212,7 +212,7 @@ function Bloco({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
 
 function Titulo2({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <h2 className={`${TITULO} text-[40px] leading-[1.05] sm:text-[52px] ${className ?? ''}`}>
+    <h2 className={`${TITULO} text-[40px] leading-[1.05] @2xl:text-[52px] ${className ?? ''}`}>
       {children}
     </h2>
   );
@@ -223,7 +223,7 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
     <section className={`${VERDE} relative overflow-hidden text-white`}>
       <span
         aria-hidden
-        className={`${TITULO} pointer-events-none absolute -right-8 -bottom-24 text-[22rem] leading-none text-[var(--site-destaque)] opacity-[0.07] select-none sm:text-[34rem]`}
+        className={`${TITULO} pointer-events-none absolute -right-8 -bottom-24 text-[22rem] leading-none text-[var(--site-destaque)] opacity-[0.07] select-none @2xl:text-[34rem]`}
       >
         {inicialDoNome(dados.barbearia)}
       </span>
@@ -231,12 +231,12 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
         className={`${LARGURA} relative flex min-h-[540px] flex-col justify-end gap-7 pt-28 pb-20 motion-safe:animate-[entrar_var(--ritmo-lento)_var(--curva-saida)_both]`}
       >
         <h1
-          className={`${TITULO} max-w-[11em] text-[44px] leading-none sm:text-[72px] lg:text-[88px]`}
+          className={`${TITULO} max-w-[11em] text-[44px] leading-none @2xl:text-[72px] @5xl:text-[88px]`}
         >
           {bloco.titulo || dados.barbearia}
         </h1>
         {bloco.texto && (
-          <p className="max-w-[32em] text-[19px] whitespace-pre-line text-[#DCE4DE] sm:text-[20px]">
+          <p className="max-w-[32em] text-[19px] whitespace-pre-line text-[#DCE4DE] @2xl:text-[20px]">
             {bloco.texto}
           </p>
         )}
@@ -305,7 +305,7 @@ function Destaques({ dados }: { dados: SitePublico }) {
 function Sobre({ bloco, base }: { bloco: BlocoSite; base: string }) {
   if (!bloco.titulo && !bloco.texto) return null;
   return (
-    <section className={`${LARGURA} py-24 sm:py-28`}>
+    <section className={`${LARGURA} py-24 @2xl:py-28`}>
       <div className="mx-auto flex max-w-3xl flex-col gap-5 text-center">
         {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
         {bloco.texto && (
@@ -335,7 +335,7 @@ function ServicosDestaque({
   if (!lista.length) return null;
   return (
     <section className="bg-white">
-      <div className={`${LARGURA} flex flex-col gap-11 py-24 sm:py-28`}>
+      <div className={`${LARGURA} flex flex-col gap-11 py-24 @2xl:py-28`}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Titulo2>{bloco.titulo || 'Serviços'}</Titulo2>
           <Link
@@ -377,7 +377,7 @@ function EquipeResumo({
   if (!dados.equipe.length) return null;
   return (
     <section className={`${VERDE} text-[#F2F1EC]`}>
-      <div className={`${LARGURA} flex flex-col gap-12 py-24 sm:py-28`}>
+      <div className={`${LARGURA} flex flex-col gap-12 py-24 @2xl:py-28`}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Titulo2>{bloco.titulo || 'A equipe'}</Titulo2>
           <Link
@@ -407,7 +407,7 @@ function Depoimentos({ bloco }: { bloco: BlocoSite }) {
   const itens = (bloco.itens ?? []).filter((i) => i.texto);
   if (!itens.length) return null;
   return (
-    <section className={`${LARGURA} flex flex-col gap-11 py-24 sm:py-28`}>
+    <section className={`${LARGURA} flex flex-col gap-11 py-24 @2xl:py-28`}>
       {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-6">
         {itens.map((d, i) => (
@@ -432,7 +432,7 @@ function CabecalhoPagina({ bloco }: { bloco: BlocoSite }) {
       <div
         className={`${LARGURA} flex flex-col gap-4 pt-20 pb-14 motion-safe:animate-[entrar_var(--ritmo-lento)_var(--curva-saida)_both]`}
       >
-        <h1 className={`${TITULO} text-[44px] leading-none sm:text-[72px]`}>{bloco.titulo}</h1>
+        <h1 className={`${TITULO} text-[44px] leading-none @2xl:text-[72px]`}>{bloco.titulo}</h1>
         {bloco.texto && (
           <p className="max-w-[36em] text-[19px] whitespace-pre-line text-[#C9D2CB]">
             {bloco.texto}
@@ -473,7 +473,7 @@ function TabelaServicos({ dados, base }: { dados: SitePublico; base: string }) {
       )}
       {grupos.map((g) => (
         <section key={g.nome} id={ancora(g.nome)} className="flex scroll-mt-6 flex-col">
-          <h2 className={`${TITULO} mb-4 text-[36px] leading-tight sm:text-[44px]`}>{g.nome}</h2>
+          <h2 className={`${TITULO} mb-4 text-[36px] leading-tight @2xl:text-[44px]`}>{g.nome}</h2>
           <ul>
             {g.itens.map((s) => (
               <li
@@ -508,21 +508,21 @@ function TabelaServicos({ dados, base }: { dados: SitePublico; base: string }) {
 function Barbeiros({ dados, base }: { dados: SitePublico; base: string }) {
   if (!dados.equipe.length) return null;
   return (
-    <div className={`${LARGURA} flex flex-col gap-20 py-20 sm:gap-24 sm:py-24`}>
+    <div className={`${LARGURA} flex flex-col gap-20 py-20 @2xl:gap-24 @2xl:py-24`}>
       {dados.equipe.map((p, i) => (
         <article
           key={p.id}
-          className={`flex flex-col gap-10 md:items-center ${i % 2 ? 'md:flex-row-reverse' : 'md:flex-row'}`}
+          className={`flex flex-col gap-10 @3xl:items-center ${i % 2 ? '@3xl:flex-row-reverse' : '@3xl:flex-row'}`}
         >
           <div
             aria-hidden
-            className={`${VERDE} ${TITULO} flex aspect-[4/5] w-full max-w-[360px] items-center justify-center text-[160px] text-[var(--site-destaque)] md:flex-1`}
+            className={`${VERDE} ${TITULO} flex aspect-[4/5] w-full max-w-[360px] items-center justify-center text-[160px] text-[var(--site-destaque)] @3xl:flex-1`}
           >
             {inicialDoNome(p.nome)}
           </div>
-          <div className="flex min-w-0 flex-col gap-4 md:flex-1">
+          <div className="flex min-w-0 flex-col gap-4 @3xl:flex-1">
             <div>
-              <h2 className={`${TITULO} text-[48px] leading-none sm:text-[56px]`}>{p.nome}</h2>
+              <h2 className={`${TITULO} text-[48px] leading-none @2xl:text-[56px]`}>{p.nome}</h2>
               {p.foco && <p className="mt-2 text-[19px] text-[#6E5520]">{p.foco}</p>}
             </div>
             {p.sobre && (
@@ -543,7 +543,7 @@ function Barbeiros({ dados, base }: { dados: SitePublico; base: string }) {
 
 function Contato({ dados }: { dados: SitePublico }) {
   return (
-    <section className={`${LARGURA} grid gap-14 py-20 md:grid-cols-2`}>
+    <section className={`${LARGURA} grid gap-14 py-20 @3xl:grid-cols-2`}>
       <div className="flex flex-col gap-9">
         {dados.endereco && (
           <div>
@@ -617,9 +617,9 @@ function Perguntas({ bloco }: { bloco: BlocoSite }) {
   if (!itens.length) return null;
   return (
     <section className="bg-white">
-      <div className="mx-auto flex max-w-3xl flex-col px-4 py-20 sm:px-6">
+      <div className="mx-auto flex max-w-3xl flex-col px-4 py-20 @2xl:px-6">
         {bloco.titulo && (
-          <Titulo2 className="mb-6 text-[36px] sm:text-[44px]">{bloco.titulo}</Titulo2>
+          <Titulo2 className="mb-6 text-[36px] @2xl:text-[44px]">{bloco.titulo}</Titulo2>
         )}
         {itens.map((q, i) => (
           <details key={i} className="group border-b border-[#DAD8D0] py-4">
@@ -645,7 +645,7 @@ function FaixaAgendar({ bloco, base }: { bloco: BlocoSite; base: string }) {
     <section className="bg-[var(--site-destaque)] text-[#14271C]">
       <div className={`${LARGURA} flex flex-wrap items-center justify-between gap-6 py-16`}>
         <div className="max-w-2xl">
-          <p className={`${TITULO} text-[34px] leading-tight sm:text-[42px]`}>
+          <p className={`${TITULO} text-[34px] leading-tight @2xl:text-[42px]`}>
             {bloco.titulo || 'Marque seu horário'}
           </p>
           {bloco.texto && <p className="mt-1.5 whitespace-pre-line">{bloco.texto}</p>}

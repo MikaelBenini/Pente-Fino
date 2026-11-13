@@ -18,6 +18,7 @@ describe('menu por papel', () => {
       'Serviços',
       'Produtos',
       'Clube',
+      'Minha página',
       'Bot',
       'Conversas do bot',
       'Configurações',
