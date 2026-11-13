@@ -70,6 +70,48 @@ export async function funilDaConta(
   return l && { ...l, criadoEm: l.criado_em.toISOString() };
 }
 
+// ─── Alertas da equipe (admin F3) ─────────────────────────────────────────
+
+/** WhatsApp caído (sem o dono pedir) e ainda desconectado, em todas as contas. */
+export async function whatsappCaidoDaPlataforma(
+  prisma: PrismaClient,
+): Promise<{ contaId: string; conta: string; caiuEm: string }[]> {
+  const linhas = await prisma.$queryRaw<{ conta_id: string; conta: string; caiu_em: Date }[]>`
+    SELECT * FROM plataforma_whatsapp_caido()`;
+  return linhas.map((l) => ({
+    contaId: l.conta_id,
+    conta: l.conta,
+    caiuEm: l.caiu_em.toISOString(),
+  }));
+}
+
+/** Quem da equipe recebe alertas: ativo e com pelo menos um tipo escolhido. */
+export function equipeParaAlertas(prisma: PrismaClient) {
+  return prisma.usuarioPlataforma.findMany({
+    where: { ativo: true, NOT: { alertas: { isEmpty: true } } },
+    select: { email: true, nome: true, alertas: true },
+  });
+}
+
+/**
+ * Grava os alertas como enviados e devolve só os que ainda não tinham saído (a chave primária
+ * tipo + chave garante uma vez só, mesmo com duas rotinas ao mesmo tempo).
+ */
+export async function guardarAlertasNovos<A extends { tipo: string; chave: string }>(
+  prisma: PrismaClient,
+  alertas: readonly A[],
+): Promise<A[]> {
+  if (alertas.length === 0) return [];
+  const novos = new Set<string>();
+  for (const a of alertas) {
+    const r = await prisma.$executeRaw`
+      INSERT INTO alerta_equipe_enviado (tipo, chave) VALUES (${a.tipo}, ${a.chave})
+      ON CONFLICT DO NOTHING`;
+    if (r > 0) novos.add(`${a.tipo}\u0000${a.chave}`);
+  }
+  return alertas.filter((a) => novos.has(`${a.tipo}\u0000${a.chave}`));
+}
+
 export interface LinhaFaturaPlataforma {
   conta_id: string;
   plano: 'basico' | 'pro' | 'premium';

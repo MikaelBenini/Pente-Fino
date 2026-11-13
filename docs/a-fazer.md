@@ -192,8 +192,14 @@ U2 a U5 já feitos (#161).
     precisa de credenciais da API do Google Ads;
   - registro no CHANGELOG.
 - [x] Lote 6b (F2 e anotação das sugestões F1b a F1d): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 6b)
-- [ ] **F3** Alertas para a equipe (cadastro novo, teste acabando, cobrança vencida, falhas)
+- [x] Merge pelo dono (lote 6b)
+- [x] **F3** Alertas para a equipe (12/11):
+  - e-mail de hora em hora, pela rotina do worker, com os sete tipos do plano;
+  - cada pessoa escolhe os seus em "Meus alertas por e-mail", no Início;
+  - cada alerta sai uma vez só;
+  - registro no CHANGELOG.
+- [x] Lote 6c (F3): bateria verde e PR aberto (12/11)
+- [ ] Merge pelo dono (lote 6c)
 - [ ] **F4** Nota de saúde da conta (0 a 100) e ordem por risco de cancelamento
 - [ ] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):

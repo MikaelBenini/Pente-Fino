@@ -7,6 +7,20 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: alertas para a equipe)
+
+- Alertas por e-mail para a equipe da plataforma, conferidos de hora em hora:
+  - cadastro novo;
+  - teste acabando em até 3 dias sem nenhuma comanda fechada;
+  - cobrança vencida;
+  - WhatsApp de uma barbearia caído há mais de 2 horas;
+  - e-mail que não saiu;
+  - nota fiscal recusada;
+  - cupom perto de esgotar (80% das vagas) ou esgotado.
+- Cada alerta chega uma vez só, e cada pessoa recebe um e-mail só com os tipos que marcou.
+- Cada pessoa escolhe os seus em "Meus alertas por e-mail", no fim do Início da administração. Os admins começam recebendo todos.
+- Contas internas não geram alerta.
+
 ### Adicionado (administração: origem das contas novas)
 
 - Os números do negócio mostram as contas novas do período por origem do cadastro (Google Ads com a campanha, Instagram, direto…), da que mais trouxe para a que menos trouxe. As contas internas ficam de fora.

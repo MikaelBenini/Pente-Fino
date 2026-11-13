@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
 import { MetricasAdmin } from './metricas-admin';
+import { MeusAlertas } from './meus-alertas';
 
 /** Data sem hora (AAAA-MM-DD) como DD/MM/AAAA, sem passar por fuso. */
 const dia = (d: string) => d.slice(0, 10).split('-').reverse().join('/');
@@ -199,6 +200,9 @@ export function InicioAdmin({
       </section>
 
       {u.papel === 'admin' && <MetricasAdmin onIrPara={onIrPara} />}
+
+      {/* Admin F3: cada pessoa da equipe escolhe os alertas que recebe por e-mail. */}
+      <MeusAlertas />
     </div>
   );
 }

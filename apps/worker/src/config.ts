@@ -21,6 +21,8 @@ const esquema = z.object({
       error: 'precisa de 32 bytes em base64',
     }),
   DATABASE_URL: z.string().startsWith('postgresql://'),
+  /** Admin F3: conexão da administração, para os alertas da equipe; sem ela, sem alertas. */
+  DATABASE_PLATAFORMA_URL: z.string().startsWith('postgresql://').optional(),
   /** Endereço do painel, para o link de agendamento nas respostas do bot. */
   APP_URL: z.url().transform((u) => u.replace(/\/$/, '')),
   WHATSAPP_PROVEDOR: z.enum(['evolution', 'falso']).default('evolution'),

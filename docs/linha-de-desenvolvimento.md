@@ -814,7 +814,13 @@ motivo e vai para a auditoria.
   - agora `novas.porOrigem` em `metricasDaPlataforma` (contas novas do período por origem, com o resumo de `resumoDaOrigem`) aparece nos números do negócio;
   - testes em `metricas-plataforma.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`;
   - a exportação de conversões offline fica para quando houver acesso à API do Google Ads.
-- [ ] **F3–F9** alertas, saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [x] **F3** alertas para a equipe (feito em 2026-11-12):
+  - regra em `packages/shared/src/alertas-equipe.ts` (`detectarAlertasEquipe`, `emailDeAlertasEquipe`), com teste;
+  - migração `alertas_equipe`: `usuario_plataforma.alertas` (os admins começam com todos), `alerta_equipe_enviado` (tipo + chave, uma vez só) e `plataforma_whatsapp_caido()`;
+  - `AlertasProcessor` no worker roda de hora em hora (aos 5 min), com a conexão da administração (`DATABASE_PLATAFORMA_URL`; sem ela, desligado);
+  - `GET` e `PUT /admin/eu/alertas` para todos os papéis, e a seção "Meus alertas por e-mail" no Início;
+  - testes em `alertas-equipe.test.ts`, `plataforma.db.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [ ] **F4–F9** saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 
