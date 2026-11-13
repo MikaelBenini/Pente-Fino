@@ -283,6 +283,25 @@ U2 a U5 já feitos (#161).
 
 ## 7. Painel: página da barbearia editável e melhorias de produto
 
+**Ordem de trabalho** (pedido do dono em 13/11: "organize tudo e siga a ordem"). Cada item é um
+PR, mergeado quando o CI passar (autorização do dono para os próximos):
+
+1. [x] Aniversário do cliente que veio pelo bot: editar os dados na ficha do cliente
+2. Merge do PR #198 (site sem o link de agendamento)
+3. Lote 7n: cabeçalho e rodapé editáveis, junto com o 7m (botões com link e CSS personalizado)
+4. Horário de funcionamento da unidade (base do agendamento e dos avisos de resumo)
+5. Lote 7l: editar o visual da página de agendamento no mesmo painel
+6. Lote 7g: quem faz cada serviço, com foto (site e agendamento)
+7. Lote 7h: páginas extras Galeria e Clube de assinatura
+8. Lotes 7i, 7j e 7k: temas Clube, Letreiro e Estúdio
+9. Resto da seção 7: saúde da conta no Início, resumo do fechamento de caixa, histórico por
+   comanda, busca global (Ctrl+K) e modo recepção
+10. Saber o que o visitante faz na página de vendas (painel no /admin)
+11. Seção 8: plano Agenda (com a regra do cupom), página "Sobre" (N5), página de vendas
+    atualizada e vídeo novo
+12. Revisão dos campos de entrada e das validações (CPF, máscaras, avisos das caixas de marcar)
+13. Seção 9: verificação final
+
 - [ ] **Página da barbearia editável** (painel P2 e P5), aprovada em 11/11:
   - instalar a skill `frontend-design`;
   - desenhar mais de um modelo, bem diferentes entre si, para o dono aprovar antes de
@@ -427,6 +446,16 @@ U2 a U5 já feitos (#161).
     telas do sistema, porque pode inventar telas;
   - licença grátis enquanto a empresa tiver até 3 pessoas;
   - o projeto fica numa pasta própria, fora do build do site.
+
+- [ ] **Revisão dos campos de entrada e das validações** (pedido do dono em 13/11, antes da
+  verificação final): percorrer todos os formulários (cadastro da conta, assinatura, clube,
+  clientes, equipe, unidades, despesas, admin) e conferir:
+  - validação e máscara de CPF e CNPJ (com dígito verificador), telefone, CEP, e-mail, datas e
+    valores em reais; hoje o cadastro da conta não valida nem formata o CPF;
+  - mensagem de erro clara junto do campo, no mesmo texto na tela e na API (zod compartilhado);
+  - caixas de marcar (checkbox) que pedem uma ação ou têm consequência mostram o aviso na hora
+    (o que acontece, o que falta fazer);
+  - o resultado vira uma lista de achados e as correções entram em lotes antes da seção 9;
 
 ## 9. Por último: verificação final do ecossistema
 

@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (ficha do cliente)
+
+- A ficha do cliente ganhou "Editar dados" (dono, gestor e recepção): nome, WhatsApp, e-mail e aniversário. Quem chega pelo bot vem só com nome e WhatsApp, e o aniversário, que dispara a mensagem de aniversário, ficava sem como pôr.
+
 ### Alterado (site da barbearia mais moderno, com movimento)
 
 - O banner entra em etapas (título, texto e botões), com um zoom lento na foto. Embaixo, uma faixa com os serviços e preços corre devagar e para no toque, no mouse ou no botão "Pausar".
