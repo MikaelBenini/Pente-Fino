@@ -3,6 +3,7 @@ import { PASSOS_INICIAIS } from './ajuda.js';
 import { documentoValido } from './assinatura.js';
 import { z } from 'zod';
 import type { EtapaFunil } from './funil.js';
+import type { SaudeConta } from './saude-conta.js';
 import type { Ciclo, PlanoConta } from './planos.js';
 
 export const PAPEIS_PLATAFORMA = ['admin', 'vendedor', 'suporte', 'financeiro'] as const;
@@ -112,6 +113,8 @@ export interface ContaNaPlataforma {
   ativacao: number;
   /** Admin F1c: a primeira etapa do funil que falta; null = todas feitas. */
   etapaFunil: EtapaFunil | null;
+  /** Admin F4: nota de saúde (0 a 100) e o que tirou pontos; null = cancelada ou sem dado. */
+  saude: SaudeConta | null;
 }
 
 /** Os passos do tutorial "Primeiros passos" que contam na ativação (admin U2). */

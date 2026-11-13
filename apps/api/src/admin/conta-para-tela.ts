@@ -4,19 +4,21 @@ import {
   resumoDaOrigem,
   type ContaNaPlataforma,
   type EtapaFunil,
+  type SaudeConta,
 } from '@pente-fino/shared';
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
 const dia = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
 
 /** Linha de plataforma_contas() como a administração mostra (sem dado de cliente). */
-/** `etapaFunil` vem do funil (admin F1c); sem ele, null. */
+/** `etapaFunil` vem do funil (admin F1c) e `saude` da nota (admin F4); sem eles, null. */
 export function contaParaTela(
   c: LinhaContaPlataforma,
-  etapaFunil: EtapaFunil | null = null,
+  extra: { etapaFunil?: EtapaFunil | null; saude?: SaudeConta | null } = {},
 ): ContaNaPlataforma {
   return {
-    etapaFunil,
+    etapaFunil: extra.etapaFunil ?? null,
+    saude: extra.saude ?? null,
     id: c.id,
     nome: c.nome,
     plano: c.plano,

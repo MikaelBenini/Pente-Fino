@@ -7,6 +7,17 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: nota de saúde da conta)
+
+- Cada conta da lista tem uma nota de saúde de 0 a 100: verde a partir de 70, amarela de 40 a 69 e vermelha abaixo de 40. Embaixo da nota aparece o que mais tira pontos.
+- A nota pesa:
+  - acessos nos últimos 7 dias;
+  - comandas fechadas na semana;
+  - primeiros passos da configuração;
+  - cobrança em dia;
+  - WhatsApp conectado.
+- A lista pode ser ordenada por "Risco de cancelamento", com a menor nota primeiro. A planilha exportada leva a nota e os motivos.
+
 ### Alterado (administração: listas de Contas e Equipe)
 
 - A lista de Contas ganhou o filtro "Parou em", para achar as barbearias paradas numa etapa do funil (por exemplo, no 1º agendamento) e ligar para elas.

@@ -829,7 +829,12 @@ motivo e vai para a auditoria.
   - `AlertasProcessor` no worker roda de hora em hora (aos 5 min), com a conexão da administração (`DATABASE_PLATAFORMA_URL`; sem ela, desligado);
   - `GET` e `PUT /admin/eu/alertas` para todos os papéis, e a seção "Meus alertas por e-mail" no Início;
   - testes em `alertas-equipe.test.ts`, `plataforma.db.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`.
-- [ ] **F4–F9** saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [x] **F4** nota de saúde da conta (feito em 2026-11-13):
+  - regra em `packages/shared/src/saude-conta.ts` (`saudeDaConta`, `faixaDaSaude`, `PESOS_SAUDE`: acesso 30, comandas 30, tutorial 15, cobrança 15, WhatsApp 10), com teste;
+  - `saude` em `ContaNaPlataforma`, calculada na lista de contas da API (fatura aberta ou recusada vencida conta como cobrança vencida);
+  - coluna "Saúde", ordem "Risco de cancelamento" e CSV;
+  - testes em `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [ ] **F5–F9** acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

@@ -206,7 +206,11 @@ U2 a U5 já feitos (#161).
   - registro no CHANGELOG.
 - [x] Lote 6d (F1d): bateria verde e PR aberto (12/11, PR #181)
 - [x] Merge pelo dono (lote 6d)
-- [ ] **F4** Nota de saúde da conta (0 a 100) e ordem por risco de cancelamento
+- [x] **F4** Nota de saúde da conta (0 a 100) e ordem por risco de cancelamento (13/11):
+  - coluna "Saúde" nas Contas, com o motivo principal, e a ordem "Risco de cancelamento";
+  - registro no CHANGELOG.
+- [x] Lote 6f (F4): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6f)
 - [ ] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
   - **Quem chama:** ícone flutuante no canto da tela, no site (visitante, que informa nome e
@@ -224,7 +228,7 @@ U2 a U5 já feitos (#161).
   "Mostrar desativados" (13/11)
 - [x] **F1c** Lista de Contas com o filtro "Parou em", pela etapa do funil (13/11)
 - [x] Lote 6e (F1b e F1c): bateria verde e PR aberto (13/11)
-- [ ] Merge pelo dono (lote 6e)
+- [x] Merge pelo dono (lote 6e)
 - [ ] **F8** Aviso geral segmentado
 - [ ] **F9** Gestão de cupons
 
