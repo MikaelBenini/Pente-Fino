@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   contasDaPlataforma,
+  enviarPushEquipe,
   criarPrisma,
   faturasDaPlataforma,
   fichaDaContaPlataforma,
@@ -174,5 +175,80 @@ describe('acesso da plataforma', () => {
       (await plataforma.funilEtapaConta.findUnique({ where: { contaId: conta } }))?.etapa,
     ).toBe('servicos');
     await expect(app.$queryRaw`SELECT * FROM funil_etapa_conta`).rejects.toThrow();
+  });
+});
+
+describe('push do chat para a equipe (admin F6)', () => {
+  it('manda aos aparelhos de quem atende o chat e tira o aparelho que não existe mais', async () => {
+    const sufixo = randomUUID().slice(0, 8);
+    const pessoa = await plataforma.usuarioPlataforma.create({
+      data: {
+        email: `push-${sufixo}@pentefino.dev`,
+        nome: 'Paula Push',
+        papel: 'suporte',
+        senhaHash: 'x',
+      },
+    });
+    const financeiro = await plataforma.usuarioPlataforma.create({
+      data: {
+        email: `push-fin-${sufixo}@pentefino.dev`,
+        nome: 'Fabio Fin',
+        papel: 'financeiro',
+        senhaHash: 'x',
+      },
+    });
+    try {
+      await plataforma.inscricaoPushPlataforma.createMany({
+        data: [
+          {
+            usuarioId: pessoa.id,
+            endpoint: `https://push.teste/${sufixo}/ok`,
+            p256dh: 'p'.repeat(20),
+            auth: 'a'.repeat(12),
+          },
+          {
+            usuarioId: pessoa.id,
+            endpoint: `https://push.teste/${sufixo}/velho`,
+            p256dh: 'p'.repeat(20),
+            auth: 'a'.repeat(12),
+          },
+          {
+            usuarioId: financeiro.id,
+            endpoint: `https://push.teste/${sufixo}/fin`,
+            p256dh: 'p'.repeat(20),
+            auth: 'a'.repeat(12),
+          },
+        ],
+      });
+      const mandados: string[] = [];
+      const r = await enviarPushEquipe(
+        plataforma,
+        { titulo: 'Ana está no chat', corpo: 'Oi', url: '/admin#chat', etiqueta: 'chat-1' },
+        async (i) => {
+          mandados.push(i.endpoint);
+          return i.endpoint.endsWith('/velho') ? 410 : 201;
+        },
+      );
+      const meus = mandados.filter((e) => e.includes(sufixo));
+      // O financeiro não atende o chat: não recebe.
+      expect(meus.sort()).toEqual([
+        `https://push.teste/${sufixo}/ok`,
+        `https://push.teste/${sufixo}/velho`,
+      ]);
+      expect(r.removidos).toBeGreaterThanOrEqual(1);
+      expect(
+        await plataforma.inscricaoPushPlataforma.count({ where: { usuarioId: pessoa.id } }),
+      ).toBe(1);
+      // A aplicação das barbearias não enxerga os aparelhos da equipe.
+      await expect(app.$queryRaw`SELECT * FROM inscricao_push_plataforma`).rejects.toThrow();
+    } finally {
+      await plataforma.usuarioPlataforma.updateMany({
+        where: { id: { in: [pessoa.id, financeiro.id] } },
+        data: { ativo: false },
+      });
+      await plataforma.inscricaoPushPlataforma.deleteMany({
+        where: { usuarioId: { in: [pessoa.id, financeiro.id] } },
+      });
+    }
   });
 });

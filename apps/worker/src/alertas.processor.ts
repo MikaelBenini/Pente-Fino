@@ -12,6 +12,7 @@ import {
 import {
   contasDaPlataforma,
   criarPrisma,
+  enviarPushEquipe,
   equipeParaAlertas,
   faturasDaPlataforma,
   fichaDaContaPlataforma,
@@ -31,13 +32,16 @@ import {
   lerModelosEmail,
   FILA_ALERTAS_EQUIPE,
   FILA_EMAILS,
+  FILA_PUSH_EQUIPE,
   lerCupons,
   TIPOS_ALERTA_EQUIPE,
   type DadosAlertasEquipe,
   type TipoAlertaEquipe,
   type TrabalhoEmail,
+  type TrabalhoPushEquipe,
 } from '@pente-fino/shared';
 import { Queue, Worker } from 'bullmq';
+import webpush from 'web-push';
 import { CONFIGURACAO_WORKER, type ConfiguracaoWorker } from './config.js';
 
 export interface DependenciasAlertas {
@@ -204,6 +208,7 @@ export class AlertasProcessor implements OnModuleInit, OnApplicationShutdown {
   private fila?: Queue;
   private emails?: Queue<TrabalhoEmail>;
   private worker?: Worker;
+  private push?: Worker<TrabalhoPushEquipe>;
   private prisma?: PrismaClient;
 
   constructor(@Inject(CONFIGURACAO_WORKER) private readonly config: ConfiguracaoWorker) {}
@@ -260,12 +265,30 @@ export class AlertasProcessor implements OnModuleInit, OnApplicationShutdown {
       },
       { connection, concurrency: 1 },
     );
+    // Admin F6: push do chat no celular da equipe (precisa das chaves VAPID, como o do painel).
+    const c = this.config;
+    if (c.VAPID_CHAVE_PUBLICA && c.VAPID_CHAVE_PRIVADA) {
+      webpush.setVapidDetails(c.VAPID_CONTATO, c.VAPID_CHAVE_PUBLICA, c.VAPID_CHAVE_PRIVADA);
+      this.push = new Worker<TrabalhoPushEquipe>(
+        FILA_PUSH_EQUIPE,
+        async (job) => {
+          const r = await enviarPushEquipe(prisma, job.data, async (inscricao, carga) => {
+            const resposta = await webpush.sendNotification(inscricao, carga, { TTL: 3_600 });
+            return resposta.statusCode;
+          });
+          return `${r.entregues}/${r.aparelhos} aparelho(s) da equipe`;
+        },
+        { connection, concurrency: 3 },
+      );
+      this.push.on('failed', (_j, e) => this.logger.error(`Push da equipe: ${e.message}`));
+    } else this.logger.warn('Sem chaves VAPID: o push do chat para a equipe fica desligado.');
     this.worker.on('completed', (_j, r) => this.logger.log(String(r)));
     this.worker.on('failed', (_j, e) => this.logger.error(`Alertas da equipe: ${e.message}`));
   }
 
   async onApplicationShutdown(): Promise<void> {
     await this.worker?.close();
+    await this.push?.close();
     await this.fila?.close();
     await this.emails?.close();
     await this.prisma?.$disconnect();
