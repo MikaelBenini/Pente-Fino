@@ -67,6 +67,7 @@ import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { EventosService } from '../filas/filas.module.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { emSequencia, umPorVez } from '../comum/sequencia.js';
+import { ChatService } from '../chat/chat.service.js';
 
 const slugParam = new PipeZod(slugSchema);
 
@@ -129,6 +130,7 @@ export class PublicoController {
     @Inject(EmailsService) private readonly emails: EmailsService,
     @Inject(LimiteCadastro) private readonly limiteCadastro: LimiteCadastro,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(ChatService) private readonly chat: ChatService,
   ) {}
 
   // ─── Cadastro de conta ──────────────────────────────────────────────────
@@ -257,6 +259,9 @@ export class PublicoController {
       }
       throw e;
     }
+    // Admin F6: se conversou no chat antes, a conversa fica ligada à conta (conversão do chat).
+    if (d.chat)
+      await this.chat.vincularConta(d.chat.id, d.chat.token, contaId).catch(() => undefined);
     // A conta já existe: falha no e-mail não desfaz o cadastro.
     await this.emails
       .boasVindas({

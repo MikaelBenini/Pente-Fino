@@ -222,9 +222,17 @@ U2 a U5 já feitos (#161).
   site com fila, aba Chat na administração (assumir, responder, encerrar, histórico) e alerta na hora
   de conversa nova; fora do horário a mensagem fica guardada; registro no CHANGELOG
 - [x] Lote 6h (F6, entrega 1): bateria verde e PR aberto (13/11)
-- [ ] Merge pelo dono (lote 6h)
-- [ ] **F6, entrega 2**: chat dentro do painel para quem já é cliente (ligado à conta) e notificação
-  no celular da equipe (push do PWA no `/admin`)
+- [x] Merge pelo dono (lote 6h)
+- [x] **Chat: sugestões aprovadas e pedidos do dono em 13/11**:
+  - respostas prontas, "virou cadastro" (a conversa vai junto no cadastro) e o resumo de 30 dias;
+  - avisos na administração (bipe, notificação do navegador, número no título e na aba);
+  - aviso no título para o visitante;
+  - chat na Ajuda do painel para quem já é cliente;
+  - registro no CHANGELOG.
+- [x] Lote 6i (chat: Ajuda, respostas prontas, conversão e avisos): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6i)
+- [ ] **F6, entrega 2 (o que falta)**: notificação no celular da equipe com o navegador fechado (push
+  do PWA no `/admin`)
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
   - **Quem chama:** ícone flutuante no canto da tela, no site (visitante, que informa nome e
     contato) e no painel da barbearia (já logado: a conversa fica ligada à conta).

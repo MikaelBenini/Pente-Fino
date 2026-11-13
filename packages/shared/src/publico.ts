@@ -33,6 +33,8 @@ export const cadastroContaSchema = z.object({
   abertoEm: z.number().optional(),
   /** De onde veio (anúncio, campanha, site): site T2 e admin F2. */
   origem: origemCadastroSchema.nullish(),
+  /** Admin F6: conversa do chat do site antes do cadastro (id e segredo, guardados no navegador). */
+  chat: z.object({ id: z.uuid(), token: z.string().min(20).max(100) }).nullish(),
 });
 export type CadastroContaEntrada = z.infer<typeof cadastroContaSchema>;
 

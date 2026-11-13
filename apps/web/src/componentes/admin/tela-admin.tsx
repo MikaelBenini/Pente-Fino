@@ -32,7 +32,7 @@ import { AuditoriaAdmin, EquipeAdmin } from './equipe-admin';
 import { FichaConta } from './ficha-conta';
 import { CobrancaAdmin, InicioAdmin } from './inicio-admin';
 import { ConfiguracoesAdmin, SaudeAdmin } from './config-admin';
-import { ChatAdmin } from './chat-admin';
+import { ChatAdmin, useAvisosDoChat } from './chat-admin';
 import { NovaVenda, VendasPorOrigemAdmin, VendasPorVendedor } from './nova-venda';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
@@ -238,14 +238,20 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
   }, []);
   // Admin U1: o endereço pode levar um filtro (#contas?situacao=teste), vindo dos cartões.
   const abaId = aba.split('?')[0]!;
+  // Admin F6: avisos do chat em qualquer aba (bipe, notificação e o número esperando).
+  const esperandoChat = useAvisosDoChat(ABAS_DO_PAPEL[u.papel].includes('chat'));
   const abas = [
     {
       id: 'inicio',
       rotulo: 'Início',
       conteudo: <InicioAdmin u={u} onAbrirConta={setAberta} onIrPara={setAba} />,
     },
-    // Admin F6: o chat do site com os visitantes.
-    { id: 'chat', rotulo: 'Chat', conteudo: <ChatAdmin u={u} /> },
+    // Admin F6: o chat do site com os visitantes (com o número de conversas esperando).
+    {
+      id: 'chat',
+      rotulo: esperandoChat ? `Chat (${esperandoChat})` : 'Chat',
+      conteudo: <ChatAdmin u={u} />,
+    },
     {
       id: 'contas',
       rotulo: 'Contas',

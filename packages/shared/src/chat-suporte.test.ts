@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { avisoDoChat, chatEmHorario, iniciarChatSchema } from './chat-suporte.js';
+import {
+  avisoDoChat,
+  chatEmHorario,
+  iniciarChatSchema,
+  respostasProntasDoChat,
+  resumirChat,
+} from './chat-suporte.js';
 
 // Horários em UTC; São Paulo = UTC−3.
 const sp = (iso: string) => new Date(`${iso}-03:00`);
@@ -40,5 +46,64 @@ describe('avisoDoChat', () => {
     );
     expect(avisoDoChat({ ...base, emHorario: false })).toContain('fora do horário');
     expect(avisoDoChat({ ...base, status: 'encerrada' })).toContain('encerrada');
+  });
+});
+
+describe('respostasProntasDoChat e resumirChat (sugestões do chat)', () => {
+  it('as respostas prontas usam os preços e os dias de teste que recebem', () => {
+    const r = respostasProntasDoChat({
+      diasTeste: 14,
+      basico: 'R$ 79,90',
+      pro: 'R$ 149,90',
+      premium: 'R$ 249,90',
+    });
+    expect(r.find((x) => x.titulo === 'Preço dos planos')?.texto).toContain('Básico R$ 79,90/mês');
+    expect(r.find((x) => x.titulo === 'Como funciona o teste')?.texto).toContain('14 dias grátis');
+  });
+
+  it('conversão em cadastro e primeira resposta só das começadas em horário', () => {
+    const r = resumirChat([
+      // Segunda 10h, respondida em 6 min, virou cadastro.
+      {
+        criadoEm: sp('2026-11-16T10:00:00').toISOString(),
+        primeiraRespostaEm: sp('2026-11-16T10:06:00').toISOString(),
+        virouConta: true,
+      },
+      // Segunda 11h, respondida em 2 min.
+      {
+        criadoEm: sp('2026-11-16T11:00:00').toISOString(),
+        primeiraRespostaEm: sp('2026-11-16T11:02:00').toISOString(),
+        virouConta: false,
+      },
+      // Segunda 15h, sem resposta ainda.
+      {
+        criadoEm: sp('2026-11-16T15:00:00').toISOString(),
+        primeiraRespostaEm: null,
+        virouConta: false,
+      },
+      // Domingo (fora do horário), respondida na segunda: não entra na média.
+      {
+        criadoEm: sp('2026-11-15T20:00:00').toISOString(),
+        primeiraRespostaEm: sp('2026-11-16T09:30:00').toISOString(),
+        virouConta: true,
+      },
+    ]);
+    expect(r).toEqual({
+      conversas: 4,
+      viraramCadastro: 2,
+      taxaCadastro: 0.5,
+      primeiraRespostaMin: 4,
+      semResposta: 1,
+    });
+  });
+
+  it('sem conversas: zeros e sem média', () => {
+    expect(resumirChat([])).toEqual({
+      conversas: 0,
+      viraramCadastro: 0,
+      taxaCadastro: 0,
+      primeiraRespostaMin: null,
+      semResposta: 0,
+    });
   });
 });

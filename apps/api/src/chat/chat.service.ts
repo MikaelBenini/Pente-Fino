@@ -3,7 +3,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   chatEmHorario,
+  resumirChat,
   type ChatDoVisitante,
+  type ResumoDoChat,
   type ChatIniciado,
   type ConversaDaEquipe,
   type ConversaNaFila,
@@ -11,6 +13,7 @@ import {
   type MensagemChat,
   type StatusChat,
 } from '@pente-fino/shared';
+import { contasDaPlataforma } from '@pente-fino/db';
 import { BancoPlataforma } from '../admin/banco-plataforma.js';
 import { gerarTokenOpaco, hashToken } from '../auth/tokens.js';
 import { Erros } from '../comum/erros.js';
@@ -95,7 +98,17 @@ export class ChatService {
   }
 
   async doVisitanteParaTela(id: string, token: string | undefined): Promise<ChatDoVisitante> {
-    const c = await this.doVisitante(id, token);
+    if (!token) throw Erros.naoEncontrado('Conversa não encontrada.');
+    return this.paraTela(id, hashToken(token));
+  }
+
+  /** A conversa como o visitante (ou o cliente na Ajuda) vê. */
+  private async paraTela(id: string, tokenHash: string): Promise<ChatDoVisitante> {
+    const c = await this.db.conversaSuporte.findFirst({
+      where: { id, tokenHash },
+      select: { id: true, status: true, criadoEm: true, atendente: { select: { nome: true } } },
+    });
+    if (!c) throw Erros.naoEncontrado('Conversa não encontrada.');
     const [mensagens, antes] = await Promise.all([
       this.db.mensagemSuporte.findMany({
         where: { conversaId: id },
@@ -132,7 +145,102 @@ export class ChatService {
     ]);
   }
 
+  /**
+   * O visitante se cadastrou pelo site depois de conversar: a conversa fica ligada à conta nova
+   * (só com o segredo dela, guardado no navegador de quem conversou).
+   */
+  async vincularConta(id: string, token: string, contaId: string): Promise<void> {
+    await this.db.conversaSuporte.updateMany({
+      where: { id, tokenHash: hashToken(token), contaAfetadaId: null },
+      data: { contaAfetadaId: contaId },
+    });
+  }
+
+  // ─── Cliente logado (chat da Ajuda) ────────────────────────────────────
+
+  /** A conversa mais recente deste usuário pela Ajuda (a aberta, ou a última encerrada). */
+  async doPainelParaTela(usuarioId: string): Promise<ChatDoVisitante | null> {
+    const c = await this.db.conversaSuporte.findFirst({
+      where: { usuarioPainelId: usuarioId, origem: 'painel' },
+      orderBy: { criadoEm: 'desc' },
+      select: { id: true, tokenHash: true },
+    });
+    return c ? this.paraTela(c.id, c.tokenHash) : null;
+  }
+
+  /**
+   * Mensagem do cliente pela Ajuda: continua a conversa aberta ou começa uma nova, já ligada à
+   * conta e ao usuário (sem pedir nome nem contato).
+   */
+  async doPainelEscrever(
+    quem: { usuarioId: string; nome: string; email: string; contaId: string; conta: string },
+    texto: string,
+  ): Promise<void> {
+    const aberta = await this.db.conversaSuporte.findFirst({
+      where: { usuarioPainelId: quem.usuarioId, origem: 'painel', status: { not: 'encerrada' } },
+      orderBy: { criadoEm: 'desc' },
+      select: { id: true },
+    });
+    if (aberta) {
+      await this.db.$transaction([
+        this.db.mensagemSuporte.create({ data: { conversaId: aberta.id, de: 'visitante', texto } }),
+        this.db.conversaSuporte.update({
+          where: { id: aberta.id },
+          data: { ultimaMensagemEm: new Date() },
+        }),
+      ]);
+      return;
+    }
+    const nome = `${quem.nome} (${quem.conta})`;
+    await this.db.conversaSuporte.create({
+      data: {
+        nome,
+        contato: quem.email,
+        pagina: '/ajuda',
+        origem: 'painel',
+        usuarioPainelId: quem.usuarioId,
+        contaAfetadaId: quem.contaId,
+        tokenHash: hashToken(gerarTokenOpaco()),
+        mensagens: { create: { de: 'visitante', texto } },
+      },
+    });
+    void this.avisarEquipe({ nome, contato: quem.email, texto, pagina: '/ajuda' }).catch(
+      (e: Error) => this.logger.warn(`Avisar a equipe do chat novo: ${e.message}`),
+    );
+  }
+
   // ─── Equipe ────────────────────────────────────────────────────────────
+
+  /** Nome das contas ligadas às conversas (para o "virou cadastro"). */
+  private async nomesDasContas(ids: (string | null)[]): Promise<Map<string, string>> {
+    if (!ids.some(Boolean)) return new Map();
+    const contas = await contasDaPlataforma(this.db);
+    return new Map(contas.map((c) => [c.id, c.nome]));
+  }
+
+  /** Conversas dos últimos 30 dias: conversão em cadastro e tempo da primeira resposta. */
+  async resumo(agora = new Date()): Promise<ResumoDoChat> {
+    const conversas = await this.db.conversaSuporte.findMany({
+      where: { criadoEm: { gte: new Date(agora.getTime() - 30 * 86_400_000) } },
+      select: {
+        criadoEm: true,
+        contaAfetadaId: true,
+        mensagens: {
+          where: { de: 'equipe' },
+          orderBy: { criadoEm: 'asc' },
+          take: 1,
+          select: { criadoEm: true },
+        },
+      },
+    });
+    return resumirChat(
+      conversas.map((c) => ({
+        criadoEm: c.criadoEm.toISOString(),
+        primeiraRespostaEm: c.mensagens[0]?.criadoEm.toISOString() ?? null,
+        virouConta: !!c.contaAfetadaId,
+      })),
+    );
+  }
 
   async lista(status?: StatusChat): Promise<ConversaNaFila[]> {
     const conversas = await this.db.conversaSuporte.findMany({
@@ -144,20 +252,26 @@ export class ChatService {
         mensagens: { orderBy: { criadoEm: 'desc' }, take: 1, select: { de: true, texto: true } },
       },
     });
-    return conversas.map((c) => this.linha(c));
+    const nomes = await this.nomesDasContas(conversas.map((c) => c.contaAfetadaId));
+    return conversas.map((c) => this.linha(c, nomes));
   }
 
-  private linha(c: {
-    id: string;
-    status: StatusChat;
-    nome: string;
-    contato: string;
-    pagina: string | null;
-    criadoEm: Date;
-    ultimaMensagemEm: Date;
-    atendente: { nome: string } | null;
-    mensagens: { de: string; texto: string }[];
-  }): ConversaNaFila {
+  private linha(
+    c: {
+      id: string;
+      status: StatusChat;
+      nome: string;
+      contato: string;
+      pagina: string | null;
+      criadoEm: Date;
+      ultimaMensagemEm: Date;
+      atendente: { nome: string } | null;
+      mensagens: { de: string; texto: string }[];
+      contaAfetadaId: string | null;
+      origem: string;
+    },
+    nomes: Map<string, string>,
+  ): ConversaNaFila {
     const ultima = c.mensagens[0];
     return {
       id: c.id,
@@ -170,6 +284,11 @@ export class ChatService {
       ultimaMensagemEm: c.ultimaMensagemEm.toISOString(),
       ultimaMensagem: (ultima?.texto ?? '').slice(0, 120),
       esperandoEquipe: ultima?.de === 'visitante' && c.status !== 'encerrada',
+      virouConta:
+        c.contaAfetadaId && c.origem !== 'painel'
+          ? { id: c.contaAfetadaId, nome: nomes.get(c.contaAfetadaId) ?? 'Conta criada' }
+          : null,
+      origem: c.origem === 'painel' ? 'painel' : 'site',
     };
   }
 
@@ -192,8 +311,9 @@ export class ChatService {
       },
     });
     if (!c) throw Erros.naoEncontrado('Conversa não encontrada.');
+    const nomes = await this.nomesDasContas([c.contaAfetadaId]);
     return {
-      ...this.linha({ ...c, mensagens: c.mensagens.slice(-1).reverse() }),
+      ...this.linha({ ...c, mensagens: c.mensagens.slice(-1).reverse() }, nomes),
       mensagens: c.mensagens.map((m) => mensagem(m, false)),
     };
   }

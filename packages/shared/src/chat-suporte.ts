@@ -104,6 +104,10 @@ export interface ConversaNaFila {
   ultimaMensagem: string;
   /** A última mensagem é do visitante (esperando resposta). */
   esperandoEquipe: boolean;
+  /** O visitante se cadastrou depois de conversar (conta criada pelo site). */
+  virouConta: { id: string; nome: string } | null;
+  /** "site" (visitante) ou "painel" (cliente logado, pela Ajuda). */
+  origem: 'site' | 'painel';
 }
 
 /** Conversa aberta na administração. */
@@ -122,4 +126,91 @@ export function avisoDoChat(
   if (c.posicao && c.posicao > 1)
     return `Você está na fila: ${c.posicao - 1} ${c.posicao === 2 ? 'pessoa' : 'pessoas'} na sua frente. Já já alguém responde.`;
   return 'Você é o próximo da fila. Já já alguém responde.';
+}
+
+// ─── Respostas prontas e resumo (sugestões aprovadas em 13/11) ────────────
+
+export interface RespostaPronta {
+  titulo: string;
+  texto: string;
+}
+
+/**
+ * Respostas prontas da equipe: um clique põe o texto na caixa, e a pessoa ajusta antes de mandar.
+ * Preços e dias de teste vêm de quem chama (a mesma tabela do site), para nunca ficarem velhos.
+ */
+export function respostasProntasDoChat(d: {
+  diasTeste: number;
+  basico: string;
+  pro: string;
+  premium: string;
+}): RespostaPronta[] {
+  return [
+    {
+      titulo: 'Preço dos planos',
+      texto: `Os planos são por barbearia, não por cadeira: Básico ${d.basico}/mês (até 3 profissionais), Pro ${d.pro}/mês (até 10) e Premium ${d.premium}/mês (profissionais ilimitados e várias unidades). No anual sai mais barato. Quer que eu te ajude a escolher?`,
+    },
+    {
+      titulo: 'Como funciona o teste',
+      texto: `São ${d.diasTeste} dias grátis com tudo do plano escolhido, sem cartão e sem fidelidade. No fim do teste você decide se assina; nada é cobrado sozinho. É só criar a conta em seupentefino.com.br/cadastro.`,
+    },
+    {
+      titulo: 'Importar a planilha',
+      texto:
+        'Dá para trazer o que você já tem: a configuração guiada importa clientes, serviços e preços da sua planilha antes do primeiro atendimento. Se quiser, me manda a planilha que eu te ajudo.',
+    },
+    {
+      titulo: 'Comissão do barbeiro',
+      texto:
+        'A comissão sai sozinha em cada serviço e produto da comanda, com a regra de cada barbeiro, e o barbeiro vê o próprio extrato no celular. Vem em todos os planos.',
+    },
+    {
+      titulo: 'Bot do WhatsApp',
+      texto:
+        'O bot usa o WhatsApp da própria barbearia, conectado por QR Code, e agenda sozinho com menus que você programa. Não usa inteligência artificial e não cobra por mensagem. Vem nos planos Pro e Premium.',
+    },
+    {
+      titulo: 'Encerrar',
+      texto:
+        'Fico por aqui, mas qualquer dúvida é só chamar de novo neste chat. Boas vendas e bons atendimentos!',
+    },
+  ];
+}
+
+export interface ResumoDoChat {
+  /** Conversas começadas no período. */
+  conversas: number;
+  /** Delas, quantas viraram cadastro. */
+  viraramCadastro: number;
+  /** 0 a 1. */
+  taxaCadastro: number;
+  /** Tempo médio até a primeira resposta da equipe, em minutos, só das começadas em horário; null = sem dado. */
+  primeiraRespostaMin: number | null;
+  /** Começadas em horário e ainda sem resposta. */
+  semResposta: number;
+}
+
+/** Resumo dos últimos dias: conversas, conversão em cadastro e velocidade da primeira resposta. */
+export function resumirChat(
+  conversas: readonly {
+    criadoEm: string;
+    primeiraRespostaEm: string | null;
+    virouConta: boolean;
+  }[],
+): ResumoDoChat {
+  const emHorario = conversas.filter((c) => chatEmHorario(new Date(c.criadoEm)));
+  const respondidas = emHorario.filter((c) => c.primeiraRespostaEm);
+  const viraram = conversas.filter((c) => c.virouConta).length;
+  const minutos = respondidas.map(
+    (c) => (Date.parse(c.primeiraRespostaEm!) - Date.parse(c.criadoEm)) / 60_000,
+  );
+  return {
+    conversas: conversas.length,
+    viraramCadastro: viraram,
+    taxaCadastro: conversas.length ? viraram / conversas.length : 0,
+    primeiraRespostaMin: minutos.length
+      ? Math.round(minutos.reduce((s, m) => s + m, 0) / minutos.length)
+      : null,
+    semResposta: emHorario.length - respondidas.length,
+  };
 }
