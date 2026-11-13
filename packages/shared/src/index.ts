@@ -75,4 +75,5 @@ export * from './modelos-email.js';
 export * from './catalogo-servicos.js';
 export * from './pagina-barbearia.js';
 export * from './site-barbearia.js';
+export * from './horario-funcionamento.js';
 export * from './origem-cadastro.js';

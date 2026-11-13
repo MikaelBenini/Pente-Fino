@@ -40,6 +40,7 @@ import { CabecalhoPagina, Estado, Ficha } from '../pagina';
 import { Assinatura } from './assinatura';
 import { RegrasDeAgendamento } from './regras-agendamento';
 import { ImportarPlanilha, LinkAgendamento } from './link-e-importacao';
+import { HorarioFuncionamentoDialogo } from '../horario-funcionamento';
 
 export function TelaConfiguracoes() {
   const { papeis } = useApp();
@@ -198,7 +199,9 @@ function Unidades() {
   const unidades = useUnidadesDetalhe();
   const { papeis } = useApp();
   const ehDono = papeis.includes('dono');
+  const ehGestao = ehDono || papeis.includes('gestor');
   const [editando, setEditando] = useState<UnidadeDetalhe | 'nova' | null>(null);
+  const [horarioDe, setHorarioDe] = useState<UnidadeDetalhe | null>(null);
   return (
     <Estado consulta={unidades}>
       {() => (
@@ -251,19 +254,29 @@ function Unidades() {
                   {u.capacidade} {u.capacidade === 1 ? 'cadeira' : 'cadeiras'} atendendo ao mesmo
                   tempo
                 </p>
-                {ehDono && (
-                  <Botao
-                    variante="secundario"
-                    className="self-start"
-                    onClick={() => setEditando(u)}
-                  >
-                    Editar unidade
-                  </Botao>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {ehDono && (
+                    <Botao variante="secundario" onClick={() => setEditando(u)}>
+                      Editar unidade
+                    </Botao>
+                  )}
+                  {ehGestao && (
+                    <Botao variante="secundario" onClick={() => setHorarioDe(u)}>
+                      Horário de funcionamento
+                    </Botao>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
           <FormularioUnidade unidade={editando} onFechar={() => setEditando(null)} />
+          {horarioDe && (
+            <HorarioFuncionamentoDialogo
+              unidadeId={horarioDe.id}
+              nome={horarioDe.nome}
+              onFechar={() => setHorarioDe(null)}
+            />
+          )}
         </div>
       )}
     </Estado>

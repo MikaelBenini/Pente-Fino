@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (horário de funcionamento da unidade)
+
+- Em Configurações, Unidades, o botão "Horário de funcionamento" (dono e gestor): para cada dia, a hora em que a unidade abre e fecha, com intervalo para o almoço, se quiser. Há o atalho "Usar este horário nos outros dias abertos".
+- O cliente só consegue marcar dentro desse horário, pelo link, pelo WhatsApp ou no balcão, mesmo que o barbeiro tenha expediente maior. Os dias de trabalho da unidade passam a seguir o horário.
+- O site da barbearia mostra esse horário, por exemplo "Terça a sexta, 9h às 12h e 13h às 20h".
+- Sem horário cadastrado, tudo continua como antes: vale o expediente da equipe.
+
 ### Alterado (site sem o link de agendamento)
 
 - O site da barbearia pode ser publicado e funciona mesmo com o link de agendamento desligado. Nesse caso, no lugar de "Agendar horário" aparece "Falar no WhatsApp", com o telefone da unidade; os "Agendar" de cada serviço e barbeiro somem. Ligando o link depois, os botões voltam sozinhos.
