@@ -136,6 +136,9 @@ const situacaoDe = (r: SitePainel): Situacao => ({
   linkLigado: r.linkLigado,
   siteSlug: r.siteSlug,
   sugestaoSiteSlug: r.sugestaoSiteSlug,
+  dominio: r.dominio,
+  dominioVerificado: r.dominioVerificado,
+  dominioIps: r.dominioIps,
 });
 
 function Editor({
@@ -332,6 +335,14 @@ function Editor({
           </Aviso>
         )}
         <Enderecos
+          unidadeId={unidadeId}
+          situacao={situacao}
+          onMudou={(r) => {
+            setSituacao(situacaoDe(r));
+            void cliente.invalidateQueries({ queryKey: chave(unidadeId) });
+          }}
+        />
+        <DominioProprio
           unidadeId={unidadeId}
           situacao={situacao}
           onMudou={(r) => {
@@ -972,6 +983,172 @@ function Enderecos({
       <p className="sr-only" aria-live="polite">
         {copiado ? 'Copiado.' : ''}
       </p>
+    </section>
+  );
+}
+
+/**
+ * Domínio próprio (lote 7e): o dono informa o domínio, vê o registro de DNS para criar onde
+ * comprou o domínio e o sistema confere. Conferido, o site abre nele com HTTPS.
+ */
+function DominioProprio({
+  unidadeId,
+  situacao,
+  onMudou,
+}: {
+  unidadeId: string;
+  situacao: Situacao;
+  onMudou: (r: SitePainel) => void;
+}) {
+  const [valor, setValor] = useState('');
+  const [ocupado, setOcupado] = useState<'ligar' | 'conferir' | 'tirar' | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [conferido, setConferido] = useState(false);
+  const alvo = typeof window === 'undefined' ? '' : window.location.hostname;
+
+  async function chamar(tipo: 'ligar' | 'conferir' | 'tirar', fn: () => Promise<SitePainel>) {
+    setOcupado(tipo);
+    setErro(null);
+    try {
+      const r = await fn();
+      onMudou(r);
+      if (tipo === 'conferir') setConferido(true);
+      if (tipo === 'ligar') setValor('');
+    } catch (e) {
+      setErro(mensagemDe(e));
+    } finally {
+      setOcupado(null);
+    }
+  }
+  const ligar = () =>
+    chamar('ligar', () =>
+      api<SitePainel>(`unidades/${unidadeId}/site/dominio`, {
+        metodo: 'PUT',
+        corpo: { dominio: valor },
+      }),
+    );
+  const conferir = () =>
+    chamar('conferir', () =>
+      api<SitePainel>(`unidades/${unidadeId}/site/dominio/verificar`, { metodo: 'POST' }),
+    );
+  const tirar = () =>
+    chamar('tirar', () =>
+      api<SitePainel>(`unidades/${unidadeId}/site/dominio`, { metodo: 'DELETE' }),
+    );
+
+  return (
+    <section
+      aria-label="Domínio próprio"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 className="font-semibold">Domínio próprio</h2>
+      {!situacao.dominio ? (
+        <>
+          <p className="text-sm text-tinta-suave">
+            Tem um endereço só da barbearia, como barbeariadocarlos.com.br? Ligue aqui e o site abre
+            nele, com o cadeado de site seguro. É opcional.
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <Campo
+                id="dominio-proprio"
+                rotulo="Domínio"
+                placeholder="barbeariadocarlos.com.br"
+                value={valor}
+                maxLength={260}
+                onChange={(e) => {
+                  setErro(null);
+                  setValor(e.target.value);
+                }}
+                erro={erro ?? undefined}
+              />
+            </div>
+            <Botao
+              variante="secundario"
+              onClick={ligar}
+              carregando={ocupado === 'ligar'}
+              disabled={!valor.trim()}
+            >
+              Ligar domínio
+            </Botao>
+          </div>
+        </>
+      ) : situacao.dominioVerificado ? (
+        <>
+          <p>
+            {situacao.publicado ? (
+              <>
+                No ar em{' '}
+                <a
+                  href={`https://${situacao.dominio}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold underline"
+                >
+                  {situacao.dominio}
+                  <span className="sr-only"> (abre em outra aba)</span>
+                </a>
+                .
+              </>
+            ) : (
+              <>{situacao.dominio} está pronto. O site abre nele assim que você publicar.</>
+            )}
+          </p>
+          <p className="text-sm text-tinta-suave">
+            No domínio, /servicos, /equipe e /contato são as páginas do site, e /agendar é o
+            agendamento. No primeiro acesso, o cadeado pode levar alguns segundos.
+          </p>
+          <Botao
+            variante="fantasma"
+            className="self-start"
+            onClick={tirar}
+            carregando={ocupado === 'tirar'}
+          >
+            Tirar domínio
+          </Botao>
+        </>
+      ) : (
+        <>
+          <p>
+            <strong>{situacao.dominio}</strong>: esperando o DNS apontar para o Pente Fino.
+          </p>
+          <div className="flex flex-col gap-1 rounded-md bg-superficie-2 p-3 text-sm">
+            <p>
+              No site onde você comprou o domínio (Registro.br, GoDaddy, Hostinger…), na parte de
+              DNS, crie:
+            </p>
+            <ul className="list-disc pl-5">
+              {situacao.dominioIps.length > 0 ? (
+                <li>
+                  um registro <strong>A</strong> em <strong>{situacao.dominio}</strong> apontando
+                  para <strong className="break-all">{situacao.dominioIps.join(' e ')}</strong>;
+                </li>
+              ) : null}
+              <li>
+                um registro <strong>CNAME</strong> em <strong>www</strong> apontando para{' '}
+                <strong className="break-all">{alvo}</strong>.
+              </li>
+            </ul>
+            <p className="text-tinta-suave">
+              A mudança costuma valer em minutos, mas pode levar até um dia.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Botao variante="secundario" onClick={conferir} carregando={ocupado === 'conferir'}>
+              Conferir agora
+            </Botao>
+            <Botao variante="fantasma" onClick={tirar} carregando={ocupado === 'tirar'}>
+              Tirar domínio
+            </Botao>
+          </div>
+          <p className="text-sm text-tinta-suave" aria-live="polite">
+            {conferido && !situacao.dominioVerificado
+              ? 'Ainda não aponta para o Pente Fino. Confira o registro e tente de novo daqui a pouco.'
+              : ''}
+          </p>
+        </>
+      )}
+      {erro && situacao.dominio && <Aviso tom="erro">{erro}</Aviso>}
     </section>
   );
 }

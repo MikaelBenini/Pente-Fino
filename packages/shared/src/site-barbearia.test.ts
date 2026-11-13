@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCOS_SITE,
+  dominioSchema,
+  normalizarDominio,
   NOME_ARQUIVO_FOTO,
   envioFotoSchema,
   fotosDoSite,
@@ -243,5 +245,21 @@ describe('fotos do site (lote 7c)', () => {
     expect(
       envioFotoSchema.safeParse({ tipo: 'image/jpeg', dados: 'A'.repeat(1_000_000) }).success,
     ).toBe(false);
+  });
+});
+
+describe('domínio próprio (lote 7e)', () => {
+  it('normaliza o que o dono escreve e recusa o que não é domínio', () => {
+    expect(normalizarDominio('https://www.BarbeariaDoCarlos.com.br/servicos?x=1')).toBe(
+      'barbeariadocarlos.com.br',
+    );
+    expect(normalizarDominio('agendar.barbearia.com:443')).toBe('agendar.barbearia.com');
+    expect(normalizarDominio('barbearia')).toBeNull();
+    expect(normalizarDominio('barbearia com.br')).toBeNull();
+    expect(normalizarDominio('-ruim.com')).toBeNull();
+    expect(dominioSchema.safeParse({ dominio: 'Navalha.com.br' }).data).toEqual({
+      dominio: 'navalha.com.br',
+    });
+    expect(dominioSchema.safeParse({ dominio: 'nada' }).success).toBe(false);
   });
 });

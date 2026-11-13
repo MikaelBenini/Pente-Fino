@@ -78,11 +78,19 @@ function IconeInstagram({ className }: { className?: string }) {
 interface Props {
   dados: SitePublico;
   pagina: PaginaSite;
-  /** Começo dos links do site: "/b/<slug>". */
+  /** Começo dos links do site: "/s/<endereço>", ou "" no domínio próprio da barbearia. */
   base: string;
+  /** Para onde vão os botões "Agendar": o link /b/<link>, ou /agendar no domínio próprio. */
+  agendar?: string;
 }
 
-export function SiteDaBarbearia({ dados, pagina, base }: Props) {
+/** Dados do site com o destino do "Agendar" já resolvido (lote 7e). */
+type DadosDoSite = SitePublico & { linkAgendar?: string };
+const linkAgendar = (dados: SitePublico) =>
+  (dados as DadosDoSite).linkAgendar ?? caminhoDoAgendamento(dados.slugAgendamento);
+
+export function SiteDaBarbearia({ dados: brutos, pagina, base, agendar }: Props) {
+  const dados: DadosDoSite = agendar ? { ...brutos, linkAgendar: agendar } : brutos;
   const { site } = dados;
   const blocos = blocosVisiveis(site, pagina);
   const estilo = {
@@ -160,11 +168,11 @@ function Foto({
 function Cabecalho({ dados, pagina, base }: Props) {
   const links = PAGINAS_SITE.map((p) => ({
     p,
-    href: `${base}${CAMINHO_PAGINA[p]}`,
+    href: `${base}${CAMINHO_PAGINA[p]}` || '/',
     rotulo: ROTULO_PAGINA[p],
   }));
   const agendar = (
-    <Link href={caminhoDoAgendamento(dados.slugAgendamento)} className={BOTAO_DESTAQUE}>
+    <Link href={linkAgendar(dados)} className={BOTAO_DESTAQUE}>
       Agendar horário
     </Link>
   );
@@ -307,10 +315,7 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
           </p>
         )}
         <div className="flex flex-wrap gap-3">
-          <Link
-            href={caminhoDoAgendamento(dados.slugAgendamento)}
-            className={`${BOTAO_DESTAQUE} text-[18px]`}
-          >
+          <Link href={linkAgendar(dados)} className={`${BOTAO_DESTAQUE} text-[18px]`}>
             Agendar horário
           </Link>
           <Link
@@ -447,7 +452,7 @@ function ServicosDestaque({
               <p className="text-[#4C554F]">{duracao(s.duracaoMin)}</p>
               <p className={`${TITULO} text-[36px] leading-none`}>{formatarMoeda(s.preco)}</p>
               <Link
-                href={caminhoDoAgendamento(dados.slugAgendamento)}
+                href={linkAgendar(dados)}
                 className="mt-1 font-semibold text-[#1F5135] underline-offset-4 hover:underline"
               >
                 Agendar {s.nome.toLowerCase()}
@@ -626,7 +631,7 @@ function TabelaServicos({ dados }: { dados: SitePublico }) {
                     {formatarMoeda(s.preco)}
                   </span>
                   <Link
-                    href={caminhoDoAgendamento(dados.slugAgendamento)}
+                    href={linkAgendar(dados)}
                     aria-label={`Agendar ${s.nome}`}
                     className={`${BOTAO} border border-[#1F5135] px-4 py-2 text-[#1F5135] focus-visible:outline-[#1F5135]`}
                   >
@@ -676,7 +681,7 @@ function Barbeiros({ dados }: { dados: SitePublico }) {
               <p className="max-w-[32em] whitespace-pre-line text-[#3E4842]">{p.sobre}</p>
             )}
             <Link
-              href={caminhoDoAgendamento(dados.slugAgendamento)}
+              href={linkAgendar(dados)}
               className={`${BOTAO} self-start bg-[#14271C] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
             >
               Agendar com {p.nome}
@@ -798,7 +803,7 @@ function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }
           {bloco.texto && <p className="mt-1.5 whitespace-pre-line">{bloco.texto}</p>}
         </div>
         <Link
-          href={caminhoDoAgendamento(dados.slugAgendamento)}
+          href={linkAgendar(dados)}
           className={`${BOTAO} bg-[#14271C] text-[18px] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
         >
           Agendar horário

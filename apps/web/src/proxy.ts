@@ -1,5 +1,46 @@
+import type { DominioPublico } from '@pente-fino/shared';
 import { type NextRequest, NextResponse } from 'next/server';
+import { CABECALHO_DOMINIO, ehHostDoPenteFino, rotaNoDominio } from './lib/dominio-proprio';
 import { ehRotaDoApp } from './lib/rotas';
+
+/** Domínios próprios já consultados (um minuto): o proxy não pergunta à API a cada pedido. */
+const DOMINIOS = new Map<string, { mapa: DominioPublico | null; ate: number }>();
+
+async function mapaDoDominio(host: string): Promise<DominioPublico | null> {
+  const chave = host.toLowerCase().replace(/:\d+$/, '');
+  const guardado = DOMINIOS.get(chave);
+  if (guardado && guardado.ate > Date.now()) return guardado.mapa;
+  let mapa: DominioPublico | null = null;
+  try {
+    const api = (process.env.API_URL ?? '').replace(/\/$/, '');
+    const r = await fetch(`${api}/publico/dominio/${encodeURIComponent(chave)}`);
+    mapa = r.ok ? ((await r.json()) as DominioPublico) : null;
+  } catch {
+    mapa = null;
+  }
+  if (DOMINIOS.size > 5000) DOMINIOS.clear();
+  DOMINIOS.set(chave, { mapa, ate: Date.now() + 60_000 });
+  return mapa;
+}
+
+/** Pedido pelo domínio da barbearia (lote 7e): site, páginas e /agendar; o resto, ao Pente Fino. */
+async function noDominio(req: NextRequest, host: string): Promise<NextResponse> {
+  const mapa = await mapaDoDominio(host);
+  if (!mapa)
+    return new NextResponse('Este domínio ainda não está ligado a um site.', { status: 404 });
+  const { pathname, search } = req.nextUrl;
+  const rota = rotaNoDominio(pathname, mapa);
+  if (rota.tipo === 'passar') return NextResponse.next();
+  if (rota.tipo === 'levar') {
+    const principal = process.env.APP_URL ?? 'https://seupentefino.com.br';
+    return NextResponse.redirect(new URL(`${rota.caminho}${search}`, principal));
+  }
+  const cabecalhos = new Headers(req.headers);
+  cabecalhos.set(CABECALHO_DOMINIO, host.toLowerCase().replace(/:\d+$/, ''));
+  return NextResponse.rewrite(new URL(`${rota.caminho}${search}`, req.url), {
+    request: { headers: cabecalhos },
+  });
+}
 
 /** Telas sem login. Convite e redefinição abrem mesmo com sessão (o link vem por e-mail). */
 const PUBLICAS = [
@@ -30,7 +71,9 @@ const SITE = '/';
  * Checagem otimista: só olha se existe o cookie de sessão. Quem decide se a sessão
  * vale é a API (o /api renova ou apaga o cookie).
  */
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
+  const host = req.headers.get('host') ?? '';
+  if (host && !ehHostDoPenteFino(host, process.env.APP_URL)) return noDominio(req, host);
   const { pathname, search } = req.nextUrl;
   const temSessao = req.cookies.has('pf_sessao');
   if (pathname === SITE) {

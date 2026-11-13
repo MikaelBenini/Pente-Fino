@@ -26,6 +26,8 @@ const PUBLICAS = new Set([
   'GET /publico/cupom/:codigo',
   'GET /publico/horario/:token',
   'GET /publico/horario/:token/horarios',
+  'GET /publico/dominio-liberado', // o Caddy pergunta antes do certificado: só sim ou não
+  'GET /publico/dominio/:host', // só os dois endereços da unidade do domínio conferido
   'GET /publico/endereco-antigo/:tipo/:slug', // só devolve o endereço atual
   'GET /publico/fotos/:arquivo', // fotos do site: o nome é o id (uuid) e o tamanho
   'GET /publico/site/:slug', // só o site que o dono publicou

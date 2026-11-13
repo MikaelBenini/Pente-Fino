@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (domínio próprio no site da barbearia)
+
+- Em "Minha página", o dono liga o domínio da barbearia (por exemplo, barbeariadocarlos.com.br). O painel mostra o registro que ele cria no DNS, onde comprou o domínio, e confere sozinho quando está apontado.
+- Conferido, o site abre no domínio com o cadeado de site seguro, emitido na hora. No domínio, `/servicos`, `/equipe` e `/contato` são as páginas, e `/agendar` é o agendamento.
+- O site continua também no endereço do Pente Fino (`/s/<endereço>`).
+
 ### Corrigido (site e link de agendamento em endereços separados)
 
 - O site da barbearia ganhou endereço próprio, `/s/<endereço>`, separado do link de agendamento (`/b/<link>`). Trocar o link em Configurações não muda mais o site, e os botões "Agendar" do site sempre levam ao link atual.

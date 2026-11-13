@@ -80,6 +80,18 @@ dia e o `restaurar.sh` devolve. Foto trocada ou tirada do site continua no disco
 limpeza das fotos sem uso fica para depois. O site entrega em `/f/<id>-<tamanho>.webp`, com cache
 de um ano no navegador.
 
+## Domínio próprio das barbearias
+
+Desde o lote 7e da seção 7, o dono liga o domínio dele em "Minha página". A API confere o DNS
+(`DOMINIO_VERIFICACAO=dns`, padrão): o registro A do domínio (ou do www) tem de bater com os IPs
+de `DOMINIO_ALVO`, que por padrão é o host do `APP_URL`, ou o www tem de ser um CNAME para ele. No
+Caddyfile, o bloco `https://` pega qualquer outro endereço com `tls on_demand`, e o certificado só
+sai depois de o Caddy perguntar a `http://api:3001/publico/dominio-liberado?domain=...` (domínio
+cadastrado, conferido e com o site publicado). No servidor, a web reescreve: a raiz e
+`/servicos`, `/equipe` e `/contato` são o site; `/agendar` é o agendamento; o resto (login,
+painel) vai para o endereço principal. Nada a configurar além de abrir as portas 80 e 443, que
+já estão abertas.
+
 ## Atualizar e voltar versão (rollback)
 
 - `./atualizar.sh` — versão do `.env` (`TAG`, padrão `latest`: o último merge na `main`).

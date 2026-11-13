@@ -55,6 +55,10 @@ const esquema = z
     CADASTRO_TEMPO_MINIMO_MS: z.coerce.number().int().min(0).default(2500),
     CADASTRO_LIMITE_POR_HORA: z.coerce.number().int().positive().default(3),
     CADASTRO_LIMITE_POR_DIA: z.coerce.number().int().positive().default(10),
+    /** Domínio próprio (lote 7e): dns confere de verdade; falso aceita só domínio ".teste". */
+    DOMINIO_VERIFICACAO: z.enum(['dns', 'falso']).default('dns'),
+    /** Para onde o domínio da barbearia deve apontar; padrão: o host do APP_URL. */
+    DOMINIO_ALVO: z.string().optional(),
     /** Pasta das fotos do site da barbearia (lote 7c). Em produção, um volume com backup. */
     FOTOS_DIR: z.string().min(1).default('.dados/fotos'),
     /** Requisições por minuto por IP em qualquer rota (o teste de carga sobe este número). */
@@ -171,6 +175,8 @@ export interface Configuracao {
   vapidChavePublica: string | null;
   /** Pasta absoluta das fotos do site (FOTOS_DIR). */
   fotosDir: string;
+  /** Domínio próprio das barbearias (lote 7e). */
+  dominio: { verificacao: 'dns' | 'falso'; alvo: string };
 }
 
 export const CONFIGURACAO = Symbol('CONFIGURACAO');
@@ -227,5 +233,9 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
     },
     vapidChavePublica: e.VAPID_CHAVE_PUBLICA || null,
     fotosDir: resolve(e.FOTOS_DIR),
+    dominio: {
+      verificacao: e.DOMINIO_VERIFICACAO,
+      alvo: e.DOMINIO_ALVO || new URL(e.APP_URL).hostname,
+    },
   };
 }
