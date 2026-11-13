@@ -175,6 +175,8 @@ export class AdminController {
         descontoBp: c.desconto_bp,
         interna: c.interna,
         cortesiaAte: c.cortesia_ate?.toISOString().slice(0, 10) ?? null,
+        // Admin F2: contas novas por origem, com o mesmo resumo da lista de Contas.
+        origem: resumoDaOrigem(origemCadastroSchema.safeParse(c.origem).data),
       })),
       tabelas: await this.precos.tabelas(),
       faturas: faturas.map((f) => ({

@@ -228,7 +228,33 @@ export function MetricasAdmin({ onIrPara }: { onIrPara: (aba: string) => void })
                 />
               </dl>
               <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
-                <NovasPorDia dias={d.novas.porDia} rotulo={noPeriodo} />
+                <div className="flex flex-col gap-3">
+                  <NovasPorDia dias={d.novas.porDia} rotulo={noPeriodo} />
+                  {/* Admin F2: de onde vieram as contas novas do período. */}
+                  <section
+                    aria-labelledby="titulo-novas-origem"
+                    className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-4"
+                  >
+                    <h3
+                      id="titulo-novas-origem"
+                      className="text-xs font-semibold uppercase tracking-wider text-tinta-suave"
+                    >
+                      Contas novas por origem ({noPeriodo})
+                    </h3>
+                    {d.novas.porOrigem.length === 0 ? (
+                      <p className="text-sm text-tinta-suave">Nenhuma conta nova no período.</p>
+                    ) : (
+                      <ul className="flex flex-col gap-1 text-sm">
+                        {d.novas.porOrigem.map((o) => (
+                          <li key={o.origem} className="flex justify-between gap-3">
+                            <span>{o.origem}</span>
+                            <span className="tabular-nums">{o.contas}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                </div>
                 <div className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                     Contas por situação

@@ -173,7 +173,7 @@ U2 a U5 já feitos (#161).
 - [x] **D2** Scripts de terceiros carregados depois da página, sem gtag duplicado (12/11: só o GTM; **dono:** conferir no Tag Assistant que a conversão continua chegando)
 - [x] **D4** Contraste AA e foco visível no site (12/11: foco geral, tabelas roláveis pelo teclado e auditoria axe no site)
 - [x] Lote 5e (D1, D2, D4): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 5e)
+- [x] Merge pelo dono (lote 5e)
 - [ ] **Contato e rodapé**: sem CNPJ por enquanto (o dono é MEI); falta o que está na pergunta
   P13
 
@@ -184,9 +184,15 @@ U2 a U5 já feitos (#161).
   - a próxima etapa aparece na ficha da conta;
   - registro no CHANGELOG.
 - [x] Lote 6a (F1): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 6a)
-- [ ] **F2** Origem do cadastro: conferir o que falta (a origem já é gravada e aparece na ficha e
-  em Vendas, #160 e #161)
+- [x] Merge pelo dono (lote 6a)
+- [x] **F2** Origem do cadastro (12/11):
+  - já gravada e mostrada na ficha, nas Contas e em Vendas (#160 e #161);
+  - faltava "contas novas por origem" no Início, que foi feito;
+  - a exportação de conversões offline para o Google Ads, opcional, ficou nas pendências do dono:
+    precisa de credenciais da API do Google Ads;
+  - registro no CHANGELOG.
+- [x] Lote 6b (F2 e anotação das sugestões F1b a F1d): bateria verde e PR aberto (12/11)
+- [x] Merge pelo dono (lote 6b)
 - [x] **F3** Alertas para a equipe (12/11):
   - e-mail de hora em hora, pela rotina do worker, com os sete tipos do plano;
   - cada pessoa escolhe os seus em "Meus alertas por e-mail", no Início;
@@ -208,6 +214,12 @@ U2 a U5 já feitos (#161).
     `/admin` instalado), para atender sem estar no computador.
   - Substitui o WhatsApp de suporte no site e na Ajuda.
 - [ ] **F7** Métricas de SaaS (churn, MRR por tipo, LTV, coortes)
+- [ ] **F1b** Equipe da administração: membros desativados escondidos por padrão, com o botão
+  "Mostrar desativados" (sugestão aprovada em 12/11)
+- [ ] **F1c** Lista de Contas com filtro por etapa do funil, por exemplo "parou no 1º
+  agendamento" (sugestão aprovada em 12/11)
+- [ ] **F1d** E-mail automático para a conta parada há 3 dias na mesma etapa do funil, com o link
+  do passo que falta (sugestão aprovada em 12/11; junto com a F3)
 - [ ] **F8** Aviso geral segmentado
 - [ ] **F9** Gestão de cupons
 
@@ -279,6 +291,9 @@ Resposta:
 - [ ] Depoimentos reais (pelo menos dois, autorizados)
 - [ ] DNS AAAA / IPv6, se a Saúde do sistema avisar
 - [ ] Tag Assistant e o valor da conversão no Google Ads
+- [ ] Se quiser conversões offline (quem pagou depois do teste) no Google Ads: criar o acesso à API
+  do Google Ads (token de desenvolvedor e conta de serviço) e guardar só no servidor (admin F2,
+  opcional)
 - [ ] Ligar "Aparecer no Google" em cada unidade
 - [ ] Limpar a comanda de teste e o caixa de 11/11 em produção
 - [ ] Webhook do Asaas em teste: porta 3001 do Codespaces em `/webhooks/asaas`, pública só
