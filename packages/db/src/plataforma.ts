@@ -300,3 +300,13 @@ export function paginasDeBarbeariaNoGoogle(prisma: PrismaClient) {
   return prisma.$queryRaw<{ slug: string; atualizado_em: Date }[]>`
     SELECT * FROM paginas_de_barbearia_no_google()`;
 }
+
+/** Admin F5: até quando o dono liberou o acesso de suporte (null = não liberou). */
+export async function suporteLiberadoDaConta(
+  prisma: PrismaClient,
+  contaId: string,
+): Promise<{ nome: string; liberadoAte: Date | null } | null> {
+  const [r] = await prisma.$queryRaw<{ nome: string; liberado_ate: Date | null }[]>`
+    SELECT * FROM plataforma_suporte_liberado(${contaId}::uuid)`;
+  return r ? { nome: r.nome, liberadoAte: r.liberado_ate } : null;
+}

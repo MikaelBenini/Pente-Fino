@@ -27,6 +27,7 @@ import {
 } from '@pente-fino/ui';
 import { CalendarOff, MapPin, Phone, Plus, Store } from 'lucide-react';
 import { useState } from 'react';
+import { AcessoSuporte } from './acesso-suporte';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'next/navigation';
 import { z } from 'zod';
@@ -42,12 +43,12 @@ import { ImportarPlanilha, LinkAgendamento } from './link-e-importacao';
 
 export function TelaConfiguracoes() {
   const { papeis } = useApp();
-  // Avisos do painel abrem direto na aba (?aba=assinatura, ?aba=link).
+  // Avisos do painel abrem direto na aba (?aba=assinatura, ?aba=link, ?aba=suporte).
   const abaDoLink = useSearchParams().get('aba');
   const ehDono = papeis.includes('dono');
   const [aba, setAba] = useState(
-    abaDoLink === 'assinatura' && ehDono
-      ? 'assinatura'
+    (abaDoLink === 'assinatura' || abaDoLink === 'suporte') && ehDono
+      ? abaDoLink
       : abaDoLink === 'link'
         ? 'link'
         : 'barbearia',
@@ -69,6 +70,7 @@ export function TelaConfiguracoes() {
             ? [
                 { id: 'importar', rotulo: 'Importar planilha', conteudo: <ImportarPlanilha /> },
                 { id: 'assinatura', rotulo: 'Assinatura', conteudo: <Assinatura /> },
+                { id: 'suporte', rotulo: 'Acesso do suporte', conteudo: <AcessoSuporte /> },
               ]
             : []),
         ]}

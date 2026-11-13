@@ -116,7 +116,18 @@ export class AuthService {
   }
 
   async eu(): Promise<UsuarioSessao> {
-    const { id } = Contexto.usuario();
+    const { id, contaId, suporte } = Contexto.usuario();
+    // Admin F5: a sessão de suporte não é um usuário da barbearia.
+    if (suporte)
+      return {
+        id,
+        nome: `Suporte Pente Fino (${suporte.nome})`,
+        email: '',
+        contaId,
+        papeis: [{ papel: 'dono', unidadeId: null }],
+        emailConfirmado: true,
+        modoSuporte: { nome: suporte.nome, ate: suporte.ate },
+      };
     return this.banco.daConta(async (tx) => this.usuarioSessao(tx, id));
   }
 

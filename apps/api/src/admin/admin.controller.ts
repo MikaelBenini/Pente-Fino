@@ -40,6 +40,7 @@ import {
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
+  type SessaoSuporteAberta,
   dataLocal,
   saudeDaConta,
   TOTAL_PASSOS_ATIVACAO,
@@ -249,6 +250,18 @@ export class AdminController {
           ),
         }),
       );
+  }
+
+  @Post('contas/:id/suporte')
+  @PapeisPlataforma('admin', 'suporte')
+  @ApiOperation({
+    summary: 'Abrir o painel da barbearia em modo suporte, só leitura (admin F5)',
+  })
+  abrirSuporte(
+    @Param('id', ParseUUIDPipe) id: string,
+    @AdminAtual() a: AdminAutenticado,
+  ): Promise<SessaoSuporteAberta> {
+    return this.contasServico.abrirSuporte(id, a);
   }
 
   @Get('contas/:id')

@@ -39,6 +39,37 @@ export function gravarSessao(
   });
 }
 
+/** Admin F5: valor do cookie de sessão quando é uma sessão de suporte (sem renovação). */
+export const SESSAO_SUPORTE = 'suporte';
+
+/**
+ * Admin F5: sessão de suporte, só com o token de acesso (a API confere e recusa gravação). Os
+ * dois cookies valem até o token vencer; sem renovação, depois disso a sessão acaba.
+ */
+export function gravarSessaoSuporte(
+  req: NextRequest,
+  res: NextResponse,
+  token: string,
+  segundos: number,
+) {
+  const base = { httpOnly: true, sameSite: 'lax' as const, secure: seguro(req), maxAge: segundos };
+  res.cookies.set(COOKIE_ACESSO, token, { ...base, path: '/api' });
+  res.cookies.set(COOKIE_SESSAO, SESSAO_SUPORTE, { ...base, path: '/' });
+}
+
+/** Segundos até o JWT vencer (sem conferir a assinatura: quem confere é a API); 0 = inválido. */
+export function segundosAteVencer(token: string): number {
+  try {
+    const carga = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString()) as {
+      exp?: unknown;
+    };
+    if (typeof carga.exp !== 'number') return 0;
+    return Math.max(0, Math.min(3600, Math.floor(carga.exp - Date.now() / 1000)));
+  } catch {
+    return 0;
+  }
+}
+
 /** Apaga com os mesmos atributos da gravação (alguns navegadores exigem para trocar cookie Secure). */
 export function apagarSessao(res: NextResponse, req?: NextRequest) {
   const base = { httpOnly: true, sameSite: 'lax' as const, secure: req ? seguro(req) : false };
