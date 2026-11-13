@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
+import { AvaliarChat } from '../avaliar-chat';
 import { Aviso } from '../aviso';
 
 export function ChatAjuda() {
@@ -55,6 +56,15 @@ export function ChatAjuda() {
             ? avisoDoChat(d)
             : 'Sua última conversa foi encerrada. Escreva para começar outra.'}
         </p>
+      )}
+      {d && d.status === 'encerrada' && (
+        <AvaliarChat
+          avaliacao={d.avaliacao}
+          onAvaliar={async (util) => {
+            await api('chat/minha/avaliacao', { corpo: { util } });
+            await q.refetch();
+          }}
+        />
       )}
       {d && d.mensagens.length > 0 && (
         <ol

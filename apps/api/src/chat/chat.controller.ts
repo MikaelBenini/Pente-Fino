@@ -15,7 +15,10 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  avaliarChatSchema,
   iniciarChatSchema,
+  type AvaliarChatEntrada,
+  type RespostaPronta,
   mensagemChatSchema,
   type ChatDoVisitante,
   type ChatIniciado,
@@ -55,6 +58,18 @@ export class ChatPublicoController {
     return this.chat.doVisitanteParaTela(id, token);
   }
 
+  @Post('conversas/:id/avaliacao')
+  @LimiteAutenticacao()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Avaliar a conversa encerrada: foi útil? (visitante)' })
+  avaliar(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(avaliarChatSchema) d: AvaliarChatEntrada,
+    @Headers('x-chat-token') token?: string,
+  ): Promise<void> {
+    return this.chat.avaliarComToken(id, token, d.util);
+  }
+
   @Post('conversas/:id/mensagens')
   @LimiteAutenticacao()
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -85,6 +100,13 @@ export class AdminChatController {
     if (status && !['fila', 'atendendo', 'encerrada'].includes(status))
       throw Erros.requisicaoInvalida('status_invalido', 'Situação inválida.');
     return this.chat.lista(status as StatusChat | undefined);
+  }
+
+  @Get('respostas')
+  @PapeisPlataforma(...PAPEIS_CHAT)
+  @ApiOperation({ summary: 'Respostas prontas, com os preços e os dias de teste atuais' })
+  respostas(): Promise<RespostaPronta[]> {
+    return this.chat.respostas();
   }
 
   @Get('resumo')

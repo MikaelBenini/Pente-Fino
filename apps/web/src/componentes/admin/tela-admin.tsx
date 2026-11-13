@@ -250,7 +250,7 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     {
       id: 'chat',
       rotulo: esperandoChat ? `Chat (${esperandoChat})` : 'Chat',
-      conteudo: <ChatAdmin u={u} />,
+      conteudo: <ChatAdmin u={u} onAbrirConta={setAberta} />,
     },
     {
       id: 'contas',

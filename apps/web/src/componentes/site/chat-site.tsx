@@ -11,6 +11,7 @@ import {
 } from '@pente-fino/shared';
 import { MessageCircle, Send, X } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { AvaliarChat } from '../avaliar-chat';
 import { eventoGoogle } from './tag-google';
 
 const CHAVE = 'pf-chat';
@@ -287,7 +288,15 @@ export function ChatSite() {
                 ))}
               </ol>
               {dados?.status === 'encerrada' ? (
-                <div className="border-t border-borda p-3">
+                <div className="flex flex-col gap-3 border-t border-borda p-3">
+                  <AvaliarChat
+                    avaliacao={dados.avaliacao}
+                    onAvaliar={async (util) => {
+                      if (!conversa) return;
+                      await chamar(`conversas/${conversa.id}/avaliacao`, conversa.token, { util });
+                      await atualizar(conversa);
+                    }}
+                  />
                   <button
                     type="button"
                     onClick={novaConversa}

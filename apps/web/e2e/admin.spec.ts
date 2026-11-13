@@ -212,6 +212,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
 
   // Configurações: aviso geral (vale 15 min) aparece para a barbearia; saúde do sistema.
   await page.getByRole('tab', { name: 'Configurações' }).click();
+  // Respostas prontas do chat: editáveis, começando pelas de fábrica.
+  await expect(
+    page.getByRole('region', { name: 'Respostas prontas do chat' }).getByLabel('Título').first(),
+  ).toHaveValue('Preço dos planos');
   const avisoGeral = page.getByRole('region', { name: 'Aviso geral' });
   const local = (ms: number) => new Date(ms - 3 * 3_600_000).toISOString().slice(0, 16);
   await avisoGeral.getByLabel('Texto').fill(`Novidade do teste ${sufixoVenda}`);

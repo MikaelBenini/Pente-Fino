@@ -3,12 +3,9 @@
 // Admin F6: o chat do site na administração. Fila e em atendimento à esquerda; a conversa aberta
 // à direita, com assumir, responder e encerrar. Atualiza a cada poucos segundos.
 import {
-  DIAS_TESTE,
   formatarDataHora,
-  formatarMoeda,
-  precoPorMes,
-  respostasProntasDoChat,
   type ConversaDaEquipe,
+  type RespostaPronta,
   type ConversaNaFila,
   type ResumoDoChat,
   type UsuarioPlataformaSessao,
@@ -33,13 +30,6 @@ function linkWhatsapp(contato: string): string | null {
   if (d.length < 10) return null;
   return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`;
 }
-
-const RESPOSTAS = respostasProntasDoChat({
-  diasTeste: DIAS_TESTE,
-  basico: formatarMoeda(precoPorMes('basico', 'mensal')),
-  pro: formatarMoeda(precoPorMes('pro', 'mensal')),
-  premium: formatarMoeda(precoPorMes('premium', 'mensal')),
-});
 
 /** Bipe curto (sem arquivo de som): avisa conversa ou mensagem nova. */
 function bipe() {
@@ -134,7 +124,7 @@ function ResumoChat() {
   return (
     <dl
       aria-label="Chat nos últimos 30 dias"
-      className="grid gap-3 rounded-lg border border-borda bg-superficie p-4 sm:grid-cols-3"
+      className="grid gap-3 rounded-lg border border-borda bg-superficie p-4 sm:grid-cols-2 lg:grid-cols-4"
     >
       <div>
         <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
@@ -155,6 +145,17 @@ function ResumoChat() {
       </div>
       <div>
         <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+          Acharam útil
+        </dt>
+        <dd className="text-2xl font-semibold tabular-nums">
+          {d.avaliadas ? `${Math.round((d.uteis / d.avaliadas) * 100)}%` : '—'}
+          <span className="ml-2 text-sm font-normal text-tinta-suave">
+            {d.avaliadas} {d.avaliadas === 1 ? 'avaliação' : 'avaliações'}
+          </span>
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
           1ª resposta, em média
         </dt>
         <dd className="text-2xl font-semibold tabular-nums">
@@ -170,7 +171,13 @@ function ResumoChat() {
   );
 }
 
-export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
+export function ChatAdmin({
+  u,
+  onAbrirConta,
+}: {
+  u: UsuarioPlataformaSessao;
+  onAbrirConta: (id: string) => void;
+}) {
   const cliente = useQueryClient();
   const [ver, setVer] = useState<'abertas' | 'encerrada'>('abertas');
   const [aberta, setAberta] = useState<string | null>(null);
@@ -277,7 +284,13 @@ export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
           }
         </Estado>
         {aberta ? (
-          <Conversa key={aberta} id={aberta} u={u} onMudou={atualizar} />
+          <Conversa
+            key={aberta}
+            id={aberta}
+            u={u}
+            onMudou={atualizar}
+            onAbrirConta={onAbrirConta}
+          />
         ) : (
           <p className="rounded-lg border border-dashed border-borda p-6 text-sm text-tinta-suave">
             Escolha uma conversa para ler e responder.
@@ -292,11 +305,18 @@ function Conversa({
   id,
   u,
   onMudou,
+  onAbrirConta,
 }: {
   id: string;
   u: UsuarioPlataformaSessao;
   onMudou: () => void;
+  onAbrirConta: (id: string) => void;
 }) {
+  const respostas = useQuery({
+    queryKey: ['admin', 'chat', 'respostas'],
+    queryFn: () => adminApi<RespostaPronta[]>('chat/respostas'),
+    staleTime: 5 * 60_000,
+  });
   const c = useQuery({
     queryKey: ['admin', 'chat', 'conversa', id],
     queryFn: () => adminApi<ConversaDaEquipe>(`chat/${id}`),
@@ -362,6 +382,30 @@ function Conversa({
                     <Ficha tom="acao">Virou cadastro: {d.virouConta.nome}</Ficha>
                   </p>
                 )}
+                {d.avaliacao !== null && (
+                  <p className="mt-1 text-sm">
+                    {d.avaliacao ? '👍 O visitante achou útil.' : '👎 O visitante não achou útil.'}
+                  </p>
+                )}
+                {/* Conversa da Ajuda: quem atende vê a conta sem procurar. */}
+                {d.contexto && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                    <span>
+                      {d.contexto.plano} · {d.contexto.status}
+                      {d.contexto.nota !== null && ` · saúde ${d.contexto.nota}`}
+                      {d.contexto.motivo && (
+                        <span className="text-tinta-suave"> ({d.contexto.motivo})</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onAbrirConta(d.contexto!.contaId)}
+                      className="font-semibold text-acao-texto underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-foco"
+                    >
+                      Abrir ficha da conta
+                    </button>
+                  </div>
+                )}
               </div>
               {d.status !== 'encerrada' && (
                 <div className="flex gap-2">
@@ -414,12 +458,12 @@ function Conversa({
                   rotulo="Resposta pronta"
                   value=""
                   onChange={(e) => {
-                    const r = RESPOSTAS.find((x) => x.titulo === e.target.value);
+                    const r = respostas.data?.find((x) => x.titulo === e.target.value);
                     if (r) setTexto(r.texto);
                   }}
                   opcoes={[
                     { valor: '', rotulo: 'Escolher…' },
-                    ...RESPOSTAS.map((r) => ({ valor: r.titulo, rotulo: r.titulo })),
+                    ...(respostas.data ?? []).map((r) => ({ valor: r.titulo, rotulo: r.titulo })),
                   ]}
                 />
                 <label className="sr-only" htmlFor={`resposta-${id}`}>

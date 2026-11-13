@@ -231,6 +231,14 @@ U2 a U5 já feitos (#161).
   - registro no CHANGELOG.
 - [x] Lote 6i (chat: Ajuda, respostas prontas, conversão e avisos): bateria verde e PR aberto (13/11)
 - [ ] Merge pelo dono (lote 6i)
+- [x] **Chat: sugestões aprovadas em 13/11**:
+  - contexto do cliente da Ajuda (plano, situação, saúde e "Abrir ficha");
+  - "Foi útil?" ao encerrar, com a média no resumo;
+  - respostas prontas editáveis em Configurações, com marcadores;
+  - registro no CHANGELOG.
+- [x] Lote 6j (chat: contexto, avaliação e respostas editáveis): bateria verde e PR aberto
+  (empilhado sobre o #186)
+- [ ] Merge pelo dono (lote 6j)
 - [ ] **F6, entrega 2 (o que falta)**: notificação no celular da equipe com o navegador fechado (push
   do PWA no `/admin`)
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):

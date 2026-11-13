@@ -36,6 +36,7 @@ const PUBLICAS = new Set([
   'POST /auth/renovar',
   'POST /auth/sair',
   'POST /chat/conversas', // chat do site: visitante começa (limite por IP)
+  'POST /chat/conversas/:id/avaliacao', // exige o segredo da conversa (limite por IP)
   'POST /chat/conversas/:id/mensagens', // exige o segredo da conversa (limite por IP)
   'POST /publico/agendamento/:slug',
   'POST /publico/agendamento/:slug/espera',
