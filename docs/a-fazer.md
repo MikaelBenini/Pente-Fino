@@ -363,14 +363,14 @@ U2 a U5 já feitos (#161).
   - pedidos do dono em 13/11 (depois dos endereços separados):
     - [ ] **Lote 7l** editar a página de agendamento (`/b/<link>`) no mesmo painel: cor,
       logotipo, foto de capa e textos, no mesmo visual do site;
-    - [ ] **Lote 7n** **Cabeçalho e rodapé editáveis** (pergunta do dono em 13/11; hoje só o logotipo, a
+    - [x] **Lote 7n** (13/11, documentado na linha de desenvolvimento) **Cabeçalho e rodapé editáveis** (pergunta do dono em 13/11; hoje só o logotipo, a
       frase do rodapé e o Instagram mudam): no cabeçalho, nome, só logotipo ou os dois, menu
       (renomear, esconder, reordenar) e o texto do botão principal; no rodapé, ligar e desligar
       cada coluna, texto livre (CNPJ, "aceitamos Pix"), links próprios e redes além do Instagram
       (Facebook, TikTok, YouTube, WhatsApp); decisão do dono (13/11): o cliente edita tudo, e a
       linha "Site e agenda pelo Pente Fino" é opcional (ligada por padrão, o dono desliga);
       junta com o lote 7m;
-    - [ ] **Lote 7m** botões com link no site: o dono põe botões próprios (texto e endereço, por
+    - [x] **Lote 7m** (13/11, junto com o 7n) botões com link no site: o dono põe botões próprios (texto e endereço, por
       exemplo cardápio de produtos ou Instagram) e, para quem quiser ir além, um CSS
       personalizado, aplicado só no site dele e filtrado (sem `@import`, sem `url()` de fora,
       sem `expression`), com um limite de tamanho;

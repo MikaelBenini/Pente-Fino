@@ -102,6 +102,13 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
     'true',
   );
 
+  // Lote 7n: cabeçalho e rodapé editáveis, inclusive a linha do Pente Fino.
+  await page.getByRole('tab', { name: 'Cabeçalho e rodapé' }).click();
+  await page.getByLabel('Texto do botão principal').fill('Marcar agora');
+  await page.getByLabel('Texto livre').fill('Aceitamos Pix e cartão.');
+  await page.getByText('Mostrar “Site e agenda pelo Pente Fino”').click();
+  await expect(page.getByLabel('Mostrar “Site e agenda pelo Pente Fino”')).not.toBeChecked();
+
   await expect(page.getByText('Rascunho salvo.')).toBeVisible({ timeout: 10_000 });
   await page.getByRole('button', { name: /^Publicar (página|alterações)$/ }).click();
   await expect(page.getByText('Publicado. O cliente já vê a página nova.')).toBeVisible();
@@ -113,6 +120,11 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
   const visitante = await (await browser.newContext()).newPage();
   await visitante.goto(siteDoTeste);
   await expect(visitante.getByRole('heading', { level: 1, name: titulo })).toBeVisible();
+  await expect(
+    visitante.getByRole('link', { name: 'Marcar agora' }).filter({ visible: true }).first(),
+  ).toBeVisible();
+  await expect(visitante.getByRole('contentinfo')).toContainText('Aceitamos Pix e cartão.');
+  await expect(visitante.getByText('Site e agenda pelo Pente Fino')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Tirar do ar' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Tirar do ar' }).click();

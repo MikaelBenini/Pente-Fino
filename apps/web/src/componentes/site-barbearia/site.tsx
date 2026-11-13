@@ -5,9 +5,12 @@ import {
   CAMINHO_PAGINA,
   caminhoDoAgendamento,
   CORES_SITE,
-  PAGINAS_SITE,
   ROTULO_PAGINA,
   blocosVisiveis,
+  cabecalhoDoSite,
+  limparCssSite,
+  rodapeDoSite,
+  urlDeLinkValida,
   formatarMoeda,
   linkDoMapa,
   servicosEmDestaque,
@@ -100,7 +103,7 @@ function AcaoPrincipal({ dados, className }: { dados: SitePublico; className: st
   if (temAgendamento(dados))
     return (
       <Link href={linkAgendar(dados)} className={className}>
-        Agendar horário
+        {cabecalhoDoSite(dados.site).botao || 'Agendar horário'}
       </Link>
     );
   if (dados.whatsapp)
@@ -122,11 +125,16 @@ export function SiteDaBarbearia({ dados: brutos, pagina, base, agendar }: Props)
     '--site-raio': RAIO[site.botoes],
   } as CSSProperties;
   const temH1 = blocos.some((b) => b.tipo === 'banner' || b.tipo === 'cabecalho');
+  const css = limparCssSite(site.css);
   return (
     <div
-      className={`${CLASSES_FONTES} @container min-h-dvh bg-[#F5F4F0] font-[family-name:var(--site-fonte-texto)] text-[17px] leading-relaxed text-[#1A221D]`}
+      className={`${CLASSES_FONTES} site-personalizado @container min-h-dvh bg-[#F5F4F0] font-[family-name:var(--site-fonte-texto)] text-[17px] leading-relaxed text-[#1A221D]`}
       style={estilo}
     >
+      {css && (
+        // CSS do dono, já limpo (limparCssSite) e preso ao site dele por aninhamento.
+        <style dangerouslySetInnerHTML={{ __html: `.site-personalizado{${css}}` }} />
+      )}
       <Cabecalho dados={dados} pagina={pagina} base={base} />
       <main>
         {!temH1 && (
@@ -189,31 +197,50 @@ function Foto({
 }
 
 function Cabecalho({ dados, pagina, base }: Props) {
-  const links = PAGINAS_SITE.map((p) => ({
-    p,
-    href: `${base}${CAMINHO_PAGINA[p]}` || '/',
-    rotulo: ROTULO_PAGINA[p],
-  }));
+  const config = cabecalhoDoSite(dados.site);
+  const links = config.menu
+    .filter((m) => m.visivel)
+    .map((m) => ({
+      p: m.pagina,
+      href: `${base}${CAMINHO_PAGINA[m.pagina]}` || '/',
+      rotulo: m.rotulo || ROTULO_PAGINA[m.pagina],
+    }));
+  const extras = config.links.map((l) => (
+    <a
+      key={l.url}
+      href={l.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex min-h-11 items-center px-3 text-[#C9D2CB] hover:text-white @3xl:min-h-0 @3xl:px-0 @3xl:py-1.5"
+    >
+      {l.rotulo}
+    </a>
+  ));
+  const mostraLogo = config.mostrar !== 'nome';
+  const mostraNome = config.mostrar !== 'logo' || !dados.site.logo;
   const agendar = <AcaoPrincipal dados={dados} className={BOTAO_DESTAQUE} />;
   return (
     <header className={`${VERDE} site-cabecalho sticky top-0 z-30 text-[#F2F1EC]`}>
       <div className={`${LARGURA} flex items-center justify-between gap-4 py-4`}>
         <Link href={base || '/'} className="flex min-h-11 items-center gap-3 text-[#F2F1EC]">
-          {dados.site.logo ? (
-            <Foto
-              id={dados.site.logo}
-              dados={dados}
-              alt=""
-              tamanhos="160px"
-              prioridade
-              className="h-11 w-auto max-w-[140px] object-contain"
-            />
-          ) : (
-            <Monograma nome={dados.barbearia} className="size-11 text-[22px]" />
+          {mostraLogo &&
+            (dados.site.logo ? (
+              <Foto
+                id={dados.site.logo}
+                dados={dados}
+                alt={mostraNome ? '' : dados.barbearia}
+                tamanhos="160px"
+                prioridade
+                className="h-11 w-auto max-w-[140px] object-contain"
+              />
+            ) : (
+              <Monograma nome={dados.barbearia} className="size-11 text-[22px]" />
+            ))}
+          {mostraNome && (
+            <span className={`${TITULO} line-clamp-2 text-[18px] leading-tight @2xl:text-[24px]`}>
+              {dados.barbearia}
+            </span>
           )}
-          <span className={`${TITULO} line-clamp-2 text-[18px] leading-tight @2xl:text-[24px]`}>
-            {dados.barbearia}
-          </span>
         </Link>
         <nav aria-label="Principal" className="hidden items-center gap-7 @3xl:flex">
           {links.map((l) => (
@@ -226,6 +253,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
               {l.rotulo}
             </Link>
           ))}
+          {extras}
           {agendar}
         </nav>
         <details className="group relative @3xl:hidden">
@@ -247,6 +275,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
                 {l.rotulo}
               </Link>
             ))}
+            {extras}
             <div className="mt-2">{agendar}</div>
           </nav>
         </details>
@@ -271,6 +300,8 @@ function Bloco({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
       return <Galeria bloco={bloco} dados={dados} />;
     case 'depoimentos':
       return <Depoimentos bloco={bloco} />;
+    case 'botoes':
+      return <BotoesComLink bloco={bloco} />;
     case 'cabecalho':
       return <CabecalhoPagina bloco={bloco} />;
     case 'tabela':
@@ -610,6 +641,33 @@ function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
   );
 }
 
+/** Botões próprios do dono com link (lote 7m): cardápio, loja, Instagram... */
+function BotoesComLink({ bloco }: { bloco: BlocoSite }) {
+  const itens = (bloco.itens ?? []).filter((i) => i.titulo && urlDeLinkValida(i.texto));
+  if (!itens.length) return null;
+  return (
+    <section
+      className={`${LARGURA} site-revelar flex flex-col items-center gap-6 py-16 text-center`}
+    >
+      {bloco.titulo && <Titulo2 className="text-[34px] @2xl:text-[44px]">{bloco.titulo}</Titulo2>}
+      <div className="flex flex-wrap justify-center gap-3">
+        {itens.map((i, n) => (
+          <a
+            key={`${i.texto}-${n}`}
+            href={i.texto}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${BOTAO} ${n === 0 ? 'bg-[#14271C] text-[#F2F1EC]' : 'border border-[#14271C] text-[#14271C]'} focus-visible:outline-[#14271C]`}
+          >
+            {i.titulo}
+            <span className="sr-only"> (abre em outra aba)</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Depoimentos({ bloco }: { bloco: BlocoSite }) {
   const itens = (bloco.itens ?? []).filter((i) => i.texto);
   if (!itens.length) return null;
@@ -883,6 +941,16 @@ function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }
 
 function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
   const link = 'text-[#C9D2CB] underline-offset-4 hover:text-white hover:underline';
+  const r = rodapeDoSite(dados.site);
+  const redes = [
+    dados.site.instagram
+      ? { nome: 'Instagram', url: `https://instagram.com/${dados.site.instagram}` }
+      : null,
+    r.facebook ? { nome: 'Facebook', url: r.facebook } : null,
+    r.tiktok ? { nome: 'TikTok', url: r.tiktok } : null,
+    r.youtube ? { nome: 'YouTube', url: r.youtube } : null,
+  ].filter((x): x is { nome: string; url: string } => x !== null);
+  const temContato = r.contato && (dados.whatsapp || redes.length > 0);
   return (
     <footer className="bg-[#0F1E15] text-[#C9D2CB]">
       <div
@@ -891,8 +959,9 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
         <div className="flex flex-col gap-2">
           <span className={`${TITULO} text-[24px] text-[#F2F1EC]`}>{dados.barbearia}</span>
           {dados.site.slogan && <span>{dados.site.slogan}</span>}
+          {r.texto && <span className="text-[14px] whitespace-pre-line">{r.texto}</span>}
         </div>
-        {dados.endereco && (
+        {r.endereco && dados.endereco && (
           <div className="flex flex-col gap-1.5">
             <strong className="text-[#F2F1EC]">Endereço</strong>
             <span>{dados.endereco}</span>
@@ -904,7 +973,7 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
             </Link>
           </div>
         )}
-        {dados.horario.some((h) => h.horario) && (
+        {r.horario && dados.horario.some((h) => h.horario) && (
           <div className="flex flex-col gap-1.5">
             <strong className="text-[#F2F1EC]">Horário</strong>
             {dados.horario
@@ -916,7 +985,7 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
               ))}
           </div>
         )}
-        {(dados.whatsapp || dados.site.instagram) && (
+        {temContato && (
           <div className="flex flex-col gap-1.5">
             <strong className="text-[#F2F1EC]">Fale com a gente</strong>
             {dados.whatsapp && (
@@ -924,16 +993,33 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
                 WhatsApp
               </a>
             )}
-            {dados.site.instagram && (
+            {redes.map((rede) => (
               <a
-                href={`https://instagram.com/${dados.site.instagram}`}
+                key={rede.nome}
+                href={rede.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={link}
               >
-                Instagram
+                {rede.nome}
               </a>
-            )}
+            ))}
+          </div>
+        )}
+        {r.links.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <strong className="text-[#F2F1EC]">Links</strong>
+            {r.links.map((l) => (
+              <a
+                key={l.url}
+                href={l.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={link}
+              >
+                {l.rotulo}
+              </a>
+            ))}
           </div>
         )}
       </div>
@@ -941,9 +1027,11 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
         className={`${LARGURA} flex flex-wrap justify-between gap-3 border-t border-[#22372A] pt-5 pb-8 text-[14px] text-[#8FA095]`}
       >
         <span>{dados.barbearia}</span>
-        <Link href="/" className="hover:text-white">
-          Site e agenda pelo Pente Fino
-        </Link>
+        {r.creditos && (
+          <Link href="/" className="hover:text-white">
+            Site e agenda pelo Pente Fino
+          </Link>
+        )}
       </div>
     </footer>
   );

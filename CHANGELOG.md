@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (cabeçalho e rodapé editáveis, botões com link e CSS no site)
+
+- "Minha página" ganhou a aba "Cabeçalho e rodapé":
+  - no cabeçalho: mostrar logotipo e nome, só o logotipo ou só o nome; renomear, esconder e mudar a ordem dos itens do menu; o texto do botão principal (por exemplo, "Marcar agora"); até 3 links próprios no menu;
+  - no rodapé: ligar e desligar endereço, horário e contatos; um texto livre (CNPJ, formas de pagamento); Facebook, TikTok e YouTube além do Instagram; até 6 links próprios; e a linha "Site e agenda pelo Pente Fino", que o dono pode tirar.
+- Bloco novo "Botões com link", em qualquer página: botões para o cardápio, a loja, o Instagram ou o que o dono quiser.
+- Na aba Tema, em "Avançado", um CSS personalizado para quem quer ir além do tema. Ele vale só no site da barbearia e não aceita buscar nada de fora.
+
 ### Alterado (site sem o link de agendamento)
 
 - O site da barbearia pode ser publicado e funciona mesmo com o link de agendamento desligado. Nesse caso, no lugar de "Agendar horário" aparece "Falar no WhatsApp", com o telefone da unidade; os "Agendar" de cada serviço e barbeiro somem. Ligando o link depois, os botões voltam sozinhos.
