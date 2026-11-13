@@ -1,5 +1,6 @@
 // Configuração validada na subida: variável faltando ou inválida = a API não sobe.
 import { duracaoEmMs } from '@pente-fino/shared';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 
 const booleano = z
@@ -54,6 +55,8 @@ const esquema = z
     CADASTRO_TEMPO_MINIMO_MS: z.coerce.number().int().min(0).default(2500),
     CADASTRO_LIMITE_POR_HORA: z.coerce.number().int().positive().default(3),
     CADASTRO_LIMITE_POR_DIA: z.coerce.number().int().positive().default(10),
+    /** Pasta das fotos do site da barbearia (lote 7c). Em produção, um volume com backup. */
+    FOTOS_DIR: z.string().min(1).default('.dados/fotos'),
     /** Requisições por minuto por IP em qualquer rota (o teste de carga sobe este número). */
     LIMITE_POR_MINUTO: z.coerce.number().int().positive().default(300),
     /** evolution = Evolution API de verdade; falso = sem WhatsApp (testes e tela sem celular). */
@@ -166,6 +169,8 @@ export interface Configuracao {
   };
   /** Chave pública VAPID (push do PWA); null = notificações no celular desligadas. */
   vapidChavePublica: string | null;
+  /** Pasta absoluta das fotos do site (FOTOS_DIR). */
+  fotosDir: string;
 }
 
 export const CONFIGURACAO = Symbol('CONFIGURACAO');
@@ -221,5 +226,6 @@ export function carregarConfiguracao(env: NodeJS.ProcessEnv = process.env): Conf
       webhookToken: e.ASAAS_WEBHOOK_TOKEN ?? null,
     },
     vapidChavePublica: e.VAPID_CHAVE_PUBLICA || null,
+    fotosDir: resolve(e.FOTOS_DIR),
   };
 }

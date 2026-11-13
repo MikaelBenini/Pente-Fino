@@ -46,3 +46,6 @@ packages/db/src/generated/
 
 # Gravação do vídeo (apps/web/video): cenas e edição intermediárias
 apps/web/video-tmp/
+
+# Fotos do site da barbearia em desenvolvimento (FOTOS_DIR)
+.dados/

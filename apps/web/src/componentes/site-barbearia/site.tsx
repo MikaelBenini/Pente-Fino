@@ -11,6 +11,7 @@ import {
   linkDoMapa,
   servicosEmDestaque,
   servicosPorCategoria,
+  urlDaFoto,
   type BlocoSite,
   type PaginaSite,
   type SitePublico,
@@ -121,6 +122,40 @@ function Monograma({ nome, className }: { nome: string; className?: string }) {
   );
 }
 
+/** Foto enviada pelo dono, nos dois tamanhos guardados; a medida evita a página pular. */
+function Foto({
+  id,
+  dados,
+  alt,
+  className,
+  tamanhos = '100vw',
+  prioridade = false,
+}: {
+  id: string;
+  dados: SitePublico;
+  alt: string;
+  className?: string;
+  tamanhos?: string;
+  prioridade?: boolean;
+}) {
+  const medida = dados.fotos[id];
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- já vem reduzida e em WebP da API
+    <img
+      src={urlDaFoto(id, 1600)}
+      srcSet={`${urlDaFoto(id, 640)} 640w, ${urlDaFoto(id, 1600)} 1600w`}
+      sizes={tamanhos}
+      width={medida?.largura}
+      height={medida?.altura}
+      alt={alt}
+      loading={prioridade ? 'eager' : 'lazy'}
+      fetchPriority={prioridade ? 'high' : undefined}
+      decoding="async"
+      className={className}
+    />
+  );
+}
+
 function Cabecalho({ dados, pagina, base }: Props) {
   const links = PAGINAS_SITE.map((p) => ({
     p,
@@ -136,7 +171,18 @@ function Cabecalho({ dados, pagina, base }: Props) {
     <header className={`${VERDE} text-[#F2F1EC]`}>
       <div className={`${LARGURA} flex items-center justify-between gap-4 py-4`}>
         <Link href={base || '/'} className="flex min-h-11 items-center gap-3 text-[#F2F1EC]">
-          <Monograma nome={dados.barbearia} className="size-11 text-[22px]" />
+          {dados.site.logo ? (
+            <Foto
+              id={dados.site.logo}
+              dados={dados}
+              alt=""
+              tamanhos="160px"
+              prioridade
+              className="h-11 w-auto max-w-[140px] object-contain"
+            />
+          ) : (
+            <Monograma nome={dados.barbearia} className="size-11 text-[22px]" />
+          )}
           <span className={`${TITULO} text-[22px] leading-tight @2xl:text-[24px]`}>
             {dados.barbearia}
           </span>
@@ -188,11 +234,13 @@ function Bloco({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
     case 'destaques':
       return <Destaques dados={dados} />;
     case 'sobre':
-      return <Sobre bloco={bloco} base={base} />;
+      return <Sobre bloco={bloco} dados={dados} base={base} />;
     case 'servicos':
       return <ServicosDestaque bloco={bloco} dados={dados} base={base} />;
     case 'equipe':
       return <EquipeResumo bloco={bloco} dados={dados} base={base} />;
+    case 'galeria':
+      return <Galeria bloco={bloco} dados={dados} />;
     case 'depoimentos':
       return <Depoimentos bloco={bloco} />;
     case 'cabecalho':
@@ -221,12 +269,29 @@ function Titulo2({ children, className }: { children: ReactNode; className?: str
 function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; base: string }) {
   return (
     <section className={`${VERDE} relative overflow-hidden text-white`}>
-      <span
-        aria-hidden
-        className={`${TITULO} pointer-events-none absolute -right-8 -bottom-24 text-[22rem] leading-none text-[var(--site-destaque)] opacity-[0.07] select-none @2xl:text-[34rem]`}
-      >
-        {inicialDoNome(dados.barbearia)}
-      </span>
+      {bloco.foto ? (
+        <>
+          <Foto
+            id={bloco.foto}
+            dados={dados}
+            alt={`Foto da ${dados.barbearia}`}
+            prioridade
+            className="absolute inset-0 size-full object-cover"
+          />
+          {/* Véu escuro embaixo, onde fica o texto: leitura garantida em qualquer foto. */}
+          <span
+            aria-hidden
+            className="absolute inset-0 bg-[linear-gradient(to_top,rgba(20,39,28,0.92)_0%,rgba(20,39,28,0.7)_45%,rgba(20,39,28,0.25)_100%)]"
+          />
+        </>
+      ) : (
+        <span
+          aria-hidden
+          className={`${TITULO} pointer-events-none absolute -right-8 -bottom-24 text-[22rem] leading-none text-[var(--site-destaque)] opacity-[0.07] select-none @2xl:text-[34rem]`}
+        >
+          {inicialDoNome(dados.barbearia)}
+        </span>
+      )}
       <div
         className={`${LARGURA} relative flex min-h-[540px] flex-col justify-end gap-7 pt-28 pb-20 motion-safe:animate-[entrar_var(--ritmo-lento)_var(--curva-saida)_both]`}
       >
@@ -302,8 +367,34 @@ function Destaques({ dados }: { dados: SitePublico }) {
   );
 }
 
-function Sobre({ bloco, base }: { bloco: BlocoSite; base: string }) {
+function Sobre({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; base: string }) {
   if (!bloco.titulo && !bloco.texto) return null;
+  if (bloco.foto)
+    return (
+      <section
+        className={`${LARGURA} flex flex-col gap-12 py-24 @3xl:flex-row @3xl:items-center @3xl:gap-16 @2xl:py-28`}
+      >
+        <Foto
+          id={bloco.foto}
+          dados={dados}
+          alt={bloco.titulo ?? `Foto da ${dados.barbearia}`}
+          tamanhos="(min-width: 768px) 50vw, 100vw"
+          className="aspect-[5/4] w-full object-cover @3xl:w-1/2"
+        />
+        <div className="flex min-w-0 flex-col gap-5 @3xl:w-1/2">
+          {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
+          {bloco.texto && (
+            <p className="text-[19px] whitespace-pre-line text-[#3E4842]">{bloco.texto}</p>
+          )}
+          <Link
+            href={`${base}/equipe`}
+            className="self-start font-semibold text-[#1F5135] underline-offset-4 hover:underline"
+          >
+            Conheça a equipe
+          </Link>
+        </div>
+      </section>
+    );
   return (
     <section className={`${LARGURA} py-24 @2xl:py-28`}>
       <div className="mx-auto flex max-w-3xl flex-col gap-5 text-center">
@@ -390,11 +481,53 @@ function EquipeResumo({
         <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-10">
           {dados.equipe.map((p) => (
             <li key={p.id} className="flex items-center gap-5">
-              <Monograma nome={p.nome} className="size-24 border-2 text-[44px]" />
+              {dados.site.equipe[p.id]?.foto ? (
+                <Foto
+                  id={dados.site.equipe[p.id]!.foto!}
+                  dados={dados}
+                  alt={`Foto de ${p.nome}`}
+                  tamanhos="96px"
+                  className="size-24 shrink-0 rounded-full border-2 border-[var(--site-destaque)] object-cover"
+                />
+              ) : (
+                <Monograma nome={p.nome} className="size-24 border-2 text-[44px]" />
+              )}
               <div className="min-w-0">
                 <h3 className={`${TITULO} text-[30px] leading-tight`}>{p.nome}</h3>
                 {p.foco && <p className="text-[#C9D2CB]">{p.foco}</p>}
               </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
+  const itens = (bloco.itens ?? []).filter((i) => i.foto);
+  if (!itens.length) return null;
+  return (
+    <section className="bg-white">
+      <div className={`${LARGURA} flex flex-col gap-11 py-24 @2xl:py-28`}>
+        {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
+        <ul className="grid grid-cols-2 gap-2 @3xl:grid-cols-3">
+          {itens.map((f, i) => (
+            <li key={`${f.foto}-${i}`}>
+              <figure className="relative">
+                <Foto
+                  id={f.foto!}
+                  dados={dados}
+                  alt={f.titulo || `Trabalho da ${dados.barbearia}`}
+                  tamanhos="(min-width: 768px) 33vw, 50vw"
+                  className="aspect-square w-full object-cover"
+                />
+                {f.titulo && (
+                  <figcaption className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] bg-[#14271C] px-2.5 py-1 text-[14px] text-white">
+                    {f.titulo}
+                  </figcaption>
+                )}
+              </figure>
             </li>
           ))}
         </ul>
@@ -514,12 +647,22 @@ function Barbeiros({ dados, base }: { dados: SitePublico; base: string }) {
           key={p.id}
           className={`flex flex-col gap-10 @3xl:items-center ${i % 2 ? '@3xl:flex-row-reverse' : '@3xl:flex-row'}`}
         >
-          <div
-            aria-hidden
-            className={`${VERDE} ${TITULO} flex aspect-[4/5] w-full max-w-[360px] items-center justify-center text-[160px] text-[var(--site-destaque)] @3xl:flex-1`}
-          >
-            {inicialDoNome(p.nome)}
-          </div>
+          {dados.site.equipe[p.id]?.foto ? (
+            <Foto
+              id={dados.site.equipe[p.id]!.foto!}
+              dados={dados}
+              alt={`Foto de ${p.nome}`}
+              tamanhos="(min-width: 768px) 360px, 100vw"
+              className="aspect-[4/5] w-full max-w-[360px] object-cover @3xl:flex-1"
+            />
+          ) : (
+            <div
+              aria-hidden
+              className={`${VERDE} ${TITULO} flex aspect-[4/5] w-full max-w-[360px] items-center justify-center text-[160px] text-[var(--site-destaque)] @3xl:flex-1`}
+            >
+              {inicialDoNome(p.nome)}
+            </div>
+          )}
           <div className="flex min-w-0 flex-col gap-4 @3xl:flex-1">
             <div>
               <h2 className={`${TITULO} text-[48px] leading-none @2xl:text-[56px]`}>{p.nome}</h2>

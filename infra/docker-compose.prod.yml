@@ -161,6 +161,10 @@ services:
       <<: *ambiente-app
       API_PORT: 3001
       API_DOCS: ${API_DOCS:-false}
+      # Fotos do site da barbearia (lote 7c): volume próprio, entra no backup.sh.
+      FOTOS_DIR: /dados/fotos
+    volumes:
+      - fotos_site:/dados/fotos
 
   worker:
     <<: *imagem
@@ -217,3 +221,4 @@ volumes:
   caddy_dados:
   caddy_config:
   status_dados:
+  fotos_site:

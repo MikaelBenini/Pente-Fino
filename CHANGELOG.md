@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (fotos no site da barbearia)
+
+- Em "Minha página", o dono põe fotos no site: o logotipo no topo, a foto do banner, a de "Sobre a casa", a de cada barbeiro e uma galeria nova com os trabalhos, com legenda.
+- A foto é reduzida no próprio celular antes de enviar (sobe rápido no 4G) e sai sem os dados da câmera, como a localização.
+- No site, as fotos carregam no tamanho certo para a tela e não fazem a página pular. O texto do banner fica legível sobre qualquer foto.
+
 ### Adicionado (site da barbearia e "Minha página")
 
 - Cada barbearia ganha um site próprio no endereço do link (`/b/<endereço>`), com quatro páginas: Início, Serviços, Equipe e Contato. O cliente vê a barbearia, os preços, os barbeiros, o endereço com mapa, o horário e as perguntas frequentes; o "Agendar horário" leva ao agendamento de sempre.

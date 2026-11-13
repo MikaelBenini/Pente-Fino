@@ -70,6 +70,16 @@ Asaas. Cancele a assinatura no painel do Asaas; o vínculo na conta (`asaas_assi
 precisa ser limpo direto no banco. O cancelamento pela administração, que faz as duas coisas, está
 planejado na Etapa 23. A rotina tenta de novo no dia seguinte.
 
+## Fotos do site da barbearia
+
+Desde o lote 7c da seção 7, as fotos que o dono põe no site (logotipo, banner, sobre a casa,
+barbeiros e galeria) ficam no volume `fotos_site`, montado na API em `/dados/fotos`
+(`FOTOS_DIR`). Cada foto vira dois arquivos WebP, de 640 px e de 1600 px, com uns 300 KB no total,
+já sem os dados da câmera. O limite é de 300 fotos por unidade. O `backup.sh` guarda o volume todo
+dia e o `restaurar.sh` devolve. Foto trocada ou tirada do site continua no disco por enquanto: a
+limpeza das fotos sem uso fica para depois. O site entrega em `/f/<id>-<tamanho>.webp`, com cache
+de um ano no navegador.
+
 ## Atualizar e voltar versão (rollback)
 
 - `./atualizar.sh` — versão do `.env` (`TAG`, padrão `latest`: o último merge na `main`).

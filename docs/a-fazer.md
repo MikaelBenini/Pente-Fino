@@ -314,12 +314,29 @@ U2 a U5 já feitos (#161).
     os blocos, tema (cor, fonte, botões), prévia no computador e no celular, publicar;
   - [x] Lote 7b: bateria verde e PR aberto (13/11)
   - [ ] Merge do lote 7b
-  - [ ] **Lote 7c** fotos: envio, redução de tamanho e guarda no servidor, com backup; banner,
-    sobre a casa, serviços, equipe, galeria e logotipo;
-  - [ ] **Lote 7d** quem faz cada serviço (P5): o dono marca os serviços de cada barbeiro, com
+  - [x] **Lote 7c** (13/11, documentado na linha de desenvolvimento) fotos: envio, redução de
+    tamanho e guarda no servidor, com backup; banner, sobre a casa, barbeiros, galeria e
+    logotipo (foto de serviço fica para depois);
+  - [x] Merge do lote 7b (PR #193, pelo dono, 13/11)
+  - pedido do dono em 13/11, depois do 7c: "o site é uma coisa e o link de agendamento é outra";
+    o barbeiro pode pôr o domínio dele; o site precisa de animações e de um visual mais moderno,
+    menos "padrão". Decisão: o link de agendamento continua em `/b/<slug>` (é o que já está no
+    Instagram, impresso e no bot) e só agenda; o site ganha endereço próprio, `/s/<slug>`, e o
+    domínio da barbearia;
+  - [ ] **Lote 7d** site e agendamento em endereços separados: o site em `/s/<slug>` (com
+    `/servicos`, `/equipe` e `/contato`), o `/b/<slug>` volta a ser só o agendamento, os botões
+    do site levam a ele; o painel mostra os dois endereços para copiar;
+  - [ ] **Lote 7e** domínio próprio: o dono informa o domínio, o painel mostra o registro de DNS
+    para apontar, o sistema confere sozinho; o certificado HTTPS sai na hora (Caddy sob demanda,
+    só para domínio cadastrado e conferido); no domínio, a raiz é o site e `/agendar` é o
+    agendamento;
+  - [ ] **Lote 7f** site mais moderno e com movimento: entrada do banner em etapas, fotos que
+    surgem ao rolar, cabeçalho que muda ao rolar, detalhes que respondem ao toque; tudo leve
+    (CSS, sem biblioteca) e desligado com "reduzir movimento";
+  - [ ] **Lote 7g** quem faz cada serviço (P5): o dono marca os serviços de cada barbeiro, com
     foto; vale no site e no agendamento;
-  - [ ] **Lote 7e** páginas extras Galeria e Clube de assinatura;
-  - [ ] **Lotes 7f, 7g e 7h** temas Clube, Letreiro e Estúdio, um por PR.
+  - [ ] **Lote 7h** páginas extras Galeria e Clube de assinatura;
+  - [ ] **Lotes 7i, 7j e 7k** temas Clube, Letreiro e Estúdio, um por PR.
 - [ ] Saúde da conta no Início (WhatsApp, link, caixa de ontem, comandas paradas)
 - [ ] Resumo do fechamento de caixa enviado ao dono
 - [ ] Histórico visível por comanda

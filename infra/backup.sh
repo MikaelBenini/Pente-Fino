@@ -6,6 +6,7 @@
 #   - usuários e permissões do PostgreSQL (pg_dumpall --globals-only)
 #   - o banco do sistema e o da Evolution API (pg_dump formato custom)
 #   - o volume de sessões da Evolution API (não precisa escanear o QR de novo)
+#   - o volume das fotos do site das barbearias (fotos_site, lote 7c)
 # Retenção local: 30 diários e 12 mensais (o do dia 1º de cada mês). Com BACKUP_DESTINO no .env
 # (um remoto do rclone, ex.: "externo:pente-fino-backup", criado pelo backup-externo.sh), os
 # arquivos novos vão também para o armazenamento externo.
@@ -47,6 +48,9 @@ pg pg_dump -U postgres -Fc "$BANCO" > "$TMP/$BANCO.dump"
 pg pg_dump -U postgres -Fc evolution > "$TMP/evolution.dump"
 docker run --rm -v pente-fino_evolution_instancias:/dados:ro -v "$TMP":/saida alpine:3.22 \
   tar czf /saida/evolution_instancias.tgz -C /dados .
+# Fotos do site das barbearias (lote 7c).
+docker run --rm -v pente-fino_fotos_site:/dados:ro -v "$TMP":/saida alpine:3.22 \
+  tar czf /saida/fotos_site.tgz -C /dados .
 date -u +%FT%TZ > "$TMP/quando.txt"
 
 ARQ="$PASTA/diario/pente-fino-$HOJE.tar.gz.enc"

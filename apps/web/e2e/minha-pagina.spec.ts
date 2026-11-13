@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { siteInicial } from '@pente-fino/shared';
 
 // Seção 7, lote 7b: o painel "Minha página". O dono edita um bloco, vê a prévia mudar, troca a
 // cor, publica e o cliente vê na hora; depois tira do ar e o link volta a ser o agendamento.
@@ -15,6 +16,31 @@ async function entrar(page: Page) {
 test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ page, browser }) => {
   test.setTimeout(120_000);
   await entrar(page);
+  // Começa da página sugerida: uma execução interrompida pode ter deixado o rascunho mexido.
+  await page.evaluate(async (slug) => {
+    const unidades = (await (await fetch('/api/unidades')).json()) as {
+      id: string;
+      slug: string | null;
+    }[];
+    const id = unidades.find((u) => u.slug === slug)!.id;
+    await fetch(`/api/unidades/${id}/site/publicado`, { method: 'DELETE' });
+    return id;
+  }, SLUG);
+  await page.evaluate(
+    async ([slug, inicial]) => {
+      const unidades = (await (await fetch('/api/unidades')).json()) as {
+        id: string;
+        slug: string | null;
+      }[];
+      const id = unidades.find((u) => u.slug === slug)!.id;
+      await fetch(`/api/unidades/${id}/site`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(inicial),
+      });
+    },
+    [SLUG, siteInicial('Barbearia Pente Fino (demonstração)')] as const,
+  );
   await page.goto('/pagina');
   await expect(page.getByRole('heading', { level: 1, name: 'Minha página' })).toBeVisible();
   const unidade = page.getByLabel('Unidade', { exact: true });
@@ -25,6 +51,35 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
   await page.getByLabel('Título', { exact: true }).fill(titulo);
   const previa = page.getByRole('region', { name: 'Prévia' });
   await expect(previa.getByRole('heading', { level: 1, name: titulo })).toBeVisible();
+
+  // Lote 7c: foto no banner, reduzida no navegador e servida em /f/.
+  const png = await page.evaluate(() => {
+    const c = document.createElement('canvas');
+    c.width = 1200;
+    c.height = 800;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#2a4434';
+    g.fillRect(0, 0, 1200, 800);
+    g.fillStyle = '#c8a55c';
+    g.fillRect(200, 200, 400, 300);
+    return c.toDataURL('image/png').split(',')[1]!;
+  });
+  await expect(
+    page.getByRole('button', { name: /^(Escolher|Trocar) foto$/ }).first(),
+  ).toBeVisible();
+  await page
+    .locator('input[type="file"]')
+    .first()
+    .setInputFiles({
+      name: 'salao.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(png, 'base64'),
+    });
+  const fotoBanner = previa.locator('img[src*="/f/"][src$="-1600.webp"]').first();
+  await expect(fotoBanner).toBeVisible();
+  await expect
+    .poll(() => fotoBanner.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
 
   // Esconder e mostrar um bloco reflete na prévia.
   await page.getByRole('button', { name: 'Esconder Faixa de destaques' }).click();
@@ -39,7 +94,8 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
   await page.getByLabel('Página', { exact: true }).selectOption('inicio');
 
   await page.getByRole('tab', { name: 'Tema' }).click();
-  await page.getByLabel('Sálvia').check({ force: true });
+  await page.getByText('Sálvia', { exact: true }).click();
+  await expect(page.getByLabel('Sálvia')).toBeChecked();
   await page.getByRole('button', { name: 'Celular' }).click();
   await expect(page.getByRole('button', { name: 'Celular' })).toHaveAttribute(
     'aria-pressed',
