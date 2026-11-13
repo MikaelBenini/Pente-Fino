@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (página de agendamento)
+
+- A página de agendamento de barbearia com muitos barbeiros abre bem mais rápido e não falha mais quando vários clientes entram ao mesmo tempo. O preço de cada barbeiro agora sai de uma consulta só.
+
 ### Adicionado (administração: resultado dos cupons)
 
 - Em Configurações → Cupons, a nova tabela "Resultado dos cupons" mostra para cada cupom:

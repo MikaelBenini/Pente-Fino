@@ -12,7 +12,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { precoServicoVigente, type Prisma } from '@pente-fino/db';
+import { precoServicoVigente, Prisma } from '@pente-fino/db';
 import {
   dataLocal,
   diaCalendarioSchema,
@@ -28,7 +28,13 @@ import {
   type UnidadeDetalhe,
   type UnidadeEntrada,
   copiarCatalogoSchema,
+  lerSite,
+  siteBarbeariaSchema,
+  type SiteBarbearia,
+  type SitePainel,
+  type SitePublico,
 } from '@pente-fino/shared';
+import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { Papeis } from '../auth/decoradores.js';
@@ -37,6 +43,7 @@ import { Contexto } from '../comum/contexto.js';
 import { ErroApp, Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade, GESTAO, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
+import { montarSitePublico } from '../publico/site.js';
 
 const SELECAO = {
   id: true,
@@ -103,6 +110,133 @@ export class UnidadesController {
         depois: regras,
       });
       return regras;
+    });
+  }
+
+  // ─── Site da barbearia (seção 7) ─────────────────────────────────────────
+
+  private async unidadeDoSite(tx: Prisma.TransactionClient, id: string) {
+    const u = await tx.unidade.findUnique({ where: { id } });
+    if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
+    const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
+    return { u, rascunho: lerSite(u.siteRascunho, conta.nome) };
+  }
+
+  private painelDoSite(
+    u: {
+      slug: string | null;
+      agendamentoPublico: boolean;
+      sitePublicado: unknown;
+      sitePublicadoEm: Date | null;
+    },
+    rascunho: SiteBarbearia,
+  ): SitePainel {
+    return {
+      rascunho,
+      publicado: u.sitePublicado !== null,
+      publicadoEm: u.sitePublicadoEm?.toISOString() ?? null,
+      alteracoesPendentes:
+        u.sitePublicado === null || !isDeepStrictEqual(u.sitePublicado, rascunho),
+      slug: u.slug,
+      linkLigado: u.agendamentoPublico,
+    };
+  }
+
+  @Get(':id/site')
+  @Papeis(...GESTAO)
+  @ApiOperation({ summary: 'Site da unidade para editar: rascunho (ou o sugerido) e situação' })
+  site(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { u, rascunho } = await this.unidadeDoSite(tx, id);
+      return this.painelDoSite(u, rascunho);
+    });
+  }
+
+  @Put(':id/site')
+  @Papeis(...GESTAO)
+  @ApiOperation({ summary: 'Gravar o rascunho do site (não muda o que o cliente vê)' })
+  gravarSite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(siteBarbeariaSchema) site: SiteBarbearia,
+  ): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { u } = await this.unidadeDoSite(tx, id);
+      const salvo = await tx.unidade.update({
+        where: { id },
+        data: { siteRascunho: site as unknown as Prisma.InputJsonValue },
+      });
+      return this.painelDoSite({ ...u, ...salvo }, site);
+    });
+  }
+
+  @Get(':id/site/previa')
+  @Papeis(...GESTAO)
+  @ApiOperation({ summary: 'Prévia do site com o rascunho e os dados vivos da unidade' })
+  previaDoSite(@Param('id', ParseUUIDPipe) id: string): Promise<SitePublico> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { u, rascunho } = await this.unidadeDoSite(tx, id);
+      return montarSitePublico(tx, u, rascunho);
+    });
+  }
+
+  @Post(':id/site/publicar')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Publicar o rascunho: /b/<slug> passa a mostrar o site' })
+  publicarSite(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { u, rascunho } = await this.unidadeDoSite(tx, id);
+      if (!u.slug || !u.agendamentoPublico)
+        throw Erros.requisicaoInvalida(
+          'link_desligado',
+          'Ligue o link de agendamento da unidade antes de publicar o site.',
+        );
+      const salvo = await tx.unidade.update({
+        where: { id },
+        data: {
+          siteRascunho: rascunho as unknown as Prisma.InputJsonValue,
+          sitePublicado: rascunho as unknown as Prisma.InputJsonValue,
+          sitePublicadoEm: new Date(),
+        },
+      });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'site_publicado',
+        antes: null,
+        depois: { tema: rascunho.tema },
+      });
+      return this.painelDoSite(salvo, rascunho);
+    });
+  }
+
+  @Delete(':id/site/publicado')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({
+    summary: 'Tirar o site do ar: /b/<slug> volta a ser a página de agendamento (rascunho fica)',
+  })
+  despublicarSite(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { rascunho } = await this.unidadeDoSite(tx, id);
+      const salvo = await tx.unidade.update({
+        where: { id },
+        data: { sitePublicado: Prisma.DbNull, sitePublicadoEm: null },
+      });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'site_despublicado',
+        antes: null,
+        depois: null,
+      });
+      return this.painelDoSite(salvo, rascunho);
     });
   }
 

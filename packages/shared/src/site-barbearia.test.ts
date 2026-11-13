@@ -1,0 +1,155 @@
+import { describe, expect, it } from 'vitest';
+import {
+  BLOCOS_SITE,
+  CORES_SITE,
+  PAGINAS_SITE,
+  blocosVisiveis,
+  formatarMinutos,
+  horarioDaUnidade,
+  lerSite,
+  linkDoMapa,
+  linkWhatsappDaUnidade,
+  notaDoSite,
+  servicosEmDestaque,
+  servicosPorCategoria,
+  siteBarbeariaSchema,
+  siteInicial,
+} from './site-barbearia.js';
+
+/** Contraste WCAG entre duas cores #RRGGBB. */
+function contraste(a: string, b: string): number {
+  const lum = (hex: string) => {
+    const [r, g, bl] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
+  };
+  const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
+  return (x! + 0.05) / (y! + 0.05);
+}
+
+describe('site da barbearia (lote 7a)', () => {
+  it('a página inicial sugerida é válida e traz as quatro páginas montadas', () => {
+    const site = siteInicial('Barbearia do Carlos');
+    expect(siteBarbeariaSchema.parse(site)).toEqual(site);
+    for (const p of PAGINAS_SITE) expect(site.paginas[p].length).toBeGreaterThan(1);
+    expect(site.paginas.inicio.find((b) => b.tipo === 'sobre')?.titulo).toBe(
+      'Conheça a Barbearia do Carlos',
+    );
+    // Depoimento não se inventa: começa escondido e vazio.
+    expect(site.paginas.inicio.find((b) => b.tipo === 'depoimentos')).toMatchObject({
+      visivel: false,
+      itens: [],
+    });
+  });
+
+  it('cada cor de destaque tem leitura com o texto escuro do botão e o fundo do tema', () => {
+    for (const { hex } of Object.values(CORES_SITE)) {
+      expect(contraste(hex, '#14271C')).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('recusa bloco fora da página certa e bloco repetido', () => {
+    const site = siteInicial('X');
+    const errado = {
+      ...site,
+      paginas: { ...site.paginas, contato: [{ id: 'tabela', tipo: 'tabela', visivel: true }] },
+    };
+    expect(siteBarbeariaSchema.safeParse(errado).success).toBe(false);
+    const repetido = {
+      ...site,
+      paginas: {
+        ...site.paginas,
+        servicos: [site.paginas.servicos[0], site.paginas.servicos[0]],
+      },
+    };
+    expect(siteBarbeariaSchema.safeParse(repetido).success).toBe(false);
+    for (const [tipo, def] of Object.entries(BLOCOS_SITE))
+      expect(def.paginas.length, tipo).toBeGreaterThan(0);
+  });
+
+  it('Instagram aceita com ou sem @ e guarda sem', () => {
+    const r = siteBarbeariaSchema.parse({ ...siteInicial('X'), instagram: '@barbearia.do_carlos' });
+    expect(r.instagram).toBe('barbearia.do_carlos');
+    expect(
+      siteBarbeariaSchema.safeParse({ ...siteInicial('X'), instagram: 'tem espaço' }).success,
+    ).toBe(false);
+  });
+
+  it('lerSite usa a página sugerida quando não há nada gravado ou o gravado é inválido', () => {
+    expect(lerSite(null, 'Navalha').paginas.inicio[2]?.titulo).toBe('Conheça a Navalha');
+    expect(lerSite({ versao: 9 }, 'Navalha').tema).toBe('tradicional');
+    const site = { ...siteInicial('Navalha'), cor: 'salvia' as const };
+    expect(lerSite(site, 'Outra').cor).toBe('salvia');
+  });
+
+  it('blocosVisiveis respeita a ordem e esconde os desligados', () => {
+    const site = siteInicial('X');
+    expect(blocosVisiveis(site, 'inicio').map((b) => b.tipo)).toEqual([
+      'banner',
+      'destaques',
+      'sobre',
+      'servicos',
+      'equipe',
+      'agendar',
+    ]);
+  });
+
+  it('horário: junta dias seguidos iguais e põe os fechados no fim', () => {
+    const exp = [
+      ...[2, 3, 4, 5].map((d) => ({ diaSemana: d, inicioMin: 540, fimMin: 1200 })),
+      { diaSemana: 2, inicioMin: 600, fimMin: 1140 }, // outro barbeiro, dentro do horário
+      { diaSemana: 6, inicioMin: 480, fimMin: 1080 },
+      { diaSemana: 1, inicioMin: 540, fimMin: 1200 }, // trabalha, mas a unidade não abre segunda
+    ];
+    expect(horarioDaUnidade(exp, [2, 3, 4, 5, 6])).toEqual([
+      { dias: 'Terça a sexta', horario: '9h às 20h' },
+      { dias: 'Sábado', horario: '8h às 18h' },
+      { dias: 'Segunda e domingo', horario: null },
+    ]);
+    expect(horarioDaUnidade([], [1])).toEqual([
+      { dias: 'Segunda, terça, quarta, quinta, sexta, sábado e domingo', horario: null },
+    ]);
+    expect(formatarMinutos(570)).toBe('9h30');
+  });
+
+  it('nota só aparece com avaliações suficientes', () => {
+    expect(notaDoSite([5, 5, 4, 5])).toBeNull();
+    expect(notaDoSite([5, 5, 4, 5, 5, 0])).toEqual({ media: 4.8, total: 5 });
+  });
+
+  it('links do mapa e do WhatsApp', () => {
+    expect(linkDoMapa('Rua A, 1')).toBe(
+      'https://www.google.com/maps/search/?api=1&query=Rua%20A%2C%201',
+    );
+    expect(linkWhatsappDaUnidade('(19) 99999-0000')).toBe('https://wa.me/5519999990000');
+    expect(linkWhatsappDaUnidade('123')).toBeNull();
+    expect(linkWhatsappDaUnidade(null)).toBeNull();
+  });
+
+  it('serviços em destaque e por categoria (extras à parte)', () => {
+    const s = (nome: string, categoria: string | null, ehExtra = false) => ({
+      id: nome,
+      nome,
+      categoria,
+      duracaoMin: 30,
+      preco: 1000,
+      ehExtra,
+    });
+    const lista = [
+      s('Corte', 'Cabelo'),
+      s('Hidratação', null, true),
+      s('Barba', 'Barba'),
+      s('Pezinho', 'Cabelo'),
+      s('Platinado', null),
+    ];
+    expect(servicosEmDestaque(lista).map((x) => x.nome)).toEqual(['Corte', 'Barba', 'Pezinho']);
+    expect(servicosPorCategoria(lista).map((g) => [g.nome, g.itens.length])).toEqual([
+      ['Cabelo', 2],
+      ['Barba', 1],
+      ['Serviços', 1],
+      ['Adicionais', 1],
+    ]);
+  });
+});

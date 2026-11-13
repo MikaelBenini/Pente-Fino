@@ -49,6 +49,36 @@ export async function precoProprioVigente(
   return p?.valor ?? null;
 }
 
+/**
+ * Preços próprios vigentes de vários barbeiros numa consulta só (página de agendamento): por
+ * barbeiro, serviço → valor. Só entra o que vale na data e não voltou para o preço da unidade.
+ */
+export async function precosPropriosVigentes(
+  tx: Tx,
+  profissionalIds: readonly string[],
+  data: DataISO,
+): Promise<Map<string, Record<string, number>>> {
+  const linhas = profissionalIds.length
+    ? await tx.precoProfissional.findMany({
+        where: {
+          profissionalId: { in: [...profissionalIds] },
+          vigenciaInicio: { lte: dataParaBanco(data) },
+        },
+        orderBy: { vigenciaInicio: 'desc' },
+        select: { profissionalId: true, servicoId: true, valor: true },
+      })
+    : [];
+  const vistos = new Set<string>();
+  const r = new Map<string, Record<string, number>>(profissionalIds.map((id) => [id, {}]));
+  for (const l of linhas) {
+    const chave = `${l.profissionalId}:${l.servicoId}`;
+    if (vistos.has(chave)) continue; // a mais recente já decidiu
+    vistos.add(chave);
+    if (l.valor !== null) r.get(l.profissionalId)![l.servicoId] = l.valor;
+  }
+  return r;
+}
+
 /** Regra de comissão vigente do profissional para o tipo de item na data. */
 export async function regraComissaoVigente(
   tx: Tx,

@@ -26,6 +26,7 @@ const PUBLICAS = new Set([
   'GET /publico/cupom/:codigo',
   'GET /publico/horario/:token',
   'GET /publico/horario/:token/horarios',
+  'GET /publico/site/:slug', // só o site que o dono publicou
   'GET /publico/paginas', // só endereço e data das páginas que ligaram "Aparecer no Google"
   'GET /publico/precos',
   'POST /admin/auth/entrar',

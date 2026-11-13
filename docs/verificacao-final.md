@@ -111,6 +111,16 @@ Rodar como cada papel, no celular, cronometrando.
 - [ ] Certificado TLS, espaço em disco e monitoramento (Uptime Kuma) com alerta chegando
 - [ ] Produção no mesmo código do `main` e CHANGELOG publicado
 
+## 6b. Plano Agenda
+
+- [ ] Assinar o plano Agenda, usar a agenda, o link, o site e os avisos no WhatsApp, contratar as
+  Automações por mais R$ 10 e conferir o valor da fatura; cada convite de subir de plano aparece
+  na hora certa (3º barbeiro, 2ª unidade, cadeado, resumo de 30 dias, faltas)
+- [ ] O que fica fora do plano aparece com cadeado no menu e não responde na API, e o convite para subir
+  de plano leva ao plano certo
+- [ ] O plano aparece no site: página de vendas, `/planos`, comparativo e a página de busca
+  "agenda para barbeiro"
+
 ## 7. A documentação bate com o sistema
 
 - [ ] `docs/CLAUDE.md` (regras e comandos) igual ao código

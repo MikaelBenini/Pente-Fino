@@ -290,6 +290,34 @@ U2 a U5 já feitos (#161).
   - o dono edita textos, fotos, seções, cores e estilo, e escolhe "quem faz cada serviço", com
     foto;
   - transições bonitas, sem deixar a página lenta.
+  - [x] skill `frontend-design` instalada e três rodadas de modelos no canvas "Página da
+    barbearia: modelos" (13/11). O dono aprovou a terceira: site com quatro páginas (Início,
+    Serviços, Equipe, Contato) no estilo Tradicional, montado por blocos num painel parecido com
+    o da Nuvemshop, mais as sugestões abaixo;
+  - decisões do dono (13/11):
+    - o agendamento fica só nos botões, nunca na frente da página;
+    - a página já nasce montada, com textos sugeridos, e o dono só ajusta;
+    - os temas Clube, Letreiro e Estúdio usam os mesmos blocos e dados, e trocar de tema não
+      apaga nada;
+    - páginas extras opcionais (Galeria, Clube de assinatura) que o dono liga no painel;
+    - começar pelo tema Tradicional e pelo painel; os outros temas entram depois, um por PR;
+  - decisão técnica: enquanto o dono não publica o site, `/b/<slug>` continua sendo a página de
+    agendamento de hoje, para não mudar o link que já está no Instagram de ninguém;
+  - [x] **Lote 7a** site da barbearia no tema Tradicional (13/11, documentado na linha de
+    desenvolvimento): páginas Início, Serviços, Equipe e
+    Contato em `/b/<slug>`, o agendamento em `/b/<slug>/agendar`, conteúdo inicial sugerido,
+    rascunho e publicado guardados na unidade, dados vivos (serviços, preços, equipe, nota,
+    horário);
+  - [x] Lote 7a: bateria verde e PR aberto (13/11)
+  - [ ] Merge do lote 7a
+  - [ ] **Lote 7b** painel "Minha página": escolher a página, ligar, desligar, reordenar e editar
+    os blocos, tema (cor, fonte, botões), prévia no computador e no celular, publicar;
+  - [ ] **Lote 7c** fotos: envio, redução de tamanho e guarda no servidor, com backup; banner,
+    sobre a casa, serviços, equipe, galeria e logotipo;
+  - [ ] **Lote 7d** quem faz cada serviço (P5): o dono marca os serviços de cada barbeiro, com
+    foto; vale no site e no agendamento;
+  - [ ] **Lote 7e** páginas extras Galeria e Clube de assinatura;
+  - [ ] **Lotes 7f, 7g e 7h** temas Clube, Letreiro e Estúdio, um por PR.
 - [ ] Saúde da conta no Início (WhatsApp, link, caixa de ontem, comandas paradas)
 - [ ] Resumo do fechamento de caixa enviado ao dono
 - [ ] Histórico visível por comanda
@@ -297,6 +325,35 @@ U2 a U5 já feitos (#161).
 - [ ] Modo recepção (tela grande)
 
 ## 8. Perto do fim
+
+- [ ] **Plano Agenda** (pedido do dono em 13/11; respostas P14 a P16 em 13/11): plano de entrada,
+  barato, para trazer barbearia nova pelo preço e pela busca do Google ("agenda para barbeiro",
+  "agenda online para barbearia"). Decisões (o dono pediu "pense por mim" nos detalhes):
+  - **Agenda, R$ 10 por mês** (anual R$ 99 por ano, sai R$ 8,25 por mês), com o mesmo teste
+    grátis dos outros planos; 1 unidade e até 2 barbeiros;
+  - entra: agenda de cada barbeiro, bloqueios e folgas, cadastro de clientes, o link de
+    agendamento e o **site completo** da barbearia (as quatro páginas da seção 7), e o
+    WhatsApp da própria barbearia conectado por QR para os avisos do agendamento
+    (confirmação, lembrete e o link de remarcar ou cancelar). O WhatsApp faz parte do
+    agendamento: não se cobra por ele;
+  - **Automações, mais R$ 10 por mês** (cobra-se pelas automações, decisão do dono): o bot que
+    responde e marca pela conversa, o convite de retorno de quem sumiu, a avaliação depois do
+    atendimento, a mensagem de aniversário e o aviso da lista de espera;
+  - fica nos planos de cima: comanda, caixa, financeiro, comissões, resultados e o clube;
+  - **revenda conforme a necessidade** (o convite aparece na hora em que a barbearia precisa,
+    nunca como propaganda solta):
+    - o 3º barbeiro: "No Básico cabem até 3 barbeiros, e você passa a ver quanto sobra";
+    - a 2ª unidade: Premium;
+    - os itens de comanda, caixa e financeiro aparecem no menu com um cadeado e uma tela que
+      mostra o que eles fazem, com o botão "Experimentar 7 dias";
+    - depois de 30 dias, um resumo no Início com os números da própria agenda ("Você atendeu
+      84 horários este mês. No Básico você vê quanto isso deu de faturamento e de lucro");
+    - muitas faltas no mês: sugere as Automações (lembrete com confirmação e lista de espera);
+    - quem assina as Automações e passa de R$ 20 por mês vê a conta: o Básico custa R$ 79,90
+      e traz tudo;
+  - divulgar no site: página de vendas, `/planos`, comparativo e uma página de busca própria
+    para "agenda para barbeiro";
+  - entra na verificação final (seção 9).
 
 - [ ] **N5** Página "Sobre": perguntar ao dono quem faz o Pente Fino, por que existe e de qual
   cidade, e escrever junto com ele
