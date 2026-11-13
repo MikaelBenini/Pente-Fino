@@ -21,6 +21,7 @@ import {
   notasFiscaisPlataforma,
   ultimaNotaEmitidaPlataforma,
   contasDaPlataforma,
+  faturasDaPlataforma,
   configuracaoDoSistema,
   configuracaoSmtp,
   decifrar,
@@ -72,6 +73,8 @@ import {
   RESPOSTAS_PADRAO,
   respostasChatSchema,
   type RespostaPronta,
+  relatorioCupons,
+  type ResultadoDoCupom,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { z } from 'zod';
@@ -687,6 +690,30 @@ export class AdminConfigController {
     @IpDaRequisicao() ip: string | null,
   ): Promise<void> {
     await this.gravar('respostas_chat', r, a, ip);
+  }
+
+  @Get('configuracoes/cupons/relatorio')
+  @ApiOperation({
+    summary: 'Resultado dos cupons: contas, pagantes, receita, desconto concedido e uso por mês',
+  })
+  async relatorioCupons(): Promise<ResultadoDoCupom[]> {
+    const [contas, faturas] = await Promise.all([
+      contasDaPlataforma(this.banco.prisma),
+      faturasDaPlataforma(this.banco.prisma),
+    ]);
+    return relatorioCupons({
+      codigos: lerCupons(await this.valor('cupons')).map((c) => c.codigo),
+      agora: new Date(),
+      contas: contas.map((c) => ({
+        id: c.id,
+        cupom: c.cupom,
+        descontoBp: c.desconto_bp,
+        status: c.status,
+        criadaEm: c.criado_em.toISOString(),
+        interna: c.interna,
+      })),
+      faturas: faturas.map((f) => ({ contaId: f.conta_id, valor: f.valor, status: f.status })),
+    });
   }
 
   @Put('configuracoes/cupons')
