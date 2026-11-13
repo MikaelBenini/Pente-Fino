@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: métricas de SaaS)
+
+- Os números do negócio ganharam o bloco "Métricas de SaaS", calculado das faturas pagas e só com meses fechados:
+  - MRR do último mês, ARPA (média por conta pagante), churn mensal (média de 6 meses) e LTV;
+  - tabela do MRR mês a mês, com o que entrou (novo, upgrade) e o que saiu (downgrade, perdido), os pagantes e o churn;
+  - MRR e ticket por plano;
+  - coortes por mês de cadastro: a fatia das contas que estava pagando em cada mês seguinte.
+
 ### Adicionado (chat: contexto do cliente, avaliação e respostas editáveis)
 
 - Na conversa de um cliente que veio pela Ajuda, quem atende vê o plano, a situação e a nota de saúde da conta, com o botão "Abrir ficha da conta".

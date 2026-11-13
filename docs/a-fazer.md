@@ -252,7 +252,11 @@ U2 a U5 já feitos (#161).
   - **No celular:** notificação de conversa nova e de mensagem nova para a equipe (push do PWA no
     `/admin` instalado), para atender sem estar no computador.
   - Substitui o WhatsApp de suporte no site e na Ajuda.
-- [ ] **F7** Métricas de SaaS (churn, MRR por tipo, LTV, coortes)
+- [x] **F7** Métricas de SaaS (churn, MRR por tipo, LTV, coortes) (13/11):
+  - bloco "Métricas de SaaS" nos números do negócio;
+  - registro no CHANGELOG.
+- [x] Lote 6l (F7): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6l)
 - [x] **F1b** Equipe da administração: membros desativados escondidos por padrão, com a caixa
   "Mostrar desativados" (13/11)
 - [x] **F1c** Lista de Contas com o filtro "Parou em", pela etapa do funil (13/11)

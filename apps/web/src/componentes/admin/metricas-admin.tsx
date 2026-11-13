@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Estado } from '../pagina';
 import { adminApi } from './admin-api';
+import { MetricasSaasAdmin } from './metricas-saas-admin';
 
 const pct = (f: number) => `${Math.round(f * 100)}%`;
 const ddmm = (dia: string) => `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
@@ -295,6 +296,8 @@ export function MetricasAdmin({ onIrPara }: { onIrPara: (aba: string) => void })
         }}
       </Estado>
       <FunilAtivacao />
+      {/* Admin F7: churn, MRR por tipo, LTV e coortes. */}
+      <MetricasSaasAdmin />
     </section>
   );
 }

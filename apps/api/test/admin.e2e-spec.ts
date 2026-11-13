@@ -20,6 +20,7 @@ import type {
   RespostaEntrarAdmin,
   NotaInterna,
   ResumoFunil,
+  MetricasSaas,
   VendaCriada,
   VendasDoVendedor,
   VendasPorOrigem,
@@ -641,6 +642,12 @@ describe('administração mais prática (admin U2 a U5)', () => {
       contaU = r.contaId;
     }
     await v.get('/admin/funil').expect(403);
+    // F7: métricas de SaaS, só o admin: 12 meses fechados e 6 coortes.
+    await v.get('/admin/metricas/saas').expect(403);
+    const saas = (await adm.get('/admin/metricas/saas').expect(200)).body as MetricasSaas;
+    expect(saas.meses).toHaveLength(12);
+    expect(saas.coortes).toHaveLength(6);
+    expect(saas.meses.at(-1)!.mes < new Date().toISOString().slice(0, 7)).toBe(true);
     await adm.get('/admin/funil?periodo=ano').expect(400);
     const f = (await adm.get('/admin/funil?periodo=30dias').expect(200)).body as ResumoFunil;
     expect(f.etapas.map((e) => e.etapa)).toEqual(ETAPAS_FUNIL.map((e) => e.etapa));
