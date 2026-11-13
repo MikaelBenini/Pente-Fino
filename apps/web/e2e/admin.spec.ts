@@ -261,7 +261,9 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await novoCupom.getByLabel('Código').fill(codigoCupom);
   await novoCupom.getByLabel('Desconto (%)').fill('25');
   await novoCupom.getByRole('button', { name: 'Salvar cupom' }).click();
-  await expect(cupons.getByRole('table', { name: 'Cupons' })).toContainText(codigoCupom);
+  await expect(cupons.getByRole('table', { name: 'Cupons', exact: true })).toContainText(
+    codigoCupom,
+  );
   const site = await browser.newContext();
   const cadastro = await site.newPage();
   await cadastro.goto(`/cadastro?cupom=${codigoCupom.toLowerCase()}`);
@@ -273,9 +275,11 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
     .getByRole('row', { name: new RegExp(codigoCupom) })
     .getByRole('button', { name: 'Desativar' })
     .click();
-  await expect(cupons.getByRole('row', { name: new RegExp(codigoCupom) })).toContainText(
-    'Desativado',
-  );
+  await expect(
+    cupons
+      .getByRole('table', { name: 'Cupons', exact: true })
+      .getByRole('row', { name: new RegExp(codigoCupom) }),
+  ).toContainText('Desativado');
   // Nota fiscal (admin R2): o Asaas de teste tem os dados fiscais completos.
   const nota = page.getByRole('region', { name: 'Nota fiscal das mensalidades' });
   await expect(nota.getByText('Tudo conferido: a emissão pode ser ligada.')).toBeVisible();

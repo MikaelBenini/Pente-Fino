@@ -57,6 +57,7 @@ export * from './acesso-suporte.js';
 export * from './chat-suporte.js';
 export * from './metricas-plataforma.js';
 export * from './metricas-saas.js';
+export * from './relatorio-cupons.js';
 export * from './plataforma-gestao.js';
 export * from './ficha-admin.js';
 export * from './protecao-cadastro.js';

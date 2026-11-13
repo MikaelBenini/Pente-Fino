@@ -20,6 +20,7 @@ import type {
   RespostaEntrarAdmin,
   NotaInterna,
   ResumoFunil,
+  ResultadoDoCupom,
   MetricasSaas,
   VendaCriada,
   VendasDoVendedor,
@@ -1194,6 +1195,13 @@ describe('cupons', () => {
       usados: number;
     }[];
     expect(lista.find((c) => c.codigo === codigo)?.usados).toBe(0);
+    // Admin F9: resultado do cupom: as duas contas usaram, nenhuma paga ainda.
+    const relatorio = (await req('get', '/admin/configuracoes/cupons/relatorio').expect(200))
+      .body as ResultadoDoCupom[];
+    const r = relatorio.find((x) => x.codigo === codigo);
+    expect(r).toMatchObject({ contas: 2, pagantes: 0, receita: 0, desconto: 0 });
+    expect(r!.porMes).toHaveLength(6);
+    expect(r!.porMes.at(-1)!.contas).toBe(2);
   });
 });
 

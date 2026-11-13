@@ -268,7 +268,13 @@ U2 a U5 já feitos (#161).
 - [x] Lote 6e (F1b e F1c): bateria verde e PR aberto (13/11)
 - [x] Merge pelo dono (lote 6e)
 - [ ] **F8** Aviso geral segmentado
-- [ ] **F9** Gestão de cupons
+- [x] **F9** Gestão de cupons (13/11):
+  - "Resultado dos cupons": contas, pagantes, receita, desconto concedido e uso por mês;
+  - aviso de vagas na lista;
+  - o alerta por e-mail já vinha da F3;
+  - registro no CHANGELOG.
+- [x] Lote 6n (F9): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6n)
 
 ## 7. Painel: página da barbearia editável e melhorias de produto
 

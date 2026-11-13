@@ -30,6 +30,7 @@ import { LimpezaNaSaude } from './limpeza-admin';
 import { NotaFiscalAdmin, NotasNaSaude } from './nota-fiscal-admin';
 import { useTabelasAdmin } from './precos-admin';
 import { RespostasChatAdmin } from './respostas-chat-admin';
+import { ResultadoCupons } from './resultado-cupons';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível salvar.';
@@ -1186,6 +1187,16 @@ export function CuponsAdmin({ onIrPara }: { onIrPara: (aba: string) => void }) {
                     <td className={`${td} tabular-nums`}>
                       {c.usados}
                       {c.vagas !== null ? ` de ${c.vagas}` : ''}
+                      {/* Admin F9: alerta de vagas (o mesmo limite do alerta da equipe, 80%). */}
+                      {c.vagas !== null && c.usados >= c.vagas ? (
+                        <span className="ml-2">
+                          <Ficha tom="perigo">Esgotou</Ficha>
+                        </span>
+                      ) : c.vagas !== null && c.usados >= Math.ceil(c.vagas * 0.8) ? (
+                        <span className="ml-2">
+                          <Ficha tom="aviso">Perto de esgotar</Ficha>
+                        </span>
+                      ) : null}
                     </td>
                     <td className={`${td} tabular-nums`}>
                       {c.validoAte ? formatarData(`${c.validoAte}T12:00:00Z`) : 'Sem prazo'}
@@ -1207,6 +1218,7 @@ export function CuponsAdmin({ onIrPara }: { onIrPara: (aba: string) => void }) {
           )
         }
       </Estado>
+      <ResultadoCupons />
       <form
         aria-label="Novo cupom"
         className="flex flex-col gap-3 border-t border-borda pt-3"
