@@ -28,7 +28,9 @@ import {
   type UnidadeDetalhe,
   type UnidadeEntrada,
   copiarCatalogoSchema,
+  dominioSchema,
   enderecoSiteSchema,
+  type DominioEntrada,
   envioFotoSchema,
   type EnderecoSite,
   fotosDoSite,
@@ -52,6 +54,7 @@ import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { montarSitePublico } from '../publico/site.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { gravarFoto, processarFoto } from '../site/fotos.js';
+import { dominioApontado, dominioEmUso, ipsDoServidor } from '../site/dominio.js';
 import {
   registrarTrocaDeEndereco,
   siteSlugEmUso,
@@ -142,17 +145,19 @@ export class UnidadesController {
     return { u, rascunho: lerSite(u.siteRascunho, conta.nome), barbearia: conta.nome };
   }
 
-  private painelDoSite(
+  private async painelDoSite(
     u: {
       slug: string | null;
       agendamentoPublico: boolean;
       sitePublicado: unknown;
       sitePublicadoEm: Date | null;
       siteSlug: string | null;
+      dominio: string | null;
+      dominioVerificadoEm: Date | null;
     },
     rascunho: SiteBarbearia,
     barbearia: string,
-  ): SitePainel {
+  ): Promise<SitePainel> {
     return {
       rascunho,
       publicado: u.sitePublicado !== null,
@@ -163,7 +168,97 @@ export class UnidadesController {
       linkLigado: u.agendamentoPublico,
       siteSlug: u.siteSlug,
       sugestaoSiteSlug: sugestaoDeSiteSlug(u.slug, barbearia),
+      dominio: u.dominio,
+      dominioVerificado: u.dominioVerificadoEm !== null,
+      // Só para quem ainda precisa apontar o DNS (é uma consulta de DNS).
+      dominioIps: u.dominio && !u.dominioVerificadoEm ? await ipsDoServidor(this.config) : [],
     };
+  }
+
+  @Put(':id/site/dominio')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({
+    summary: 'Domínio próprio do site (lote 7e): grava e já confere o DNS',
+  })
+  definirDominio(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(dominioSchema) { dominio }: DominioEntrada,
+  ): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    const alvo = this.config.dominio.alvo;
+    if (dominio === alvo || dominio.endsWith(`.${alvo}`))
+      throw Erros.requisicaoInvalida(
+        'dominio_invalido',
+        'Use o domínio da barbearia, não o do Pente Fino.',
+      );
+    return this.banco.daConta(async (tx) => {
+      const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
+      if (await dominioEmUso(tx, dominio, id))
+        throw Erros.conflito('Esse domínio já está cadastrado em outra barbearia.');
+      const apontado = await dominioApontado(this.config, dominio);
+      const salvo = await tx.unidade.update({
+        where: { id },
+        data: {
+          dominio,
+          dominioVerificadoEm:
+            dominio === u.dominio && u.dominioVerificadoEm
+              ? u.dominioVerificadoEm
+              : apontado
+                ? new Date()
+                : null,
+        },
+      });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'site_dominio',
+        antes: { dominio: u.dominio },
+        depois: { dominio },
+      });
+      return this.painelDoSite(salvo, rascunho, barbearia);
+    });
+  }
+
+  @Post(':id/site/dominio/verificar')
+  @Papeis(...GESTAO)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Conferir de novo o DNS do domínio próprio' })
+  verificarDominio(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
+      if (!u.dominio) return this.painelDoSite(u, rascunho, barbearia);
+      const apontado = await dominioApontado(this.config, u.dominio);
+      const salvo = await tx.unidade.update({
+        where: { id },
+        data: { dominioVerificadoEm: apontado ? (u.dominioVerificadoEm ?? new Date()) : null },
+      });
+      return this.painelDoSite(salvo, rascunho, barbearia);
+    });
+  }
+
+  @Delete(':id/site/dominio')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({ summary: 'Tirar o domínio próprio (o site segue no endereço do Pente Fino)' })
+  tirarDominio(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
+      const salvo = await tx.unidade.update({
+        where: { id },
+        data: { dominio: null, dominioVerificadoEm: null },
+      });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'site_dominio',
+        antes: { dominio: u.dominio },
+        depois: { dominio: null },
+      });
+      return this.painelDoSite(salvo, rascunho, barbearia);
+    });
   }
 
   @Get(':id/site')

@@ -2,6 +2,11 @@
 # .env pelo docker-compose.prod.yml. Os registros A de @, www, app, api e wa apontam para a VPS.
 {
 	email {$ACME_EMAIL}
+	# Domínio próprio das barbearias (seção 7, lote 7e): o certificado só sai depois de a API
+	# dizer que o domínio é de uma barbearia, com o DNS conferido e o site publicado.
+	on_demand_tls {
+		ask http://api:3001/publico/dominio-liberado
+	}
 }
 
 (seguranca) {
@@ -43,6 +48,20 @@ wa.{$DOMINIO} {
 status.{$DOMINIO} {
 	import seguranca
 	reverse_proxy status:3001
+}
+
+# Domínio próprio das barbearias (lote 7e): qualquer outro endereço cai aqui. O certificado é
+# emitido no primeiro acesso, só para domínio liberado pela API; o site decide o que mostrar.
+https:// {
+	import seguranca
+	tls {
+		on_demand
+	}
+	reverse_proxy web:3000
+}
+
+http:// {
+	redir https://{host}{uri} permanent
 }
 
 # www e o antigo app. levam ao domínio principal, mantendo o caminho.

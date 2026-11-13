@@ -278,4 +278,53 @@ describe('site da barbearia', () => {
     await dono.put(`/unidades/${a.unidadeA}/site/endereco`, { slug: 'Com Espaço' }).expect(400);
     await http().get('/publico/endereco-antigo/qualquer/x-y-z').expect(400);
   });
+
+  it('domínio próprio: grava, confere o DNS, libera o certificado e leva ao site', async () => {
+    // Nos testes, a conferência aceita só domínio ".teste" (DOMINIO_VERIFICACAO=falso).
+    const pendente = (
+      await dono
+        .put(`/unidades/${a.unidadeA}/site/dominio`, { dominio: 'https://www.Navalha.com.br/' })
+        .expect(200)
+    ).body as SitePainel;
+    expect(pendente).toMatchObject({ dominio: 'navalha.com.br', dominioVerificado: false });
+    expect(pendente.dominioIps.length).toBeGreaterThan(0);
+    await http().get('/publico/dominio-liberado?domain=navalha.com.br').expect(404);
+    await http().get('/publico/dominio/navalha.com.br').expect(404);
+
+    const pronto = (
+      await dono
+        .put(`/unidades/${a.unidadeA}/site/dominio`, { dominio: 'barbearia-a.teste' })
+        .expect(200)
+    ).body as SitePainel;
+    expect(pronto).toMatchObject({ dominio: 'barbearia-a.teste', dominioVerificado: true });
+    expect(pronto.dominioIps).toEqual([]);
+
+    // O site precisa estar publicado para o domínio abrir (e o certificado sair).
+    await dono.post(`/unidades/${a.unidadeA}/site/publicar`).expect(200);
+    await http().get('/publico/dominio-liberado?domain=www.barbearia-a.teste').expect(200);
+    const mapa = (await http().get('/publico/dominio/barbearia-a.teste').expect(200)).body;
+    expect(mapa).toEqual({
+      siteSlug: pronto.siteSlug ?? expect.any(String),
+      slugAgendamento: slug,
+    });
+
+    // Domínio de outra unidade, do próprio Pente Fino ou inválido: não.
+    await dono
+      .put(`/unidades/${a.unidadeB}/site/dominio`, { dominio: 'barbearia-a.teste' })
+      .expect(409);
+    await dono
+      .put(`/unidades/${a.unidadeA}/site/dominio`, { dominio: 'loja.localhost' })
+      .expect(400);
+    await dono.put(`/unidades/${a.unidadeA}/site/dominio`, { dominio: 'sem-ponto' }).expect(400);
+    await barbeiro.put(`/unidades/${a.unidadeA}/site/dominio`, { dominio: 'x.teste' }).expect(403);
+
+    // Tirar do ar fecha o domínio; tirar o domínio também.
+    await dono.delete(`/unidades/${a.unidadeA}/site/publicado`).expect(200);
+    await http().get('/publico/dominio-liberado?domain=barbearia-a.teste').expect(404);
+    await dono.post(`/unidades/${a.unidadeA}/site/publicar`).expect(200);
+    const sem = (await dono.delete(`/unidades/${a.unidadeA}/site/dominio`).expect(200))
+      .body as SitePainel;
+    expect(sem).toMatchObject({ dominio: null, dominioVerificado: false });
+    await http().get('/publico/dominio/barbearia-a.teste').expect(404);
+  });
 });

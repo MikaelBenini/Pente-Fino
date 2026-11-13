@@ -469,6 +469,12 @@ export interface SitePainel {
   siteSlug: string | null;
   /** Sugestão para o endereço do site enquanto ele não existe. */
   sugestaoSiteSlug: string;
+  /** Domínio próprio da barbearia (lote 7e), sem "www."; null = não tem. */
+  dominio: string | null;
+  /** O DNS do domínio já aponta para o Pente Fino: o site abre nele. */
+  dominioVerificado: boolean;
+  /** Para onde o registro A do domínio deve apontar (IP do servidor), quando se sabe. */
+  dominioIps: string[];
 }
 
 /** Caminho público do site e do agendamento (lote 7d): coisas diferentes, endereços diferentes. */
@@ -616,4 +622,48 @@ export interface FotoEnviada {
   id: string;
   largura: number;
   altura: number;
+}
+
+// ─── Domínio próprio (lote 7e) ──────────────────────────────────────────────
+
+const HOSTNAME = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
+/**
+ * "https://www.BarbeariaDoCarlos.com.br/" → "barbeariadocarlos.com.br". Guarda sem o "www.": o
+ * site abre nos dois. null quando não é um domínio.
+ */
+export function normalizarDominio(texto: string): string | null {
+  const d = texto
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-z]+:\/\//, '')
+    .replace(/[/?#].*$/, '')
+    .replace(/:\d+$/, '')
+    .replace(/\.$/, '')
+    .replace(/^www\./, '');
+  return HOSTNAME.test(d) ? d : null;
+}
+
+export const dominioSchema = z.object({
+  dominio: z
+    .string()
+    .max(260)
+    .transform((t, ctx) => {
+      const d = normalizarDominio(t);
+      if (!d) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Domínio inválido. Escreva como barbeariadocarlos.com.br.',
+        });
+        return z.NEVER;
+      }
+      return d;
+    }),
+});
+export type DominioEntrada = z.infer<typeof dominioSchema>;
+
+/** O que a página no domínio próprio precisa: os dois endereços da unidade. */
+export interface DominioPublico {
+  siteSlug: string;
+  slugAgendamento: string;
 }

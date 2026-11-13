@@ -2,8 +2,10 @@ import { ROTULO_PAGINA, type PaginaSite } from '@pente-fino/shared';
 import { Carregando } from '@pente-fino/ui';
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { Suspense } from 'react';
 import { SiteDaBarbearia } from '@/componentes/site-barbearia/site';
+import { CABECALHO_DOMINIO } from '@/lib/dominio-proprio';
 import { enderecoAtual, sitePublico } from '@/lib/servidor/pagina-publica';
 
 // Páginas internas do site da barbearia (seção 7): /s/<endereço>/servicos, /equipe e /contato.
@@ -38,7 +40,16 @@ async function Conteudo({ params }: Props) {
     if (novo) permanentRedirect(`/s/${novo}/${pagina}`);
     notFound();
   }
-  return <SiteDaBarbearia dados={site} pagina={p} base={`/s/${slug}`} />;
+  // No domínio próprio (lote 7e) os links ficam limpos: /servicos, /agendar.
+  const noDominio = !!(await headers()).get(CABECALHO_DOMINIO);
+  return (
+    <SiteDaBarbearia
+      dados={site}
+      pagina={p}
+      base={noDominio ? '' : `/s/${slug}`}
+      agendar={noDominio ? '/agendar' : undefined}
+    />
+  );
 }
 
 export default function Pagina({ params }: Props) {

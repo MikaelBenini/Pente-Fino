@@ -319,6 +319,7 @@ U2 a U5 já feitos (#161).
     logotipo (foto de serviço fica para depois);
   - [x] Merge do lote 7b (PR #193, pelo dono, 13/11)
   - [x] Merge do lote 7c (PR #194, pelo dono, 13/11)
+  - [x] Merge do lote 7d (PR #195, 13/11)
   - pedido do dono em 13/11, depois do 7c: "o site é uma coisa e o link de agendamento é outra";
     o barbeiro pode pôr o domínio dele; o site precisa de animações e de um visual mais moderno,
     menos "padrão". Decisão: o link de agendamento continua em `/b/<slug>` (é o que já está no
@@ -328,7 +329,7 @@ U2 a U5 já feitos (#161).
     o link e o site ir junto) site e agendamento em endereços separados: o site em `/s/<slug>` (com
     `/servicos`, `/equipe` e `/contato`), o `/b/<slug>` volta a ser só o agendamento, os botões
     do site levam a ele; o painel mostra os dois endereços para copiar;
-  - [ ] **Lote 7e** domínio próprio: o dono informa o domínio, o painel mostra o registro de DNS
+  - [x] **Lote 7e** (13/11, documentado na linha de desenvolvimento) domínio próprio: o dono informa o domínio, o painel mostra o registro de DNS
     para apontar, o sistema confere sozinho; o certificado HTTPS sai na hora (Caddy sob demanda,
     só para domínio cadastrado e conferido); no domínio, a raiz é o site e `/agendar` é o
     agendamento;

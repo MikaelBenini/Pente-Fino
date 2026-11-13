@@ -60,6 +60,8 @@ import {
   type TabelaPrecosPlanos,
   temRecurso,
   lerSite,
+  normalizarDominio,
+  type DominioPublico,
   type SitePublico,
   type TipoEndereco,
 } from '@pente-fino/shared';
@@ -85,6 +87,7 @@ import { montarSitePublico } from './site.js';
 import { lerFoto } from '../site/fotos.js';
 
 const slugParam = new PipeZod(slugSchema);
+const consultaDominio = z.object({ domain: z.string().min(4).max(260) });
 
 /** "Prefere pelo WhatsApp?": o bot conectado e marcando pela conversa. */
 async function linkAgendarPelaConversa(tx: Transacao, unidadeId: string, regras: unknown) {
@@ -397,6 +400,40 @@ export class PublicoController {
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
       return montarSitePublico(tx, u, lerSite(u.sitePublicado, conta.nome));
     });
+  }
+
+  @Get('dominio/:host')
+  @Publico()
+  @ApiOperation({
+    summary: 'Domínio próprio (lote 7e): os endereços do site e do agendamento da unidade',
+  })
+  async dominio(@Param('host') host: string): Promise<DominioPublico> {
+    const u = await this.unidadePeloDominio(host);
+    if (!u) throw Erros.naoEncontrado('Domínio não cadastrado.');
+    return { siteSlug: u.siteSlug!, slugAgendamento: u.slug ?? '' };
+  }
+
+  @Get('dominio-liberado')
+  @Publico()
+  @ApiOperation({
+    summary: 'Pergunta do Caddy antes de emitir o certificado: o domínio é de uma barbearia?',
+  })
+  async dominioLiberado(@Consulta(consultaDominio) q: z.infer<typeof consultaDominio>): Promise<{
+    ok: true;
+  }> {
+    if (!(await this.unidadePeloDominio(q.domain)))
+      throw Erros.naoEncontrado('Domínio não cadastrado.');
+    return { ok: true };
+  }
+
+  /** Unidade do domínio conferido, com site publicado; aceita com ou sem "www.". */
+  private async unidadePeloDominio(host: string) {
+    const dominio = normalizarDominio(host);
+    if (!dominio) return null;
+    const u = await this.banco.semConta({ dominio }, (tx) =>
+      tx.unidade.findUnique({ where: { dominio } }),
+    );
+    return u?.ativa && u.siteSlug && u.sitePublicado ? u : null;
   }
 
   @Get('endereco-antigo/:tipo/:slug')

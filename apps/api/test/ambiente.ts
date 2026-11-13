@@ -15,5 +15,6 @@ process.env.CADASTRO_LIMITE_POR_HORA = '1000';
 process.env.CADASTRO_LIMITE_POR_DIA = '1000';
 // Sem WhatsApp de verdade: o provedor falso guarda o que "enviou" e simula o QR.
 process.env.WHATSAPP_PROVEDOR = 'falso';
+process.env.DOMINIO_VERIFICACAO = 'falso';
 process.env.COBRANCA_PROVEDOR = 'falso';
 process.env.ASAAS_WEBHOOK_TOKEN = 'token-do-webhook-asaas-teste';

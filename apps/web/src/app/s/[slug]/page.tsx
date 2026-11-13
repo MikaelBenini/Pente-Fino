@@ -1,8 +1,10 @@
 import { Carregando } from '@pente-fino/ui';
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { Suspense } from 'react';
 import { SiteDaBarbearia } from '@/componentes/site-barbearia/site';
+import { CABECALHO_DOMINIO } from '@/lib/dominio-proprio';
 import { enderecoAtual, sitePublico } from '@/lib/servidor/pagina-publica';
 import { URL_SITE } from '@/lib/site';
 
@@ -44,7 +46,16 @@ async function Conteudo({ params }: Props) {
     if (novo) permanentRedirect(`/s/${novo}`);
     notFound();
   }
-  return <SiteDaBarbearia dados={site} pagina="inicio" base={`/s/${slug}`} />;
+  // No domínio próprio (lote 7e) os links ficam limpos: /servicos, /agendar.
+  const noDominio = !!(await headers()).get(CABECALHO_DOMINIO);
+  return (
+    <SiteDaBarbearia
+      dados={site}
+      pagina="inicio"
+      base={noDominio ? '' : `/s/${slug}`}
+      agendar={noDominio ? '/agendar' : undefined}
+    />
+  );
 }
 
 export default function Pagina({ params }: Props) {
