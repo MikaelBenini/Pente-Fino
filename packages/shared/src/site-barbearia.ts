@@ -58,16 +58,27 @@ interface DefinicaoBloco {
   /** Campos que o dono edita no painel. */
   titulo?: boolean;
   texto?: boolean;
-  /** Lista de itens (depoimentos, perguntas): o que cada campo do item quer dizer. */
-  itens?: { titulo: string; texto: string };
+  /** O bloco leva uma foto (lote 7c). */
+  foto?: boolean;
+  /**
+   * Lista de itens (depoimentos, perguntas, galeria): o que cada campo do item quer dizer. Texto
+   * vazio = o item não tem esse campo; `foto` = cada item leva uma foto.
+   */
+  itens?: { titulo: string; texto: string; foto?: boolean };
 }
 
 export const BLOCOS_SITE = {
-  banner: { rotulo: 'Banner', paginas: ['inicio'], titulo: true, texto: true },
+  banner: { rotulo: 'Banner', paginas: ['inicio'], titulo: true, texto: true, foto: true },
   destaques: { rotulo: 'Faixa de destaques', paginas: ['inicio'] },
-  sobre: { rotulo: 'Sobre a casa', paginas: ['inicio'], titulo: true, texto: true },
+  sobre: { rotulo: 'Sobre a casa', paginas: ['inicio'], titulo: true, texto: true, foto: true },
   servicos: { rotulo: 'Serviços em destaque', paginas: ['inicio'], titulo: true },
   equipe: { rotulo: 'Equipe', paginas: ['inicio'], titulo: true },
+  galeria: {
+    rotulo: 'Galeria de fotos',
+    paginas: ['inicio'],
+    titulo: true,
+    itens: { titulo: 'Legenda', texto: '', foto: true },
+  },
   depoimentos: {
     rotulo: 'Depoimentos',
     paginas: ['inicio'],
@@ -105,9 +116,13 @@ const textoCurto = (max: number) =>
     .trim()
     .max(max, { error: `Até ${max} caracteres.` });
 
+/** Foto enviada pelo dono (tabela foto_site): o id vira o nome do arquivo. */
+export const fotoIdSchema = z.uuid();
+
 export const itemBlocoSchema = z.object({
   titulo: textoCurto(160),
-  texto: textoCurto(600),
+  texto: textoCurto(600).default(''),
+  foto: fotoIdSchema.optional(),
 });
 
 export const blocoSiteSchema = z.object({
@@ -117,6 +132,7 @@ export const blocoSiteSchema = z.object({
   titulo: textoCurto(120).optional(),
   texto: textoCurto(600).optional(),
   itens: z.array(itemBlocoSchema).max(12, { error: 'No máximo 12 itens.' }).optional(),
+  foto: fotoIdSchema.optional(),
 });
 export type BlocoSite = z.infer<typeof blocoSiteSchema>;
 
@@ -139,6 +155,8 @@ const paginaSchema = (pagina: PaginaSite) =>
 
 export const siteBarbeariaSchema = z.object({
   versao: z.literal(1),
+  /** Logotipo no cabeçalho (lote 7c); sem ele, o monograma com a inicial. */
+  logo: fotoIdSchema.optional(),
   tema: z.enum(TEMAS_SITE),
   cor: z.enum(IDS_CORES),
   fonte: z.enum(IDS_FONTES),
@@ -159,7 +177,10 @@ export const siteBarbeariaSchema = z.object({
   }),
   /** O que aparece de cada barbeiro (por id do profissional): especialidade e apresentação. */
   equipe: z
-    .record(z.uuid(), z.object({ foco: textoCurto(80), sobre: textoCurto(600) }))
+    .record(
+      z.uuid(),
+      z.object({ foco: textoCurto(80), sobre: textoCurto(600), foto: fotoIdSchema.optional() }),
+    )
     .refine((r) => Object.keys(r).length <= 100, { error: 'Equipe grande demais.' }),
 });
 export type SiteBarbearia = z.infer<typeof siteBarbeariaSchema>;
@@ -199,6 +220,7 @@ export function siteInicial(barbearia: string): SiteBarbearia {
         },
         { id: 'servicos', tipo: 'servicos', visivel: true, titulo: 'Os mais pedidos' },
         { id: 'equipe', tipo: 'equipe', visivel: true, titulo: 'Os barbeiros' },
+        { id: 'galeria', tipo: 'galeria', visivel: false, titulo: 'Nosso trabalho', itens: [] },
         {
           id: 'depoimentos',
           tipo: 'depoimentos',
@@ -408,6 +430,8 @@ export interface SitePublico {
   equipe: { id: string; nome: string; foco: string; sobre: string }[];
   horario: LinhaHorario[];
   nota: { media: number; total: number } | null;
+  /** Medidas das fotos usadas (evita a página pular enquanto carrega). */
+  fotos: Record<string, { largura: number; altura: number }>;
 }
 
 /** Serviços em destaque no Início: os três primeiros principais (extras não entram). */
@@ -516,4 +540,53 @@ export function adicionarBloco(
   const fim = blocos.findIndex((b) => b.tipo === 'agendar');
   blocos.splice(fim < 0 || tipo === 'agendar' ? blocos.length : fim, 0, novo);
   return comPagina(site, pagina, blocos);
+}
+
+// ─── Fotos (lote 7c) ────────────────────────────────────────────────────────
+
+/** Tamanhos guardados de cada foto (largura máxima, em px). */
+export const TAMANHOS_FOTO = [640, 1600] as const;
+export type TamanhoFoto = (typeof TAMANHOS_FOTO)[number];
+
+/** Endereço público da foto: /f/<id>-<tamanho>.webp. */
+export function urlDaFoto(id: string, tamanho: TamanhoFoto = 1600): string {
+  return `/f/${id}-${tamanho}.webp`;
+}
+
+/** Nome de arquivo aceito em /f/ (o id e um dos tamanhos). */
+export const NOME_ARQUIVO_FOTO =
+  /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(640|1600)\.webp$/;
+
+/** Todas as fotos que o site usa (logo, blocos, itens e barbeiros), sem repetir. */
+export function fotosDoSite(site: SiteBarbearia): string[] {
+  const ids = new Set<string>();
+  if (site.logo) ids.add(site.logo);
+  for (const p of PAGINAS_SITE)
+    for (const b of site.paginas[p]) {
+      if (b.foto) ids.add(b.foto);
+      for (const i of b.itens ?? []) if (i.foto) ids.add(i.foto);
+    }
+  for (const e of Object.values(site.equipe)) if (e.foto) ids.add(e.foto);
+  return [...ids];
+}
+
+/** Maior arquivo aceito, já reduzido no navegador (a ponte do painel aceita até 1 MB). */
+export const MAXIMO_BYTES_FOTO = 700 * 1024;
+
+/** Envio de foto: a imagem reduzida no navegador, em base64. */
+export const envioFotoSchema = z.object({
+  tipo: z.enum(['image/webp', 'image/jpeg', 'image/png']),
+  dados: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]+={0,2}$/, { error: 'Arquivo inválido.' })
+    .max(Math.ceil((MAXIMO_BYTES_FOTO * 4) / 3) + 4, {
+      error: 'Foto grande demais. Tente outra.',
+    }),
+});
+export type EnvioFoto = z.infer<typeof envioFotoSchema>;
+
+export interface FotoEnviada {
+  id: string;
+  largura: number;
+  altura: number;
 }

@@ -5,7 +5,8 @@ criptografado (AES-256, senha `BACKUP_SENHA` do `.env`):
 
 - usuários e permissões do PostgreSQL;
 - o banco do sistema e o da Evolution API;
-- o volume de sessões do WhatsApp (não precisa ler o QR code de novo).
+- o volume de sessões do WhatsApp (não precisa ler o QR code de novo);
+- as fotos do site das barbearias (volume `fotos_site`, desde o lote 7c da seção 7).
 
 Ficam 30 diários e 12 mensais em `/opt/barbearia/backups`. Com `BACKUP_DESTINO` no `.env`, a pasta
 é espelhada no armazenamento externo pelo rclone. O log fica em `/opt/barbearia/backups/backup.log`.

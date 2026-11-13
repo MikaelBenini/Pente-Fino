@@ -341,6 +341,7 @@ model Conta {
   bloqueiosRecorrentes BloqueioRecorrente[]
   avisos               Aviso[]
   funilEtapa           FunilEtapaConta?
+  fotosSite            FotoSite[]
 
   @@map("conta")
 }
@@ -402,6 +403,7 @@ model Unidade {
 
   listaEspera ListaEspera[]
   avisos      Aviso[]
+  fotosSite   FotoSite[]
 
   @@index([contaId])
   @@map("unidade")
@@ -1885,4 +1887,23 @@ model ExecucaoLimpeza {
 
   @@index([iniciadaEm])
   @@map("execucao_limpeza")
+}
+
+/// Foto do site da barbearia (seção 7, lote 7c). O arquivo fica no disco do servidor
+/// (FOTOS_DIR/<id>-640.webp e -1600.webp, já sem os dados da câmera); aqui, de quem é e o tamanho.
+model FotoSite {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId   String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId String   @map("unidade_id") @db.Uuid
+  largura   Int
+  altura    Int
+  bytes     Int
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@index([contaId])
+  @@index([unidadeId])
+  @@map("foto_site")
 }

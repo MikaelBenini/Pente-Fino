@@ -1,4 +1,14 @@
-import { Controller, Get, HttpCode, HttpStatus, Inject, Param, Post, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   aplicarModelosIniciais,
@@ -52,7 +62,7 @@ import {
   lerSite,
   type SitePublico,
 } from '@pente-fino/shared';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { auditar } from '../auditoria/auditoria.js';
@@ -71,6 +81,7 @@ import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { emSequencia, umPorVez } from '../comum/sequencia.js';
 import { ChatService } from '../chat/chat.service.js';
 import { montarSitePublico } from './site.js';
+import { lerFoto } from '../site/fotos.js';
 
 const slugParam = new PipeZod(slugSchema);
 
@@ -381,6 +392,27 @@ export class PublicoController {
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
       return montarSitePublico(tx, u, lerSite(u.sitePublicado, conta.nome));
     });
+  }
+
+  @Get('fotos/:arquivo')
+  @Publico()
+  @ApiOperation({ summary: 'Foto do site da barbearia (<id>-640.webp ou <id>-1600.webp)' })
+  async foto(@Param('arquivo') arquivo: string, @Res() res: Response): Promise<void> {
+    const dados = await lerFoto(this.config.fotosDir, arquivo);
+    if (!dados) {
+      res
+        .status(404)
+        .json({ erro: { codigo: 'nao_encontrado', mensagem: 'Foto não encontrada.' } });
+      return;
+    }
+    // O id não muda e o arquivo nunca é reescrito: pode guardar por um ano.
+    res
+      .status(200)
+      .set({
+        'content-type': 'image/webp',
+        'cache-control': 'public, max-age=31536000, immutable',
+      })
+      .send(dados);
   }
 
   @Get('paginas')

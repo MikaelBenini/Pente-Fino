@@ -28,8 +28,12 @@ import {
   type UnidadeDetalhe,
   type UnidadeEntrada,
   copiarCatalogoSchema,
+  envioFotoSchema,
+  fotosDoSite,
   lerSite,
   siteBarbeariaSchema,
+  type EnvioFoto,
+  type FotoEnviada,
   type SiteBarbearia,
   type SitePainel,
   type SitePublico,
@@ -44,6 +48,8 @@ import { ErroApp, Erros } from '../comum/erros.js';
 import { data, dataTexto, exigirUnidade, GESTAO, TODOS } from '../comum/escopo.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { montarSitePublico } from '../publico/site.js';
+import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { gravarFoto, processarFoto } from '../site/fotos.js';
 
 const SELECAO = {
   id: true,
@@ -58,6 +64,9 @@ const SELECAO = {
   agendamentoPublico: true,
   aparecerNoGoogle: true,
 } as const;
+/** Fotos enviadas por unidade (cada uma ocupa uns 300 KB no disco). */
+const LIMITE_FOTOS_UNIDADE = 300;
+
 const periodoSchema = z.object({
   de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
   ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
@@ -70,7 +79,10 @@ const dataParam = new PipeZod(
 @ApiBearerAuth()
 @Controller('unidades')
 export class UnidadesController {
-  constructor(@Inject(BancoService) private readonly banco: BancoService) {}
+  constructor(
+    @Inject(BancoService) private readonly banco: BancoService,
+    @Inject(CONFIGURACAO) private readonly config: Configuracao,
+  ) {}
 
   @Get(':id/regras-agendamento')
   @Papeis(...GESTAO)
@@ -163,11 +175,48 @@ export class UnidadesController {
     exigirUnidade(id, GESTAO);
     return this.banco.daConta(async (tx) => {
       const { u } = await this.unidadeDoSite(tx, id);
+      // Só foto enviada por esta conta (a tabela é isolada por conta).
+      const fotos = fotosDoSite(site);
+      if (fotos.length) {
+        const achadas = await tx.fotoSite.count({ where: { id: { in: fotos } } });
+        if (achadas !== fotos.length)
+          throw Erros.requisicaoInvalida(
+            'foto_invalida',
+            'Uma das fotos não existe mais. Envie de novo.',
+          );
+      }
       const salvo = await tx.unidade.update({
         where: { id },
         data: { siteRascunho: site as unknown as Prisma.InputJsonValue },
       });
       return this.painelDoSite({ ...u, ...salvo }, site);
+    });
+  }
+
+  @Post(':id/site/fotos')
+  @Papeis(...GESTAO)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Enviar foto do site (reduzida no navegador; refeita aqui sem os dados da câmera)',
+  })
+  async enviarFoto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(envioFotoSchema) envio: EnvioFoto,
+  ): Promise<FotoEnviada> {
+    exigirUnidade(id, GESTAO);
+    const foto = await processarFoto(envio.dados);
+    return this.banco.daConta(async (tx) => {
+      await this.unidadeDoSite(tx, id);
+      if ((await tx.fotoSite.count({ where: { unidadeId: id } })) >= LIMITE_FOTOS_UNIDADE)
+        throw Erros.requisicaoInvalida(
+          'limite_fotos',
+          `Esta unidade já tem ${LIMITE_FOTOS_UNIDADE} fotos enviadas.`,
+        );
+      const linha = await tx.fotoSite.create({
+        data: { unidadeId: id, largura: foto.largura, altura: foto.altura, bytes: foto.bytes },
+      });
+      await gravarFoto(this.config.fotosDir, linha.id, foto);
+      return { id: linha.id, largura: foto.largura, altura: foto.altura };
     });
   }
 

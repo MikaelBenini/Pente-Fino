@@ -36,6 +36,8 @@ FROM node:24-alpine AS final
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=producao --chown=node:node /repo /app
+# Pasta das fotos do site (lote 7c): o volume novo herda o dono node na primeira subida.
+RUN mkdir -p /dados/fotos && chown node:node /dados/fotos
 USER node
 WORKDIR /app/apps/api
 EXPOSE 3001

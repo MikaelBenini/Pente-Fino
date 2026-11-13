@@ -1,6 +1,7 @@
 import { precoServicoVigente, type Prisma, type Transacao } from '@pente-fino/db';
 import {
   dataLocal,
+  fotosDoSite,
   horarioDaUnidade,
   linkWhatsappDaUnidade,
   notaDoSite,
@@ -50,6 +51,13 @@ export async function montarSitePublico(
     },
     select: { notaBarbearia: true },
   });
+  const ids = fotosDoSite(site);
+  const fotos = ids.length
+    ? await tx.fotoSite.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, largura: true, altura: true },
+      })
+    : [];
   return {
     slug: u.slug ?? '',
     barbearia: conta.nome,
@@ -72,5 +80,6 @@ export async function montarSitePublico(
       u.diasTrabalho,
     ),
     nota: notaDoSite(notas.map((n) => n.notaBarbearia!)),
+    fotos: Object.fromEntries(fotos.map((f) => [f.id, { largura: f.largura, altura: f.altura }])),
   };
 }

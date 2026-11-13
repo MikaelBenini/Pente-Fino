@@ -39,6 +39,8 @@ export function configurarApp(app: INestApplication): Configuracao {
   express.disable('x-powered-by');
   express.set('trust proxy', config.trustProxy ? 1 : false);
   express.use(contextoDaRequisicao);
+  // Até 1 MB, como a ponte do painel: a foto do site (lote 7c) chega reduzida, em base64.
+  express.useBodyParser('json', { limit: '1mb' });
   express.enableCors({ origin: config.appUrl, credentials: true });
   express.enableShutdownHooks();
 

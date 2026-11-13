@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCOS_SITE,
+  NOME_ARQUIVO_FOTO,
+  envioFotoSchema,
+  fotosDoSite,
+  urlDaFoto,
   adicionarBloco,
   blocosParaAdicionar,
   editarBloco,
@@ -190,5 +194,54 @@ describe('operações do painel (lote 7b)', () => {
     expect(adicionarBloco(base, 'inicio', 'tabela', 'X')).toBe(base);
     const sem = removerBloco(base, 'contato', 'perguntas');
     expect(blocosParaAdicionar(sem, 'contato')).toEqual(['perguntas']);
+  });
+});
+
+describe('fotos do site (lote 7c)', () => {
+  const f1 = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b';
+  const f2 = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5c';
+
+  it('lista as fotos usadas, sem repetir', () => {
+    const base = siteInicial('X');
+    let s = editarBloco(base, 'inicio', 'banner', { foto: f1 });
+    s = editarBloco(s, 'inicio', 'galeria', {
+      itens: [
+        { titulo: 'Degradê', texto: '', foto: f2 },
+        { titulo: 'De novo', texto: '', foto: f1 },
+      ],
+    });
+    s = { ...s, logo: f2 };
+    expect(fotosDoSite(s).sort()).toEqual([f1, f2].sort());
+    expect(siteBarbeariaSchema.safeParse(s).success).toBe(true);
+    expect(fotosDoSite(base)).toEqual([]);
+  });
+
+  it('o rascunho gravado antes das fotos continua valendo', () => {
+    const antigo = siteInicial('X') as Record<string, unknown>;
+    delete antigo.logo;
+    const paginas = antigo.paginas as { inicio: { tipo: string }[] };
+    paginas.inicio = paginas.inicio.filter((b) => b.tipo !== 'galeria');
+    const lido = lerSite(antigo, 'Outro nome');
+    expect(lido.paginas.inicio.some((b) => b.tipo === 'galeria')).toBe(false);
+    expect(lido.paginas.inicio[2]?.titulo).toBe('Conheça a X');
+  });
+
+  it('endereço e nome do arquivo da foto', () => {
+    expect(urlDaFoto(f1)).toBe(`/f/${f1}-1600.webp`);
+    expect(urlDaFoto(f1, 640)).toBe(`/f/${f1}-640.webp`);
+    expect(NOME_ARQUIVO_FOTO.test(`${f1}-640.webp`)).toBe(true);
+    expect(NOME_ARQUIVO_FOTO.test(`${f1}-800.webp`)).toBe(false);
+    expect(NOME_ARQUIVO_FOTO.test(`../${f1}-640.webp`)).toBe(false);
+  });
+
+  it('envio aceita base64 de imagem pequena e recusa o resto', () => {
+    expect(envioFotoSchema.safeParse({ tipo: 'image/webp', dados: 'UklGRg==' }).success).toBe(true);
+    expect(envioFotoSchema.safeParse({ tipo: 'image/gif', dados: 'R0lG' }).success).toBe(false);
+    expect(envioFotoSchema.safeParse({ tipo: 'image/png', dados: 'não é base64' }).success).toBe(
+      false,
+    );
+    expect(
+      envioFotoSchema.safeParse({ tipo: 'image/jpeg', dados: 'A'.repeat(1_000_000) }).success,
+    ).toBe(false);
   });
 });

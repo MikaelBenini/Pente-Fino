@@ -66,4 +66,9 @@ done
 restaurar_em pente-fino-postgres-1
 docker run --rm -v pente-fino_evolution_instancias:/dados -v "$TMP":/backup alpine:3.22 \
   sh -c 'rm -rf /dados/* && tar xzf /backup/evolution_instancias.tgz -C /dados'
+# Fotos do site (lote 7c); backup anterior a elas não traz o arquivo.
+if [[ -f "$TMP/fotos_site.tgz" ]]; then
+  docker run --rm -v pente-fino_fotos_site:/dados -v "$TMP":/backup alpine:3.22 \
+    sh -c 'rm -rf /dados/* && tar xzf /backup/fotos_site.tgz -C /dados && chown -R 1000:1000 /dados'
+fi
 ./atualizar.sh

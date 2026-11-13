@@ -2,6 +2,7 @@
 // com os dados vivos da unidade e tirar do ar (volta a página de agendamento).
 import type { INestApplication } from '@nestjs/common';
 import { dataLocal, type SitePainel, type SitePublico } from '@pente-fino/shared';
+import sharp from 'sharp';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
@@ -159,5 +160,73 @@ describe('site da barbearia', () => {
     expect(fora.rascunho.cor).toBe('cobre');
     await http().get(`/publico/site/${slug}`).expect(404);
     await http().get(`/publico/agendamento/${slug}`).expect(200);
+  });
+
+  it('fotos: reduz em dois tamanhos sem os dados da câmera, valida no rascunho e entra na prévia', async () => {
+    const jpg = await sharp({
+      create: { width: 2400, height: 1600, channels: 3, background: '#335544' },
+    })
+      .jpeg()
+      .withMetadata({ exif: { IFD0: { Copyright: 'camera do dono' } } })
+      .toBuffer();
+    expect((await sharp(jpg).metadata()).exif).toBeDefined();
+    const envio = await dono
+      .post(`/unidades/${a.unidadeA}/site/fotos`, {
+        tipo: 'image/jpeg',
+        dados: jpg.toString('base64'),
+      })
+      .expect(201);
+    const foto = envio.body as { id: string; largura: number; altura: number };
+    expect(foto).toMatchObject({ largura: 1600, altura: 1067 });
+
+    for (const [t, largura] of [
+      [640, 640],
+      [1600, 1600],
+    ] as const) {
+      const r = await http()
+        .get(`/publico/fotos/${foto.id}-${t}.webp`)
+        .buffer(true)
+        .parse((res, cb) => {
+          const partes: Buffer[] = [];
+          res.on('data', (c: Buffer) => partes.push(c));
+          res.on('end', () => cb(null, Buffer.concat(partes)));
+        })
+        .expect(200);
+      expect(r.headers['content-type']).toBe('image/webp');
+      expect(r.headers['cache-control']).toContain('immutable');
+      const meta = await sharp(r.body as Buffer).metadata();
+      expect(meta).toMatchObject({ format: 'webp', width: largura });
+      expect(meta.exif).toBeUndefined();
+    }
+    await http().get(`/publico/fotos/${foto.id}-800.webp`).expect(404);
+    await http().get('/publico/fotos/..%2F..%2Fetc%2Fpasswd').expect(404);
+
+    await dono
+      .post(`/unidades/${a.unidadeA}/site/fotos`, { tipo: 'image/png', dados: 'bmFvZWZvdG8=' })
+      .expect(400);
+
+    // Foto de verdade passa dos 100 KB do padrão do Express: o corpo aceita até 1 MB.
+    const ruido = Buffer.alloc(700 * 500 * 3);
+    for (let i = 0; i < ruido.length; i++) ruido[i] = (i * 7919) % 251;
+    const grande = await sharp(ruido, { raw: { width: 700, height: 500, channels: 3 } })
+      .jpeg({ quality: 95 })
+      .toBuffer();
+    expect(grande.toString('base64').length).toBeGreaterThan(150_000);
+    await dono
+      .post(`/unidades/${a.unidadeA}/site/fotos`, {
+        tipo: 'image/jpeg',
+        dados: grande.toString('base64'),
+      })
+      .expect(201);
+
+    const { rascunho } = (await dono.get(`/unidades/${a.unidadeA}/site`)).body as SitePainel;
+    rascunho.paginas.inicio[0]!.foto = foto.id;
+    rascunho.logo = foto.id;
+    await dono.put(`/unidades/${a.unidadeA}/site`, rascunho).expect(200);
+    const p = (await dono.get(`/unidades/${a.unidadeA}/site/previa`)).body as SitePublico;
+    expect(p.fotos[foto.id]).toEqual({ largura: 1600, altura: 1067 });
+
+    rascunho.paginas.inicio[0]!.foto = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b';
+    await dono.put(`/unidades/${a.unidadeA}/site`, rascunho).expect(400);
   });
 });
