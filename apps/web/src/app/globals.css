@@ -369,6 +369,140 @@ dialog[open]::backdrop {
   }
 }
 
+/*
+ * Site da barbearia (seção 7, lote 7f): movimento só em CSS, sem biblioteca. Entrada do banner em
+ * etapas, zoom lento na foto, faixa de serviços correndo, faixas que surgem ao rolar e cabeçalho
+ * que fica translúcido. Rolagem usa a linha do tempo da própria rolagem (o navegador que não
+ * conhece mostra tudo parado). "Reduzir movimento" desliga tudo, no bloco do fim.
+ */
+@keyframes site-subir {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+@keyframes site-titulo {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 -0.2em 0);
+  }
+}
+@keyframes site-zoom {
+  from {
+    transform: scale(1.12);
+  }
+}
+@keyframes site-correr {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes site-brilho {
+  to {
+    transform: translateX(260%) skewX(-20deg);
+  }
+}
+.site-entrada > * {
+  animation: site-subir 800ms var(--curva-saida) both;
+}
+.site-entrada > :nth-child(1) {
+  animation-name: site-titulo;
+  animation-duration: 900ms;
+}
+.site-entrada > :nth-child(2) {
+  animation-delay: 160ms;
+}
+.site-entrada > :nth-child(3) {
+  animation-delay: 300ms;
+}
+.site-entrada > :nth-child(4) {
+  animation-delay: 420ms;
+}
+.site-zoom {
+  animation: site-zoom 9s cubic-bezier(0.2, 0.6, 0.2, 1) both;
+}
+.site-faixa-trilho {
+  animation: site-correr 40s linear infinite;
+}
+.site-faixa:hover .site-faixa-trilho,
+.site-faixa:focus-within .site-faixa-trilho {
+  animation-play-state: paused;
+}
+.site-botao {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.site-botao::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  transform: translateX(-140%) skewX(-20deg);
+}
+.site-botao:hover::after {
+  animation: site-brilho 750ms var(--curva-saida);
+}
+.site-cartao {
+  transition:
+    transform var(--ritmo) var(--curva-saida),
+    box-shadow var(--ritmo) var(--curva-saida);
+}
+.site-cartao:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 22px 40px -28px rgb(20 39 28 / 0.55);
+}
+.site-foto-cor {
+  filter: grayscale(1) contrast(1.05);
+  transition: filter var(--ritmo-lento) var(--curva-saida);
+}
+.site-foto-cor:hover,
+:hover > .site-foto-cor {
+  filter: none;
+}
+.site-foto-zoom {
+  transition: transform var(--ritmo-lento) var(--curva-saida);
+}
+:hover > .site-foto-zoom {
+  transform: scale(1.06);
+}
+@supports (animation-timeline: view()) {
+  .site-revelar {
+    animation: site-subir linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 65%;
+  }
+  .site-cabecalho {
+    animation: site-cabecalho linear both;
+    animation-timeline: scroll(nearest);
+    animation-range: 0 140px;
+  }
+  @keyframes site-cabecalho {
+    to {
+      background-color: rgb(20 39 28 / 0.86);
+      backdrop-filter: blur(14px) saturate(1.2);
+      box-shadow: 0 14px 30px -22px rgb(0 0 0 / 0.7);
+    }
+  }
+  .site-parallax {
+    animation: site-parallax linear both;
+    animation-timeline: view();
+    animation-range: exit 0% exit 100%;
+  }
+  @keyframes site-parallax {
+    to {
+      transform: translateY(14%) scale(1.04);
+    }
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   html {
     scroll-behavior: smooth;
@@ -385,8 +519,19 @@ dialog[open]::backdrop {
   }
   .revelar,
   .cabecalho-rolagem,
-  .esqueleto-brilho {
+  .esqueleto-brilho,
+  .site-entrada > *,
+  .site-zoom,
+  .site-faixa-trilho,
+  .site-revelar,
+  .site-cabecalho,
+  .site-parallax,
+  .site-botao::after {
     animation: none !important;
+  }
+  .site-cartao:hover,
+  :hover > .site-foto-zoom {
+    transform: none !important;
   }
 }
 

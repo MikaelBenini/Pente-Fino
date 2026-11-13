@@ -320,6 +320,7 @@ U2 a U5 já feitos (#161).
   - [x] Merge do lote 7b (PR #193, pelo dono, 13/11)
   - [x] Merge do lote 7c (PR #194, pelo dono, 13/11)
   - [x] Merge do lote 7d (PR #195, 13/11)
+  - [x] Merge do lote 7e (PR #196, 13/11)
   - pedido do dono em 13/11, depois do 7c: "o site é uma coisa e o link de agendamento é outra";
     o barbeiro pode pôr o domínio dele; o site precisa de animações e de um visual mais moderno,
     menos "padrão". Decisão: o link de agendamento continua em `/b/<slug>` (é o que já está no
@@ -333,9 +334,20 @@ U2 a U5 já feitos (#161).
     para apontar, o sistema confere sozinho; o certificado HTTPS sai na hora (Caddy sob demanda,
     só para domínio cadastrado e conferido); no domínio, a raiz é o site e `/agendar` é o
     agendamento;
-  - [ ] **Lote 7f** site mais moderno e com movimento: entrada do banner em etapas, fotos que
+  - [x] **Lote 7f** (13/11, documentado na linha de desenvolvimento) site mais moderno e com
+    movimento: entrada do banner em etapas, fotos que
     surgem ao rolar, cabeçalho que muda ao rolar, detalhes que respondem ao toque; tudo leve
     (CSS, sem biblioteca) e desligado com "reduzir movimento";
+  - [ ] **Horário de funcionamento da unidade** (pedido do dono em 13/11, logo depois do 7f):
+    - o dono define, por dia da semana, a hora em que a unidade abre e fecha (com intervalo
+      opcional, como o almoço), em Configurações, Unidades;
+    - o agendamento pelo link, pelo bot e pelo balcão só oferece horário dentro dele, mesmo
+      que o barbeiro tenha expediente maior (o expediente do barbeiro continua valendo dentro
+      do horário da unidade);
+    - é a base dos avisos de resumo (resumo do dia, fechamento de caixa, alertas da equipe):
+      saem na hora certa de cada unidade;
+    - o site e a página de agendamento mostram esse horário (hoje sai do expediente da
+      equipe); sem horário cadastrado, continua como hoje;
   - [ ] **Lote 7g** quem faz cada serviço (P5): o dono marca os serviços de cada barbeiro, com
     foto; vale no site e no agendamento;
   - [ ] **Lote 7h** páginas extras Galeria e Clube de assinatura;

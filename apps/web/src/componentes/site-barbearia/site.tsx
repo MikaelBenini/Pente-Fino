@@ -26,7 +26,7 @@ import { CLASSES_FONTES, FONTE_TITULO } from './fontes';
 const VERDE = 'bg-[#14271C]';
 const TITULO = 'font-[family-name:var(--site-titulo)] font-normal';
 const BOTAO =
-  'inline-flex min-h-11 items-center justify-center rounded-[var(--site-raio)] px-6 py-3 font-semibold transition-[filter] duration-[var(--ritmo-rapido)] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2';
+  'site-botao inline-flex min-h-11 items-center justify-center rounded-[var(--site-raio)] px-6 py-3 font-semibold transition-[filter] duration-[var(--ritmo-rapido)] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2';
 const BOTAO_DESTAQUE = `${BOTAO} bg-[var(--site-destaque)] text-[#14271C] focus-visible:outline-[var(--site-destaque)]`;
 const LARGURA = 'mx-auto w-full max-w-6xl px-4 @2xl:px-6';
 
@@ -177,7 +177,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
     </Link>
   );
   return (
-    <header className={`${VERDE} text-[#F2F1EC]`}>
+    <header className={`${VERDE} site-cabecalho sticky top-0 z-30 text-[#F2F1EC]`}>
       <div className={`${LARGURA} flex items-center justify-between gap-4 py-4`}>
         <Link href={base || '/'} className="flex min-h-11 items-center gap-3 text-[#F2F1EC]">
           {dados.site.logo ? (
@@ -192,7 +192,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
           ) : (
             <Monograma nome={dados.barbearia} className="size-11 text-[22px]" />
           )}
-          <span className={`${TITULO} text-[22px] leading-tight @2xl:text-[24px]`}>
+          <span className={`${TITULO} line-clamp-2 text-[18px] leading-tight @2xl:text-[24px]`}>
             {dados.barbearia}
           </span>
         </Link>
@@ -280,13 +280,15 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
     <section className={`${VERDE} relative overflow-hidden text-white`}>
       {bloco.foto ? (
         <>
-          <Foto
-            id={bloco.foto}
-            dados={dados}
-            alt={`Foto da ${dados.barbearia}`}
-            prioridade
-            className="absolute inset-0 size-full object-cover"
-          />
+          <div className="site-parallax absolute inset-0">
+            <Foto
+              id={bloco.foto}
+              dados={dados}
+              alt={`Foto da ${dados.barbearia}`}
+              prioridade
+              className="site-zoom size-full object-cover"
+            />
+          </div>
           {/* Véu escuro embaixo, onde fica o texto: leitura garantida em qualquer foto. */}
           <span
             aria-hidden
@@ -302,7 +304,7 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
         </span>
       )}
       <div
-        className={`${LARGURA} relative flex min-h-[540px] flex-col justify-end gap-7 pt-28 pb-20 motion-safe:animate-[entrar_var(--ritmo-lento)_var(--curva-saida)_both]`}
+        className={`${LARGURA} site-entrada relative flex min-h-[440px] flex-col justify-end gap-7 pt-16 pb-16 @2xl:min-h-[540px] @2xl:pt-28 @2xl:pb-20`}
       >
         <h1
           className={`${TITULO} max-w-[11em] text-[44px] leading-none @2xl:text-[72px] @5xl:text-[88px]`}
@@ -326,6 +328,47 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
           </Link>
         </div>
       </div>
+      <FaixaServicos dados={dados} />
+    </section>
+  );
+}
+
+/**
+ * Faixa de serviços e preços correndo embaixo do banner (lote 7f). Para ao passar o mouse, ao
+ * focar e no botão "Pausar" (quem não usa mouse também consegue parar o movimento).
+ */
+function FaixaServicos({ dados }: { dados: SitePublico }) {
+  const itens = dados.servicos.filter((s) => !s.ehExtra).slice(0, 8);
+  if (itens.length < 2) return null;
+  const lista = (copia: boolean) => (
+    <ul aria-hidden={copia || undefined} className="flex shrink-0 items-center gap-10 pr-10">
+      {itens.map((s) => (
+        <li key={s.id} className="flex items-baseline gap-3 whitespace-nowrap">
+          <span className={`${TITULO} text-[22px]`}>{s.nome}</span>
+          <span className="font-semibold text-[var(--site-destaque)]">
+            {formatarMoeda(s.preco)}
+          </span>
+          <span aria-hidden className="ml-7 size-1.5 self-center rounded-full bg-white/40" />
+        </li>
+      ))}
+    </ul>
+  );
+  return (
+    <section
+      aria-label="Serviços e preços"
+      className="site-faixa relative overflow-hidden border-t border-white/15 bg-black/25 py-4"
+    >
+      <input id="pausar-faixa" type="checkbox" className="peer sr-only" />
+      <div className="site-faixa-trilho flex w-max peer-checked:[animation-play-state:paused]">
+        {lista(false)}
+        {lista(true)}
+      </div>
+      <label
+        htmlFor="pausar-faixa"
+        className="absolute top-1/2 right-2 flex min-h-11 -translate-y-1/2 cursor-pointer items-center rounded-[var(--site-raio)] bg-[#14271C] px-3 text-[13px] text-[#C9D2CB] peer-focus-visible:outline-2 peer-focus-visible:outline-white"
+      >
+        Pausar
+      </label>
     </section>
   );
 }
@@ -388,7 +431,7 @@ function Sobre({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
           dados={dados}
           alt={bloco.titulo ?? `Foto da ${dados.barbearia}`}
           tamanhos="(min-width: 768px) 50vw, 100vw"
-          className="aspect-[5/4] w-full object-cover @3xl:w-1/2"
+          className="site-revelar aspect-[5/4] w-full object-cover @3xl:w-1/2"
         />
         <div className="flex min-w-0 flex-col gap-5 @3xl:w-1/2">
           {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
@@ -406,7 +449,7 @@ function Sobre({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
     );
   return (
     <section className={`${LARGURA} py-24 @2xl:py-28`}>
-      <div className="mx-auto flex max-w-3xl flex-col gap-5 text-center">
+      <div className="site-revelar mx-auto flex max-w-3xl flex-col gap-5 text-center">
         {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
         {bloco.texto && (
           <p className="text-[19px] whitespace-pre-line text-[#3E4842]">{bloco.texto}</p>
@@ -447,7 +490,10 @@ function ServicosDestaque({
         </div>
         <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-6">
           {lista.map((s) => (
-            <li key={s.id} className="flex flex-col gap-3 border-t-2 border-[#14271C] pt-6">
+            <li
+              key={s.id}
+              className="site-revelar site-cartao flex flex-col gap-3 border-t-2 border-[#14271C] bg-white px-1 pt-6 pb-2"
+            >
               <h3 className={`${TITULO} text-[30px] leading-tight`}>{s.nome}</h3>
               <p className="text-[#4C554F]">{duracao(s.duracaoMin)}</p>
               <p className={`${TITULO} text-[36px] leading-none`}>{formatarMoeda(s.preco)}</p>
@@ -489,14 +535,14 @@ function EquipeResumo({
         </div>
         <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-10">
           {dados.equipe.map((p) => (
-            <li key={p.id} className="flex items-center gap-5">
+            <li key={p.id} className="site-revelar flex items-center gap-5">
               {dados.site.equipe[p.id]?.foto ? (
                 <Foto
                   id={dados.site.equipe[p.id]!.foto!}
                   dados={dados}
                   alt={`Foto de ${p.nome}`}
                   tamanhos="96px"
-                  className="size-24 shrink-0 rounded-full border-2 border-[var(--site-destaque)] object-cover"
+                  className="site-foto-cor size-24 shrink-0 rounded-full border-2 border-[var(--site-destaque)] object-cover"
                 />
               ) : (
                 <Monograma nome={p.nome} className="size-24 border-2 text-[44px]" />
@@ -523,13 +569,13 @@ function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
         <ul className="grid grid-cols-2 gap-2 @3xl:grid-cols-3">
           {itens.map((f, i) => (
             <li key={`${f.foto}-${i}`}>
-              <figure className="relative">
+              <figure className="site-revelar relative overflow-hidden">
                 <Foto
                   id={f.foto!}
                   dados={dados}
                   alt={f.titulo || `Trabalho da ${dados.barbearia}`}
                   tamanhos="(min-width: 768px) 33vw, 50vw"
-                  className="aspect-square w-full object-cover"
+                  className="site-foto-zoom aspect-square w-full object-cover"
                 />
                 {f.titulo && (
                   <figcaption className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] bg-[#14271C] px-2.5 py-1 text-[14px] text-white">
@@ -555,7 +601,7 @@ function Depoimentos({ bloco }: { bloco: BlocoSite }) {
         {itens.map((d, i) => (
           <figure
             key={i}
-            className="flex flex-col gap-4 border-t-[3px] border-[var(--site-destaque)] bg-white p-8"
+            className="site-revelar site-cartao flex flex-col gap-4 border-t-[3px] border-[var(--site-destaque)] bg-white p-8"
           >
             <blockquote className={`${TITULO} text-[23px] leading-snug whitespace-pre-line`}>
               “{d.texto}”
@@ -571,9 +617,7 @@ function Depoimentos({ bloco }: { bloco: BlocoSite }) {
 function CabecalhoPagina({ bloco }: { bloco: BlocoSite }) {
   return (
     <section className="bg-[#1C3426] text-[#F2F1EC]">
-      <div
-        className={`${LARGURA} flex flex-col gap-4 pt-20 pb-14 motion-safe:animate-[entrar_var(--ritmo-lento)_var(--curva-saida)_both]`}
-      >
+      <div className={`${LARGURA} site-entrada flex flex-col gap-4 pt-20 pb-14`}>
         <h1 className={`${TITULO} text-[44px] leading-none @2xl:text-[72px]`}>{bloco.titulo}</h1>
         {bloco.texto && (
           <p className="max-w-[36em] text-[19px] whitespace-pre-line text-[#C9D2CB]">
@@ -654,7 +698,7 @@ function Barbeiros({ dados }: { dados: SitePublico }) {
       {dados.equipe.map((p, i) => (
         <article
           key={p.id}
-          className={`flex flex-col gap-10 @3xl:items-center ${i % 2 ? '@3xl:flex-row-reverse' : '@3xl:flex-row'}`}
+          className={`site-revelar flex flex-col gap-10 @3xl:items-center ${i % 2 ? '@3xl:flex-row-reverse' : '@3xl:flex-row'}`}
         >
           {dados.site.equipe[p.id]?.foto ? (
             <Foto
@@ -662,7 +706,7 @@ function Barbeiros({ dados }: { dados: SitePublico }) {
               dados={dados}
               alt={`Foto de ${p.nome}`}
               tamanhos="(min-width: 768px) 360px, 100vw"
-              className="aspect-[4/5] w-full max-w-[360px] object-cover @3xl:flex-1"
+              className="site-foto-cor aspect-[4/5] w-full max-w-[360px] object-cover @3xl:flex-1"
             />
           ) : (
             <div
@@ -795,7 +839,9 @@ function Perguntas({ bloco }: { bloco: BlocoSite }) {
 function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
   return (
     <section className="bg-[var(--site-destaque)] text-[#14271C]">
-      <div className={`${LARGURA} flex flex-wrap items-center justify-between gap-6 py-16`}>
+      <div
+        className={`${LARGURA} site-revelar flex flex-wrap items-center justify-between gap-6 py-16`}
+      >
         <div className="max-w-2xl">
           <p className={`${TITULO} text-[34px] leading-tight @2xl:text-[42px]`}>
             {bloco.titulo || 'Marque seu horário'}
