@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (site da barbearia mais moderno, com movimento)
+
+- O banner entra em etapas (título, texto e botões), com um zoom lento na foto. Embaixo, uma faixa com os serviços e preços corre devagar e para no toque, no mouse ou no botão "Pausar".
+- As faixas da página surgem conforme o cliente rola. O cabeçalho fica fixo e ganha um fundo translúcido ao rolar.
+- Os cartões de serviço e os depoimentos sobem de leve ao passar o mouse. As fotos dos barbeiros ganham cor, as da galeria aproximam, e os botões têm um brilho que passa.
+- Tudo feito só com CSS, sem deixar a página mais pesada, e desligado quando o aparelho pede "reduzir movimento".
+
 ### Adicionado (domínio próprio no site da barbearia)
 
 - Em "Minha página", o dono liga o domínio da barbearia (por exemplo, barbeariadocarlos.com.br). O painel mostra o registro que ele cria no DNS, onde comprou o domínio, e confere sozinho quando está apontado.
