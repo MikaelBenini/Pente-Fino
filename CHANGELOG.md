@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (ajuda para a barbearia que parou na configuração)
+
+- Quando a barbearia fica 3 dias parada na mesma etapa da configuração, o dono recebe o e-mail "Ajuda com o próximo passo". Ele tem o título e o porquê do passo e um botão direto para a tela certa.
+- As etapas que contam são: serviços com preço, barbeiros, 1º agendamento, 1ª comanda fechada e WhatsApp. O WhatsApp só conta nos planos com o bot.
+- O e-mail sai uma vez por etapa, das 9 h às 20 h, e só para contas em teste ou ativas.
+- O texto pode ser editado na administração, em Configurações → Modelos de e-mail.
+
 ### Adicionado (administração: alertas para a equipe)
 
 - Alertas por e-mail para a equipe da plataforma, conferidos de hora em hora:

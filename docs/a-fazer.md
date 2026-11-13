@@ -199,7 +199,13 @@ U2 a U5 já feitos (#161).
   - cada alerta sai uma vez só;
   - registro no CHANGELOG.
 - [x] Lote 6c (F3): bateria verde e PR aberto (12/11)
-- [ ] Merge pelo dono (lote 6c)
+- [x] Merge pelo dono (lote 6c)
+- [x] **F1d** E-mail automático para a conta parada há 3 dias na mesma etapa do funil (12/11):
+  - sugestão aprovada; modelo "Ajuda com o próximo passo", editável, com o link do passo;
+  - uma vez por etapa, das 9 h às 20 h, na rotina da F3;
+  - registro no CHANGELOG.
+- [x] Lote 6d (F1d): bateria verde e PR aberto (12/11, PR #181)
+- [ ] Merge pelo dono (lote 6d)
 - [ ] **F4** Nota de saúde da conta (0 a 100) e ordem por risco de cancelamento
 - [ ] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
@@ -218,8 +224,6 @@ U2 a U5 já feitos (#161).
   "Mostrar desativados" (sugestão aprovada em 12/11)
 - [ ] **F1c** Lista de Contas com filtro por etapa do funil, por exemplo "parou no 1º
   agendamento" (sugestão aprovada em 12/11)
-- [ ] **F1d** E-mail automático para a conta parada há 3 dias na mesma etapa do funil, com o link
-  do passo que falta (sugestão aprovada em 12/11; junto com a F3)
 - [ ] **F8** Aviso geral segmentado
 - [ ] **F9** Gestão de cupons
 
