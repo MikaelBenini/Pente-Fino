@@ -32,6 +32,7 @@ const conta = (o: Partial<ContaNaPlataforma>): ContaNaPlataforma => ({
   origem: null,
   ativacao: 8,
   etapaFunil: null,
+  saude: null,
   interna: false,
   cortesiaAte: null,
   cobrarAPartirDe: null,

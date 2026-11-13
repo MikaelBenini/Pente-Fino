@@ -657,7 +657,11 @@ describe('administração mais prática (admin U2 a U5)', () => {
     expect(ficha.etapaFunil).not.toBe('cadastro');
     // F1c: a lista de contas traz a mesma etapa, para o filtro "Parou em".
     const lista = (await adm.get('/admin/contas').expect(200)).body as ContaNaPlataforma[];
-    expect(lista.find((c) => c.id === contaU)?.etapaFunil).toBe(ficha.etapaFunil);
+    const naLista = lista.find((c) => c.id === contaU);
+    expect(naLista?.etapaFunil).toBe(ficha.etapaFunil);
+    // F4: conta recém-vendida, sem acesso nem comanda, tem nota baixa e diz por quê.
+    expect(naLista?.saude?.nota).toBeLessThan(40);
+    expect(naLista?.saude?.motivos).toContain('Nenhuma comanda fechada na semana');
   });
 
   it('venda com CPF, ficha com ativação e notas da equipe, lista com origem e vendas por origem', async () => {

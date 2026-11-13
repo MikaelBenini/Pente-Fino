@@ -40,6 +40,9 @@ import {
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
+  dataLocal,
+  saudeDaConta,
+  TOTAL_PASSOS_ATIVACAO,
   etapaAtualDoFunil,
   alertasDaEquipeSchema,
   TIPOS_ALERTA_EQUIPE,
@@ -209,14 +212,43 @@ export class AdminController {
   })
   async contas(@AdminAtual() a: AdminAutenticado): Promise<ContaNaPlataforma[]> {
     // Vendedor vê só as contas que vendeu.
-    const [todas, funil] = await Promise.all([
+    const [todas, funil, faturas] = await Promise.all([
       contasDaPlataforma(this.banco.prisma),
       funilDasContas(this.banco.prisma),
+      faturasDaPlataforma(this.banco.prisma),
     ]);
     const etapa = new Map(funil.map((f) => [f.id, etapaAtualDoFunil(f)]));
+    // Admin F4: fatura aberta ou recusada com o vencimento passado conta como cobrança vencida.
+    const agora = new Date();
+    const hoje = dataLocal(agora);
+    const comVencida = new Set(
+      faturas
+        .filter(
+          (f) =>
+            (f.status === 'aberta' || f.status === 'recusada') &&
+            f.vencimento.toISOString().slice(0, 10) < hoje,
+        )
+        .map((f) => f.conta_id),
+    );
     return todas
       .filter((c) => veTodasAsContas(a.papel) || c.vendedor_id === a.id)
-      .map((c) => contaParaTela(c, etapa.get(c.id) ?? null));
+      .map((c) =>
+        contaParaTela(c, {
+          etapaFunil: etapa.get(c.id) ?? null,
+          saude: saudeDaConta(
+            {
+              status: c.status,
+              ultimoAcessoEm: c.ultimo_acesso_em?.toISOString() ?? null,
+              fechadas7Dias: c.fechadas_7_dias,
+              whatsappConectado: c.whatsapp_conectado,
+              ativacao: Number(c.ativacao) || 0,
+              totalPassos: TOTAL_PASSOS_ATIVACAO,
+              cobrancaVencida: comVencida.has(c.id),
+            },
+            agora,
+          ),
+        }),
+      );
   }
 
   @Get('contas/:id')

@@ -87,6 +87,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(parouEm.getByRole('option')).toHaveCount(8);
   await parouEm.selectOption('agendamento');
   await parouEm.selectOption('');
+  // Admin F4: nota de saúde e a ordem por risco de cancelamento.
+  await expect(tabela.getByRole('columnheader', { name: 'Saúde' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Ordenar por' }).selectOption('risco');
+  await page.getByRole('combobox', { name: 'Ordenar por' }).selectOption('criada');
   // Ficha da conta: busca, abre e estende o teste com motivo (fica no histórico).
   await page.getByLabel('Buscar barbearia').fill('Plano Básico');
   await tabela.getByRole('button', { name: 'Barbearia Plano Básico' }).click();

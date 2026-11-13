@@ -5,6 +5,7 @@ import {
   formatarDataHora,
   NOME_PAPEL_PLATAFORMA,
   ETAPAS_FUNIL,
+  faixaDaSaude,
   NOME_PLANO,
   PLANOS,
   TOTAL_PASSOS_ATIVACAO,
@@ -309,7 +310,7 @@ function NotaFiscalDoFinanceiro() {
   return <Estado consulta={config}>{() => <NotaFiscalAdmin atual={config.data!} />}</Estado>;
 }
 
-type Ordem = 'criada' | 'nome' | 'acesso' | 'fechadas' | 'teste' | 'ativacao';
+type Ordem = 'criada' | 'nome' | 'acesso' | 'fechadas' | 'teste' | 'ativacao' | 'risco';
 const ORDENAR: Record<Ordem, (a: ContaNaPlataforma, b: ContaNaPlataforma) => number> = {
   criada: (a, b) => b.criadaEm.localeCompare(a.criadaEm),
   nome: (a, b) => a.nome.localeCompare(b.nome, 'pt-BR'),
@@ -317,7 +318,11 @@ const ORDENAR: Record<Ordem, (a: ContaNaPlataforma, b: ContaNaPlataforma) => num
   fechadas: (a, b) => b.fechadas7Dias - a.fechadas7Dias,
   teste: (a, b) => (a.testeAte ?? '9').localeCompare(b.testeAte ?? '9'),
   ativacao: (a, b) => a.ativacao - b.ativacao || b.criadaEm.localeCompare(a.criadaEm),
+  // Admin F4: menor nota primeiro; conta sem nota (cancelada) por último.
+  risco: (a, b) => (a.saude?.nota ?? 101) - (b.saude?.nota ?? 101),
 };
+
+const TOM_SAUDE = { boa: 'acao', atencao: 'aviso', risco: 'perigo' } as const;
 
 /** Primeira coluna presa ao rolar a tabela para o lado (admin U2). */
 const FIXA = 'sticky left-0 z-10 bg-superficie';
@@ -342,6 +347,8 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
       'Conta interna',
       'Origem',
       'Ativação',
+      'Saúde',
+      'O que tira pontos',
     ],
     ...contas.map((c) => [
       c.nome,
@@ -359,6 +366,8 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
       c.interna ? 'Sim' : 'Não',
       c.origem ?? SEM_ORIGEM,
       `${c.ativacao}/${TOTAL_PASSOS_ATIVACAO}`,
+      c.saude?.nota ?? '',
+      c.saude?.motivos.join(', ') ?? '',
     ]),
   ];
   const texto = '\ufeff' + linhas.map((l) => l.map(campo).join(';')).join('\r\n');
@@ -490,6 +499,7 @@ function ContasAdmin({
             { valor: 'acesso', rotulo: 'Sem acesso há mais tempo' },
             { valor: 'fechadas', rotulo: 'Mais comandas na semana' },
             { valor: 'ativacao', rotulo: 'Menos configuradas' },
+            { valor: 'risco', rotulo: 'Risco de cancelamento' },
           ]}
         />
         <Botao
@@ -512,6 +522,7 @@ function ContasAdmin({
                   'Barbearia',
                   'Plano',
                   'Situação',
+                  'Saúde',
                   'Ativação',
                   'Origem',
                   'Criada',
@@ -554,6 +565,24 @@ function ContasAdmin({
                       <span className="block text-xs text-tinta-suave">
                         até {formatarData(c.testeAte)}
                       </span>
+                    )}
+                  </td>
+                  <td className={td}>
+                    {/* Admin F4: nota de 0 a 100; o que tira pontos aparece embaixo. */}
+                    {c.saude ? (
+                      <>
+                        <Ficha tom={TOM_SAUDE[faixaDaSaude(c.saude.nota)]}>
+                          {c.saude.nota}
+                          <span className="sr-only"> de 100</span>
+                        </Ficha>
+                        {c.saude.motivos[0] && (
+                          <span className="block max-w-48 text-xs text-tinta-suave">
+                            {c.saude.motivos[0]}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-tinta-suave">—</span>
                     )}
                   </td>
                   <td className={`${td} tabular-nums whitespace-nowrap`}>
