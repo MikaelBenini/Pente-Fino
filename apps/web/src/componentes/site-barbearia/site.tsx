@@ -87,7 +87,30 @@ interface Props {
 /** Dados do site com o destino do "Agendar" já resolvido (lote 7e). */
 type DadosDoSite = SitePublico & { linkAgendar?: string };
 const linkAgendar = (dados: SitePublico) =>
-  (dados as DadosDoSite).linkAgendar ?? caminhoDoAgendamento(dados.slugAgendamento);
+  (dados as DadosDoSite).linkAgendar ??
+  (dados.slugAgendamento ? caminhoDoAgendamento(dados.slugAgendamento) : '');
+/** O site pode estar no ar sem o link de agendamento ligado (decisão do dono, 13/11). */
+const temAgendamento = (dados: SitePublico) => linkAgendar(dados) !== '';
+
+/**
+ * Botão principal: "Agendar horário" com o link ligado; sem ele, "Falar no WhatsApp" (telefone
+ * da unidade); sem os dois, nada.
+ */
+function AcaoPrincipal({ dados, className }: { dados: SitePublico; className: string }) {
+  if (temAgendamento(dados))
+    return (
+      <Link href={linkAgendar(dados)} className={className}>
+        Agendar horário
+      </Link>
+    );
+  if (dados.whatsapp)
+    return (
+      <a href={dados.whatsapp} target="_blank" rel="noopener noreferrer" className={className}>
+        Falar no WhatsApp
+      </a>
+    );
+  return null;
+}
 
 export function SiteDaBarbearia({ dados: brutos, pagina, base, agendar }: Props) {
   const dados: DadosDoSite = agendar ? { ...brutos, linkAgendar: agendar } : brutos;
@@ -171,11 +194,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
     href: `${base}${CAMINHO_PAGINA[p]}` || '/',
     rotulo: ROTULO_PAGINA[p],
   }));
-  const agendar = (
-    <Link href={linkAgendar(dados)} className={BOTAO_DESTAQUE}>
-      Agendar horário
-    </Link>
-  );
+  const agendar = <AcaoPrincipal dados={dados} className={BOTAO_DESTAQUE} />;
   return (
     <header className={`${VERDE} site-cabecalho sticky top-0 z-30 text-[#F2F1EC]`}>
       <div className={`${LARGURA} flex items-center justify-between gap-4 py-4`}>
@@ -317,9 +336,7 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
           </p>
         )}
         <div className="flex flex-wrap gap-3">
-          <Link href={linkAgendar(dados)} className={`${BOTAO_DESTAQUE} text-[18px]`}>
-            Agendar horário
-          </Link>
+          <AcaoPrincipal dados={dados} className={`${BOTAO_DESTAQUE} text-[18px]`} />
           <Link
             href={`${base}/servicos`}
             className={`${BOTAO} border border-white text-[18px] text-white focus-visible:outline-white`}
@@ -497,12 +514,14 @@ function ServicosDestaque({
               <h3 className={`${TITULO} text-[30px] leading-tight`}>{s.nome}</h3>
               <p className="text-[#4C554F]">{duracao(s.duracaoMin)}</p>
               <p className={`${TITULO} text-[36px] leading-none`}>{formatarMoeda(s.preco)}</p>
-              <Link
-                href={linkAgendar(dados)}
-                className="mt-1 font-semibold text-[#1F5135] underline-offset-4 hover:underline"
-              >
-                Agendar {s.nome.toLowerCase()}
-              </Link>
+              {temAgendamento(dados) && (
+                <Link
+                  href={linkAgendar(dados)}
+                  className="mt-1 font-semibold text-[#1F5135] underline-offset-4 hover:underline"
+                >
+                  Agendar {s.nome.toLowerCase()}
+                </Link>
+              )}
             </li>
           ))}
         </ul>
@@ -674,13 +693,15 @@ function TabelaServicos({ dados }: { dados: SitePublico }) {
                   <span className={`${TITULO} text-[30px] leading-none`}>
                     {formatarMoeda(s.preco)}
                   </span>
-                  <Link
-                    href={linkAgendar(dados)}
-                    aria-label={`Agendar ${s.nome}`}
-                    className={`${BOTAO} border border-[#1F5135] px-4 py-2 text-[#1F5135] focus-visible:outline-[#1F5135]`}
-                  >
-                    Agendar
-                  </Link>
+                  {temAgendamento(dados) && (
+                    <Link
+                      href={linkAgendar(dados)}
+                      aria-label={`Agendar ${s.nome}`}
+                      className={`${BOTAO} border border-[#1F5135] px-4 py-2 text-[#1F5135] focus-visible:outline-[#1F5135]`}
+                    >
+                      Agendar
+                    </Link>
+                  )}
                 </div>
               </li>
             ))}
@@ -724,12 +745,14 @@ function Barbeiros({ dados }: { dados: SitePublico }) {
             {p.sobre && (
               <p className="max-w-[32em] whitespace-pre-line text-[#3E4842]">{p.sobre}</p>
             )}
-            <Link
-              href={linkAgendar(dados)}
-              className={`${BOTAO} self-start bg-[#14271C] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
-            >
-              Agendar com {p.nome}
-            </Link>
+            {temAgendamento(dados) && (
+              <Link
+                href={linkAgendar(dados)}
+                className={`${BOTAO} self-start bg-[#14271C] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
+              >
+                Agendar com {p.nome}
+              </Link>
+            )}
           </div>
         </article>
       ))}
@@ -837,6 +860,7 @@ function Perguntas({ bloco }: { bloco: BlocoSite }) {
 }
 
 function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
+  if (!temAgendamento(dados) && !dados.whatsapp) return null;
   return (
     <section className="bg-[var(--site-destaque)] text-[#14271C]">
       <div
@@ -848,12 +872,10 @@ function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }
           </p>
           {bloco.texto && <p className="mt-1.5 whitespace-pre-line">{bloco.texto}</p>}
         </div>
-        <Link
-          href={linkAgendar(dados)}
+        <AcaoPrincipal
+          dados={dados}
           className={`${BOTAO} bg-[#14271C] text-[18px] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
-        >
-          Agendar horário
-        </Link>
+        />
       </div>
     </section>
   );
