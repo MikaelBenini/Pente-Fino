@@ -31,6 +31,7 @@ export const DESCRICAO_PAPEL_PLATAFORMA: Readonly<Record<PapelPlataforma, string
 export const ABAS_DO_PAPEL: Readonly<Record<PapelPlataforma, readonly string[]>> = {
   admin: [
     'inicio',
+    'chat',
     'contas',
     'cobranca',
     'vendas',
@@ -39,8 +40,8 @@ export const ABAS_DO_PAPEL: Readonly<Record<PapelPlataforma, readonly string[]>>
     'configuracoes',
     'saude',
   ],
-  vendedor: ['inicio', 'contas', 'cobranca'],
-  suporte: ['inicio', 'contas', 'saude'],
+  vendedor: ['inicio', 'chat', 'contas', 'cobranca'],
+  suporte: ['inicio', 'chat', 'contas', 'saude'],
   financeiro: ['inicio', 'contas', 'cobranca'],
 };
 

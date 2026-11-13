@@ -1,0 +1,279 @@
+'use client';
+
+// Admin F6: o chat do site na administração. Fila e em atendimento à esquerda; a conversa aberta
+// à direita, com assumir, responder e encerrar. Atualiza a cada poucos segundos.
+import {
+  formatarDataHora,
+  type ConversaDaEquipe,
+  type ConversaNaFila,
+  type UsuarioPlataformaSessao,
+} from '@pente-fino/shared';
+import { Botao, Selecao } from '@pente-fino/ui';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Aviso } from '../aviso';
+import { Estado, Ficha } from '../pagina';
+import { adminApi } from './admin-api';
+
+const NOME_STATUS = {
+  fila: 'Na fila',
+  atendendo: 'Em atendimento',
+  encerrada: 'Encerrada',
+} as const;
+
+/** Link do WhatsApp quando o contato é um telefone. */
+function linkWhatsapp(contato: string): string | null {
+  if (contato.includes('@')) return null;
+  const d = contato.replace(/\D/g, '');
+  if (d.length < 10) return null;
+  return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`;
+}
+
+export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
+  const cliente = useQueryClient();
+  const [ver, setVer] = useState<'abertas' | 'encerrada'>('abertas');
+  const [aberta, setAberta] = useState<string | null>(null);
+  const lista = useQuery({
+    queryKey: ['admin', 'chat', ver],
+    queryFn: () =>
+      adminApi<ConversaNaFila[]>(ver === 'encerrada' ? 'chat?status=encerrada' : 'chat'),
+    refetchInterval: 5000,
+  });
+  const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'chat'] });
+  const naFila = (lista.data ?? []).filter((c) => c.status === 'fila').length;
+
+  return (
+    <section aria-labelledby="titulo-chat" className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 id="titulo-chat" className="text-3xl font-semibold">
+            Chat do site
+          </h1>
+          <p className="text-sm text-tinta-suave">
+            {ver === 'abertas'
+              ? naFila
+                ? `${naFila} ${naFila === 1 ? 'pessoa esperando' : 'pessoas esperando'} na fila.`
+                : 'Ninguém esperando agora.'
+              : 'As 50 últimas conversas encerradas.'}
+          </p>
+        </div>
+        <Selecao
+          id="chat-ver"
+          rotulo="Mostrar"
+          value={ver}
+          onChange={(e) => {
+            setVer(e.target.value as 'abertas' | 'encerrada');
+            setAberta(null);
+          }}
+          opcoes={[
+            { valor: 'abertas', rotulo: 'Fila e em atendimento' },
+            { valor: 'encerrada', rotulo: 'Encerradas' },
+          ]}
+        />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
+        <Estado consulta={lista}>
+          {() =>
+            lista.data!.length === 0 ? (
+              <p className="rounded-lg border border-borda bg-superficie p-4 text-sm text-tinta-suave">
+                Nenhuma conversa aqui.
+              </p>
+            ) : (
+              <ul aria-label="Conversas" className="flex flex-col gap-2">
+                {lista.data!.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => setAberta(c.id)}
+                      aria-current={aberta === c.id}
+                      className={`flex w-full flex-col gap-1 rounded-lg border p-3 text-left focus-visible:outline-2 focus-visible:outline-foco ${
+                        aberta === c.id
+                          ? 'border-modulo bg-superficie-2'
+                          : 'border-borda bg-superficie hover:bg-superficie-2'
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="font-semibold">{c.nome}</span>
+                        <Ficha
+                          tom={
+                            c.status === 'fila'
+                              ? 'aviso'
+                              : c.status === 'atendendo'
+                                ? 'acao'
+                                : 'neutro'
+                          }
+                        >
+                          {NOME_STATUS[c.status]}
+                        </Ficha>
+                      </span>
+                      <span className="line-clamp-2 text-sm text-tinta-suave">
+                        {c.ultimaMensagem}
+                      </span>
+                      <span className="text-xs text-tinta-fraca">
+                        {formatarDataHora(c.ultimaMensagemEm)}
+                        {c.atendente ? ` · ${c.atendente}` : ''}
+                        {c.esperandoEquipe ? ' · esperando resposta' : ''}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </Estado>
+        {aberta ? (
+          <Conversa key={aberta} id={aberta} u={u} onMudou={atualizar} />
+        ) : (
+          <p className="rounded-lg border border-dashed border-borda p-6 text-sm text-tinta-suave">
+            Escolha uma conversa para ler e responder.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function Conversa({
+  id,
+  u,
+  onMudou,
+}: {
+  id: string;
+  u: UsuarioPlataformaSessao;
+  onMudou: () => void;
+}) {
+  const c = useQuery({
+    queryKey: ['admin', 'chat', 'conversa', id],
+    queryFn: () => adminApi<ConversaDaEquipe>(`chat/${id}`),
+    refetchInterval: 4000,
+  });
+  const [texto, setTexto] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  async function acao(caminho: string, corpo: object = {}) {
+    setErro(null);
+    setOcupado(true);
+    try {
+      await adminApi(`chat/${id}/${caminho}`, { corpo });
+      await c.refetch();
+      onMudou();
+      return true;
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não deu certo. Tente de novo.');
+      return false;
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  return (
+    <Estado consulta={c}>
+      {() => {
+        const d = c.data!;
+        const minha = d.atendente === u.nome;
+        const whatsapp = linkWhatsapp(d.contato);
+        return (
+          <article
+            aria-label={`Conversa com ${d.nome}`}
+            className="flex min-h-[28rem] flex-col rounded-lg border border-borda bg-superficie"
+          >
+            <header className="flex flex-wrap items-start justify-between gap-3 border-b border-borda p-4">
+              <div>
+                <h2 className="text-lg font-semibold">{d.nome}</h2>
+                <p className="text-sm text-tinta-suave">
+                  {d.contato}
+                  {whatsapp && (
+                    <>
+                      {' · '}
+                      <a
+                        href={whatsapp}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-acao-texto underline underline-offset-2"
+                      >
+                        Chamar no WhatsApp
+                      </a>
+                    </>
+                  )}
+                </p>
+                <p className="text-xs text-tinta-fraca">
+                  Começou em {formatarDataHora(d.criadoEm)}
+                  {d.pagina ? ` na página ${d.pagina}` : ''}
+                  {d.atendente ? ` · atendida por ${d.atendente}` : ''}
+                </p>
+              </div>
+              {d.status !== 'encerrada' && (
+                <div className="flex gap-2">
+                  {!minha && (
+                    <Botao
+                      variante="secundario"
+                      carregando={ocupado}
+                      onClick={() => void acao('assumir')}
+                    >
+                      Assumir
+                    </Botao>
+                  )}
+                  <Botao
+                    variante="secundario"
+                    carregando={ocupado}
+                    onClick={() => void acao('encerrar')}
+                  >
+                    Encerrar
+                  </Botao>
+                </div>
+              )}
+            </header>
+            <ol aria-label="Mensagens" className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
+              {d.mensagens.map((m) => (
+                <li
+                  key={m.id}
+                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-line ${
+                    m.de === 'equipe' ? 'self-end bg-modulo/20' : 'self-start bg-superficie-3'
+                  }`}
+                >
+                  <span className="block text-xs font-semibold text-tinta-suave">
+                    {m.de === 'equipe' ? (m.autor ?? 'Equipe') : d.nome} ·{' '}
+                    {formatarDataHora(m.criadoEm)}
+                  </span>
+                  {m.texto}
+                </li>
+              ))}
+            </ol>
+            {d.status !== 'encerrada' && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!texto.trim()) return;
+                  void acao('mensagens', { texto }).then((ok) => ok && setTexto(''));
+                }}
+                className="flex items-end gap-2 border-t border-borda p-3"
+              >
+                <label className="sr-only" htmlFor={`resposta-${id}`}>
+                  Resposta
+                </label>
+                <textarea
+                  id={`resposta-${id}`}
+                  value={texto}
+                  onChange={(e) => setTexto(e.target.value)}
+                  rows={2}
+                  maxLength={2000}
+                  placeholder={minha ? 'Escreva a resposta' : 'Responder assume a conversa'}
+                  className="w-full resize-none rounded-md border border-borda bg-fundo px-3 py-2 text-sm focus:border-modulo focus:outline-none"
+                />
+                <Botao type="submit" carregando={ocupado} disabled={!texto.trim()}>
+                  Enviar
+                </Botao>
+              </form>
+            )}
+            {erro && (
+              <div className="p-3">
+                <Aviso tom="erro">{erro}</Aviso>
+              </div>
+            )}
+          </article>
+        );
+      }}
+    </Estado>
+  );
+}

@@ -18,6 +18,7 @@ import { como, criarApp, criarCenario, type Cenario } from './ajudantes.js';
 const PUBLICAS = new Set([
   'GET /',
   'GET /health',
+  'GET /chat/conversas/:id', // chat do site: exige o segredo da conversa (x-chat-token)
   'GET /publico/agendamento/:slug',
   'GET /publico/agendamento/:slug/cliente', // exige o token do link do bot
   'GET /publico/agendamento/:slug/horarios',
@@ -34,6 +35,8 @@ const PUBLICAS = new Set([
   'POST /auth/redefinir-senha',
   'POST /auth/renovar',
   'POST /auth/sair',
+  'POST /chat/conversas', // chat do site: visitante começa (limite por IP)
+  'POST /chat/conversas/:id/mensagens', // exige o segredo da conversa (limite por IP)
   'POST /publico/agendamento/:slug',
   'POST /publico/agendamento/:slug/espera',
   'POST /publico/clube/:slug/assinar',

@@ -75,6 +75,9 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page).toHaveURL(/#contas\?situacao=\w+$/);
   await expect(page.getByLabel('Situação')).not.toHaveValue('');
   await page.getByRole('tab', { name: 'Início' }).click();
+  // Admin F6: o chat do site tem a aba própria.
+  await page.getByRole('tab', { name: 'Chat' }).click();
+  await expect(page.getByRole('heading', { name: 'Chat do site', level: 1 })).toBeVisible();
   await page.getByRole('tab', { name: 'Contas' }).click();
   await expect(page).toHaveURL(/#contas$/);
   await expect(page.getByRole('heading', { name: 'Contas', exact: true })).toBeVisible();

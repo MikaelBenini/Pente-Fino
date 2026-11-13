@@ -1683,6 +1683,54 @@ model FunilEtapaConta {
   @@map("funil_etapa_conta")
 }
 
+enum StatusConversaSuporte {
+  fila
+  atendendo
+  encerrada
+
+  @@map("status_conversa_suporte")
+}
+
+/// Admin F6: conversa do chat do site com a equipe do Pente Fino. O visitante lê e escreve com o
+/// token que recebeu (só o hash fica aqui). Tabela só da administração.
+model ConversaSuporte {
+  id               String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  status           StatusConversaSuporte @default(fila)
+  nome             String
+  contato          String
+  pagina           String?
+  tokenHash        String                @unique @map("token_hash")
+  atendenteId      String?               @map("atendente_id") @db.Uuid
+  /// Conta da barbearia, quando o visitante já é cliente (entrega 2).
+  contaAfetadaId   String?               @map("conta_afetada_id") @db.Uuid
+  criadoEm         DateTime              @default(now()) @map("criado_em") @db.Timestamptz(3)
+  assumidaEm       DateTime?             @map("assumida_em") @db.Timestamptz(3)
+  encerradaEm      DateTime?             @map("encerrada_em") @db.Timestamptz(3)
+  ultimaMensagemEm DateTime              @default(now()) @map("ultima_mensagem_em") @db.Timestamptz(3)
+
+  atendente UsuarioPlataforma? @relation(fields: [atendenteId], references: [id], onDelete: SetNull)
+  mensagens MensagemSuporte[]
+
+  @@index([status, ultimaMensagemEm])
+  @@map("conversa_suporte")
+}
+
+model MensagemSuporte {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  conversaId String   @map("conversa_id") @db.Uuid
+  /// "visitante" ou "equipe".
+  de         String
+  autorId    String?  @map("autor_id") @db.Uuid
+  texto      String
+  criadoEm   DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conversa ConversaSuporte    @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+  autor    UsuarioPlataforma? @relation("AutorMensagemSuporte", fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([conversaId, criadoEm])
+  @@map("mensagem_suporte")
+}
+
 /// Admin F3: alertas da equipe que já saíram. O mesmo tipo + chave nunca sai duas vezes.
 model AlertaEquipeEnviado {
   tipo      String
@@ -1714,9 +1762,11 @@ model UsuarioPlataforma {
   criadoEm         DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm     DateTime        @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  sessoes       SessaoPlataforma[]
-  auditorias    AuditoriaPlataforma[]
-  notasInternas NotaInternaConta[]
+  sessoes          SessaoPlataforma[]
+  auditorias       AuditoriaPlataforma[]
+  notasInternas    NotaInternaConta[]
+  conversasSuporte ConversaSuporte[]
+  mensagensSuporte MensagemSuporte[]     @relation("AutorMensagemSuporte")
 
   @@map("usuario_plataforma")
 }

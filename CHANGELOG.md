@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (chat do site com a equipe)
+
+- O site ganhou o chat "Fale com a gente", no lugar do botão do WhatsApp. O visitante deixa o nome e o WhatsApp ou e-mail, escreve a dúvida e entra na fila.
+- O visitante vê a posição na fila, quem está atendendo e as respostas, que chegam a cada poucos segundos. A conversa fica guardada no navegador dele.
+- Fora do horário (segunda a sexta das 9h às 18h, sábado das 9h às 13h), a mensagem fica guardada, e a equipe responde pelo contato deixado.
+- Na administração, a aba "Chat" mostra a fila e as conversas em atendimento. Quem atende assume, responde, encerra e consulta as encerradas. O botão "Chamar no WhatsApp" aparece quando o contato é um telefone.
+- O novo alerta "Conversa nova no chat" chega por e-mail na hora para quem marcar em Meus alertas.
+
 ### Adicionado (administração: nota de saúde da conta)
 
 - Cada conta da lista tem uma nota de saúde de 0 a 100: verde a partir de 70, amarela de 40 a 69 e vermelha abaixo de 40. Embaixo da nota aparece o que mais tira pontos.

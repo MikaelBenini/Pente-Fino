@@ -2,7 +2,7 @@ import { CabecalhoSite } from '@/componentes/site/cabecalho-site';
 import { FaixaOferta } from '@/componentes/site/oferta-lancamento';
 import { RodapeSite } from '@/componentes/site/rodape-site';
 import { AvisoCookies, TagGoogle } from '@/componentes/site/tag-google';
-import { WhatsappFlutuante } from '@/componentes/site/whatsapp-flutuante';
+import { ChatSite } from '@/componentes/site/chat-site';
 
 export default function LayoutSite({ children }: LayoutProps<'/'>) {
   return (
@@ -19,7 +19,8 @@ export default function LayoutSite({ children }: LayoutProps<'/'>) {
         {children}
       </main>
       <RodapeSite />
-      <WhatsappFlutuante />
+      {/* Admin F6: chat com a equipe no lugar do botão do WhatsApp. */}
+      <ChatSite />
       <TagGoogle />
       <AvisoCookies />
     </div>

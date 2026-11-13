@@ -834,6 +834,14 @@ motivo e vai para a auditoria.
   - `saude` em `ContaNaPlataforma`, calculada na lista de contas da API (fatura aberta ou recusada vencida conta como cobrança vencida);
   - coluna "Saúde", ordem "Risco de cancelamento" e CSV;
   - testes em `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [x] **F6, entrega 1** chat do site (feito em 2026-11-13):
+  - regra e formatos em `packages/shared/src/chat-suporte.ts` (horário, `avisoDoChat`, esquemas), com teste;
+  - migração `chat_suporte` (`conversa_suporte` e `mensagem_suporte`, só a administração acessa; o visitante usa o segredo da conversa, guardado como hash);
+  - `ChatService`, rotas públicas `/chat/conversas` (com limite por IP) e `/admin/chat` (admin, vendedor e suporte);
+  - alerta `chat_novo` na hora;
+  - `ChatSite` no lugar do botão do WhatsApp e `ChatAdmin` na aba Chat;
+  - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts`, `site.spec.ts` e `admin.spec.ts`.
+- [ ] **F6, entrega 2**: chat no painel para quem já é cliente e notificação no celular da equipe
 - [ ] **F5–F9** acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
