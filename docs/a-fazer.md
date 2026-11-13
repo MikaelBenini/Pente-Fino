@@ -221,7 +221,7 @@ U2 a U5 já feitos (#161).
 - [x] **F6, entrega 1** (13/11, prioridade do dono para reter interessados): chat do visitante no
   site com fila, aba Chat na administração (assumir, responder, encerrar, histórico) e alerta na hora
   de conversa nova; fora do horário a mensagem fica guardada; registro no CHANGELOG
-- [ ] Lote 6h (F6, entrega 1): bateria verde e PR aberto
+- [x] Lote 6h (F6, entrega 1): bateria verde e PR aberto (13/11)
 - [ ] Merge pelo dono (lote 6h)
 - [ ] **F6, entrega 2**: chat dentro do painel para quem já é cliente (ligado à conta) e notificação
   no celular da equipe (push do PWA no `/admin`)
