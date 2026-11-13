@@ -14,6 +14,7 @@ import {
 } from '@pente-fino/shared';
 import type {
   ContaNaPlataforma,
+  EstadoDaConta,
   SaudeDoSistema,
   FichaContaPlataforma,
   MetricasDaPlataforma,
@@ -825,6 +826,38 @@ describe('configurações e saúde do sistema', () => {
       texto: 'Manutenção programada hoje à noite.',
       tom: 'manutencao',
     });
+    // Admin F8: aviso segmentado; a conta fora do público não recebe nem o texto.
+    const janela = {
+      inicio: new Date(agora - 3_600_000).toISOString(),
+      fim: new Date(agora + 3_600_000).toISOString(),
+    };
+    const plano = ((await dono.get('/conta/situacao').expect(200)).body as EstadoDaConta).plano;
+    const outro = plano === 'premium' ? 'basico' : 'premium';
+    await adm()
+      .put('/admin/configuracoes/aviso-geral', {
+        aviso: {
+          texto: 'Só para outro plano.',
+          tom: 'info',
+          ...janela,
+          publico: { planos: [outro] },
+        },
+      })
+      .expect(204);
+    expect((await dono.get('/sistema/aviso').expect(200)).body).toEqual({ aviso: null });
+    await adm()
+      .put('/admin/configuracoes/aviso-geral', {
+        aviso: {
+          texto: 'Só para esta conta.',
+          tom: 'info',
+          ...janela,
+          publico: { contas: [a.contaId] },
+        },
+      })
+      .expect(204);
+    const so = (await dono.get('/sistema/aviso').expect(200)).body.aviso;
+    expect(so).toMatchObject({ texto: 'Só para esta conta.' });
+    // O público não vai para a barbearia (nem a lista de contas).
+    expect(so.publico).toBeUndefined();
     await adm().put('/admin/configuracoes/aviso-geral', { aviso: null }).expect(204);
     expect((await dono.get('/sistema/aviso').expect(200)).body).toEqual({ aviso: null });
   });

@@ -261,13 +261,18 @@ U2 a U5 já feitos (#161).
   - bloco "Métricas de SaaS" nos números do negócio;
   - registro no CHANGELOG.
 - [x] Lote 6l (F7): bateria verde e PR aberto (13/11)
-- [ ] Merge pelo dono (lote 6l)
+- [x] Merge pelo dono (lote 6l)
 - [x] **F1b** Equipe da administração: membros desativados escondidos por padrão, com a caixa
   "Mostrar desativados" (13/11)
 - [x] **F1c** Lista de Contas com o filtro "Parou em", pela etapa do funil (13/11)
 - [x] Lote 6e (F1b e F1c): bateria verde e PR aberto (13/11)
 - [x] Merge pelo dono (lote 6e)
-- [ ] **F8** Aviso geral segmentado
+- [x] **F8** Aviso geral segmentado (13/11):
+  - público por plano, situação e contas escolhidas, filtrado no servidor;
+  - o formulário mostra quem vê e quantas contas;
+  - registro no CHANGELOG.
+- [x] Lote 6m (F8): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6m)
 - [ ] **F9** Gestão de cupons
 
 ## 7. Painel: página da barbearia editável e melhorias de produto
