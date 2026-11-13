@@ -240,7 +240,7 @@ function Editor({
     }
   }
 
-  const podePublicar = situacao.linkLigado && !!situacao.slug;
+  const semLink = !situacao.linkLigado || !situacao.slug;
   const pendente = situacao.alteracoesPendentes || site !== ultimoSalvo;
   const dadosDaPrevia: SitePublico = {
     ...previa,
@@ -318,20 +318,22 @@ function Editor({
             <Botao
               onClick={publicar}
               carregando={publicando}
-              disabled={!podePublicar || !!problema || (situacao.publicado && !pendente)}
+              disabled={!!problema || (situacao.publicado && !pendente)}
             >
               {situacao.publicado ? 'Publicar alterações' : 'Publicar página'}
             </Botao>
           </div>
         </section>
 
-        {!podePublicar && (
-          <Aviso tom="aviso">
-            Para publicar, ligue o link de agendamento desta unidade em{' '}
+        {semLink && (
+          <Aviso tom="info">
+            O link de agendamento desta unidade está desligado: o site funciona normalmente, mas no
+            lugar de &ldquo;Agendar horário&rdquo; aparece &ldquo;Falar no WhatsApp&rdquo;. Para o
+            cliente marcar pelo site, ligue o link em{' '}
             <Link href="/configuracoes?aba=link" className="font-semibold underline">
               Configurações, Link de agendamento
             </Link>
-            . Você pode montar a página antes.
+            .
           </Aviso>
         )}
         <Enderecos

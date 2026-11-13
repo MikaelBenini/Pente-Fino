@@ -94,7 +94,7 @@ describe('site da barbearia', () => {
     await barbeiro.get(`/unidades/${a.unidadeA}/site`).expect(403);
   });
 
-  it('grava o rascunho, recusa bloco na página errada e não publica sem o link ligado', async () => {
+  it('grava o rascunho, recusa bloco na página errada e publica mesmo sem o link ligado', async () => {
     const { rascunho } = (await dono.get(`/unidades/${a.unidadeA}/site`)).body as SitePainel;
     rascunho.cor = 'salvia';
     rascunho.instagram = '@barbearia.teste';
@@ -111,8 +111,14 @@ describe('site da barbearia', () => {
       })
       .expect(400);
 
-    const erro = await dono.post(`/unidades/${a.unidadeA}/site/publicar`).expect(400);
-    expect(erro.body.codigo ?? erro.body.erro?.codigo).toBe('link_desligado');
+    // O site não depende do link de agendamento (decisão do dono, 13/11): sem link, os botões
+    // "Agendar" dão lugar ao WhatsApp da unidade.
+    const sem = (await dono.post(`/unidades/${a.unidadeA}/site/publicar`).expect(200))
+      .body as SitePainel;
+    expect(sem).toMatchObject({ publicado: true, linkLigado: false });
+    const pub = (await http().get(`/publico/site/${sem.siteSlug}`).expect(200)).body as SitePublico;
+    expect(pub).toMatchObject({ slugAgendamento: '', whatsapp: 'https://wa.me/5519999990000' });
+    await dono.delete(`/unidades/${a.unidadeA}/site/publicado`).expect(200);
   });
 
   it('a prévia junta o rascunho com serviços, equipe e horário da unidade', async () => {

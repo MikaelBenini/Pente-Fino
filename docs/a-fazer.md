@@ -321,6 +321,7 @@ U2 a U5 já feitos (#161).
   - [x] Merge do lote 7c (PR #194, pelo dono, 13/11)
   - [x] Merge do lote 7d (PR #195, 13/11)
   - [x] Merge do lote 7e (PR #196, 13/11)
+  - [x] Merge do lote 7f (PR #197, 13/11)
   - pedido do dono em 13/11, depois do 7c: "o site é uma coisa e o link de agendamento é outra";
     o barbeiro pode pôr o domínio dele; o site precisa de animações e de um visual mais moderno,
     menos "padrão". Decisão: o link de agendamento continua em `/b/<slug>` (é o que já está no
@@ -338,6 +339,13 @@ U2 a U5 já feitos (#161).
     movimento: entrada do banner em etapas, fotos que
     surgem ao rolar, cabeçalho que muda ao rolar, detalhes que respondem ao toque; tudo leve
     (CSS, sem biblioteca) e desligado com "reduzir movimento";
+  - [x] **Site sem o link de agendamento** (13/11, documentado na linha de desenvolvimento) (pedido do dono em 13/11): o site publica e funciona
+    com o link de agendamento desligado (a barbearia pode não querer agendamento pelo site nem
+    o link no WhatsApp); sem link, os botões "Agendar" dão lugar a "Falar no WhatsApp" (com o
+    telefone da unidade) ou somem; ligar o link depois faz os botões voltarem sozinhos;
+  - [ ] **Aniversário do cliente que veio pelo bot** (pedido do dono em 13/11): quando o cliente
+    chega pelo WhatsApp, não dá para informar a data de aniversário; corrigir no cadastro e,
+    se fizer sentido, o bot perguntar (opcional);
   - [ ] **Horário de funcionamento da unidade** (pedido do dono em 13/11, logo depois do 7f):
     - o dono define, por dia da semana, a hora em que a unidade abre e fecha (com intervalo
       opcional, como o almoço), em Configurações, Unidades;
@@ -355,6 +363,13 @@ U2 a U5 já feitos (#161).
   - pedidos do dono em 13/11 (depois dos endereços separados):
     - [ ] **Lote 7l** editar a página de agendamento (`/b/<link>`) no mesmo painel: cor,
       logotipo, foto de capa e textos, no mesmo visual do site;
+    - [ ] **Lote 7n** **Cabeçalho e rodapé editáveis** (pergunta do dono em 13/11; hoje só o logotipo, a
+      frase do rodapé e o Instagram mudam): no cabeçalho, nome, só logotipo ou os dois, menu
+      (renomear, esconder, reordenar) e o texto do botão principal; no rodapé, ligar e desligar
+      cada coluna, texto livre (CNPJ, "aceitamos Pix"), links próprios e redes além do Instagram
+      (Facebook, TikTok, YouTube, WhatsApp); decisão do dono (13/11): o cliente edita tudo, e a
+      linha "Site e agenda pelo Pente Fino" é opcional (ligada por padrão, o dono desliga);
+      junta com o lote 7m;
     - [ ] **Lote 7m** botões com link no site: o dono põe botões próprios (texto e endereço, por
       exemplo cardápio de produtos ou Instagram) e, para quem quiser ir além, um CSS
       personalizado, aplicado só no site dele e filtrado (sem `@import`, sem `url()` de fora,
