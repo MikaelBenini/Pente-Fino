@@ -94,8 +94,11 @@ test('clube online: conta para receber, link pelo WhatsApp e assinatura pelo cli
   await page.goto('/clube');
   await page.getByRole('tab', { name: 'Receber online' }).click();
   const form = page.getByRole('form', { name: 'Dados para receber' });
-  // A demonstração pode já ter a conta de uma execução anterior.
-  if (await form.isVisible().catch(() => false)) {
+  const conta = page.getByText('Conta no Asaas', { exact: true });
+  // Espera a aba carregar: o formulário (sem conta) ou a conta (de uma execução anterior).
+  // Olhar antes de carregar pulava o cadastro e o link era recusado mais adiante.
+  await expect(form.or(conta)).toBeVisible();
+  if (await form.isVisible()) {
     await form.getByLabel('Razão social').fill('Barbearia Demo LTDA');
     await form.getByLabel('CNPJ').fill('12.345.678/0001-90');
     await form.getByLabel('Faturamento por mês (R$)').fill('30000');
@@ -107,7 +110,7 @@ test('clube online: conta para receber, link pelo WhatsApp e assinatura pelo cli
     await form.getByLabel('Número').fill('1000');
     await form.getByRole('button', { name: 'Criar conta para receber' }).click();
   }
-  await expect(page.getByText('Conta no Asaas')).toBeVisible();
+  await expect(conta).toBeVisible();
 
   await page.getByRole('tab', { name: 'Planos' }).click();
   await page.getByRole('button', { name: 'Novo plano' }).click();
