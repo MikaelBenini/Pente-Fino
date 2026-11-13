@@ -8,6 +8,7 @@ import type {
   ChatIniciado,
   ConversaDaEquipe,
   ResumoDoChat,
+  RespostaPronta,
   ConversaNaFila,
   RespostaEntrarAdmin,
 } from '@pente-fino/shared';
@@ -25,6 +26,12 @@ let a: Cenario;
 const contasCriadas: string[] = [];
 const sufixo = randomUUID().slice(0, 8);
 const pessoas = {
+  admin: {
+    email: `chat-admin-${sufixo}@pentefino.dev`,
+    senha: 'senha-do-admin-chat-1',
+    papel: 'admin' as const,
+    nome: 'Alice Admin',
+  },
   vendedor: {
     email: `chat-vend-${sufixo}@pentefino.dev`,
     senha: 'senha-do-vend-chat-1',
@@ -219,5 +226,67 @@ describe('chat do site (admin F6)', () => {
     ).body as ResumoDoChat;
     expect(r.conversas).toBeGreaterThanOrEqual(2);
     expect(r.viraramCadastro).toBeGreaterThanOrEqual(1);
+  });
+
+  it('avaliação ao encerrar, contexto do cliente da Ajuda e respostas prontas editáveis', async () => {
+    const tAdmin = await entrarAdmin(pessoas.admin);
+    const adm = {
+      get: (url: string) => http().get(url).set('authorization', `Bearer ${tAdmin}`),
+      post: (url: string, corpo: object = {}) =>
+        http().post(url).set('authorization', `Bearer ${tAdmin}`).send(corpo),
+      put: (url: string, corpo: unknown) =>
+        http()
+          .put(url)
+          .set('authorization', `Bearer ${tAdmin}`)
+          .send(corpo as object),
+    };
+    // Avaliar só depois de encerrada.
+    const c = (
+      await http()
+        .post('/chat/conversas')
+        .send({ nome: 'Ava Avalia', contato: '(11) 97777-6666', texto: 'Oi' })
+        .expect(201)
+    ).body as ChatIniciado;
+    conversas.push(c.id);
+    const avaliar = (util: boolean) =>
+      http().post(`/chat/conversas/${c.id}/avaliacao`).set('x-chat-token', c.token).send({ util });
+    await avaliar(true).expect(409);
+    await adm.post(`/admin/chat/${c.id}/encerrar`).expect(204);
+    await avaliar(true).expect(204);
+    const v = (await http().get(`/chat/conversas/${c.id}`).set('x-chat-token', c.token).expect(200))
+      .body as ChatDoVisitante;
+    expect(v.avaliacao).toBe(true);
+    const r = (await adm.get('/admin/chat/resumo').expect(200)).body as ResumoDoChat;
+    expect(r.avaliadas).toBeGreaterThanOrEqual(1);
+    expect(r.uteis).toBeGreaterThanOrEqual(1);
+
+    // Conversa do cliente da Ajuda: quem atende vê plano, situação e saúde da conta.
+    const fila = (await adm.get('/admin/chat').expect(200)).body as ConversaNaFila[];
+    const doCliente = fila.find((x) => x.origem === 'painel' && x.contato === a.emails.dono)!;
+    const aberta = (await adm.get(`/admin/chat/${doCliente.id}`).expect(200))
+      .body as ConversaDaEquipe;
+    expect(aberta.contexto?.contaId).toBe(a.contaId);
+    expect(aberta.contexto?.plano).toBeTruthy();
+    expect(typeof aberta.contexto?.nota).toBe('number');
+
+    // Respostas prontas: de fábrica com o preço atual; a equipe troca, com marcadores.
+    const fabrica = (await adm.get('/admin/chat/respostas').expect(200)).body as RespostaPronta[];
+    expect(fabrica.find((x) => x.titulo === 'Preço dos planos')?.texto).toMatch(/R\$\s?\d/);
+    await adm
+      .put('/admin/configuracoes/respostas-chat', [{ titulo: 'x', texto: 'curta' }])
+      .expect(400);
+    await adm
+      .put('/admin/configuracoes/respostas-chat', [
+        { titulo: 'Oferta', texto: 'Teste de {dias} dias e Básico por {basico}.' },
+      ])
+      .expect(204);
+    const minhas = (await adm.get('/admin/chat/respostas').expect(200)).body as RespostaPronta[];
+    expect(minhas).toHaveLength(1);
+    expect(minhas[0]!.texto).not.toContain('{');
+    // Lista vazia volta às de fábrica.
+    await adm.put('/admin/configuracoes/respostas-chat', []).expect(204);
+    expect(
+      ((await adm.get('/admin/chat/respostas').expect(200)).body as RespostaPronta[]).length,
+    ).toBe(fabrica.length);
   });
 });

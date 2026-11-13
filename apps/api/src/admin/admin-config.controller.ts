@@ -69,6 +69,9 @@ import {
   CHAVE_ROTINAS_WORKER,
   ROTINAS_WORKER,
   emailDeTeste,
+  RESPOSTAS_PADRAO,
+  respostasChatSchema,
+  type RespostaPronta,
 } from '@pente-fino/shared';
 import { Queue } from 'bullmq';
 import { z } from 'zod';
@@ -663,6 +666,27 @@ export class AdminConfigController {
       usados: contas.filter((x) => x.cupom?.toUpperCase() === c.codigo && x.status === 'ativa')
         .length,
     }));
+  }
+
+  @Get('configuracoes/respostas-chat')
+  @ApiOperation({ summary: 'Respostas prontas do chat como a equipe escreveu (com os marcadores)' })
+  async respostasChat(): Promise<RespostaPronta[]> {
+    const salvas = respostasChatSchema.safeParse(await this.valor('respostas_chat')).data;
+    // Nada salvo (ou lista vazia): mostra as de fábrica para editar.
+    return salvas?.length ? salvas : [...RESPOSTAS_PADRAO];
+  }
+
+  @Put('configuracoes/respostas-chat')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Trocar as respostas prontas do chat (lista vazia = volta às de fábrica)',
+  })
+  async salvarRespostasChat(
+    @Corpo(respostasChatSchema) r: RespostaPronta[],
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    await this.gravar('respostas_chat', r, a, ip);
   }
 
   @Put('configuracoes/cupons')

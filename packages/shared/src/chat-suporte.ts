@@ -82,6 +82,8 @@ export interface ChatDoVisitante {
   atendente: string | null;
   emHorario: boolean;
   mensagens: MensagemChat[];
+  /** Avaliação já dada (só depois de encerrada). */
+  avaliacao: boolean | null;
 }
 
 export interface ChatIniciado {
@@ -108,11 +110,15 @@ export interface ConversaNaFila {
   virouConta: { id: string; nome: string } | null;
   /** "site" (visitante) ou "painel" (cliente logado, pela Ajuda). */
   origem: 'site' | 'painel';
+  /** Avaliação do visitante ao encerrar: true = útil; null = não avaliou. */
+  avaliacao: boolean | null;
 }
 
 /** Conversa aberta na administração. */
 export interface ConversaDaEquipe extends ConversaNaFila {
   mensagens: MensagemChat[];
+  /** Conversa da Ajuda: plano, situação e saúde da conta (null no site). */
+  contexto: ContextoDoCliente | null;
 }
 
 /** Aviso que o visitante vê junto da conversa. */
@@ -135,46 +141,86 @@ export interface RespostaPronta {
   texto: string;
 }
 
+/** Marcadores que as respostas prontas podem usar; viram o valor atual ao inserir. */
+export const MARCADORES_RESPOSTA = ['{basico}', '{pro}', '{premium}', '{dias}'] as const;
+
+/** Respostas prontas de fábrica (a equipe troca em Configurações → Respostas prontas do chat). */
+export const RESPOSTAS_PADRAO: readonly RespostaPronta[] = [
+  {
+    titulo: 'Preço dos planos',
+    texto:
+      'Os planos são por barbearia, não por cadeira: Básico {basico}/mês (até 3 profissionais), Pro {pro}/mês (até 10) e Premium {premium}/mês (profissionais ilimitados e várias unidades). No anual sai mais barato. Quer que eu te ajude a escolher?',
+  },
+  {
+    titulo: 'Como funciona o teste',
+    texto:
+      'São {dias} dias grátis com tudo do plano escolhido, sem cartão e sem fidelidade. No fim do teste você decide se assina; nada é cobrado sozinho. É só criar a conta em seupentefino.com.br/cadastro.',
+  },
+  {
+    titulo: 'Importar a planilha',
+    texto:
+      'Dá para trazer o que você já tem: a configuração guiada importa clientes, serviços e preços da sua planilha antes do primeiro atendimento. Se quiser, me manda a planilha que eu te ajudo.',
+  },
+  {
+    titulo: 'Comissão do barbeiro',
+    texto:
+      'A comissão sai sozinha em cada serviço e produto da comanda, com a regra de cada barbeiro, e o barbeiro vê o próprio extrato no celular. Vem em todos os planos.',
+  },
+  {
+    titulo: 'Bot do WhatsApp',
+    texto:
+      'O bot usa o WhatsApp da própria barbearia, conectado por QR Code, e agenda sozinho com menus que você programa. Não usa inteligência artificial e não cobra por mensagem. Vem nos planos Pro e Premium.',
+  },
+  {
+    titulo: 'Encerrar',
+    texto:
+      'Fico por aqui, mas qualquer dúvida é só chamar de novo neste chat. Boas vendas e bons atendimentos!',
+  },
+];
+
+export const respostasChatSchema = z
+  .array(
+    z.object({
+      titulo: z.string().trim().min(2, { error: 'Dê um título.' }).max(40),
+      texto: z.string().trim().min(5, { error: 'Escreva a resposta.' }).max(1000),
+    }),
+  )
+  .max(20, { error: 'Até 20 respostas prontas.' });
+
 /**
- * Respostas prontas da equipe: um clique põe o texto na caixa, e a pessoa ajusta antes de mandar.
- * Preços e dias de teste vêm de quem chama (a mesma tabela do site), para nunca ficarem velhos.
+ * As respostas prontas com os marcadores trocados pelos valores atuais (preços e dias de teste da
+ * mesma tabela do site): o texto nunca fica com preço velho. Sem personalizadas, as de fábrica.
  */
-export function respostasProntasDoChat(d: {
-  diasTeste: number;
-  basico: string;
-  pro: string;
-  premium: string;
-}): RespostaPronta[] {
-  return [
-    {
-      titulo: 'Preço dos planos',
-      texto: `Os planos são por barbearia, não por cadeira: Básico ${d.basico}/mês (até 3 profissionais), Pro ${d.pro}/mês (até 10) e Premium ${d.premium}/mês (profissionais ilimitados e várias unidades). No anual sai mais barato. Quer que eu te ajude a escolher?`,
-    },
-    {
-      titulo: 'Como funciona o teste',
-      texto: `São ${d.diasTeste} dias grátis com tudo do plano escolhido, sem cartão e sem fidelidade. No fim do teste você decide se assina; nada é cobrado sozinho. É só criar a conta em seupentefino.com.br/cadastro.`,
-    },
-    {
-      titulo: 'Importar a planilha',
-      texto:
-        'Dá para trazer o que você já tem: a configuração guiada importa clientes, serviços e preços da sua planilha antes do primeiro atendimento. Se quiser, me manda a planilha que eu te ajudo.',
-    },
-    {
-      titulo: 'Comissão do barbeiro',
-      texto:
-        'A comissão sai sozinha em cada serviço e produto da comanda, com a regra de cada barbeiro, e o barbeiro vê o próprio extrato no celular. Vem em todos os planos.',
-    },
-    {
-      titulo: 'Bot do WhatsApp',
-      texto:
-        'O bot usa o WhatsApp da própria barbearia, conectado por QR Code, e agenda sozinho com menus que você programa. Não usa inteligência artificial e não cobra por mensagem. Vem nos planos Pro e Premium.',
-    },
-    {
-      titulo: 'Encerrar',
-      texto:
-        'Fico por aqui, mas qualquer dúvida é só chamar de novo neste chat. Boas vendas e bons atendimentos!',
-    },
-  ];
+export function respostasProntasDoChat(
+  d: { diasTeste: number; basico: string; pro: string; premium: string },
+  personalizadas?: readonly RespostaPronta[] | null,
+): RespostaPronta[] {
+  const vars: Record<string, string> = {
+    '{basico}': d.basico,
+    '{pro}': d.pro,
+    '{premium}': d.premium,
+    '{dias}': String(d.diasTeste),
+  };
+  return (personalizadas?.length ? personalizadas : RESPOSTAS_PADRAO).map((r) => ({
+    titulo: r.titulo,
+    texto: r.texto.replace(/\{(basico|pro|premium|dias)\}/g, (m) => vars[m] ?? m),
+  }));
+}
+
+/** O visitante (ou o cliente da Ajuda) avalia a conversa encerrada. */
+export const avaliarChatSchema = z.object({ util: z.boolean() });
+export type AvaliarChatEntrada = z.infer<typeof avaliarChatSchema>;
+
+/** Contexto do cliente na conversa vinda da Ajuda (quem atende vê sem procurar). */
+export interface ContextoDoCliente {
+  contaId: string;
+  conta: string;
+  plano: string;
+  status: 'teste' | 'ativa' | 'suspensa' | 'cancelada';
+  /** Nota de saúde (0 a 100); null = cancelada. */
+  nota: number | null;
+  /** O que mais tira pontos da nota. */
+  motivo: string | null;
 }
 
 export interface ResumoDoChat {
@@ -188,6 +234,9 @@ export interface ResumoDoChat {
   primeiraRespostaMin: number | null;
   /** Começadas em horário e ainda sem resposta. */
   semResposta: number;
+  /** Encerradas que o visitante avaliou e, delas, as que achou úteis. */
+  avaliadas: number;
+  uteis: number;
 }
 
 /** Resumo dos últimos dias: conversas, conversão em cadastro e velocidade da primeira resposta. */
@@ -196,6 +245,8 @@ export function resumirChat(
     criadoEm: string;
     primeiraRespostaEm: string | null;
     virouConta: boolean;
+    /** true = foi útil; false = não; null = não avaliou. */
+    avaliacao?: boolean | null;
   }[],
 ): ResumoDoChat {
   const emHorario = conversas.filter((c) => chatEmHorario(new Date(c.criadoEm)));
@@ -212,5 +263,7 @@ export function resumirChat(
       ? Math.round(minutos.reduce((s, m) => s + m, 0) / minutos.length)
       : null,
     semResposta: emHorario.length - respondidas.length,
+    avaliadas: conversas.filter((c) => c.avaliacao === true || c.avaliacao === false).length,
+    uteis: conversas.filter((c) => c.avaliacao === true).length,
   };
 }

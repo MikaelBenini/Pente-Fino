@@ -858,6 +858,12 @@ motivo e vai para a auditoria.
   - título "(n) Nova mensagem" no `ChatSite`;
   - chat da Ajuda: migração `chat_painel` (`origem`, `usuario_painel_id`), `GET /chat/minha` e `POST /chat/minha/mensagens` para qualquer papel, `ChatAjuda` no bloco "Falar com o suporte";
   - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts` e `suporte.spec.ts`.
+- [x] **Chat: contexto, avaliação e respostas editáveis** (feito em 2026-11-13):
+  - `contexto` em `ConversaDaEquipe` (plano, situação e `saudeDaConta`) com "Abrir ficha";
+  - migração `chat_avaliacao` (`conversa_suporte.avaliacao`), `POST /chat/conversas/:id/avaliacao` e `/chat/minha/avaliacao` (só encerrada) e `avaliadas`/`uteis` em `resumirChat`;
+  - `RESPOSTAS_PADRAO`, marcadores e `respostasChatSchema`;
+  - `GET`/`PUT /admin/configuracoes/respostas-chat` (vazio = de fábrica) e `GET /admin/chat/respostas`;
+  - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts` e `admin.spec.ts`.
 - [ ] **F6, entrega 2 (o que falta)**: notificação no celular da equipe com o navegador fechado (push do PWA no `/admin`)
 - [ ] **F7–F9** métricas de SaaS, aviso segmentado e gestão de cupons
 

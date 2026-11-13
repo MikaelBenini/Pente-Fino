@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (chat: contexto do cliente, avaliação e respostas editáveis)
+
+- Na conversa de um cliente que veio pela Ajuda, quem atende vê o plano, a situação e a nota de saúde da conta, com o botão "Abrir ficha da conta".
+- Ao fim da conversa, o visitante ou o cliente responde "Foi útil?". O resumo da aba Chat mostra a porcentagem dos que acharam útil, e cada conversa mostra a avaliação.
+- As respostas prontas do chat podem ser editadas em Configurações → Respostas prontas do chat. É possível criar, mudar e tirar respostas, ou voltar às de fábrica. Os marcadores {basico}, {pro}, {premium} e {dias} viram o preço e os dias de teste atuais.
+
 ### Adicionado (chat: Ajuda, respostas prontas, conversão e avisos)
 
 - O chat com o suporte agora também fica na Ajuda do painel, para quem já é cliente. Não pede nome nem contato, e a conversa fica ligada à conta. Na administração, essas conversas aparecem com a etiqueta "Cliente".

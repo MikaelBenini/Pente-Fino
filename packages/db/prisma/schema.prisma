@@ -1709,6 +1709,8 @@ model ConversaSuporte {
   origem           String                @default("site")
   /// Usuário da barbearia que abriu pela Ajuda (sem chave estrangeira: tabela da administração).
   usuarioPainelId  String?               @map("usuario_painel_id") @db.Uuid
+  /// O visitante avaliou ao encerrar: true = foi útil; null = não avaliou.
+  avaliacao        Boolean?
   criadoEm         DateTime              @default(now()) @map("criado_em") @db.Timestamptz(3)
   assumidaEm       DateTime?             @map("assumida_em") @db.Timestamptz(3)
   encerradaEm      DateTime?             @map("encerrada_em") @db.Timestamptz(3)

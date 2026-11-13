@@ -61,6 +61,16 @@ describe('respostasProntasDoChat e resumirChat (sugestões do chat)', () => {
     expect(r.find((x) => x.titulo === 'Como funciona o teste')?.texto).toContain('14 dias grátis');
   });
 
+  it('respostas personalizadas trocam os marcadores pelos valores atuais', () => {
+    const r = respostasProntasDoChat(
+      { diasTeste: 14, basico: 'R$ 79,90', pro: 'R$ 149,90', premium: 'R$ 249,90' },
+      [{ titulo: 'Oferta', texto: 'Básico por {basico} e {dias} dias de teste. {outro} fica.' }],
+    );
+    expect(r).toEqual([
+      { titulo: 'Oferta', texto: 'Básico por R$ 79,90 e 14 dias de teste. {outro} fica.' },
+    ]);
+  });
+
   it('conversão em cadastro e primeira resposta só das começadas em horário', () => {
     const r = resumirChat([
       // Segunda 10h, respondida em 6 min, virou cadastro.
@@ -94,6 +104,8 @@ describe('respostasProntasDoChat e resumirChat (sugestões do chat)', () => {
       taxaCadastro: 0.5,
       primeiraRespostaMin: 4,
       semResposta: 1,
+      avaliadas: 0,
+      uteis: 0,
     });
   });
 
@@ -104,6 +116,23 @@ describe('respostasProntasDoChat e resumirChat (sugestões do chat)', () => {
       taxaCadastro: 0,
       primeiraRespostaMin: null,
       semResposta: 0,
+      avaliadas: 0,
+      uteis: 0,
     });
+  });
+
+  it('avaliações: conta as avaliadas e as úteis', () => {
+    const base = {
+      criadoEm: sp('2026-11-16T10:00:00').toISOString(),
+      primeiraRespostaEm: null,
+      virouConta: false,
+    };
+    const r = resumirChat([
+      { ...base, avaliacao: true },
+      { ...base, avaliacao: true },
+      { ...base, avaliacao: false },
+      { ...base, avaliacao: null },
+    ]);
+    expect(r).toMatchObject({ avaliadas: 3, uteis: 2 });
   });
 });

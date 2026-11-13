@@ -3,7 +3,9 @@
 import { Controller, Get, HttpCode, HttpStatus, Inject, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  avaliarChatSchema,
   mensagemChatSchema,
+  type AvaliarChatEntrada,
   type ChatDoVisitante,
   type MensagemChatEntrada,
 } from '@pente-fino/shared';
@@ -27,6 +29,14 @@ export class ChatPainelController {
   @ApiOperation({ summary: 'Minha conversa com o suporte (Ajuda do painel); null = nenhuma' })
   async minha(): Promise<{ conversa: ChatDoVisitante | null }> {
     return { conversa: await this.chat.doPainelParaTela(Contexto.usuario().id) };
+  }
+
+  @Post('avaliacao')
+  @Papeis('dono', 'gestor', 'recepcao', 'barbeiro')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Avaliar a última conversa encerrada com o suporte' })
+  avaliar(@Corpo(avaliarChatSchema) d: AvaliarChatEntrada): Promise<void> {
+    return this.chat.avaliarDoPainel(Contexto.usuario().id, d.util);
   }
 
   @Post('mensagens')

@@ -29,6 +29,7 @@ import { FaixaAvisoGeral } from '../faixa-aviso-geral';
 import { LimpezaNaSaude } from './limpeza-admin';
 import { NotaFiscalAdmin, NotasNaSaude } from './nota-fiscal-admin';
 import { useTabelasAdmin } from './precos-admin';
+import { RespostasChatAdmin } from './respostas-chat-admin';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível salvar.';
@@ -86,6 +87,7 @@ export function ConfiguracoesAdmin({ onIrPara }: { onIrPara: (aba: string) => vo
       <PrecosAdmin onIrPara={onIrPara} />
       <CuponsAdmin onIrPara={onIrPara} />
       <ModelosEmailAdmin />
+      <RespostasChatAdmin />
     </div>
   );
 }
