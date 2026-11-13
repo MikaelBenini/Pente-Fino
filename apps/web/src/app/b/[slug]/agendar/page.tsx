@@ -1,32 +1,21 @@
-import { Carregando } from '@pente-fino/ui';
-import type { Metadata } from 'next';
+import { permanentRedirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { TelaAgendar } from '@/componentes/telas/agendar';
-import { unidadePublica } from '@/lib/servidor/pagina-publica';
 
-// Agendamento da unidade dentro do site (seção 7): os botões "Agendar horário" do site trazem
-// para cá. Funciona com ou sem site publicado.
+// O agendamento é o próprio /b/<slug> (lote 7d). Este endereço existiu por pouco tempo, quando o
+// site ocupava o /b/<slug>: leva de volta ao link.
 
 type Props = { params: Promise<{ slug: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+async function Levar({ params }: Props) {
   const { slug } = await params;
-  const u = await unidadePublica(slug);
-  return {
-    title: { absolute: u ? `Agendar horário · ${u.barbearia}` : 'Agendar horário' },
-    robots: { index: false, follow: true },
-  };
-}
-
-async function Conteudo({ params }: Props) {
-  const { slug } = await params;
-  return <TelaAgendar slugDaRota={slug} />;
+  permanentRedirect(`/b/${slug}`);
+  return null;
 }
 
 export default function Pagina({ params }: Props) {
   return (
-    <Suspense fallback={<Carregando />}>
-      <Conteudo params={params} />
+    <Suspense>
+      <Levar params={params} />
     </Suspense>
   );
 }

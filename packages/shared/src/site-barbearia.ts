@@ -411,7 +411,10 @@ export function linkWhatsappDaUnidade(telefone: string | null): string | null {
 // ─── O que a página pública recebe ──────────────────────────────────────────
 
 export interface SitePublico {
+  /** Endereço do site: /s/<slug> (lote 7d). */
   slug: string;
+  /** Link de agendamento atual (/b/<slugAgendamento>), para onde vão os botões "Agendar". */
+  slugAgendamento: string;
   barbearia: string;
   unidade: string;
   site: SiteBarbearia;
@@ -454,15 +457,39 @@ export function servicosPorCategoria(servicos: SitePublico['servicos']) {
 /** O que o painel recebe para editar o site da unidade. */
 export interface SitePainel {
   rascunho: SiteBarbearia;
-  /** Há um site publicado: /b/<slug> mostra o site, e não a página de agendamento. */
+  /** Há um site publicado em /s/<siteSlug>. */
   publicado: boolean;
   publicadoEm: string | null;
   /** O rascunho mudou desde a última publicação. */
   alteracoesPendentes: boolean;
-  /** Endereço da página; sem ele (ou com o link desligado) não dá para publicar. */
+  /** Link de agendamento (/b/<slug>); sem ele, ou desligado, não dá para publicar. */
   slug: string | null;
   linkLigado: boolean;
+  /** Endereço do site (/s/<siteSlug>), separado do link; null até escolher ou publicar. */
+  siteSlug: string | null;
+  /** Sugestão para o endereço do site enquanto ele não existe. */
+  sugestaoSiteSlug: string;
 }
+
+/** Caminho público do site e do agendamento (lote 7d): coisas diferentes, endereços diferentes. */
+export const caminhoDoSite = (siteSlug: string) => `/s/${siteSlug}`;
+export const caminhoDoAgendamento = (slug: string) => `/b/${slug}`;
+
+/** Troca do endereço do site no painel. */
+export const enderecoSiteSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, {
+      error: 'Use letras minúsculas, números e hífen, sem espaço.',
+    })
+    .min(3, { error: 'No mínimo 3 letras.' })
+    .max(60, { error: 'No máximo 60 letras.' }),
+});
+export type EnderecoSite = z.infer<typeof enderecoSiteSchema>;
+
+export type TipoEndereco = 'agendamento' | 'site';
 
 // ─── Operações do painel (lote 7b) ──────────────────────────────────────────
 

@@ -342,6 +342,7 @@ model Conta {
   avisos               Aviso[]
   funilEtapa           FunilEtapaConta?
   fotosSite            FotoSite[]
+  enderecosAntigos     EnderecoAntigo[]
 
   @@map("conta")
 }
@@ -377,6 +378,8 @@ model Unidade {
   /// Cópia do rascunho no último "Publicar". Nulo = sem site: /b/slug é a página de agendamento.
   sitePublicado       Json?     @map("site_publicado")
   sitePublicadoEm     DateTime? @map("site_publicado_em") @db.Timestamptz(3)
+  /// Endereço do site (/s/<site_slug>), separado do link de agendamento (lote 7d). Único.
+  siteSlug            String?   @unique @map("site_slug")
   criadoEm            DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -401,9 +404,10 @@ model Unidade {
 
   itensClube ItemClube[]
 
-  listaEspera ListaEspera[]
-  avisos      Aviso[]
-  fotosSite   FotoSite[]
+  listaEspera      ListaEspera[]
+  avisos           Aviso[]
+  fotosSite        FotoSite[]
+  enderecosAntigos EnderecoAntigo[]
 
   @@index([contaId])
   @@map("unidade")
@@ -1906,4 +1910,23 @@ model FotoSite {
   @@index([contaId])
   @@index([unidadeId])
   @@map("foto_site")
+}
+
+/// Endereço que a unidade deixou de usar (lote 7d): o link de agendamento (/b/<slug>) ou o site
+/// (/s/<slug>). Quem chega pelo antigo é levado ao atual; nada impresso ou divulgado quebra.
+model EnderecoAntigo {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId   String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId String   @map("unidade_id") @db.Uuid
+  /// agendamento ou site.
+  tipo      String
+  slug      String
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta   @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  @@unique([contaId, tipo, slug])
+  @@index([tipo, slug])
+  @@map("endereco_antigo")
 }

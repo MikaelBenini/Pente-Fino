@@ -37,7 +37,11 @@ test('site da barbearia: Início, páginas internas, agendar e tirar do ar', asy
   rascunho.instagram = 'barbeariademo';
   rascunho.paginas.inicio[0].titulo = 'Corte com hora marcada nos Jardins';
   expect((await api(page, `unidades/${id}/site`, 'PUT', rascunho)).status).toBe(200);
-  expect((await api(page, `unidades/${id}/site/publicar`, 'POST')).status).toBe(200);
+  const publicado = await api(page, `unidades/${id}/site/publicar`, 'POST');
+  expect(publicado.status).toBe(200);
+  // Lote 7d: o site tem endereço próprio (/s/...), separado do link de agendamento (/b/...).
+  const SITE = publicado.corpo.siteSlug as string;
+  const novoLink = `${SLUG}-novo`;
 
   try {
     const visitante = await (await page.context().browser()!.newContext()).newPage();
@@ -47,7 +51,7 @@ test('site da barbearia: Início, páginas internas, agendar e tirar do ar', asy
     });
     // A página guarda o site por até um minuto: espera a versão publicada aparecer.
     await expect(async () => {
-      await visitante.goto(`/b/${SLUG}`);
+      await visitante.goto(`/s/${SITE}`);
       await expect(titulo).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 90_000 });
 
@@ -66,7 +70,7 @@ test('site da barbearia: Início, páginas internas, agendar e tirar do ar', asy
     };
 
     await irPara('Serviços');
-    await expect(visitante).toHaveURL(new RegExp(`/b/${SLUG}/servicos$`));
+    await expect(visitante).toHaveURL(new RegExp(`/s/${SITE}/servicos$`));
     await expect(
       visitante.getByRole('heading', { level: 1, name: 'Serviços e preços' }),
     ).toBeVisible();
@@ -87,12 +91,13 @@ test('site da barbearia: Início, páginas internas, agendar e tirar do ar', asy
     await expect(visitante.getByText(/Recomendamos marcar pelo site/)).toBeVisible();
 
     await visitante.getByRole('main').getByRole('link', { name: 'Agendar horário' }).click();
-    await expect(visitante).toHaveURL(new RegExp(`/b/${SLUG}/agendar$`));
+    // "Agendar" leva ao link de agendamento, que é outro endereço.
+    await expect(visitante).toHaveURL(new RegExp(`/b/${SLUG}$`));
     await expect(visitante.getByRole('heading', { level: 1 })).toBeVisible();
 
     // Página interna que não existe: a tela de "não encontrada", fora do Google. O código da
     // resposta sai antes (a página chega em partes), então o teste olha a tela e o robots.
-    await visitante.goto(`/b/${SLUG}/qualquer`);
+    await visitante.goto(`/s/${SITE}/qualquer`);
     await expect(
       visitante.getByRole('heading', { level: 1, name: 'Página não encontrada' }),
     ).toBeVisible();
@@ -100,8 +105,20 @@ test('site da barbearia: Início, páginas internas, agendar e tirar do ar', asy
       'content',
       /noindex/,
     );
+
+    // O bug do dono: trocar o link de agendamento não pode mudar o site nem quebrar o link antigo.
+    expect((await api(page, `unidades/${id}`, 'PATCH', { slug: novoLink })).status).toBe(200);
+    await visitante.goto(`/b/${SLUG}`);
+    await expect(visitante).toHaveURL(new RegExp(`/b/${novoLink}$`));
+    await visitante.goto(`/s/${SITE}`);
+    await expect(titulo).toBeVisible();
+    // O nome da barbearia no topo leva ao Início do site (no celular o menu fica fechado).
+    await visitante.getByRole('banner').getByRole('link').first().click();
+    await expect(visitante).toHaveURL(new RegExp(`/s/${SITE}$`));
+    await expect(titulo).toBeVisible();
     await visitante.close();
   } finally {
+    await api(page, `unidades/${id}`, 'PATCH', { slug: SLUG });
     expect((await api(page, `unidades/${id}/site/publicado`, 'DELETE')).status).toBe(200);
   }
 });

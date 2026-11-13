@@ -1,15 +1,15 @@
 import { jsonLdDaBarbearia, linkDeAgendamento, metadadosDaPagina } from '@pente-fino/shared';
 import { Carregando } from '@pente-fino/ui';
 import type { Metadata } from 'next';
+import { permanentRedirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { TelaAgendar } from '@/componentes/telas/agendar';
-import { SiteDaBarbearia } from '@/componentes/site-barbearia/site';
-import { sitePublico, unidadePublica } from '@/lib/servidor/pagina-publica';
+import { enderecoAtual, unidadePublica } from '@/lib/servidor/pagina-publica';
 import { URL_SITE } from '@/lib/site';
 
 // Página pública da unidade (painel P1, P3 e P4): /b/<slug>, o endereço bom para o Instagram.
-// Com o site publicado (seção 7), é o Início do site e o agendamento fica em /b/<slug>/agendar;
-// sem site, continua sendo a página de agendamento (o link que já está no Instagram não muda).
+// É sempre a página de agendamento: o site da barbearia tem endereço próprio, /s/<endereço>
+// (seção 7, lote 7d). Link trocado pelo dono: o antigo leva ao novo, com a mesma query.
 // A prévia no WhatsApp e no Instagram é da barbearia (não do Pente Fino); o Google só indexa
 // quando o dono liga "Aparecer no Google".
 
@@ -22,22 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const u = await unidadePublica(slug);
   if (!u) return { title: 'Agendar horário', robots: { index: false, follow: false } };
-  const site = await sitePublico(slug);
   const { titulo, descricao } = metadadosDaPagina(u);
-  if (site) {
-    const banner = site.site.paginas.inicio.find((b) => b.tipo === 'banner' && b.visivel);
-    const titulo =
-      site.unidade.toLowerCase() !== site.barbearia.toLowerCase()
-        ? `${site.barbearia} · ${site.unidade}`
-        : site.barbearia;
-    return {
-      title: { absolute: titulo },
-      description: (banner?.texto || descricao).slice(0, 155),
-      alternates: { canonical: linkDeAgendamento(URL_SITE, slug) },
-      robots: u.aparecerNoGoogle ? { index: true, follow: true } : { index: false, follow: false },
-      openGraph: { type: 'website', title: titulo, siteName: site.barbearia, locale: 'pt_BR' },
-    };
-  }
   const url = linkDeAgendamento(URL_SITE, slug);
   return {
     title: { absolute: titulo },
@@ -72,9 +57,18 @@ async function DadosParaOGoogle({ params }: Props) {
 
 async function Conteudo({ params, searchParams }: Props) {
   const { slug } = await params;
-  // Link do bot (?c=…, nome e telefone preenchidos) vai direto para o agendamento.
-  const site = (await searchParams).c ? null : await sitePublico(slug);
-  if (site) return <SiteDaBarbearia dados={site} pagina="inicio" base={`/b/${slug}`} />;
+  // Endereço antigo primeiro: o dado da unidade fica em cache por minutos e ainda acharia o
+  // link que o dono acabou de trocar.
+  {
+    const novo = await enderecoAtual('agendamento', slug);
+    if (novo) {
+      const query = new URLSearchParams();
+      for (const [k, v] of Object.entries(await searchParams))
+        for (const item of [v].flat()) if (item !== undefined) query.append(k, item);
+      const resto = query.toString();
+      permanentRedirect(`/b/${novo}${resto ? `?${resto}` : ''}`);
+    }
+  }
   return <TelaAgendar slugDaRota={slug} />;
 }
 

@@ -106,16 +106,19 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
   await page.getByRole('button', { name: /^Publicar (página|alterações)$/ }).click();
   await expect(page.getByText('Publicado. O cliente já vê a página nova.')).toBeVisible();
   await expect(page.getByText(/^No ar desde /)).toBeVisible();
+  // O site fica no endereço próprio, mostrado no painel (lote 7d).
+  const enderecoSite = await page.getByLabel(/\/s\/$/).inputValue();
+  const siteDoTeste = `/s/${enderecoSite}`;
 
   const visitante = await (await browser.newContext()).newPage();
-  await visitante.goto(`/b/${SLUG}`);
+  await visitante.goto(siteDoTeste);
   await expect(visitante.getByRole('heading', { level: 1, name: titulo })).toBeVisible();
 
   await page.getByRole('button', { name: 'Tirar do ar' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Tirar do ar' }).click();
   await expect(page.getByText(/O site saiu do ar/)).toBeVisible();
   await expect(page.getByText('Ainda não publicada')).toBeVisible();
-  await visitante.goto(`/b/${SLUG}`);
+  await visitante.goto(siteDoTeste);
   await expect(visitante.getByRole('heading', { level: 1, name: titulo })).toHaveCount(0);
   await visitante.close();
 });

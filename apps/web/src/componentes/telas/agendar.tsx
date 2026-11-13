@@ -34,7 +34,7 @@ import {
   SearchX,
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { Aviso } from '../aviso';
 import { IconeMarca } from '../marca';
@@ -77,7 +77,26 @@ function Agendar({ slugDaRota }: { slugDaRota?: string }) {
     enabled: /^[a-z0-9-]{3,60}$/.test(slug),
     retry: false,
   });
+  // Lote 7d: link trocado pelo dono. Antes de dizer "não encontrada", procura o endereço novo e
+  // leva até ele (com o resto do endereço, como o ?c= do bot).
+  const novo = useQuery({
+    queryKey: ['publico', 'endereco-antigo', slug],
+    queryFn: () => api<{ slug: string }>(`publico/endereco-antigo/agendamento/${slug}`),
+    enabled: pagina.isError,
+    retry: false,
+  });
+  useEffect(() => {
+    if (!novo.data) return;
+    const resto = window.location.search;
+    window.location.replace(`/b/${novo.data.slug}${resto}`);
+  }, [novo.data]);
 
+  if (pagina.isError && (novo.isPending || novo.data))
+    return (
+      <Moldura>
+        <Carregando />
+      </Moldura>
+    );
   if (!/^[a-z0-9-]{3,60}$/.test(slug) || pagina.isError) {
     return (
       <Moldura>
