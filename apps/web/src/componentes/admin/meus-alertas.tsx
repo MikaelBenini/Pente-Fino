@@ -8,30 +8,34 @@ import {
   type AlertasDaEquipeEntrada,
   type TipoAlertaEquipe,
 } from '@pente-fino/shared';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Estado } from '../pagina';
 import { adminApi } from './admin-api';
 
 export function MeusAlertas() {
-  const cliente = useQueryClient();
-  const chave = ['admin', 'eu', 'alertas'];
   const q = useQuery({
-    queryKey: chave,
+    queryKey: ['admin', 'eu', 'alertas'],
     queryFn: () => adminApi<AlertasDaEquipeEntrada>('eu/alertas'),
   });
+  // A escolha fica no estado da tela assim que a pessoa marca: uma leitura que chegue depois
+  // não desfaz o clique. Se não salvar, volta ao que o servidor tem.
+  const [marcados, setMarcados] = useState<TipoAlertaEquipe[] | null>(null);
+  const atuais = marcados ?? q.data?.alertas ?? [];
   const [aviso, setAviso] = useState<string | null>(null);
 
   async function trocar(tipo: TipoAlertaEquipe, ligado: boolean) {
-    const atuais = q.data?.alertas ?? [];
-    const alertas = ligado ? [...atuais, tipo] : atuais.filter((t) => t !== tipo);
-    cliente.setQueryData(chave, { alertas });
+    const alertas = ligado
+      ? [...atuais.filter((t) => t !== tipo), tipo]
+      : atuais.filter((t) => t !== tipo);
+    setMarcados(alertas);
     try {
       await adminApi('eu/alertas', { metodo: 'PUT', corpo: { alertas } });
       setAviso('Alertas salvos.');
     } catch {
+      setMarcados(null);
       setAviso('Não deu para salvar. Tente de novo.');
-      await cliente.invalidateQueries({ queryKey: chave });
+      void q.refetch();
     }
   }
 
@@ -56,7 +60,7 @@ export function MeusAlertas() {
               >
                 <input
                   type="checkbox"
-                  checked={q.data!.alertas.includes(t)}
+                  checked={atuais.includes(t)}
                   onChange={(e) => void trocar(t, e.target.checked)}
                   className="mt-1 size-4 accent-modulo"
                 />

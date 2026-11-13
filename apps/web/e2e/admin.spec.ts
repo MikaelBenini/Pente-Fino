@@ -49,7 +49,9 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
   // Admin F3: cada pessoa escolhe os alertas que recebe por e-mail.
   const alertas = page.getByRole('region', { name: 'Meus alertas por e-mail' });
-  await alertas.getByRole('checkbox', { name: /Cadastro novo/ }).check();
+  const cadastroNovo = alertas.getByRole('checkbox', { name: /Cadastro novo/ });
+  await cadastroNovo.click();
+  await expect(cadastroNovo).toBeChecked();
   await expect(alertas.getByRole('status')).toHaveText('Alertas salvos.');
   await page.reload();
   await expect(
