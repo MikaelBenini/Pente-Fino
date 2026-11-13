@@ -834,7 +834,16 @@ motivo e vai para a auditoria.
   - `saude` em `ContaNaPlataforma`, calculada na lista de contas da API (fatura aberta ou recusada vencida conta como cobrança vencida);
   - coluna "Saúde", ordem "Risco de cancelamento" e CSV;
   - testes em `admin.e2e-spec.ts` e `admin.spec.ts`.
-- [ ] **F5–F9** acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [x] **F5** acesso de suporte com consentimento (feito em 2026-11-13):
+  - migração `acesso_suporte`: `conta.suporte_liberado_ate` e `plataforma_suporte_liberado()`;
+  - `GET`/`PUT /conta/suporte`, só o dono, auditado;
+  - `POST /admin/contas/:id/suporte` (admin e suporte) emite o token com `TokensAcesso.emitirSuporte`: papel dono, marca `sup`, até `fimDaSessaoSuporte` (1 h, nunca depois da liberação);
+  - a `AutenticacaoGuard` recusa gravação e as conversas;
+  - `OcultarContatoInterceptor` troca telefone e WhatsApp das respostas;
+  - `auth/eu` devolve `modoSuporte`;
+  - na web: a ponte grava a sessão sem renovação (`/api/suporte/entrar`), a página `/suporte`, a faixa na casca, o bloco na ficha e a aba do dono;
+  - testes em `acesso-suporte.test.ts`, `ocultar-contato.spec.ts`, `suporte.e2e-spec.ts` e `apps/web/e2e/suporte.spec.ts`.
+- [ ] **F6–F9** acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

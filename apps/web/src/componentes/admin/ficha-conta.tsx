@@ -25,6 +25,7 @@ import {
   type NotaInterna,
   type AcaoConta,
   type FichaContaPlataforma,
+  type SessaoSuporteAberta,
   type ProximoPasso,
   type PapelPlataforma,
 } from '@pente-fino/shared';
@@ -210,16 +211,73 @@ export function FichaConta({
     >
       <Estado consulta={ficha}>
         {() => (
-          <Conteudo
-            f={ficha.data!}
-            contaId={id!}
-            atualizar={atualizar}
-            admin={papel === 'admin'}
-            podePagar={papel !== 'suporte'}
-          />
+          <>
+            <Conteudo
+              f={ficha.data!}
+              contaId={id!}
+              atualizar={atualizar}
+              admin={papel === 'admin'}
+              podePagar={papel !== 'suporte'}
+            />
+            {(papel === 'admin' || papel === 'suporte') && (
+              <ModoSuporte liberadoAte={ficha.data!.suporteLiberadoAte} contaId={id!} />
+            )}
+          </>
         )}
       </Estado>
     </Dialogo>
+  );
+}
+
+/**
+ * Admin F5: abrir o painel da barbearia só para ler, quando o dono liberou (Configurações →
+ * Acesso do suporte). Abre em outra aba; a entrada fica nas duas auditorias.
+ */
+function ModoSuporte({ liberadoAte, contaId }: { liberadoAte: string | null; contaId: string }) {
+  const [erro, setErro] = useState<string | null>(null);
+  const [abrindo, setAbrindo] = useState(false);
+  async function abrir() {
+    setErro(null);
+    setAbrindo(true);
+    // A aba abre no clique (o navegador bloqueia aba aberta depois de esperar a resposta).
+    const aba = window.open('about:blank', '_blank');
+    try {
+      const s = await adminApi<SessaoSuporteAberta>(`contas/${contaId}/suporte`, { corpo: {} });
+      if (aba) {
+        aba.opener = null;
+        aba.location.href = `/suporte#${s.token}`;
+      }
+    } catch (e) {
+      aba?.close();
+      setErro(e instanceof Error ? e.message : 'Não deu para abrir o modo suporte.');
+    } finally {
+      setAbrindo(false);
+    }
+  }
+  return (
+    <section
+      aria-labelledby="titulo-modo-suporte"
+      className="mt-6 flex flex-col gap-2 border-t border-borda pt-4"
+    >
+      <h3 id="titulo-modo-suporte" className="font-semibold">
+        Modo suporte
+      </h3>
+      <p className="text-sm text-tinta-suave">
+        {liberadoAte
+          ? `O dono liberou até ${formatarDataHora(liberadoAte)}. O painel abre só para ler, por até 1 hora, sem telefones nem conversas.`
+          : 'O dono ainda não liberou. Ele libera por 24 horas em Configurações → Acesso do suporte.'}
+      </p>
+      <Botao
+        variante="secundario"
+        className="self-start"
+        disabled={!liberadoAte}
+        carregando={abrindo}
+        onClick={() => void abrir()}
+      >
+        Abrir painel em modo suporte
+      </Botao>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+    </section>
   );
 }
 

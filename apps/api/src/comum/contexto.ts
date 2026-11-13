@@ -7,6 +7,8 @@ export interface UsuarioAutenticado {
   id: string;
   contaId: string;
   papeis: PapelAtribuido[];
+  /** Admin F5: sessão de suporte (equipe do Pente Fino, com consentimento do dono), só leitura. */
+  suporte?: { adminId: string; nome: string; ate: string };
 }
 
 export interface DadosContexto {

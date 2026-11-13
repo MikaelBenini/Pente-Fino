@@ -284,6 +284,8 @@ model Conta {
   cortesiaAte             DateTime?     @map("cortesia_ate") @db.Date
   /// Cobrança manual começa nesta data (reativação, fim da cortesia ou decisão da administração).
   cobrarAPartirDe         DateTime?     @map("cobrar_a_partir_de") @db.Date
+  /// Admin F5: o dono liberou o acesso de suporte (só leitura) até este momento.
+  suporteLiberadoAte      DateTime?     @map("suporte_liberado_ate") @db.Timestamptz(3)
   /// Cupom usado ao contratar e o desconto dele (pontos-base), enquanto a assinatura existir.
   cupom                   String?
   descontoBp              Int           @default(0) @map("desconto_bp")

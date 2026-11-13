@@ -85,6 +85,7 @@ import { ProfissionaisService } from './profissionais/profissionais.service.js';
 import { ServicosController } from './servicos/servicos.controller.js';
 import { UsuariosService } from './usuarios/usuarios.service.js';
 import { UsuariosController } from './usuarios/usuarios.controller.js';
+import { OcultarContatoInterceptor } from './suporte/ocultar-contato.interceptor.js';
 
 /** Serviços que todo módulo de negócio usa. */
 @Global()
@@ -229,6 +230,8 @@ export class ComumModule {}
     PlanoGuard,
     { provide: APP_GUARD, useExisting: PlanoGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor },
+    // Admin F5: telefone e WhatsApp escondidos na sessão de suporte.
+    { provide: APP_INTERCEPTOR, useClass: OcultarContatoInterceptor },
     { provide: APP_FILTER, useClass: FiltroErros },
   ],
 })

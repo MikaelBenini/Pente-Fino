@@ -100,6 +100,8 @@ export interface UsuarioSessao {
   papeis: { papel: z.infer<typeof papelSchema>; unidadeId: string | null }[];
   /** E-mail confirmado (só o cadastro pelo site começa sem): até lá, não agenda nem convida. */
   emailConfirmado: boolean;
+  /** Admin F5: sessão da equipe do Pente Fino com o consentimento do dono, só leitura. */
+  modoSuporte?: { nome: string; ate: string };
 }
 
 /** Unidade como a lista de escolha mostra. */

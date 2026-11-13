@@ -17,6 +17,10 @@ import {
   type PreviaTrocaPlano,
   type TrocarPlanoEntrada,
   type EstadoPrimeirosPassos,
+  HORAS_LIBERACAO_SUPORTE,
+  liberarSuporteSchema,
+  type AcessoSuporteDaConta,
+  type LiberarSuporteEntrada,
 } from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { LivreSemAssinatura, Papeis } from '../auth/decoradores.js';
@@ -220,6 +224,43 @@ export class ContaController {
           profissionais: Number.isFinite(limites.profissionais) ? limites.profissionais : null,
         },
       };
+    });
+  }
+
+  @Get('suporte')
+  @Papeis('dono')
+  @ApiOperation({ summary: 'Até quando o suporte do Pente Fino pode ver o painel (admin F5)' })
+  acessoSuporte(): Promise<AcessoSuporteDaConta> {
+    return this.banco.daConta(async (tx) => {
+      const c = await tx.conta.findUniqueOrThrow({
+        where: { id: Contexto.usuario().contaId },
+        select: { suporteLiberadoAte: true },
+      });
+      const ate = c.suporteLiberadoAte;
+      return { liberadoAte: ate && ate > new Date() ? ate.toISOString() : null };
+    });
+  }
+
+  @Put('suporte')
+  @Papeis('dono')
+  @Auditada()
+  @ApiOperation({
+    summary: 'Liberar por 24 h (ou cancelar) o acesso de suporte, só leitura (admin F5)',
+  })
+  liberarSuporte(
+    @Corpo(liberarSuporteSchema) d: LiberarSuporteEntrada,
+  ): Promise<AcessoSuporteDaConta> {
+    return this.banco.daConta(async (tx) => {
+      const id = Contexto.usuario().contaId;
+      const ate = d.liberar ? new Date(Date.now() + HORAS_LIBERACAO_SUPORTE * 3_600_000) : null;
+      await tx.conta.update({ where: { id }, data: { suporteLiberadoAte: ate } });
+      await auditar(tx, {
+        entidade: 'conta',
+        entidadeId: id,
+        acao: d.liberar ? 'liberar_suporte' : 'cancelar_suporte',
+        depois: { liberadoAte: ate?.toISOString() ?? null },
+      });
+      return { liberadoAte: ate?.toISOString() ?? null };
     });
   }
 

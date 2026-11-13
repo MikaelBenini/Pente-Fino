@@ -51,6 +51,24 @@ import { Marca } from './marca';
 /** Telas que qualquer papel abre, mesmo fora do menu. */
 const LIVRES = ['/app', '/unidade', '/perfil'];
 
+/** Admin F5: a equipe do Pente Fino está vendo o painel com a permissão do dono, só para ler. */
+function FaixaSuporte({ nome, ate }: { nome: string; ate: string }) {
+  const hora = new Date(ate).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Sao_Paulo',
+  });
+  return (
+    <div
+      role="status"
+      className="border-b border-modulo/50 bg-modulo/15 px-4 py-2 text-sm font-medium text-tinta"
+    >
+      Modo suporte: {nome}, do Pente Fino, está vendo o painel com a permissão do dono. Só leitura,
+      até {hora}. Telefones de clientes e conversas do bot ficam escondidos.
+    </div>
+  );
+}
+
 export function Casca({ children }: { children: ReactNode }) {
   const usuario = useUsuario();
   const unidades = useUnidades(usuario.isSuccess);
@@ -130,12 +148,14 @@ export function Casca({ children }: { children: ReactNode }) {
         <MenuLateral />
         <div className="flex min-w-0 flex-col">
           <BarraTopo />
+          {usuario.data?.modoSuporte && <FaixaSuporte {...usuario.data.modoSuporte} />}
           <AvisoConexao />
           <AvisoGeral />
           <AvisoConfirmarEmail />
           <AvisoAssinatura />
           <AvisoWhatsapp />
-          <AvisoConversas />
+          {/* As conversas do bot ficam fechadas no modo suporte (admin F5). */}
+          {!usuario.data?.modoSuporte && <AvisoConversas />}
           <main
             id="conteudo"
             className="mx-auto w-full max-w-6xl flex-1 px-[max(1rem,env(safe-area-inset-left))] pt-6 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-8 lg:pb-12"

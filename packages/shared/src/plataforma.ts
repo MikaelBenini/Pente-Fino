@@ -263,6 +263,8 @@ export interface FichaContaPlataforma {
   ativacao: number;
   /** Admin F1: a primeira etapa do funil de ativação que falta; null = todas feitas. */
   etapaFunil: EtapaFunil | null;
+  /** Admin F5: até quando o dono liberou o acesso de suporte; null = não liberou. */
+  suporteLiberadoAte: string | null;
   /** Notas da equipe sobre a conta (a barbearia não vê), das mais novas. */
   notas: NotaInterna[];
 }
