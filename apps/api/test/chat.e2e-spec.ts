@@ -8,6 +8,7 @@ import type {
   ChatIniciado,
   ConversaDaEquipe,
   ResumoDoChat,
+  EstadoPush,
   RespostaPronta,
   ConversaNaFila,
   RespostaEntrarAdmin,
@@ -288,5 +289,36 @@ describe('chat do site (admin F6)', () => {
     expect(
       ((await adm.get('/admin/chat/respostas').expect(200)).body as RespostaPronta[]).length,
     ).toBe(fabrica.length);
+  });
+
+  it('push do chat no celular da equipe: liga e desliga o aparelho; financeiro não', async () => {
+    const tVend = await entrarAdmin(pessoas.vendedor);
+    const tFin = await entrarAdmin(pessoas.financeiro);
+    const com = (token: string) => ({
+      get: (url: string) => http().get(url).set('authorization', `Bearer ${token}`),
+      post: (url: string, corpo: object) =>
+        http().post(url).set('authorization', `Bearer ${token}`).send(corpo),
+    });
+    await com(tFin).get('/admin/chat/push').expect(403);
+    const estado = (await com(tVend).get('/admin/chat/push').expect(200)).body as EstadoPush;
+    const inscricao = {
+      endpoint: `https://push.teste/${sufixo}/vendedor`,
+      keys: { p256dh: 'p'.repeat(40), auth: 'a'.repeat(16) },
+    };
+    if (!estado.chavePublica) {
+      // Servidor sem chaves VAPID: não liga.
+      await com(tVend).post('/admin/chat/push', inscricao).expect(409);
+      return;
+    }
+    await com(tVend).post('/admin/chat/push', inscricao).expect(204);
+    expect(
+      ((await com(tVend).get('/admin/chat/push').expect(200)).body as EstadoPush).aparelhos,
+    ).toBe(1);
+    await com(tVend)
+      .post('/admin/chat/push/desligar', { endpoint: inscricao.endpoint })
+      .expect(204);
+    expect(
+      ((await com(tVend).get('/admin/chat/push').expect(200)).body as EstadoPush).aparelhos,
+    ).toBe(0);
   });
 });

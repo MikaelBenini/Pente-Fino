@@ -238,9 +238,14 @@ U2 a U5 já feitos (#161).
   - registro no CHANGELOG.
 - [x] Lote 6j (chat: contexto, avaliação e respostas editáveis): bateria verde e PR aberto
   (PR em seguida ao #186)
-- [ ] Merge pelo dono (lote 6j)
-- [ ] **F6, entrega 2 (o que falta)**: notificação no celular da equipe com o navegador fechado (push
-  do PWA no `/admin`)
+- [x] Merge pelo dono (lote 6j)
+- [x] **F6, entrega 2 (o que faltava)**: notificação no celular da equipe com o navegador fechado
+  (13/11):
+  - botão "Avisar no celular" na aba Chat;
+  - conversa e mensagem nova chegam por push a quem atende o chat;
+  - registro no CHANGELOG.
+- [x] Lote 6k (push do chat): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6k)
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
   - **Quem chama:** ícone flutuante no canto da tela, no site (visitante, que informa nome e
     contato) e no painel da barbearia (já logado: a conversa fica ligada à conta).

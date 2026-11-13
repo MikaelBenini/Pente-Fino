@@ -1740,6 +1740,22 @@ model MensagemSuporte {
   @@map("mensagem_suporte")
 }
 
+/// Admin F6: aparelhos da equipe da plataforma que recebem push (conversa e mensagem nova do chat).
+model InscricaoPushPlataforma {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  usuarioId String   @map("usuario_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  aparelho  String?
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  usuario UsuarioPlataforma @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("inscricao_push_plataforma")
+}
+
 /// Admin F3: alertas da equipe que já saíram. O mesmo tipo + chave nunca sai duas vezes.
 model AlertaEquipeEnviado {
   tipo      String
@@ -1775,7 +1791,8 @@ model UsuarioPlataforma {
   auditorias       AuditoriaPlataforma[]
   notasInternas    NotaInternaConta[]
   conversasSuporte ConversaSuporte[]
-  mensagensSuporte MensagemSuporte[]     @relation("AutorMensagemSuporte")
+  inscricoesPush   InscricaoPushPlataforma[]
+  mensagensSuporte MensagemSuporte[]         @relation("AutorMensagemSuporte")
 
   @@map("usuario_plataforma")
 }

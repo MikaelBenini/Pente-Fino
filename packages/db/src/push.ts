@@ -10,6 +10,7 @@ import {
   textoPushDoHorario,
   type MudancaNaAgenda,
   type TrabalhoNotificacao,
+  type TrabalhoPushEquipe,
 } from '@pente-fino/shared';
 import type { Prisma, PrismaClient } from './generated/prisma/client.js';
 import { naConta } from './index.js';
@@ -102,6 +103,38 @@ export async function enviarNotificacao(
     ).catch((e: { statusCode?: number }) => e.statusCode ?? 0);
     if (status === 404 || status === 410) {
       await naConta(prisma, n.contaId, (tx) => tx.inscricaoPush.delete({ where: { id: a.id } }));
+      removidos++;
+    } else if (status >= 200 && status < 300) entregues++;
+  }
+  return { entregues, aparelhos: aparelhos.length, removidos };
+}
+
+/** Admin F6: quem atende o chat (e pode receber o push). */
+export const PAPEIS_DO_CHAT = ['admin', 'vendedor', 'suporte'] as const;
+
+/**
+ * Admin F6: manda o push do chat aos aparelhos de quem da equipe atende o chat (ativo, papel
+ * admin, vendedor ou suporte). Aparelho que não existe mais (404 ou 410) sai da lista.
+ * `prisma` é a conexão da administração.
+ */
+export async function enviarPushEquipe(
+  prisma: PrismaClient,
+  n: TrabalhoPushEquipe,
+  enviar: EnviarPush,
+): Promise<{ entregues: number; aparelhos: number; removidos: number }> {
+  const aparelhos = await prisma.inscricaoPushPlataforma.findMany({
+    where: { usuario: { ativo: true, papel: { in: [...PAPEIS_DO_CHAT] } } },
+  });
+  const carga = JSON.stringify(n);
+  let entregues = 0;
+  let removidos = 0;
+  for (const a of aparelhos) {
+    const status = await enviar(
+      { endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
+      carga,
+    ).catch((e: { statusCode?: number }) => e.statusCode ?? 0);
+    if (status === 404 || status === 410) {
+      await prisma.inscricaoPushPlataforma.delete({ where: { id: a.id } });
       removidos++;
     } else if (status >= 200 && status < 300) entregues++;
   }

@@ -96,6 +96,8 @@ privada mostrada, e as variáveis `DEPLOY_HOST` e `DEPLOY_KNOWN_HOSTS` com os va
 
 ## Monitoramento
 
+- **Push no celular (painel e chat da equipe):** as notificações no celular só saem com `VAPID_CHAVE_PUBLICA` e `VAPID_CHAVE_PRIVADA` no `.env` da VPS. Para gerar as duas uma vez: `npx web-push generate-vapid-keys`. Sem elas, o painel e a aba Chat escondem o botão de aviso no celular, e o log do worker avisa.
+
 - **Alertas da equipe (admin F3):** o worker usa a `DATABASE_PLATAFORMA_URL`, que já vem no ambiente comum do compose, para mandar os alertas de hora em hora. Sem ela, os alertas ficam desligados e o log do worker avisa.
 
 - Uptime Kuma em `https://status.seudominio` (registro A `status`). **Crie a conta de administrador
