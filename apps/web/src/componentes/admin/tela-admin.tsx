@@ -32,6 +32,7 @@ import { AuditoriaAdmin, EquipeAdmin } from './equipe-admin';
 import { FichaConta } from './ficha-conta';
 import { CobrancaAdmin, InicioAdmin } from './inicio-admin';
 import { ConfiguracoesAdmin, SaudeAdmin } from './config-admin';
+import { ChatAdmin } from './chat-admin';
 import { NovaVenda, VendasPorOrigemAdmin, VendasPorVendedor } from './nova-venda';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
@@ -243,6 +244,8 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
       rotulo: 'Início',
       conteudo: <InicioAdmin u={u} onAbrirConta={setAberta} onIrPara={setAba} />,
     },
+    // Admin F6: o chat do site com os visitantes.
+    { id: 'chat', rotulo: 'Chat', conteudo: <ChatAdmin u={u} /> },
     {
       id: 'contas',
       rotulo: 'Contas',

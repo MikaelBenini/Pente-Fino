@@ -58,6 +58,8 @@ import { AdminVendasService } from './admin/admin-vendas.service.js';
 import { PrecosService } from './comum/precos.service.js';
 import { AdminGuard } from './admin/admin.guard.js';
 import { BancoPlataforma } from './admin/banco-plataforma.js';
+import { AdminChatController, ChatPublicoController } from './chat/chat.controller.js';
+import { ChatService } from './chat/chat.service.js';
 import { AvisosController } from './avisos/avisos.controller.js';
 import { DesempenhoService } from './desempenho/desempenho.service.js';
 import { BotController } from './bot/bot.controller.js';
@@ -169,6 +171,8 @@ export class ComumModule {}
     AdminConfigController,
     AdminNotaFiscalController,
     AdminGestaoController,
+    ChatPublicoController,
+    AdminChatController,
     AvisosController,
     ResumoController,
     BotController,
@@ -206,6 +210,7 @@ export class ComumModule {}
     RelatorioService,
     ResumoService,
     BancoPlataforma,
+    ChatService,
     AdminAuthService,
     AdminContasService,
     AdminVendasService,

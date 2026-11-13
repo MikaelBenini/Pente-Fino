@@ -54,6 +54,7 @@ export * from './alertas-equipe.js';
 export * from './etapa-parada.js';
 export * from './saude-conta.js';
 export * from './acesso-suporte.js';
+export * from './chat-suporte.js';
 export * from './metricas-plataforma.js';
 export * from './plataforma-gestao.js';
 export * from './ficha-admin.js';

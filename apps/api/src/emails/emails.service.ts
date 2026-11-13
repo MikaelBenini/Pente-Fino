@@ -66,6 +66,11 @@ export class EmailsService {
     await this.filas.emails.add('enviar', email);
   }
 
+  /** E-mail de texto simples para a equipe da plataforma (ex.: conversa nova no chat, admin F6). */
+  texto(email: TrabalhoEmail): Promise<void> {
+    return this.enfileirar(email);
+  }
+
   convite(d: {
     para: string;
     nome: string;

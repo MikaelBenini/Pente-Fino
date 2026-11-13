@@ -843,7 +843,15 @@ motivo e vai para a auditoria.
   - `auth/eu` devolve `modoSuporte`;
   - na web: a ponte grava a sessão sem renovação (`/api/suporte/entrar`), a página `/suporte`, a faixa na casca, o bloco na ficha e a aba do dono;
   - testes em `acesso-suporte.test.ts`, `ocultar-contato.spec.ts`, `suporte.e2e-spec.ts` e `apps/web/e2e/suporte.spec.ts`.
-- [ ] **F6–F9** acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [x] **F6, entrega 1** chat do site (feito em 2026-11-13):
+  - regra e formatos em `packages/shared/src/chat-suporte.ts` (horário, `avisoDoChat`, esquemas), com teste;
+  - migração `chat_suporte` (`conversa_suporte` e `mensagem_suporte`, só a administração acessa; o visitante usa o segredo da conversa, guardado como hash);
+  - `ChatService`, rotas públicas `/chat/conversas` (com limite por IP) e `/admin/chat` (admin, vendedor e suporte);
+  - alerta `chat_novo` na hora;
+  - `ChatSite` no lugar do botão do WhatsApp e `ChatAdmin` na aba Chat;
+  - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts`, `site.spec.ts` e `admin.spec.ts`.
+- [ ] **F6, entrega 2**: chat no painel para quem já é cliente e notificação no celular da equipe
+- [ ] **F7–F9** métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

@@ -217,7 +217,14 @@ U2 a U5 já feitos (#161).
   - telefones e conversas escondidos; registro nas duas auditorias;
   - registro no CHANGELOG.
 - [x] Lote 6g (F5): bateria verde e PR aberto (13/11)
-- [ ] Merge pelo dono (lote 6g)
+- [x] Merge pelo dono (lote 6g)
+- [x] **F6, entrega 1** (13/11, prioridade do dono para reter interessados): chat do visitante no
+  site com fila, aba Chat na administração (assumir, responder, encerrar, histórico) e alerta na hora
+  de conversa nova; fora do horário a mensagem fica guardada; registro no CHANGELOG
+- [x] Lote 6h (F6, entrega 1): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6h)
+- [ ] **F6, entrega 2**: chat dentro do painel para quem já é cliente (ligado à conta) e notificação
+  no celular da equipe (push do PWA no `/admin`)
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
   - **Quem chama:** ícone flutuante no canto da tela, no site (visitante, que informa nome e
     contato) e no painel da barbearia (já logado: a conversa fica ligada à conta).

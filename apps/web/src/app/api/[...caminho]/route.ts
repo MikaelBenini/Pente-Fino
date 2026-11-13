@@ -38,6 +38,9 @@ function cabecalhos(req: NextRequest, acesso?: string): Headers {
   if (ip) h.set('x-forwarded-for', ip);
   const agente = req.headers.get('user-agent');
   if (agente) h.set('user-agent', agente);
+  // Admin F6: segredo da conversa do chat do site (o visitante não tem sessão).
+  const chat = req.headers.get('x-chat-token');
+  if (chat) h.set('x-chat-token', chat);
   if (acesso) h.set('authorization', `Bearer ${acesso}`);
   return h;
 }

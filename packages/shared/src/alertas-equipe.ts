@@ -13,6 +13,7 @@ export const TIPOS_ALERTA_EQUIPE = [
   'falha_email',
   'falha_nf',
   'cupom_esgotando',
+  'chat_novo',
 ] as const;
 export type TipoAlertaEquipe = (typeof TIPOS_ALERTA_EQUIPE)[number];
 
@@ -36,6 +37,11 @@ export const ALERTAS_EQUIPE: Readonly<Record<TipoAlertaEquipe, { nome: string; q
     cupom_esgotando: {
       nome: 'Cupom perto de esgotar',
       quando: 'Um cupom com vagas já usou 80% delas.',
+    },
+    chat_novo: {
+      nome: 'Conversa nova no chat',
+      quando:
+        'Um visitante começou uma conversa no chat do site (chega na hora, não de hora em hora).',
     },
   };
 

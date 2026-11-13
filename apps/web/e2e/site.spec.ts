@@ -351,3 +351,26 @@ test('N4: blog lista o post publicado; rascunho não vai ao ar', async ({ page, 
   // Rascunho (sem data) não tem página.
   expect((await request.get('/blog/como-calcular-comissao-de-barbeiro')).status()).toBe(404);
 });
+
+// ─── Admin F6: chat do site ─────
+test('F6: visitante abre o chat, deixa o contato e a dúvida e entra na fila', async ({ page }) => {
+  await page.goto('/planos');
+  await page.getByRole('button', { name: 'Abrir o chat com o Pente Fino' }).click();
+  const chat = page.getByRole('region', { name: 'Chat com o Pente Fino' });
+  await chat.getByLabel('Seu nome').fill('Visitante de Teste');
+  await chat.getByLabel('WhatsApp ou e-mail').fill('visitante@teste.dev');
+  await chat.getByLabel('Sua dúvida').fill('O teste grátis precisa de cartão?');
+  await chat.getByRole('button', { name: 'Começar conversa' }).click();
+  await expect(chat.getByRole('list', { name: 'Mensagens' })).toContainText(
+    'O teste grátis precisa de cartão?',
+  );
+  await expect(chat.getByRole('status')).toContainText(/fila|fora do horário/);
+  // A conversa fica guardada neste navegador: recarregar não perde.
+  await page.reload();
+  await page.getByRole('button', { name: /chat/i }).click();
+  await expect(
+    page
+      .getByRole('region', { name: 'Chat com o Pente Fino' })
+      .getByRole('list', { name: 'Mensagens' }),
+  ).toContainText('O teste grátis precisa de cartão?');
+});
