@@ -876,12 +876,16 @@ motivo e vai para a auditoria.
   - `GET /admin/metricas/saas`, só o admin;
   - `metricas-saas-admin.tsx`;
   - testes em `admin.e2e-spec.ts` e `admin.spec.ts`.
+- [x] **F8** aviso geral segmentado (feito em 2026-11-13):
+  - `publico` em `avisoGeralSchema` (planos, situações e contas), com `contaNoPublico` e `descreverPublico` no shared, com teste;
+  - `/sistema/aviso` filtra pela conta e não envia o público;
+  - `PublicoDoAviso` no formulário, com quantas contas veem;
+  - testes em `configuracao-sistema.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`.
 - [x] **F9** gestão de cupons (feito em 2026-11-13):
   - `relatorioCupons` no shared (contas, pagantes, receita das faturas pagas, desconto concedido = valor × bp ÷ (10000 − bp) e uso por mês), com teste;
   - `GET /admin/configuracoes/cupons/relatorio`;
   - `ResultadoCupons` e o aviso de vagas na lista;
   - teste em `admin.e2e-spec.ts`.
-- [ ] **F8** aviso segmentado (PR #190)
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

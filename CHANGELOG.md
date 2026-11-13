@@ -16,6 +16,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
   - o uso por mês nos últimos 6 meses, em barras.
 - O cupom com vagas aparece como "Perto de esgotar" ao usar 80% delas e como "Esgotou" no fim. O alerta por e-mail para a equipe continua valendo.
 
+### Adicionado (administração: aviso geral segmentado)
+
+- O aviso geral pode ir só para parte das barbearias: por plano (Básico, Pro, Premium), por situação (em teste ou pagantes) e para contas escolhidas. Os filtros se combinam, por exemplo "Pro e Premium em teste".
+- O formulário mostra para quem vai e quantas contas veem hoje. Sem marcar nada, vai para todas.
+- A barbearia fora do público não recebe o aviso nem o texto dele.
+
 ### Adicionado (administração: métricas de SaaS)
 
 - Os números do negócio ganharam o bloco "Métricas de SaaS", calculado das faturas pagas e só com meses fechados:

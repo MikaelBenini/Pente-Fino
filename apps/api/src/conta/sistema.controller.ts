@@ -1,7 +1,13 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { configuracaoDoSistema } from '@pente-fino/db';
-import { avisoVigente, lerConfiguracaoPublica, type AvisoGeral } from '@pente-fino/shared';
+import {
+  avisoVigente,
+  contaNoPublico,
+  lerConfiguracaoPublica,
+  type AvisoGeral,
+} from '@pente-fino/shared';
+import { Contexto } from '../comum/contexto.js';
 import { Papeis } from '../auth/decoradores.js';
 import { BancoService } from '../comum/banco.service.js';
 import { TODOS } from '../comum/escopo.js';
@@ -18,6 +24,17 @@ export class SistemaController {
   @ApiOperation({ summary: 'Aviso geral em vigor (manutenção programada, novidade) ou nenhum' })
   async aviso(): Promise<{ aviso: AvisoGeral | null }> {
     const c = lerConfiguracaoPublica(await configuracaoDoSistema(this.banco.prisma));
-    return { aviso: avisoVigente(c.avisoGeral, new Date()) };
+    const aviso = avisoVigente(c.avisoGeral, new Date());
+    if (!aviso?.publico) return { aviso: aviso && { ...aviso, publico: undefined } };
+    // Admin F8: aviso segmentado; a conta fora do público não recebe nem o texto.
+    const conta = await this.banco.daConta((tx) =>
+      tx.conta.findUniqueOrThrow({
+        where: { id: Contexto.usuario().contaId },
+        select: { id: true, plano: true, status: true },
+      }),
+    );
+    return {
+      aviso: contaNoPublico(aviso.publico, conta) ? { ...aviso, publico: undefined } : null,
+    };
   }
 }

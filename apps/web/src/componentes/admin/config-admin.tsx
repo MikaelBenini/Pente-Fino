@@ -17,6 +17,7 @@ import {
   type TabelaPrecosPlanos,
   type CupomNaTela,
   type EventoDaAuditoria,
+  type PublicoAviso,
 } from '@pente-fino/shared';
 import { Botao, Campo, CampoTexto, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -26,6 +27,7 @@ import { Aviso } from '../aviso';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
 import { adminApi } from './admin-api';
 import { FaixaAvisoGeral } from '../faixa-aviso-geral';
+import { PublicoDoAviso, publicoLimpo } from './publico-aviso';
 import { LimpezaNaSaude } from './limpeza-admin';
 import { NotaFiscalAdmin, NotasNaSaude } from './nota-fiscal-admin';
 import { useTabelasAdmin } from './precos-admin';
@@ -102,6 +104,8 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
   const [fim, setFim] = useState(
     paraCampo(c.avisoGeral?.fim ?? new Date(agora.getTime() + 86_400_000).toISOString()),
   );
+  // Admin F8: para quem vai o aviso (nada marcado = todas as barbearias).
+  const [publico, setPublico] = useState<PublicoAviso>(c.avisoGeral?.publico ?? {});
   const [dias, setDias] = useState(String(c.teste.dias));
   const [versao, setVersao] = useState(c.teste.versaoTermos);
   const [taxaClube, setTaxaClube] = useState(
@@ -119,7 +123,8 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
           Aviso geral
         </h2>
         <p className="text-sm text-tinta-suave">
-          Aparece no topo do painel de todas as barbearias entre o início e o fim.
+          Aparece no topo do painel entre o início e o fim, para todas as barbearias ou só para o
+          público escolhido.
         </p>
         <Campo
           id="aviso-texto"
@@ -155,6 +160,7 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
             onChange={(e) => setFim(e.target.value)}
           />
         </div>
+        <PublicoDoAviso publico={publico} onMudar={setPublico} />
         {texto.trim() && (
           <figure aria-label="Prévia do aviso" className="flex flex-col gap-1">
             <figcaption className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
@@ -174,7 +180,15 @@ function Formularios({ c }: { c: ConfiguracaoPublica }) {
             enviar={async () => {
               await adminApi('configuracoes/aviso-geral', {
                 metodo: 'PUT',
-                corpo: { aviso: { texto, tom, inicio: deCampo(inicio), fim: deCampo(fim) } },
+                corpo: {
+                  aviso: {
+                    texto,
+                    tom,
+                    inicio: deCampo(inicio),
+                    fim: deCampo(fim),
+                    publico: publicoLimpo(publico),
+                  },
+                },
               });
               await atualizar();
             }}
