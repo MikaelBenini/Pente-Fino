@@ -808,19 +808,25 @@ motivo e vai para a auditoria.
   - `GET /admin/funil?periodo=todos|90dias|30dias`, só para o admin;
   - `etapaFunil` na ficha da conta e o bloco "Funil de ativação" em `metricas-admin.tsx`;
   - testes em `admin.e2e-spec.ts` e `apps/web/e2e/admin.spec.ts`.
+- [ ] **F1b–F1c** (aprovadas em 2026-11-12): equipe sem os desativados por padrão; filtro de Contas pela etapa do funil
+- [x] **F1d** e-mail para a conta parada há 3 dias na mesma etapa (feito em 2026-11-12, aprovada no mesmo dia):
+  - regra em `packages/shared/src/etapa-parada.ts` (`decidirEtapaParada`, `emailDoPasso`), com teste;
+  - modelo `etapa_parada`;
+  - migração `funil_etapa_conta` (etapa, desde quando e o aviso, só a administração acessa);
+  - `executarAvisosDeEtapa` na rotina de hora em hora da F3, com e-mail só das 9 h às 20 h;
+  - teste em `plataforma.db.test.ts`.
+- [x] **F2** origem do cadastro (feito em 2026-11-12):
+  - a gravação e a ficha vieram com o T2, e as Contas e Vendas com o U2 e o U5;
+  - agora `novas.porOrigem` em `metricasDaPlataforma` (contas novas do período por origem, com o resumo de `resumoDaOrigem`) aparece nos números do negócio;
+  - testes em `metricas-plataforma.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`;
+  - a exportação de conversões offline fica para quando houver acesso à API do Google Ads.
 - [x] **F3** alertas para a equipe (feito em 2026-11-12):
   - regra em `packages/shared/src/alertas-equipe.ts` (`detectarAlertasEquipe`, `emailDeAlertasEquipe`), com teste;
   - migração `alertas_equipe`: `usuario_plataforma.alertas` (os admins começam com todos), `alerta_equipe_enviado` (tipo + chave, uma vez só) e `plataforma_whatsapp_caido()`;
   - `AlertasProcessor` no worker roda de hora em hora (aos 5 min), com a conexão da administração (`DATABASE_PLATAFORMA_URL`; sem ela, desligado);
   - `GET` e `PUT /admin/eu/alertas` para todos os papéis, e a seção "Meus alertas por e-mail" no Início;
   - testes em `alertas-equipe.test.ts`, `plataforma.db.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`.
-- [x] **F1d** e-mail para a conta parada há 3 dias na mesma etapa (feito em 2026-11-12):
-  - regra em `packages/shared/src/etapa-parada.ts` (`decidirEtapaParada`, `emailDoPasso`), com teste;
-  - modelo `etapa_parada`;
-  - migração `funil_etapa_conta` (etapa, desde quando e o aviso, só a administração acessa);
-  - `executarAvisosDeEtapa` na rotina de hora em hora da F3, com e-mail só das 9 h às 20 h;
-  - teste em `plataforma.db.test.ts`.
-- [ ] **F2, F4–F9** origem do cadastro (com o T2 do site), saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
+- [ ] **F4–F9** saúde da conta, acesso de suporte com consentimento, chamados, métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 

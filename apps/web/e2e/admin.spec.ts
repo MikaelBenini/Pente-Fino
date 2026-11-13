@@ -49,7 +49,9 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByText('Receita recorrente (MRR)')).toBeVisible();
   // Admin F3: cada pessoa escolhe os alertas que recebe por e-mail.
   const alertas = page.getByRole('region', { name: 'Meus alertas por e-mail' });
-  await alertas.getByRole('checkbox', { name: /Cadastro novo/ }).check();
+  const cadastroNovo = alertas.getByRole('checkbox', { name: /Cadastro novo/ });
+  await cadastroNovo.click();
+  await expect(cadastroNovo).toBeChecked();
   await expect(alertas.getByRole('status')).toHaveText('Alertas salvos.');
   await page.reload();
   await expect(
@@ -57,6 +59,8 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
       .getByRole('region', { name: 'Meus alertas por e-mail' })
       .getByRole('checkbox', { name: /Cadastro novo/ }),
   ).toBeChecked();
+  // Admin F2: de onde vieram as contas novas do período.
+  await expect(page.getByRole('region', { name: /^Contas novas por origem/ })).toBeVisible();
   // Admin F1: funil de ativação, do cadastro ao pagamento.
   const funil = page.getByRole('region', { name: 'Funil de ativação' });
   const etapas = funil.getByRole('list', { name: 'Etapas do funil' });

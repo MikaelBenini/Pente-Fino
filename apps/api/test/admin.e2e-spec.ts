@@ -163,6 +163,8 @@ describe('administração do sistema', () => {
     // Padrão: mês atual (um ponto por dia até hoje); "30dias" mostra 30.
     expect(m.periodo.tipo).toBe('mes');
     expect(m.novas.porDia).toHaveLength(Number(m.periodo.ate.slice(8, 10)));
+    // Admin F2: as contas novas do período, por origem, somam o total do período.
+    expect(m.novas.porOrigem.reduce((s, o) => s + o.contas, 0)).toBe(m.novas.noPeriodo);
     const trinta = (
       await http()
         .get('/admin/metricas?periodo=30dias')
