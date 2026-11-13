@@ -227,6 +227,12 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(avisoGeral.getByRole('figure', { name: 'Prévia do aviso' })).toContainText(
     `Novidade do teste ${sufixoVenda}`,
   );
+  // Admin F8: escolher o público mostra para quem vai; sem marcar nada, vai para todas.
+  const quemVe = avisoGeral.getByRole('group', { name: 'Quem vê' });
+  await quemVe.getByRole('checkbox', { name: 'Premium', exact: true }).check();
+  await expect(quemVe.getByText(/plano Premium/)).toBeVisible();
+  await quemVe.getByRole('checkbox', { name: 'Premium', exact: true }).uncheck();
+  await expect(quemVe.getByText(/^Todas as barbearias/)).toBeVisible();
   await avisoGeral.getByLabel('De').fill(local(Date.now() - 60_000));
   await avisoGeral.getByLabel('Até').fill(local(Date.now() + 15 * 60_000));
   await avisoGeral.getByRole('button', { name: 'Publicar aviso' }).click();

@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (administração: aviso geral segmentado)
+
+- O aviso geral pode ir só para parte das barbearias: por plano (Básico, Pro, Premium), por situação (em teste ou pagantes) e para contas escolhidas. Os filtros se combinam, por exemplo "Pro e Premium em teste".
+- O formulário mostra para quem vai e quantas contas veem hoje. Sem marcar nada, vai para todas.
+- A barbearia fora do público não recebe o aviso nem o texto dele.
+
 ### Adicionado (administração: métricas de SaaS)
 
 - Os números do negócio ganharam o bloco "Métricas de SaaS", calculado das faturas pagas e só com meses fechados:

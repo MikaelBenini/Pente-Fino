@@ -11,12 +11,33 @@ import {
 } from './nota-fiscal.js';
 import type { ExecucaoLimpezaNaTela } from './limpeza.js';
 
+/**
+ * Admin F8: para quem é o aviso. Cada lista vazia ou ausente vale para todos; com mais de uma,
+ * a conta precisa caber em todas (ex.: Pro e Premium em teste).
+ */
+export const publicoAvisoSchema = z.object({
+  planos: z
+    .array(z.enum(['basico', 'pro', 'premium']))
+    .max(3)
+    .optional(),
+  /** "teste" = em teste; "pagante" = assinatura ativa. */
+  situacoes: z
+    .array(z.enum(['teste', 'pagante']))
+    .max(2)
+    .optional(),
+  /** Só estas contas (ids). */
+  contas: z.array(z.uuid()).max(200).optional(),
+});
+export type PublicoAviso = z.infer<typeof publicoAvisoSchema>;
+
 export const avisoGeralSchema = z
   .object({
     texto: z.string().trim().min(5, { error: 'Escreva o aviso.' }).max(300),
     tom: z.enum(['info', 'manutencao']).default('info'),
     inicio: z.iso.datetime({ offset: true, error: 'Início inválido.' }),
     fim: z.iso.datetime({ offset: true, error: 'Fim inválido.' }),
+    /** Admin F8: sem público, todas as barbearias veem. */
+    publico: publicoAvisoSchema.optional(),
   })
   .refine((a) => Date.parse(a.fim) > Date.parse(a.inicio), {
     error: 'O fim vem depois do início.',
@@ -65,6 +86,40 @@ export function lerConfiguracaoPublica(json: unknown): ConfiguracaoPublica {
     clubeOnline: lerConfigClubeOnline(o.clube_online),
     notaFiscal: lerConfigNotaFiscal(o.nota_fiscal),
   };
+}
+
+/** Admin F8: a conta faz parte do público do aviso? */
+export function contaNoPublico(
+  publico: PublicoAviso | undefined,
+  conta: { id: string; plano: 'basico' | 'pro' | 'premium'; status: string },
+): boolean {
+  if (!publico) return true;
+  if (publico.contas?.length && !publico.contas.includes(conta.id)) return false;
+  if (publico.planos?.length && !publico.planos.includes(conta.plano)) return false;
+  if (publico.situacoes?.length) {
+    const situacao =
+      conta.status === 'teste' ? 'teste' : conta.status === 'ativa' ? 'pagante' : null;
+    if (!situacao || !publico.situacoes.includes(situacao)) return false;
+  }
+  return true;
+}
+
+/** Admin F8: quem vê o aviso, em palavras ("Pro e Premium · em teste"). */
+export function descreverPublico(publico: PublicoAviso | undefined): string {
+  if (!publico) return 'Todas as barbearias';
+  const partes: string[] = [];
+  const nome = { basico: 'Básico', pro: 'Pro', premium: 'Premium' } as const;
+  if (publico.contas?.length)
+    partes.push(
+      `${publico.contas.length} ${publico.contas.length === 1 ? 'conta escolhida' : 'contas escolhidas'}`,
+    );
+  if (publico.planos?.length)
+    partes.push(`plano ${publico.planos.map((p) => nome[p]).join(' e ')}`);
+  if (publico.situacoes?.length)
+    partes.push(
+      publico.situacoes.map((s) => (s === 'teste' ? 'em teste' : 'pagantes')).join(' e '),
+    );
+  return partes.length ? partes.join(' · ') : 'Todas as barbearias';
 }
 
 /** O aviso geral aparece só entre o início e o fim. */

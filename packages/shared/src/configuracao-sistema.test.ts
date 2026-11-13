@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   avisoGeralSchema,
   avisoVigente,
+  contaNoPublico,
+  descreverPublico,
   lerConfiguracaoPublica,
   ipInterno,
   mascararEmail,
@@ -89,5 +91,34 @@ describe('falhas de e-mail e IP de quem acessa (admin R7 e R9)', () => {
       expect(ipInterno(ip), String(ip)).toBe(false);
     expect(normalizarIp('::ffff:200.150.10.20')).toBe('200.150.10.20');
     expect(normalizarIp(' ')).toBeNull();
+  });
+});
+
+describe('aviso segmentado (admin F8)', () => {
+  const conta = {
+    id: '019a4b2c-0000-7000-8000-000000000001',
+    plano: 'pro' as const,
+    status: 'teste',
+  };
+  it('sem público, todas veem; cada lista restringe e todas precisam bater', () => {
+    expect(contaNoPublico(undefined, conta)).toBe(true);
+    expect(contaNoPublico({ planos: ['pro', 'premium'] }, conta)).toBe(true);
+    expect(contaNoPublico({ planos: ['basico'] }, conta)).toBe(false);
+    expect(contaNoPublico({ situacoes: ['pagante'] }, conta)).toBe(false);
+    expect(contaNoPublico({ planos: ['pro'], situacoes: ['teste'] }, conta)).toBe(true);
+    expect(contaNoPublico({ contas: [conta.id] }, conta)).toBe(true);
+    expect(contaNoPublico({ contas: ['019a4b2c-0000-7000-8000-000000000009'] }, conta)).toBe(false);
+    // Suspensa ou cancelada não é "em teste" nem "pagante".
+    expect(
+      contaNoPublico({ situacoes: ['teste', 'pagante'] }, { ...conta, status: 'suspensa' }),
+    ).toBe(false);
+  });
+
+  it('descreve o público em palavras', () => {
+    expect(descreverPublico(undefined)).toBe('Todas as barbearias');
+    expect(descreverPublico({ planos: ['pro', 'premium'], situacoes: ['teste'] })).toBe(
+      'plano Pro e Premium · em teste',
+    );
+    expect(descreverPublico({ contas: ['a', 'b'] })).toBe('2 contas escolhidas');
   });
 });
