@@ -16,7 +16,6 @@ import {
   CircleUserRound,
   CloudOff,
   Ellipsis,
-  LifeBuoy,
   LogOut,
   MessageCircleOff,
   MessagesSquare,
@@ -375,14 +374,6 @@ function BlocoUsuario() {
           {c.papeis.map((p) => NOME_PAPEL[p]).join(' · ')}
         </p>
       </div>
-      <Link
-        href="/ajuda#contato"
-        aria-label="Falar com o suporte"
-        title="Falar com o suporte"
-        className={botaoIcone}
-      >
-        <LifeBuoy aria-hidden className="size-5" strokeWidth={1.75} />
-      </Link>
       <Link href="/perfil" aria-label="Meu perfil" title="Meu perfil" className={botaoIcone}>
         <CircleUserRound aria-hidden className="size-5" strokeWidth={1.75} />
       </Link>
@@ -627,10 +618,6 @@ function FolhaMais({
               Meu perfil
             </Link>
           )}
-          <Link href="/ajuda#contato" onClick={onFechar} className={classeLink}>
-            <LifeBuoy aria-hidden className="size-5 text-tinta-suave" strokeWidth={1.75} />
-            Falar com o suporte
-          </Link>
           <BotaoTema />
           <Botao
             variante="fantasma"

@@ -7,6 +7,22 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (site da barbearia e "Minha página")
+
+- Cada barbearia ganha um site próprio no endereço do link (`/b/<endereço>`), com quatro páginas: Início, Serviços, Equipe e Contato. O cliente vê a barbearia, os preços, os barbeiros, o endereço com mapa, o horário e as perguntas frequentes; o "Agendar horário" leva ao agendamento de sempre.
+- A página já nasce montada, com textos sugeridos. Preços, equipe, horário e nota dos clientes vêm do próprio sistema; a nota só aparece com 5 avaliações ou mais.
+- No menu, em Cadastros, a nova tela "Minha página" (dono e gestor) monta o site com blocos:
+  - muda a ordem, esconde, tira e põe de volta cada faixa da página, e edita os textos;
+  - escreve a especialidade e a apresentação de cada barbeiro, os depoimentos e as perguntas frequentes;
+  - escolhe a cor de destaque, a fonte dos títulos, o formato dos botões, a frase do rodapé e o Instagram;
+  - vê a prévia ao vivo, no computador e no celular;
+  - o rascunho salva sozinho e o cliente só vê a mudança em "Publicar"; "Tirar do ar" volta o link a abrir só o agendamento.
+- Enquanto a página não é publicada, o link da barbearia continua abrindo a página de agendamento, como hoje.
+
+### Alterado (menu do painel)
+
+- O atalho "Falar com o suporte" saiu do rodapé do menu (ao lado do nome) e da gaveta do celular. O suporte continua no item Ajuda, que já estava no menu.
+
 ### Corrigido (página de agendamento)
 
 - A página de agendamento de barbearia com muitos barbeiros abre bem mais rápido e não falha mais quando vários clientes entram ao mesmo tempo. O preço de cada barbeiro agora sai de uma consulta só.

@@ -309,9 +309,11 @@ U2 a U5 já feitos (#161).
     rascunho e publicado guardados na unidade, dados vivos (serviços, preços, equipe, nota,
     horário);
   - [x] Lote 7a: bateria verde e PR aberto (13/11)
-  - [ ] Merge do lote 7a
-  - [ ] **Lote 7b** painel "Minha página": escolher a página, ligar, desligar, reordenar e editar
+  - [x] Merge do lote 7a (PR #192, 13/11)
+  - [x] **Lote 7b** (13/11, documentado na linha de desenvolvimento) painel "Minha página": escolher a página, ligar, desligar, reordenar e editar
     os blocos, tema (cor, fonte, botões), prévia no computador e no celular, publicar;
+  - [x] Lote 7b: bateria verde e PR aberto (13/11)
+  - [ ] Merge do lote 7b
   - [ ] **Lote 7c** fotos: envio, redução de tamanho e guarda no servidor, com backup; banner,
     sobre a casa, serviços, equipe, galeria e logotipo;
   - [ ] **Lote 7d** quem faz cada serviço (P5): o dono marca os serviços de cada barbeiro, com
