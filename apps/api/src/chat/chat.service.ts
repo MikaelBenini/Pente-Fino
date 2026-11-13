@@ -14,6 +14,7 @@ import {
   saudeDaConta,
   TOTAL_PASSOS_ATIVACAO,
   type ContextoDoCliente,
+  type EstadoPush,
   type RespostaPronta,
   type ChatDoVisitante,
   type ResumoDoChat,
@@ -30,6 +31,7 @@ import { gerarTokenOpaco, hashToken } from '../auth/tokens.js';
 import { Erros } from '../comum/erros.js';
 import { EmailsService } from '../emails/emails.service.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
+import { Filas } from '../filas/filas.module.js';
 
 const primeiroNome = (n: string | null | undefined) => (n ? (n.split(' ')[0] ?? n) : null);
 
@@ -57,7 +59,20 @@ export class ChatService {
     @Inject(BancoPlataforma) private readonly banco: BancoPlataforma,
     @Inject(EmailsService) private readonly emails: EmailsService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
+    @Inject(Filas) private readonly filas: Filas,
   ) {}
+
+  /** Push no celular de quem atende o chat (uma notificação por conversa, a mais nova por cima). */
+  private avisarNoCelular(conversaId: string, titulo: string, corpo: string): void {
+    void this.filas.pushEquipe
+      .add('chat', {
+        titulo,
+        corpo: corpo.slice(0, 140),
+        url: '/admin#chat',
+        etiqueta: `chat-${conversaId}`,
+      })
+      .catch((e: Error) => this.logger.warn(`Push da equipe: ${e.message}`));
+  }
 
   private get db() {
     return this.banco.prisma;
@@ -77,6 +92,7 @@ export class ChatService {
       },
       select: { id: true },
     });
+    this.avisarNoCelular(c.id, `${d.nome} está no chat do site`, d.texto);
     void this.avisarEquipe(d).catch((e: Error) =>
       this.logger.warn(`Avisar a equipe do chat novo: ${e.message}`),
     );
@@ -161,6 +177,11 @@ export class ChatService {
       this.db.mensagemSuporte.create({ data: { conversaId: id, de: 'visitante', texto } }),
       this.db.conversaSuporte.update({ where: { id }, data: { ultimaMensagemEm: new Date() } }),
     ]);
+    const nome = await this.db.conversaSuporte.findUnique({
+      where: { id },
+      select: { nome: true },
+    });
+    this.avisarNoCelular(id, `${nome?.nome ?? 'Visitante'} mandou mensagem`, texto);
   }
 
   /** O visitante avalia a conversa encerrada (pode mudar de ideia; vale a última). */
@@ -232,10 +253,11 @@ export class ChatService {
           data: { ultimaMensagemEm: new Date() },
         }),
       ]);
+      this.avisarNoCelular(aberta.id, `${quem.nome} (${quem.conta}) mandou mensagem`, texto);
       return;
     }
     const nome = `${quem.nome} (${quem.conta})`;
-    await this.db.conversaSuporte.create({
+    const nova = await this.db.conversaSuporte.create({
       data: {
         nome,
         contato: quem.email,
@@ -246,7 +268,9 @@ export class ChatService {
         tokenHash: hashToken(gerarTokenOpaco()),
         mensagens: { create: { de: 'visitante', texto } },
       },
+      select: { id: true },
     });
+    this.avisarNoCelular(nova.id, `${nome} chamou o suporte`, texto);
     void this.avisarEquipe({ nome, contato: quem.email, texto, pagina: '/ajuda' }).catch(
       (e: Error) => this.logger.warn(`Avisar a equipe do chat novo: ${e.message}`),
     );
@@ -290,6 +314,40 @@ export class ChatService {
       nota: saude?.nota ?? null,
       motivo: saude?.motivos[0] ?? null,
     };
+  }
+
+  // ─── Push no celular da equipe ─────────────────────────────────────────
+
+  async estadoPush(adminId: string): Promise<EstadoPush> {
+    return {
+      chavePublica: this.config.vapidChavePublica,
+      aparelhos: await this.db.inscricaoPushPlataforma.count({ where: { usuarioId: adminId } }),
+    };
+  }
+
+  async ligarPush(
+    adminId: string,
+    d: { endpoint: string; keys: { p256dh: string; auth: string } },
+    agente?: string,
+  ): Promise<void> {
+    if (!this.config.vapidChavePublica)
+      throw Erros.conflito('O servidor está sem notificações no celular configuradas.');
+    // O mesmo aparelho (endpoint) passa a ser desta pessoa, com as chaves novas.
+    await this.db.inscricaoPushPlataforma.upsert({
+      where: { endpoint: d.endpoint },
+      create: {
+        usuarioId: adminId,
+        endpoint: d.endpoint,
+        p256dh: d.keys.p256dh,
+        auth: d.keys.auth,
+        aparelho: agente?.slice(0, 200) ?? null,
+      },
+      update: { usuarioId: adminId, p256dh: d.keys.p256dh, auth: d.keys.auth },
+    });
+  }
+
+  async desligarPush(adminId: string, endpoint: string): Promise<void> {
+    await this.db.inscricaoPushPlataforma.deleteMany({ where: { usuarioId: adminId, endpoint } });
   }
 
   /** Respostas prontas: as da equipe (Configurações) ou as de fábrica, com os valores atuais. */

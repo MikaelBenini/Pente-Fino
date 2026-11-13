@@ -3,9 +3,11 @@ import {
   FILA_EMAILS,
   FILA_EVENTOS,
   FILA_NOTIFICACOES,
+  FILA_PUSH_EQUIPE,
   FILA_WHATSAPP_ENTRADA,
   type EventoDominio,
   type TrabalhoNotificacao,
+  type TrabalhoPushEquipe,
   type TrabalhoWhatsappEntrada,
   type NomeEvento,
   type TrabalhoEmail,
@@ -30,6 +32,8 @@ export class Filas implements OnApplicationShutdown {
   readonly eventos: Queue<EventoDominio>;
   readonly whatsappEntrada: Queue<TrabalhoWhatsappEntrada>;
   readonly notificacoes: Queue<TrabalhoNotificacao>;
+  /** Admin F6: push no celular da equipe (chat). */
+  readonly pushEquipe: Queue<TrabalhoPushEquipe>;
 
   constructor(@Inject(CONFIGURACAO) config: Configuracao) {
     const connection = { url: config.redisUrl };
@@ -54,6 +58,10 @@ export class Filas implements OnApplicationShutdown {
       connection,
       defaultJobOptions: { ...OPCOES_PADRAO, attempts: 3 },
     });
+    this.pushEquipe = new Queue<TrabalhoPushEquipe>(FILA_PUSH_EQUIPE, {
+      connection,
+      defaultJobOptions: { ...OPCOES_PADRAO, attempts: 2 },
+    });
   }
 
   async onApplicationShutdown(): Promise<void> {
@@ -62,6 +70,7 @@ export class Filas implements OnApplicationShutdown {
       this.eventos.close(),
       this.whatsappEntrada.close(),
       this.notificacoes.close(),
+      this.pushEquipe.close(),
     ]);
   }
 }

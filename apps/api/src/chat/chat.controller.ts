@@ -16,6 +16,10 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   avaliarChatSchema,
+  inscricaoPushSchema,
+  removerPushSchema,
+  type EstadoPush,
+  type InscricaoPushEntrada,
   iniciarChatSchema,
   type AvaliarChatEntrada,
   type RespostaPronta,
@@ -100,6 +104,38 @@ export class AdminChatController {
     if (status && !['fila', 'atendendo', 'encerrada'].includes(status))
       throw Erros.requisicaoInvalida('status_invalido', 'Situação inválida.');
     return this.chat.lista(status as StatusChat | undefined);
+  }
+
+  @Get('push')
+  @PapeisPlataforma(...PAPEIS_CHAT)
+  @ApiOperation({
+    summary: 'Push do chat neste aparelho: chave pública e quantos aparelhos ligados',
+  })
+  push(@AdminAtual() a: AdminAutenticado): Promise<EstadoPush> {
+    return this.chat.estadoPush(a.id);
+  }
+
+  @Post('push')
+  @PapeisPlataforma(...PAPEIS_CHAT)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Ligar o aviso do chat neste aparelho (push)' })
+  ligarPush(
+    @Corpo(inscricaoPushSchema) d: InscricaoPushEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @Headers('user-agent') agente?: string,
+  ): Promise<void> {
+    return this.chat.ligarPush(a.id, d, agente);
+  }
+
+  @Post('push/desligar')
+  @PapeisPlataforma(...PAPEIS_CHAT)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Desligar o aviso do chat neste aparelho' })
+  desligarPush(
+    @Corpo(removerPushSchema) d: { endpoint: string },
+    @AdminAtual() a: AdminAutenticado,
+  ): Promise<void> {
+    return this.chat.desligarPush(a.id, d.endpoint);
   }
 
   @Get('respostas')

@@ -12,6 +12,18 @@ export const FILA_NOTIFICACOES = 'notificacoes';
 export const FILA_LIMPEZA = 'limpeza';
 /** Admin F3: alertas da equipe da plataforma, de hora em hora. */
 export const FILA_ALERTAS_EQUIPE = 'alertas-equipe';
+/** Admin F6: push no celular da equipe da plataforma (conversa e mensagem nova do chat). */
+export const FILA_PUSH_EQUIPE = 'push-equipe';
+
+/** Um push para quem da equipe atende o chat e ligou o aviso no aparelho. */
+export interface TrabalhoPushEquipe {
+  titulo: string;
+  corpo: string;
+  /** Endereço que abre ao tocar (ex.: /admin#chat). */
+  url: string;
+  /** Mesma etiqueta substitui a notificação anterior (uma por conversa). */
+  etiqueta: string;
+}
 
 /**
  * Novas tentativas para o que pode ser repetido sem efeito duplo (V2): a mensagem do cliente

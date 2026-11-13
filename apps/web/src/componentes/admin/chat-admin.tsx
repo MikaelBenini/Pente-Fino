@@ -5,6 +5,7 @@
 import {
   formatarDataHora,
   type ConversaDaEquipe,
+  type EstadoPush,
   type RespostaPronta,
   type ConversaNaFila,
   type ResumoDoChat,
@@ -96,6 +97,95 @@ export function useAvisosDoChat(ligado: boolean): number {
     };
   }, [ligado, n]);
   return n;
+}
+
+/** Chave VAPID (base64url) no formato que o navegador pede. */
+function chaveDoServidor(base64: string): Uint8Array<ArrayBuffer> {
+  const b = (base64 + '='.repeat((4 - (base64.length % 4)) % 4))
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+  const bruto = atob(b);
+  const saida = new Uint8Array(new ArrayBuffer(bruto.length));
+  for (let i = 0; i < bruto.length; i++) saida[i] = bruto.charCodeAt(i);
+  return saida;
+}
+
+/**
+ * Admin F6: aviso no celular (push), mesmo com o navegador fechado. Liga neste aparelho; no
+ * iPhone, só com o Pente Fino instalado na tela de início.
+ */
+function PushNoCelular() {
+  const estado = useQuery({
+    queryKey: ['admin', 'chat', 'push'],
+    queryFn: () => adminApi<EstadoPush>('chat/push'),
+  });
+  const [inscrito, setInscrito] = useState<boolean | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const suportado =
+    typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
+
+  useEffect(() => {
+    if (!suportado) return;
+    void navigator.serviceWorker
+      .getRegistration('/')
+      .then((r) => r?.pushManager.getSubscription())
+      .then((s) => setInscrito(!!s));
+  }, [suportado]);
+
+  if (!suportado || !estado.data?.chavePublica) return null;
+
+  async function ligar() {
+    setErro(null);
+    setOcupado(true);
+    try {
+      if ((await Notification.requestPermission()) !== 'granted')
+        throw new Error('O navegador não deu permissão para notificações.');
+      const r =
+        (await navigator.serviceWorker.getRegistration('/')) ??
+        (await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }));
+      const s =
+        (await r.pushManager.getSubscription()) ??
+        (await r.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: chaveDoServidor(estado.data!.chavePublica!),
+        }));
+      await adminApi('chat/push', { corpo: s.toJSON() });
+      setInscrito(true);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não deu para ligar o aviso no celular.');
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function desligar() {
+    setOcupado(true);
+    try {
+      const s = await (
+        await navigator.serviceWorker.getRegistration('/')
+      )?.pushManager.getSubscription();
+      if (s) await adminApi('chat/push/desligar', { corpo: { endpoint: s.endpoint } });
+      setInscrito(false);
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {inscrito ? (
+        <Botao variante="secundario" carregando={ocupado} onClick={() => void desligar()}>
+          Desligar aviso no celular
+        </Botao>
+      ) : (
+        <Botao variante="secundario" carregando={ocupado} onClick={() => void ligar()}>
+          Avisar no celular
+        </Botao>
+      )}
+      {erro && <span className="text-xs text-perigo-texto">{erro}</span>}
+    </div>
+  );
 }
 
 function AtivarNotificacoes() {
@@ -206,6 +296,7 @@ export function ChatAdmin({
           </p>
         </div>
         <AtivarNotificacoes />
+        <PushNoCelular />
         <Selecao
           id="chat-ver"
           rotulo="Mostrar"

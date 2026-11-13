@@ -864,7 +864,13 @@ motivo e vai para a auditoria.
   - `RESPOSTAS_PADRAO`, marcadores e `respostasChatSchema`;
   - `GET`/`PUT /admin/configuracoes/respostas-chat` (vazio = de fábrica) e `GET /admin/chat/respostas`;
   - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts` e `admin.spec.ts`.
-- [ ] **F6, entrega 2 (o que falta)**: notificação no celular da equipe com o navegador fechado (push do PWA no `/admin`)
+- [x] **F6, entrega 2: push da equipe** (feito em 2026-11-13):
+  - migração `push_equipe` (`inscricao_push_plataforma`, só a administração acessa);
+  - `GET`/`POST /admin/chat/push` e `/push/desligar`;
+  - `FILA_PUSH_EQUIPE`, enfileirada pelo `ChatService` a cada conversa ou mensagem nova (etiqueta por conversa);
+  - `enviarPushEquipe` no `AlertasProcessor` (admin, vendedor e suporte ativos; tira 404 e 410);
+  - botão "Avisar no celular" na aba Chat;
+  - testes em `plataforma.db.test.ts` e `chat.e2e-spec.ts`.
 - [x] **F7** métricas de SaaS (feito em 2026-11-13):
   - regra em `packages/shared/src/metricas-saas.ts` (`metricasSaas`): MRR por conta e mês das faturas pagas (a anual vale 1/12 por 12 meses), novo, upgrade, downgrade, perdido, churn, ARPA, LTV, MRR por plano e coortes; só meses fechados, sem as internas; com teste;
   - `GET /admin/metricas/saas`, só o admin;

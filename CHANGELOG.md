@@ -15,6 +15,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
   - MRR e ticket por plano;
   - coortes por mês de cadastro: a fatia das contas que estava pagando em cada mês seguinte.
 
+### Adicionado (chat: aviso no celular da equipe)
+
+- Na aba Chat da administração, o botão "Avisar no celular" liga a notificação no aparelho. Conversa nova e mensagem nova de visitante ou de cliente chegam no celular de quem atende, mesmo com o navegador fechado, uma notificação por conversa.
+- Tocar na notificação abre a aba Chat.
+- Recebe quem atende o chat (admin, vendedor e suporte). No iPhone, é preciso ter o Pente Fino instalado na tela de início.
+
 ### Adicionado (chat: contexto do cliente, avaliação e respostas editáveis)
 
 - Na conversa de um cliente que veio pela Ajuda, quem atende vê o plano, a situação e a nota de saúde da conta, com o botão "Abrir ficha da conta".
