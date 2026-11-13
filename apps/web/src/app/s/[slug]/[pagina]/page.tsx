@@ -1,13 +1,13 @@
 import { ROTULO_PAGINA, type PaginaSite } from '@pente-fino/shared';
 import { Carregando } from '@pente-fino/ui';
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { SiteDaBarbearia } from '@/componentes/site-barbearia/site';
-import { sitePublico } from '@/lib/servidor/pagina-publica';
+import { enderecoAtual, sitePublico } from '@/lib/servidor/pagina-publica';
 
-// Páginas internas do site da barbearia (seção 7): /b/<slug>/servicos, /equipe e /contato.
-// Sem site publicado, não existem.
+// Páginas internas do site da barbearia (seção 7): /s/<endereço>/servicos, /equipe e /contato.
+// Sem site publicado, não existem; endereço trocado pelo dono leva ao novo (lote 7d).
 
 type Props = { params: Promise<{ slug: string; pagina: string }> };
 
@@ -32,8 +32,13 @@ async function Conteudo({ params }: Props) {
   const { slug, pagina } = await params;
   const p = INTERNAS[pagina];
   const site = p ? await sitePublico(slug) : null;
-  if (!p || !site) notFound();
-  return <SiteDaBarbearia dados={site} pagina={p} base={`/b/${slug}`} />;
+  if (!p) notFound();
+  if (!site) {
+    const novo = await enderecoAtual('site', slug);
+    if (novo) permanentRedirect(`/s/${novo}/${pagina}`);
+    notFound();
+  }
+  return <SiteDaBarbearia dados={site} pagina={p} base={`/s/${slug}`} />;
 }
 
 export default function Pagina({ params }: Props) {

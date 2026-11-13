@@ -229,4 +229,53 @@ describe('site da barbearia', () => {
     rascunho.paginas.inicio[0]!.foto = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b';
     await dono.put(`/unidades/${a.unidadeA}/site`, rascunho).expect(400);
   });
+
+  it('site e link em endereços separados: trocar um não muda o outro, e o antigo leva ao novo', async () => {
+    await dono.patch(`/unidades/${a.unidadeA}`, { agendamentoPublico: true }).expect(200);
+    const pub = (await dono.post(`/unidades/${a.unidadeA}/site/publicar`).expect(200))
+      .body as SitePainel;
+    // Sem endereço próprio, o site nasce com a sugestão (o do link) e fica com ele.
+    expect(pub.siteSlug).toBe(slug);
+
+    // O dono troca o LINK de agendamento: o site continua no mesmo endereço.
+    const novoLink = `${slug}-agenda`;
+    await dono.patch(`/unidades/${a.unidadeA}`, { slug: novoLink }).expect(200);
+    const site = (await http().get(`/publico/site/${slug}`).expect(200)).body as SitePublico;
+    expect(site).toMatchObject({ slug, slugAgendamento: novoLink });
+    await http().get(`/publico/agendamento/${slug}`).expect(404);
+    expect(
+      (await http().get(`/publico/endereco-antigo/agendamento/${slug}`).expect(200)).body,
+    ).toEqual({
+      slug: novoLink,
+    });
+
+    // Agora troca o endereço do SITE: o link não muda; o endereço antigo do site leva ao novo.
+    const novoSite = `${slug}-site`;
+    const r = (
+      await dono.put(`/unidades/${a.unidadeA}/site/endereco`, { slug: novoSite }).expect(200)
+    ).body as SitePainel;
+    expect(r).toMatchObject({ siteSlug: novoSite, slug: novoLink });
+    await http().get(`/publico/site/${novoSite}`).expect(200);
+    await http().get(`/publico/site/${slug}`).expect(404);
+    expect((await http().get(`/publico/endereco-antigo/site/${slug}`).expect(200)).body).toEqual({
+      slug: novoSite,
+    });
+    await http().get(`/publico/agendamento/${novoLink}`).expect(200);
+
+    // Voltar ao endereço antigo do link: ele deixa de ser "antigo" e volta a ser o atual.
+    await dono.patch(`/unidades/${a.unidadeA}`, { slug }).expect(200);
+    await http().get(`/publico/agendamento/${slug}`).expect(200);
+    expect(
+      (await http().get(`/publico/endereco-antigo/agendamento/${novoLink}`).expect(200)).body,
+    ).toEqual({
+      slug,
+    });
+    await http().get(`/publico/endereco-antigo/agendamento/${slug}`).expect(404);
+
+    // Endereço de site de outra unidade não pode; formato inválido também não.
+    await dono.patch(`/unidades/${a.unidadeB}`, { slug: `${slug}-b` }).expect(200);
+    await dono.put(`/unidades/${a.unidadeB}/site/endereco`, { slug: novoSite }).expect(409);
+    await dono.put(`/unidades/${a.unidadeA}/site/endereco`, { slug: 'Com Espaço' }).expect(400);
+    await http().get('/publico/endereco-antigo/qualquer/x-y-z').expect(400);
+  });
 });

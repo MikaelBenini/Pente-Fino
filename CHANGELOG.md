@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (site e link de agendamento em endereços separados)
+
+- O site da barbearia ganhou endereço próprio, `/s/<endereço>`, separado do link de agendamento (`/b/<link>`). Trocar o link em Configurações não muda mais o site, e os botões "Agendar" do site sempre levam ao link atual.
+- O dono escolhe o endereço do site em "Minha página", que agora mostra os dois endereços para copiar.
+- Endereço trocado não quebra mais: quem chega pelo link de agendamento antigo, ou pelo endereço antigo do site, é levado ao novo, inclusive pelo link do bot e pelo que já está impresso ou no Instagram.
+- O `/b/<link>` volta a ser sempre a página de agendamento.
+
 ### Adicionado (fotos no site da barbearia)
 
 - Em "Minha página", o dono põe fotos no site: o logotipo no topo, a foto do banner, a de "Sobre a casa", a de cada barbeiro e uma galeria nova com os trabalhos, com legenda.

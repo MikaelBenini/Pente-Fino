@@ -318,12 +318,14 @@ U2 a U5 já feitos (#161).
     tamanho e guarda no servidor, com backup; banner, sobre a casa, barbeiros, galeria e
     logotipo (foto de serviço fica para depois);
   - [x] Merge do lote 7b (PR #193, pelo dono, 13/11)
+  - [x] Merge do lote 7c (PR #194, pelo dono, 13/11)
   - pedido do dono em 13/11, depois do 7c: "o site é uma coisa e o link de agendamento é outra";
     o barbeiro pode pôr o domínio dele; o site precisa de animações e de um visual mais moderno,
     menos "padrão". Decisão: o link de agendamento continua em `/b/<slug>` (é o que já está no
     Instagram, impresso e no bot) e só agenda; o site ganha endereço próprio, `/s/<slug>`, e o
     domínio da barbearia;
-  - [ ] **Lote 7d** site e agendamento em endereços separados: o site em `/s/<slug>` (com
+  - [x] **Lote 7d** (13/11, documentado na linha de desenvolvimento; corrige o bug de trocar
+    o link e o site ir junto) site e agendamento em endereços separados: o site em `/s/<slug>` (com
     `/servicos`, `/equipe` e `/contato`), o `/b/<slug>` volta a ser só o agendamento, os botões
     do site levam a ele; o painel mostra os dois endereços para copiar;
   - [ ] **Lote 7e** domínio próprio: o dono informa o domínio, o painel mostra o registro de DNS
@@ -337,6 +339,18 @@ U2 a U5 já feitos (#161).
     foto; vale no site e no agendamento;
   - [ ] **Lote 7h** páginas extras Galeria e Clube de assinatura;
   - [ ] **Lotes 7i, 7j e 7k** temas Clube, Letreiro e Estúdio, um por PR.
+  - pedidos do dono em 13/11 (depois dos endereços separados):
+    - [ ] **Lote 7l** editar a página de agendamento (`/b/<link>`) no mesmo painel: cor,
+      logotipo, foto de capa e textos, no mesmo visual do site;
+    - [ ] **Lote 7m** botões com link no site: o dono põe botões próprios (texto e endereço, por
+      exemplo cardápio de produtos ou Instagram) e, para quem quiser ir além, um CSS
+      personalizado, aplicado só no site dele e filtrado (sem `@import`, sem `url()` de fora,
+      sem `expression`), com um limite de tamanho;
+- [ ] **Saber o que o visitante faz na página de vendas** (pedido do dono em 13/11,
+  `seupentefino.com.br`): se um visitante novo entrou, até onde rolou a página, em quais botões
+  clicou (planos, cadastro, WhatsApp, vídeo, chat) e de onde veio; painel no `/admin` com o
+  funil do dia e da semana. Feito por nós, sem cookie de terceiros (só um id anônimo da visita),
+  respeitando o aviso de cookies e o "não rastrear" do navegador;
 - [ ] Saúde da conta no Início (WhatsApp, link, caixa de ontem, comandas paradas)
 - [ ] Resumo do fechamento de caixa enviado ao dono
 - [ ] Histórico visível por comanda
@@ -359,6 +373,9 @@ U2 a U5 já feitos (#161).
     responde e marca pela conversa, o convite de retorno de quem sumiu, a avaliação depois do
     atendimento, a mensagem de aniversário e o aviso da lista de espera;
   - fica nos planos de cima: comanda, caixa, financeiro, comissões, resultados e o clube;
+  - **cupom de desconto** (decisão do dono em 13/11): no plano Agenda, só vale com as
+    Automações juntas (R$ 20); no Agenda sozinho (R$ 10) não aceita cupom, porque com 10% a 30%
+    de desconto cairia para uns R$ 7, barato demais;
   - **revenda conforme a necessidade** (o convite aparece na hora em que a barbearia precisa,
     nunca como propaganda solta):
     - o 3º barbeiro: "No Básico cabem até 3 barbeiros, e você passa a ver quanto sobra";

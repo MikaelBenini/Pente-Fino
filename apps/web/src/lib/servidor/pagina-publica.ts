@@ -1,5 +1,5 @@
 import 'server-only';
-import type { SitePublico, UnidadePublica } from '@pente-fino/shared';
+import type { SitePublico, TipoEndereco, UnidadePublica } from '@pente-fino/shared';
 import { cacheLife, cacheTag } from 'next/cache';
 import { urlDaApi } from './sessao';
 
@@ -45,6 +45,22 @@ export async function sitePublico(slug: string): Promise<SitePublico | null> {
   try {
     const r = await fetch(`${urlDaApi()}/publico/site/${slug}`);
     return r.ok ? ((await r.json()) as SitePublico) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Endereço que a unidade deixou de usar (lote 7d): devolve o atual para redirecionar; null
+ * quando o endereço nunca existiu. Cache curto: o dono pode trocar de novo.
+ */
+export async function enderecoAtual(tipo: TipoEndereco, slug: string): Promise<string | null> {
+  'use cache';
+  cacheLife({ stale: 30, revalidate: 60, expire: 300 });
+  if (!SLUG.test(slug) || slug.length > 60) return null;
+  try {
+    const r = await fetch(`${urlDaApi()}/publico/endereco-antigo/${tipo}/${slug}`);
+    return r.ok ? ((await r.json()) as { slug: string }).slug : null;
   } catch {
     return null;
   }

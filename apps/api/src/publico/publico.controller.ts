@@ -61,6 +61,7 @@ import {
   temRecurso,
   lerSite,
   type SitePublico,
+  type TipoEndereco,
 } from '@pente-fino/shared';
 import type { Request, Response } from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -386,12 +387,41 @@ export class PublicoController {
     summary: 'Site publicado da barbearia (blocos do dono e dados vivos); 404 sem site publicado',
   })
   async site(@Param('slug', slugParam) slug: string): Promise<SitePublico> {
-    const u = await this.unidade(slug);
-    if (!u.sitePublicado) throw Erros.naoEncontrado('Esta barbearia ainda não publicou o site.');
+    // Lote 7d: o site tem endereço próprio (/s/<site_slug>), separado do link de agendamento.
+    const u = await this.banco.semConta({ slugSite: slug }, (tx) =>
+      tx.unidade.findUnique({ where: { siteSlug: slug } }),
+    );
+    if (!u || !u.ativa || !u.sitePublicado)
+      throw Erros.naoEncontrado('Esta barbearia ainda não publicou o site.');
     return this.banco.naConta(u.contaId, async (tx) => {
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
       return montarSitePublico(tx, u, lerSite(u.sitePublicado, conta.nome));
     });
+  }
+
+  @Get('endereco-antigo/:tipo/:slug')
+  @Publico()
+  @ApiOperation({
+    summary:
+      'Endereço que a unidade deixou de usar: devolve o atual (link ou site) para redirecionar',
+  })
+  async enderecoAntigo(
+    @Param('tipo', new PipeZod(z.enum(['agendamento', 'site']))) tipo: TipoEndereco,
+    @Param('slug', slugParam) slug: string,
+  ): Promise<{ slug: string }> {
+    const antigo = await this.banco.semConta({ enderecoAntigo: `${tipo}:${slug}` }, (tx) =>
+      tx.enderecoAntigo.findFirst({ where: { tipo, slug }, orderBy: { criadoEm: 'desc' } }),
+    );
+    const atual = antigo
+      ? await this.banco.naConta(antigo.contaId, async (tx) => {
+          const u = await tx.unidade.findUnique({ where: { id: antigo.unidadeId } });
+          if (!u?.ativa) return null;
+          if (tipo === 'site') return u.sitePublicado ? u.siteSlug : null;
+          return u.agendamentoPublico ? u.slug : null;
+        })
+      : null;
+    if (!atual || atual === slug) throw Erros.naoEncontrado('Endereço não encontrado.');
+    return { slug: atual };
   }
 
   @Get('fotos/:arquivo')

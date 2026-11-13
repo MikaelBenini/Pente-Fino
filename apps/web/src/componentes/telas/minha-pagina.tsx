@@ -7,6 +7,9 @@ import {
   BLOCOS_SITE,
   BOTOES_SITE,
   CAMINHO_PAGINA,
+  caminhoDoAgendamento,
+  caminhoDoSite,
+  enderecoSiteSchema,
   CORES_SITE,
   FONTES_SITE,
   PAGINAS_SITE,
@@ -131,6 +134,8 @@ const situacaoDe = (r: SitePainel): Situacao => ({
   alteracoesPendentes: r.alteracoesPendentes,
   slug: r.slug,
   linkLigado: r.linkLigado,
+  siteSlug: r.siteSlug,
+  sugestaoSiteSlug: r.sugestaoSiteSlug,
 });
 
 function Editor({
@@ -144,7 +149,16 @@ function Editor({
 }) {
   const cliente = useQueryClient();
   const [site, setSite] = useState<SiteBarbearia>(inicial.rascunho);
-  const [situacao, setSituacao] = useState<Situacao>(inicial);
+  const [situacaoLocal, setSituacao] = useState<Situacao>(inicial);
+  // O link vem sempre da consulta (trocado em Configurações, ela recarrega); o endereço do site,
+  // da última resposta daqui ou da consulta.
+  const situacao: Situacao = {
+    ...situacaoLocal,
+    slug: inicial.slug,
+    linkLigado: inicial.linkLigado,
+    siteSlug: situacaoLocal.siteSlug ?? inicial.siteSlug,
+    sugestaoSiteSlug: inicial.sugestaoSiteSlug,
+  };
   const [pagina, setPagina] = useState<PaginaSite>('inicio');
   const [aba, setAba] = useState('blocos');
   const [celular, setCelular] = useState(false);
@@ -198,7 +212,7 @@ function Editor({
       if (!(await salvar(site))) return;
       const r = await api<SitePainel>(`unidades/${unidadeId}/site/publicar`, { metodo: 'POST' });
       setSituacao(situacaoDe(r));
-      if (r.slug) await renovarSite(r.slug);
+      if (r.siteSlug) await renovarSite(r.siteSlug);
       setAviso('Publicado. O cliente já vê a página nova.');
       await cliente.invalidateQueries({ queryKey: chave(unidadeId) });
     } catch (e) {
@@ -213,7 +227,7 @@ function Editor({
     try {
       const r = await api<SitePainel>(`unidades/${unidadeId}/site/publicado`, { metodo: 'DELETE' });
       setSituacao(situacaoDe(r));
-      if (r.slug) await renovarSite(r.slug);
+      if (r.siteSlug) await renovarSite(r.siteSlug);
       setAviso('O site saiu do ar. O link voltou a abrir a página de agendamento.');
       setConfirmarTirar(false);
     } catch (e) {
@@ -227,6 +241,7 @@ function Editor({
   const pendente = situacao.alteracoesPendentes || site !== ultimoSalvo;
   const dadosDaPrevia: SitePublico = {
     ...previa,
+    slug: situacao.siteSlug ?? situacao.sugestaoSiteSlug,
     site,
     fotos: { ...previa.fotos, ...fotosNovas },
     equipe: previa.equipe.map((p) => ({
@@ -235,7 +250,7 @@ function Editor({
       sobre: site.equipe[p.id]?.sobre ?? '',
     })),
   };
-  const base = `/b/${situacao.slug ?? previa.slug}`;
+  const base = caminhoDoSite(situacao.siteSlug ?? situacao.sugestaoSiteSlug);
 
   // Links da prévia não saem do painel: os do site trocam a página editada.
   const naPrevia = (e: MouseEvent) => {
@@ -268,7 +283,7 @@ function Editor({
             </p>
             <p className="text-sm text-tinta-suave" aria-live="polite">
               {!situacao.publicado
-                ? 'Até publicar, o link da barbearia abre a página de agendamento.'
+                ? 'Até publicar, o cliente não vê o site. O link de agendamento funciona normalmente.'
                 : pendente
                   ? 'Há alterações que o cliente ainda não vê.'
                   : 'O cliente vê exatamente esta versão.'}{' '}
@@ -280,9 +295,9 @@ function Editor({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {situacao.publicado && situacao.slug && (
+            {situacao.publicado && situacao.siteSlug && (
               <a
-                href={`/b/${situacao.slug}`}
+                href={caminhoDoSite(situacao.siteSlug)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="toque inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3"
@@ -316,6 +331,14 @@ function Editor({
             . Você pode montar a página antes.
           </Aviso>
         )}
+        <Enderecos
+          unidadeId={unidadeId}
+          situacao={situacao}
+          onMudou={(r) => {
+            setSituacao(situacaoDe(r));
+            void cliente.invalidateQueries({ queryKey: chave(unidadeId) });
+          }}
+        />
         {problema && <Aviso tom="erro">{problema}</Aviso>}
         {erro && <Aviso tom="erro">{erro}</Aviso>}
         {aviso && <Aviso tom="sucesso">{aviso}</Aviso>}
@@ -811,5 +834,144 @@ function Tema({ site, onMudar }: { site: SiteBarbearia; onMudar: (s: SiteBarbear
         onChange={(e) => onMudar({ ...site, instagram: e.target.value.replace(/^@/, '') })}
       />
     </div>
+  );
+}
+
+/**
+ * Os dois endereços da unidade (lote 7d): o do site, que o dono escolhe aqui, e o do link de
+ * agendamento, que fica em Configurações. Trocar um não muda o outro; o antigo leva ao novo.
+ */
+function Enderecos({
+  unidadeId,
+  situacao,
+  onMudou,
+}: {
+  unidadeId: string;
+  situacao: Situacao;
+  onMudou: (r: SitePainel) => void;
+}) {
+  const atual = situacao.siteSlug ?? situacao.sugestaoSiteSlug;
+  const [valor, setValor] = useState(atual);
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState<string | null>(null);
+  const origem = typeof window === 'undefined' ? '' : window.location.origin;
+  const mudou = valor.trim().toLowerCase() !== (situacao.siteSlug ?? '');
+
+  async function salvar() {
+    const r = enderecoSiteSchema.safeParse({ slug: valor });
+    if (!r.success) {
+      setErro(r.error.issues[0]?.message ?? 'Endereço inválido.');
+      return;
+    }
+    setSalvando(true);
+    setErro(null);
+    try {
+      const antigo = situacao.siteSlug;
+      const novo = await api<SitePainel>(`unidades/${unidadeId}/site/endereco`, {
+        metodo: 'PUT',
+        corpo: r.data,
+      });
+      if (antigo) await renovarSite(antigo);
+      if (novo.siteSlug) await renovarSite(novo.siteSlug);
+      setValor(novo.siteSlug ?? r.data.slug);
+      onMudou(novo);
+    } catch (e) {
+      setErro(mensagemDe(e));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function copiar(rotulo: string, texto: string) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(rotulo);
+    } catch {
+      setCopiado(null);
+    }
+  }
+
+  const linkSite = `${origem}${caminhoDoSite(atual)}`;
+  const linkAgenda = situacao.slug ? `${origem}${caminhoDoAgendamento(situacao.slug)}` : null;
+  return (
+    <section
+      aria-label="Endereços"
+      className="grid gap-4 rounded-lg border border-borda bg-superficie p-4 md:grid-cols-2"
+    >
+      <div className="flex min-w-0 flex-col gap-2">
+        <h2 className="font-semibold">Endereço do site</h2>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Campo
+              id="endereco-site"
+              rotulo={`${origem.replace(/^https?:\/\//, '')}/s/`}
+              value={valor}
+              maxLength={60}
+              onChange={(e) => {
+                setErro(null);
+                setValor(e.target.value);
+              }}
+              erro={erro ?? undefined}
+            />
+          </div>
+          <Botao
+            variante="secundario"
+            onClick={salvar}
+            carregando={salvando}
+            disabled={!mudou || !valor.trim()}
+          >
+            Salvar endereço
+          </Botao>
+        </div>
+        <p className="text-sm text-tinta-suave">
+          {situacao.siteSlug
+            ? 'Se trocar, quem tiver o endereço antigo é levado ao novo.'
+            : 'Sugestão. Fica valendo quando você salvar ou publicar.'}
+        </p>
+        {situacao.publicado && situacao.siteSlug && (
+          <Botao
+            variante="fantasma"
+            className="self-start"
+            onClick={() => copiar('site', linkSite)}
+          >
+            {copiado === 'site' ? 'Endereço do site copiado' : 'Copiar endereço do site'}
+          </Botao>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-col gap-2">
+        <h2 className="font-semibold">Link de agendamento</h2>
+        {linkAgenda ? (
+          <>
+            <p className="break-all">{linkAgenda.replace(/^https?:\/\//, '')}</p>
+            <p className="text-sm text-tinta-suave">
+              É para onde vão os botões &ldquo;Agendar&rdquo; do site. Para trocar, vá em{' '}
+              <Link href="/configuracoes?aba=link" className="font-semibold underline">
+                Configurações, Link de agendamento
+              </Link>
+              ; o site não muda.
+            </p>
+            <Botao
+              variante="fantasma"
+              className="self-start"
+              onClick={() => copiar('agenda', linkAgenda)}
+            >
+              {copiado === 'agenda' ? 'Link copiado' : 'Copiar link de agendamento'}
+            </Botao>
+          </>
+        ) : (
+          <p className="text-sm text-tinta-suave">
+            Ainda sem link. Crie em{' '}
+            <Link href="/configuracoes?aba=link" className="font-semibold underline">
+              Configurações, Link de agendamento
+            </Link>
+            .
+          </p>
+        )}
+      </div>
+      <p className="sr-only" aria-live="polite">
+        {copiado ? 'Copiado.' : ''}
+      </p>
+    </section>
   );
 }

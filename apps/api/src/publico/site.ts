@@ -59,7 +59,8 @@ export async function montarSitePublico(
       })
     : [];
   return {
-    slug: u.slug ?? '',
+    slug: u.siteSlug ?? '',
+    slugAgendamento: u.slug ?? '',
     barbearia: conta.nome,
     unidade: u.nome,
     site,

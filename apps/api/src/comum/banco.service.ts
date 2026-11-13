@@ -38,7 +38,9 @@ export class BancoService implements OnApplicationShutdown {
       | { tokenHorario: string }
       | { clienteAsaas: string }
       | { assinaturaClube: string }
-      | { slugClube: string },
+      | { slugClube: string }
+      | { slugSite: string }
+      | { enderecoAntigo: string },
     fn: (tx: Transacao) => Promise<T>,
   ): Promise<T> {
     const [nome, valor] =
@@ -54,7 +56,11 @@ export class BancoService implements OnApplicationShutdown {
                 ? ['app.cliente_asaas', chave.clienteAsaas]
                 : 'assinaturaClube' in chave
                   ? ['app.assinatura_clube', chave.assinaturaClube]
-                  : ['app.slug_clube', chave.slugClube];
+                  : 'slugClube' in chave
+                    ? ['app.slug_clube', chave.slugClube]
+                    : 'slugSite' in chave
+                      ? ['app.slug_site', chave.slugSite]
+                      : ['app.endereco_antigo', chave.enderecoAntigo];
     return this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT set_config(${nome}, ${valor}, true)`;
       return fn(tx);

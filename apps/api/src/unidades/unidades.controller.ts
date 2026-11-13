@@ -28,7 +28,9 @@ import {
   type UnidadeDetalhe,
   type UnidadeEntrada,
   copiarCatalogoSchema,
+  enderecoSiteSchema,
   envioFotoSchema,
+  type EnderecoSite,
   fotosDoSite,
   lerSite,
   siteBarbeariaSchema,
@@ -50,6 +52,12 @@ import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 import { montarSitePublico } from '../publico/site.js';
 import { CONFIGURACAO, type Configuracao } from '../config/configuracao.js';
 import { gravarFoto, processarFoto } from '../site/fotos.js';
+import {
+  registrarTrocaDeEndereco,
+  siteSlugEmUso,
+  siteSlugLivre,
+  sugestaoDeSiteSlug,
+} from '../site/enderecos.js';
 
 const SELECAO = {
   id: true,
@@ -131,7 +139,7 @@ export class UnidadesController {
     const u = await tx.unidade.findUnique({ where: { id } });
     if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
     const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
-    return { u, rascunho: lerSite(u.siteRascunho, conta.nome) };
+    return { u, rascunho: lerSite(u.siteRascunho, conta.nome), barbearia: conta.nome };
   }
 
   private painelDoSite(
@@ -140,8 +148,10 @@ export class UnidadesController {
       agendamentoPublico: boolean;
       sitePublicado: unknown;
       sitePublicadoEm: Date | null;
+      siteSlug: string | null;
     },
     rascunho: SiteBarbearia,
+    barbearia: string,
   ): SitePainel {
     return {
       rascunho,
@@ -151,6 +161,8 @@ export class UnidadesController {
         u.sitePublicado === null || !isDeepStrictEqual(u.sitePublicado, rascunho),
       slug: u.slug,
       linkLigado: u.agendamentoPublico,
+      siteSlug: u.siteSlug,
+      sugestaoSiteSlug: sugestaoDeSiteSlug(u.slug, barbearia),
     };
   }
 
@@ -160,8 +172,8 @@ export class UnidadesController {
   site(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
     exigirUnidade(id, GESTAO);
     return this.banco.daConta(async (tx) => {
-      const { u, rascunho } = await this.unidadeDoSite(tx, id);
-      return this.painelDoSite(u, rascunho);
+      const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
+      return this.painelDoSite(u, rascunho, barbearia);
     });
   }
 
@@ -174,7 +186,7 @@ export class UnidadesController {
   ): Promise<SitePainel> {
     exigirUnidade(id, GESTAO);
     return this.banco.daConta(async (tx) => {
-      const { u } = await this.unidadeDoSite(tx, id);
+      const { u, barbearia } = await this.unidadeDoSite(tx, id);
       // Só foto enviada por esta conta (a tabela é isolada por conta).
       const fotos = fotosDoSite(site);
       if (fotos.length) {
@@ -189,7 +201,7 @@ export class UnidadesController {
         where: { id },
         data: { siteRascunho: site as unknown as Prisma.InputJsonValue },
       });
-      return this.painelDoSite({ ...u, ...salvo }, site);
+      return this.painelDoSite({ ...u, ...salvo }, site, barbearia);
     });
   }
 
@@ -220,6 +232,35 @@ export class UnidadesController {
     });
   }
 
+  @Put(':id/site/endereco')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({
+    summary: 'Trocar o endereço do site (/s/<slug>); o antigo passa a levar ao novo',
+  })
+  trocarEnderecoDoSite(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(enderecoSiteSchema) { slug }: EnderecoSite,
+  ): Promise<SitePainel> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
+      if (u.siteSlug === slug) return this.painelDoSite(u, rascunho, barbearia);
+      if (await siteSlugEmUso(tx, slug, id))
+        throw Erros.conflito('Esse endereço já é de outra barbearia. Escolha outro.');
+      const salvo = await tx.unidade.update({ where: { id }, data: { siteSlug: slug } });
+      await registrarTrocaDeEndereco(tx, id, 'site', u.siteSlug, slug);
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'site_endereco',
+        antes: { siteSlug: u.siteSlug },
+        depois: { siteSlug: slug },
+      });
+      return this.painelDoSite(salvo, rascunho, barbearia);
+    });
+  }
+
   @Get(':id/site/previa')
   @Papeis(...GESTAO)
   @ApiOperation({ summary: 'Prévia do site com o rascunho e os dados vivos da unidade' })
@@ -235,19 +276,25 @@ export class UnidadesController {
   @Papeis(...GESTAO)
   @Auditada()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Publicar o rascunho: /b/<slug> passa a mostrar o site' })
+  @ApiOperation({
+    summary:
+      'Publicar o rascunho no endereço do site (/s/<site_slug>); sem endereço, usa a sugestão',
+  })
   publicarSite(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
     exigirUnidade(id, GESTAO);
     return this.banco.daConta(async (tx) => {
-      const { u, rascunho } = await this.unidadeDoSite(tx, id);
+      const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
       if (!u.slug || !u.agendamentoPublico)
         throw Erros.requisicaoInvalida(
           'link_desligado',
           'Ligue o link de agendamento da unidade antes de publicar o site.',
         );
+      const siteSlug =
+        u.siteSlug ?? (await siteSlugLivre(tx, sugestaoDeSiteSlug(u.slug, barbearia), id));
       const salvo = await tx.unidade.update({
         where: { id },
         data: {
+          siteSlug,
           siteRascunho: rascunho as unknown as Prisma.InputJsonValue,
           sitePublicado: rascunho as unknown as Prisma.InputJsonValue,
           sitePublicadoEm: new Date(),
@@ -260,7 +307,7 @@ export class UnidadesController {
         antes: null,
         depois: { tema: rascunho.tema },
       });
-      return this.painelDoSite(salvo, rascunho);
+      return this.painelDoSite(salvo, rascunho, barbearia);
     });
   }
 
@@ -268,12 +315,12 @@ export class UnidadesController {
   @Papeis(...GESTAO)
   @Auditada()
   @ApiOperation({
-    summary: 'Tirar o site do ar: /b/<slug> volta a ser a página de agendamento (rascunho fica)',
+    summary: 'Tirar o site do ar (o rascunho e o endereço ficam guardados)',
   })
   despublicarSite(@Param('id', ParseUUIDPipe) id: string): Promise<SitePainel> {
     exigirUnidade(id, GESTAO);
     return this.banco.daConta(async (tx) => {
-      const { rascunho } = await this.unidadeDoSite(tx, id);
+      const { rascunho, barbearia } = await this.unidadeDoSite(tx, id);
       const salvo = await tx.unidade.update({
         where: { id },
         data: { sitePublicado: Prisma.DbNull, sitePublicadoEm: null },
@@ -285,7 +332,7 @@ export class UnidadesController {
         antes: null,
         depois: null,
       });
-      return this.painelDoSite(salvo, rascunho);
+      return this.painelDoSite(salvo, rascunho, barbearia);
     });
   }
 
@@ -439,6 +486,9 @@ export class UnidadesController {
         data: dados,
         select: SELECAO,
       });
+      // Link trocado (lote 7d): o antigo continua levando ao novo; o site não muda.
+      if (dados.slug !== undefined)
+        await registrarTrocaDeEndereco(tx, unidadeId, 'agendamento', antes.slug, depois.slug);
       await auditar(tx, {
         entidade: 'unidade',
         entidadeId: unidadeId,

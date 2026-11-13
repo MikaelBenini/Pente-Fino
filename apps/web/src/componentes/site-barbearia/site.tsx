@@ -3,6 +3,7 @@
 // do painel. Cada faixa é um bloco que o dono liga, desliga e reordena.
 import {
   CAMINHO_PAGINA,
+  caminhoDoAgendamento,
   CORES_SITE,
   PAGINAS_SITE,
   ROTULO_PAGINA,
@@ -163,7 +164,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
     rotulo: ROTULO_PAGINA[p],
   }));
   const agendar = (
-    <Link href={`${base}/agendar`} className={BOTAO_DESTAQUE}>
+    <Link href={caminhoDoAgendamento(dados.slugAgendamento)} className={BOTAO_DESTAQUE}>
       Agendar horário
     </Link>
   );
@@ -246,15 +247,15 @@ function Bloco({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
     case 'cabecalho':
       return <CabecalhoPagina bloco={bloco} />;
     case 'tabela':
-      return <TabelaServicos dados={dados} base={base} />;
+      return <TabelaServicos dados={dados} />;
     case 'barbeiros':
-      return <Barbeiros dados={dados} base={base} />;
+      return <Barbeiros dados={dados} />;
     case 'contato':
       return <Contato dados={dados} />;
     case 'perguntas':
       return <Perguntas bloco={bloco} />;
     case 'agendar':
-      return <FaixaAgendar bloco={bloco} base={base} />;
+      return <FaixaAgendar bloco={bloco} dados={dados} />;
   }
 }
 
@@ -306,7 +307,10 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
           </p>
         )}
         <div className="flex flex-wrap gap-3">
-          <Link href={`${base}/agendar`} className={`${BOTAO_DESTAQUE} text-[18px]`}>
+          <Link
+            href={caminhoDoAgendamento(dados.slugAgendamento)}
+            className={`${BOTAO_DESTAQUE} text-[18px]`}
+          >
             Agendar horário
           </Link>
           <Link
@@ -443,7 +447,7 @@ function ServicosDestaque({
               <p className="text-[#4C554F]">{duracao(s.duracaoMin)}</p>
               <p className={`${TITULO} text-[36px] leading-none`}>{formatarMoeda(s.preco)}</p>
               <Link
-                href={`${base}/agendar`}
+                href={caminhoDoAgendamento(dados.slugAgendamento)}
                 className="mt-1 font-semibold text-[#1F5135] underline-offset-4 hover:underline"
               >
                 Agendar {s.nome.toLowerCase()}
@@ -576,7 +580,7 @@ function CabecalhoPagina({ bloco }: { bloco: BlocoSite }) {
   );
 }
 
-function TabelaServicos({ dados, base }: { dados: SitePublico; base: string }) {
+function TabelaServicos({ dados }: { dados: SitePublico }) {
   const grupos = servicosPorCategoria(dados.servicos);
   if (!grupos.length)
     return (
@@ -622,7 +626,7 @@ function TabelaServicos({ dados, base }: { dados: SitePublico; base: string }) {
                     {formatarMoeda(s.preco)}
                   </span>
                   <Link
-                    href={`${base}/agendar`}
+                    href={caminhoDoAgendamento(dados.slugAgendamento)}
                     aria-label={`Agendar ${s.nome}`}
                     className={`${BOTAO} border border-[#1F5135] px-4 py-2 text-[#1F5135] focus-visible:outline-[#1F5135]`}
                   >
@@ -638,7 +642,7 @@ function TabelaServicos({ dados, base }: { dados: SitePublico; base: string }) {
   );
 }
 
-function Barbeiros({ dados, base }: { dados: SitePublico; base: string }) {
+function Barbeiros({ dados }: { dados: SitePublico }) {
   if (!dados.equipe.length) return null;
   return (
     <div className={`${LARGURA} flex flex-col gap-20 py-20 @2xl:gap-24 @2xl:py-24`}>
@@ -672,7 +676,7 @@ function Barbeiros({ dados, base }: { dados: SitePublico; base: string }) {
               <p className="max-w-[32em] whitespace-pre-line text-[#3E4842]">{p.sobre}</p>
             )}
             <Link
-              href={`${base}/agendar`}
+              href={caminhoDoAgendamento(dados.slugAgendamento)}
               className={`${BOTAO} self-start bg-[#14271C] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
             >
               Agendar com {p.nome}
@@ -783,7 +787,7 @@ function Perguntas({ bloco }: { bloco: BlocoSite }) {
   );
 }
 
-function FaixaAgendar({ bloco, base }: { bloco: BlocoSite; base: string }) {
+function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
   return (
     <section className="bg-[var(--site-destaque)] text-[#14271C]">
       <div className={`${LARGURA} flex flex-wrap items-center justify-between gap-6 py-16`}>
@@ -794,7 +798,7 @@ function FaixaAgendar({ bloco, base }: { bloco: BlocoSite; base: string }) {
           {bloco.texto && <p className="mt-1.5 whitespace-pre-line">{bloco.texto}</p>}
         </div>
         <Link
-          href={`${base}/agendar`}
+          href={caminhoDoAgendamento(dados.slugAgendamento)}
           className={`${BOTAO} bg-[#14271C] text-[18px] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
         >
           Agendar horário
