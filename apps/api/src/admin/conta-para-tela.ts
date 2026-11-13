@@ -1,12 +1,22 @@
 import type { LinhaContaPlataforma } from '@pente-fino/db';
-import { origemCadastroSchema, resumoDaOrigem, type ContaNaPlataforma } from '@pente-fino/shared';
+import {
+  origemCadastroSchema,
+  resumoDaOrigem,
+  type ContaNaPlataforma,
+  type EtapaFunil,
+} from '@pente-fino/shared';
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
 const dia = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
 
 /** Linha de plataforma_contas() como a administração mostra (sem dado de cliente). */
-export function contaParaTela(c: LinhaContaPlataforma): ContaNaPlataforma {
+/** `etapaFunil` vem do funil (admin F1c); sem ele, null. */
+export function contaParaTela(
+  c: LinhaContaPlataforma,
+  etapaFunil: EtapaFunil | null = null,
+): ContaNaPlataforma {
   return {
+    etapaFunil,
     id: c.id,
     nome: c.nome,
     plano: c.plano,

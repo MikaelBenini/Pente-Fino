@@ -655,6 +655,9 @@ describe('administração mais prática (admin U2 a U5)', () => {
       .body as FichaContaPlataforma;
     expect(ETAPAS_FUNIL.map((e) => e.etapa)).toContain(ficha.etapaFunil);
     expect(ficha.etapaFunil).not.toBe('cadastro');
+    // F1c: a lista de contas traz a mesma etapa, para o filtro "Parou em".
+    const lista = (await adm.get('/admin/contas').expect(200)).body as ContaNaPlataforma[];
+    expect(lista.find((c) => c.id === contaU)?.etapaFunil).toBe(ficha.etapaFunil);
   });
 
   it('venda com CPF, ficha com ativação e notas da equipe, lista com origem e vendas por origem', async () => {

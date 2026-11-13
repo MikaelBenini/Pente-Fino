@@ -188,8 +188,8 @@ U2 a U5 já feitos (#161).
 - [x] **F2** Origem do cadastro (12/11):
   - já gravada e mostrada na ficha, nas Contas e em Vendas (#160 e #161);
   - faltava "contas novas por origem" no Início, que foi feito;
-  - a exportação de conversões offline para o Google Ads, opcional, ficou nas pendências do dono:
-    precisa de credenciais da API do Google Ads;
+  - a exportação de conversões offline para o Google Ads, opcional, não será feita (decisão do
+    dono em 13/11);
   - registro no CHANGELOG.
 - [x] Lote 6b (F2 e anotação das sugestões F1b a F1d): bateria verde e PR aberto (12/11)
 - [x] Merge pelo dono (lote 6b)
@@ -205,7 +205,7 @@ U2 a U5 já feitos (#161).
   - uma vez por etapa, das 9 h às 20 h, na rotina da F3;
   - registro no CHANGELOG.
 - [x] Lote 6d (F1d): bateria verde e PR aberto (12/11, PR #181)
-- [ ] Merge pelo dono (lote 6d)
+- [x] Merge pelo dono (lote 6d)
 - [ ] **F4** Nota de saúde da conta (0 a 100) e ordem por risco de cancelamento
 - [ ] **F5** Acesso de suporte com consentimento do dono, só leitura e auditado
 - [ ] **F6** Suporte por chat (pedido do dono em 11/11, detalhado em 12/11):
@@ -220,10 +220,11 @@ U2 a U5 já feitos (#161).
     `/admin` instalado), para atender sem estar no computador.
   - Substitui o WhatsApp de suporte no site e na Ajuda.
 - [ ] **F7** Métricas de SaaS (churn, MRR por tipo, LTV, coortes)
-- [ ] **F1b** Equipe da administração: membros desativados escondidos por padrão, com o botão
-  "Mostrar desativados" (sugestão aprovada em 12/11)
-- [ ] **F1c** Lista de Contas com filtro por etapa do funil, por exemplo "parou no 1º
-  agendamento" (sugestão aprovada em 12/11)
+- [x] **F1b** Equipe da administração: membros desativados escondidos por padrão, com a caixa
+  "Mostrar desativados" (13/11)
+- [x] **F1c** Lista de Contas com o filtro "Parou em", pela etapa do funil (13/11)
+- [x] Lote 6e (F1b e F1c): bateria verde e PR aberto (13/11)
+- [ ] Merge pelo dono (lote 6e)
 - [ ] **F8** Aviso geral segmentado
 - [ ] **F9** Gestão de cupons
 
@@ -295,9 +296,6 @@ Resposta:
 - [ ] Depoimentos reais (pelo menos dois, autorizados)
 - [ ] DNS AAAA / IPv6, se a Saúde do sistema avisar
 - [ ] Tag Assistant e o valor da conversão no Google Ads
-- [ ] Se quiser conversões offline (quem pagou depois do teste) no Google Ads: criar o acesso à API
-  do Google Ads (token de desenvolvedor e conta de serviço) e guardar só no servidor (admin F2,
-  opcional)
 - [ ] Ligar "Aparecer no Google" em cada unidade
 - [ ] Limpar a comanda de teste e o caixa de 11/11 em produção
 - [ ] Webhook do Asaas em teste: porta 3001 do Codespaces em `/webhooks/asaas`, pública só

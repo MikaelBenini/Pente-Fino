@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Alterado (administração: listas de Contas e Equipe)
+
+- A lista de Contas ganhou o filtro "Parou em", para achar as barbearias paradas numa etapa do funil (por exemplo, no 1º agendamento) e ligar para elas.
+- Na Equipe, quem foi desativado sai da lista. A caixa "Mostrar desativados" mostra de novo e diz quantos são.
+
 ### Adicionado (ajuda para a barbearia que parou na configuração)
 
 - Quando a barbearia fica 3 dias parada na mesma etapa da configuração, o dono recebe o e-mail "Ajuda com o próximo passo". Ele tem o título e o porquê do passo e um botão direto para a tela certa.

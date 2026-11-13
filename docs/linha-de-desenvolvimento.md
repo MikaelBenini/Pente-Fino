@@ -808,7 +808,10 @@ motivo e vai para a auditoria.
   - `GET /admin/funil?periodo=todos|90dias|30dias`, só para o admin;
   - `etapaFunil` na ficha da conta e o bloco "Funil de ativação" em `metricas-admin.tsx`;
   - testes em `admin.e2e-spec.ts` e `apps/web/e2e/admin.spec.ts`.
-- [ ] **F1b–F1c** (aprovadas em 2026-11-12): equipe sem os desativados por padrão; filtro de Contas pela etapa do funil
+- [x] **F1b–F1c** (aprovadas em 2026-11-12, feitas em 2026-11-13):
+  - **F1b:** a Equipe esconde os desativados, com a caixa "Mostrar desativados (N)";
+  - **F1c:** `etapaFunil` em `ContaNaPlataforma` (de `plataforma_funil()`) e o filtro "Parou em" na lista de Contas;
+  - testes em `admin.e2e-spec.ts` e `admin.spec.ts`.
 - [x] **F1d** e-mail para a conta parada há 3 dias na mesma etapa (feito em 2026-11-12, aprovada no mesmo dia):
   - regra em `packages/shared/src/etapa-parada.ts` (`decidirEtapaParada`, `emailDoPasso`), com teste;
   - modelo `etapa_parada`;
@@ -819,7 +822,7 @@ motivo e vai para a auditoria.
   - a gravação e a ficha vieram com o T2, e as Contas e Vendas com o U2 e o U5;
   - agora `novas.porOrigem` em `metricasDaPlataforma` (contas novas do período por origem, com o resumo de `resumoDaOrigem`) aparece nos números do negócio;
   - testes em `metricas-plataforma.test.ts`, `admin.e2e-spec.ts` e `admin.spec.ts`;
-  - a exportação de conversões offline fica para quando houver acesso à API do Google Ads.
+  - a exportação de conversões offline não será feita (decisão do dono em 2026-11-13).
 - [x] **F3** alertas para a equipe (feito em 2026-11-12):
   - regra em `packages/shared/src/alertas-equipe.ts` (`detectarAlertasEquipe`, `emailDeAlertasEquipe`), com teste;
   - migração `alertas_equipe`: `usuario_plataforma.alertas` (os admins começam com todos), `alerta_equipe_enviado` (tipo + chave, uma vez só) e `plataforma_whatsapp_caido()`;

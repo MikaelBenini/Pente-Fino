@@ -4,6 +4,7 @@ import {
   formatarData,
   formatarDataHora,
   NOME_PAPEL_PLATAFORMA,
+  ETAPAS_FUNIL,
   NOME_PLANO,
   PLANOS,
   TOTAL_PASSOS_ATIVACAO,
@@ -390,6 +391,8 @@ function ContasAdmin({
       : (new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('situacao') ?? ''),
   );
   const [vendedor, setVendedor] = useState('');
+  // Admin F1c: contas paradas numa etapa do funil (ex.: "parou no 1º agendamento").
+  const [etapa, setEtapa] = useState('');
   const vendas = useQuery({
     queryKey: ['admin', 'vendas'],
     queryFn: () => adminApi<VendasDoVendedor[]>('vendas'),
@@ -402,7 +405,8 @@ function ContasAdmin({
         (!termo || c.nome.toLowerCase().includes(termo)) &&
         (!plano || c.plano === plano) &&
         (!situacao || (situacao === 'interna' ? c.interna : c.status === situacao && !c.interna)) &&
-        (!vendedor || (vendedor === 'site' ? c.vendedorId === null : c.vendedorId === vendedor)),
+        (!vendedor || (vendedor === 'site' ? c.vendedorId === null : c.vendedorId === vendedor)) &&
+        (!etapa || (etapa === 'completo' ? c.etapaFunil === null : c.etapaFunil === etapa)),
     )
     .sort(ORDENAR[ordem]);
   return (
@@ -460,6 +464,20 @@ function ContasAdmin({
             ]}
           />
         )}
+        <Selecao
+          id="filtro-etapa"
+          rotulo="Parou em"
+          value={etapa}
+          onChange={(e) => setEtapa(e.target.value)}
+          opcoes={[
+            { valor: '', rotulo: 'Qualquer etapa' },
+            ...ETAPAS_FUNIL.filter((x) => x.etapa !== 'cadastro').map((x) => ({
+              valor: x.etapa,
+              rotulo: x.nome,
+            })),
+            { valor: 'completo', rotulo: 'Funil completo' },
+          ]}
+        />
         <Selecao
           id="ordem-contas"
           rotulo="Ordenar por"
