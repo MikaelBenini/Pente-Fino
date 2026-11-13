@@ -40,6 +40,7 @@ import {
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
+  etapaAtualDoFunil,
   alertasDaEquipeSchema,
   TIPOS_ALERTA_EQUIPE,
   type AlertasDaEquipeEntrada,
@@ -208,10 +209,14 @@ export class AdminController {
   })
   async contas(@AdminAtual() a: AdminAutenticado): Promise<ContaNaPlataforma[]> {
     // Vendedor vê só as contas que vendeu.
-    const linhas = (await contasDaPlataforma(this.banco.prisma)).filter(
-      (c) => veTodasAsContas(a.papel) || c.vendedor_id === a.id,
-    );
-    return linhas.map(contaParaTela);
+    const [todas, funil] = await Promise.all([
+      contasDaPlataforma(this.banco.prisma),
+      funilDasContas(this.banco.prisma),
+    ]);
+    const etapa = new Map(funil.map((f) => [f.id, etapaAtualDoFunil(f)]));
+    return todas
+      .filter((c) => veTodasAsContas(a.papel) || c.vendedor_id === a.id)
+      .map((c) => contaParaTela(c, etapa.get(c.id) ?? null));
   }
 
   @Get('contas/:id')

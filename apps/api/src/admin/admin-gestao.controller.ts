@@ -66,7 +66,7 @@ export class AdminGestaoController {
     ]);
     const contas = linhas
       .filter((c) => veTodasAsContas(a.papel) || c.vendedor_id === a.id)
-      .map(contaParaTela);
+      .map((c) => contaParaTela(c));
     const porId = new Map(contas.map((c) => [c.id, c]));
     const cobrancas = faturas
       .filter((f) => porId.has(f.conta_id) && f.status !== 'cancelada')

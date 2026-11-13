@@ -82,6 +82,11 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(
     tabela.getByRole('rowheader', { name: /Barbearia Pente Fino/ }).first(),
   ).toBeVisible();
+  // Admin F1c: filtrar pela etapa do funil em que a conta parou.
+  const parouEm = page.getByRole('combobox', { name: 'Parou em' });
+  await expect(parouEm.getByRole('option')).toHaveCount(8);
+  await parouEm.selectOption('agendamento');
+  await parouEm.selectOption('');
   // Ficha da conta: busca, abre e estende o teste com motivo (fica no histórico).
   await page.getByLabel('Buscar barbearia').fill('Plano Básico');
   await tabela.getByRole('button', { name: 'Barbearia Plano Básico' }).click();
@@ -172,6 +177,12 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   const desativar = page.getByRole('dialog', { name: /^Desativar / });
   await desativar.getByLabel('Motivo').fill('Teste da equipe');
   await desativar.getByRole('button', { name: 'Desativar' }).click();
+  // Admin F1b: quem foi desativado sai da lista; a caixa mostra de novo.
+  await expect(equipe.getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) })).toHaveCount(
+    0,
+    { timeout: 20_000 },
+  );
+  await page.getByRole('checkbox', { name: /^Mostrar desativados/ }).check();
   // O banco de desenvolvimento acumula a equipe das execuções anteriores (mais de mil linhas):
   // a tabela leva mais que os 5 s padrão para se redesenhar depois de desativar.
   await expect(

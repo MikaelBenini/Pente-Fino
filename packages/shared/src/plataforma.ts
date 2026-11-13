@@ -110,6 +110,8 @@ export interface ContaNaPlataforma {
   origem: string | null;
   /** Quantos dos primeiros passos do tutorial a barbearia já fez (de TOTAL_PASSOS_ATIVACAO). */
   ativacao: number;
+  /** Admin F1c: a primeira etapa do funil que falta; null = todas feitas. */
+  etapaFunil: EtapaFunil | null;
 }
 
 /** Os passos do tutorial "Primeiros passos" que contam na ativação (admin U2). */

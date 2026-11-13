@@ -96,6 +96,9 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
   const [enviando, setEnviando] = useState(false);
   const [acesso, setAcesso] = useState<AcessoTemporario | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
+  // Admin F1b: quem saiu fica escondido; a caixa mostra de novo (e diz quantos são).
+  const [mostrarDesativados, setMostrarDesativados] = useState(false);
+  const desativados = (q.data ?? []).filter((m) => !m.ativo).length;
   const atualizar = () => cliente.invalidateQueries({ queryKey: ['admin', 'equipe'] });
 
   async function acao(id: string, f: () => Promise<unknown>) {
@@ -173,6 +176,17 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
         </Botao>
       </form>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {desativados > 0 && (
+        <label className="flex min-h-11 items-center gap-2 self-start text-sm">
+          <input
+            type="checkbox"
+            checked={mostrarDesativados}
+            onChange={(e) => setMostrarDesativados(e.target.checked)}
+            className="size-4 accent-modulo"
+          />
+          Mostrar desativados ({desativados})
+        </label>
+      )}
       <Estado consulta={q}>
         {() => (
           <Tabela rotulo="Equipe da plataforma">
@@ -195,100 +209,104 @@ export function EquipeAdmin({ u }: { u: UsuarioPlataformaSessao }) {
               </tr>
             </thead>
             <tbody>
-              {q.data!.map((m) => {
-                const eu = m.id === u.id;
-                return (
-                  <tr
-                    key={m.id}
-                    className={`border-b border-borda ${m.ativo ? '' : 'text-tinta-suave'}`}
-                  >
-                    <th scope="row" className={`${td} font-semibold`}>
-                      {m.nome}
-                      {eu && <span className="font-normal text-tinta-suave"> (você)</span>}
-                      <span className="block text-sm font-normal text-tinta-suave">{m.email}</span>
-                    </th>
-                    <td className={td}>
-                      {eu ? (
-                        NOME_PAPEL_PLATAFORMA[m.papel]
-                      ) : (
-                        <select
-                          id={`papel-${m.id}`}
-                          aria-label={`Papel de ${m.nome}`}
-                          value={m.papel}
-                          disabled={!!ocupado}
-                          onChange={(e) =>
-                            acao(m.id, () =>
-                              adminApi(`equipe/${m.id}`, {
-                                metodo: 'PUT',
-                                corpo: { papel: e.target.value },
-                              }),
-                            )
-                          }
-                          className="min-h-11 rounded-md border border-borda-forte bg-fundo px-2 text-tinta focus-visible:outline-2 focus-visible:outline-foco"
-                        >
-                          {PAPEIS_PLATAFORMA.map((p) => (
-                            <option key={p} value={p}>
-                              {NOME_PAPEL_PLATAFORMA[p]}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </td>
-                    <td className={td}>
-                      <Ficha tom={m.ativo ? 'acao' : 'neutro'}>
-                        {m.ativo ? 'Ativo' : 'Desativado'}
-                      </Ficha>
-                    </td>
-                    <td className={td}>
-                      {m.segundoFatorConfigurado ? 'Configurado' : 'Falta configurar'}
-                    </td>
-                    <td className={`${td} tabular-nums`}>
-                      {m.ultimoAcessoEm ? formatarDataHora(m.ultimoAcessoEm) : '—'}
-                    </td>
-                    <td className={`${td} tabular-nums`}>
-                      {m.senhaTrocadaEm ? formatarDataHora(m.senhaTrocadaEm) : '—'}
-                    </td>
-                    <td className={`${td} tabular-nums`}>{m.contasVendidas}</td>
-                    <td className={td}>
-                      {!eu && (
-                        <div className="flex flex-wrap gap-2">
-                          <Botao
-                            variante="secundario"
+              {q
+                .data!.filter((m) => m.ativo || mostrarDesativados)
+                .map((m) => {
+                  const eu = m.id === u.id;
+                  return (
+                    <tr
+                      key={m.id}
+                      className={`border-b border-borda ${m.ativo ? '' : 'text-tinta-suave'}`}
+                    >
+                      <th scope="row" className={`${td} font-semibold`}>
+                        {m.nome}
+                        {eu && <span className="font-normal text-tinta-suave"> (você)</span>}
+                        <span className="block text-sm font-normal text-tinta-suave">
+                          {m.email}
+                        </span>
+                      </th>
+                      <td className={td}>
+                        {eu ? (
+                          NOME_PAPEL_PLATAFORMA[m.papel]
+                        ) : (
+                          <select
+                            id={`papel-${m.id}`}
+                            aria-label={`Papel de ${m.nome}`}
+                            value={m.papel}
                             disabled={!!ocupado}
-                            onClick={() =>
-                              acao(m.id, async () =>
-                                setAcesso(
-                                  await adminApi<AcessoTemporario>(`equipe/${m.id}/redefinir`, {
-                                    corpo: {},
-                                  }),
-                                ),
+                            onChange={(e) =>
+                              acao(m.id, () =>
+                                adminApi(`equipe/${m.id}`, {
+                                  metodo: 'PUT',
+                                  corpo: { papel: e.target.value },
+                                }),
                               )
                             }
+                            className="min-h-11 rounded-md border border-borda-forte bg-fundo px-2 text-tinta focus-visible:outline-2 focus-visible:outline-foco"
                           >
-                            Redefinir acesso
-                          </Botao>
-                          <Botao
-                            variante={m.ativo ? 'perigo' : 'secundario'}
-                            disabled={!!ocupado}
-                            onClick={() =>
-                              m.ativo
-                                ? setDesativar({ id: m.id, nome: m.nome })
-                                : acao(m.id, () =>
-                                    adminApi(`equipe/${m.id}`, {
-                                      metodo: 'PUT',
-                                      corpo: { ativo: true },
+                            {PAPEIS_PLATAFORMA.map((p) => (
+                              <option key={p} value={p}>
+                                {NOME_PAPEL_PLATAFORMA[p]}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                      <td className={td}>
+                        <Ficha tom={m.ativo ? 'acao' : 'neutro'}>
+                          {m.ativo ? 'Ativo' : 'Desativado'}
+                        </Ficha>
+                      </td>
+                      <td className={td}>
+                        {m.segundoFatorConfigurado ? 'Configurado' : 'Falta configurar'}
+                      </td>
+                      <td className={`${td} tabular-nums`}>
+                        {m.ultimoAcessoEm ? formatarDataHora(m.ultimoAcessoEm) : '—'}
+                      </td>
+                      <td className={`${td} tabular-nums`}>
+                        {m.senhaTrocadaEm ? formatarDataHora(m.senhaTrocadaEm) : '—'}
+                      </td>
+                      <td className={`${td} tabular-nums`}>{m.contasVendidas}</td>
+                      <td className={td}>
+                        {!eu && (
+                          <div className="flex flex-wrap gap-2">
+                            <Botao
+                              variante="secundario"
+                              disabled={!!ocupado}
+                              onClick={() =>
+                                acao(m.id, async () =>
+                                  setAcesso(
+                                    await adminApi<AcessoTemporario>(`equipe/${m.id}/redefinir`, {
+                                      corpo: {},
                                     }),
-                                  )
-                            }
-                          >
-                            {m.ativo ? 'Desativar' : 'Reativar'}
-                          </Botao>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                                  ),
+                                )
+                              }
+                            >
+                              Redefinir acesso
+                            </Botao>
+                            <Botao
+                              variante={m.ativo ? 'perigo' : 'secundario'}
+                              disabled={!!ocupado}
+                              onClick={() =>
+                                m.ativo
+                                  ? setDesativar({ id: m.id, nome: m.nome })
+                                  : acao(m.id, () =>
+                                      adminApi(`equipe/${m.id}`, {
+                                        metodo: 'PUT',
+                                        corpo: { ativo: true },
+                                      }),
+                                    )
+                              }
+                            >
+                              {m.ativo ? 'Desativar' : 'Reativar'}
+                            </Botao>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </Tabela>
         )}

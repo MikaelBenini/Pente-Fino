@@ -31,6 +31,7 @@ const conta = (o: Partial<ContaNaPlataforma>): ContaNaPlataforma => ({
   ultimoAcessoEm: '2026-11-19T12:00:00Z',
   origem: null,
   ativacao: 8,
+  etapaFunil: null,
   interna: false,
   cortesiaAte: null,
   cobrarAPartirDe: null,
