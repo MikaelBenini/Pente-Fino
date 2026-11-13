@@ -308,6 +308,8 @@ U2 a U5 já feitos (#161).
     Contato em `/b/<slug>`, o agendamento em `/b/<slug>/agendar`, conteúdo inicial sugerido,
     rascunho e publicado guardados na unidade, dados vivos (serviços, preços, equipe, nota,
     horário);
+  - [x] Lote 7a: bateria verde e PR aberto (13/11)
+  - [ ] Merge do lote 7a
   - [ ] **Lote 7b** painel "Minha página": escolher a página, ligar, desligar, reordenar e editar
     os blocos, tema (cor, fonte, botões), prévia no computador e no celular, publicar;
   - [ ] **Lote 7c** fotos: envio, redução de tamanho e guarda no servidor, com backup; banner,
