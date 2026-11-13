@@ -850,7 +850,15 @@ motivo e vai para a auditoria.
   - alerta `chat_novo` na hora;
   - `ChatSite` no lugar do botão do WhatsApp e `ChatAdmin` na aba Chat;
   - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts`, `site.spec.ts` e `admin.spec.ts`.
-- [ ] **F6, entrega 2**: chat no painel para quem já é cliente e notificação no celular da equipe
+- [x] **Chat: melhorias** (feito em 2026-11-13):
+  - `respostasProntasDoChat` e `resumirChat` no shared, com teste;
+  - `chat` no cadastro liga a conversa à conta (`ChatService.vincularConta`) e mostra `virouConta`;
+  - `GET /admin/chat/resumo`;
+  - `useAvisosDoChat`: bipe, `Notification` e o número no título e na aba;
+  - título "(n) Nova mensagem" no `ChatSite`;
+  - chat da Ajuda: migração `chat_painel` (`origem`, `usuario_painel_id`), `GET /chat/minha` e `POST /chat/minha/mensagens` para qualquer papel, `ChatAjuda` no bloco "Falar com o suporte";
+  - testes em `chat-suporte.test.ts`, `chat.e2e-spec.ts` e `suporte.spec.ts`.
+- [ ] **F6, entrega 2 (o que falta)**: notificação no celular da equipe com o navegador fechado (push do PWA no `/admin`)
 - [ ] **F7–F9** métricas de SaaS, aviso segmentado e gestão de cupons
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)

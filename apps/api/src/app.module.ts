@@ -60,6 +60,7 @@ import { AdminGuard } from './admin/admin.guard.js';
 import { BancoPlataforma } from './admin/banco-plataforma.js';
 import { AdminChatController, ChatPublicoController } from './chat/chat.controller.js';
 import { ChatService } from './chat/chat.service.js';
+import { ChatPainelController } from './chat/chat-painel.controller.js';
 import { AvisosController } from './avisos/avisos.controller.js';
 import { DesempenhoService } from './desempenho/desempenho.service.js';
 import { BotController } from './bot/bot.controller.js';
@@ -172,6 +173,7 @@ export class ComumModule {}
     AdminNotaFiscalController,
     AdminGestaoController,
     ChatPublicoController,
+    ChatPainelController,
     AdminChatController,
     AvisosController,
     ResumoController,

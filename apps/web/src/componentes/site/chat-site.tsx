@@ -27,6 +27,12 @@ function ler(): Guardada | null {
     return null;
   }
 }
+/** Admin F6: a conversa do chat deste navegador, para ligar ao cadastro (conversão do chat). */
+export function conversaDoChat(): { id: string; token: string } | null {
+  const g = ler();
+  return g ? { id: g.id, token: g.token } : null;
+}
+
 function guardar(v: Guardada | null) {
   try {
     if (v) localStorage.setItem(CHAVE, JSON.stringify(v));
@@ -102,6 +108,16 @@ export function ChatSite() {
 
   const total = dados?.mensagens.length ?? 0;
   const naoLidas = aberto ? 0 : Math.max(0, total - (conversa?.vistas ?? total));
+
+  // Resposta nova com o chat fechado: o título da aba avisa, mesmo em outra aba do navegador.
+  useEffect(() => {
+    if (!naoLidas) return;
+    const original = document.title;
+    document.title = `(${naoLidas}) Nova mensagem · Pente Fino`;
+    return () => {
+      document.title = original;
+    };
+  }, [naoLidas]);
 
   // Aberto: marca tudo como visto e desce para a última mensagem.
   useEffect(() => {

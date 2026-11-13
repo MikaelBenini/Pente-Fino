@@ -7,6 +7,22 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (chat: Ajuda, respostas prontas, conversão e avisos)
+
+- O chat com o suporte agora também fica na Ajuda do painel, para quem já é cliente. Não pede nome nem contato, e a conversa fica ligada à conta. Na administração, essas conversas aparecem com a etiqueta "Cliente".
+- Respostas prontas na conversa da administração: preço dos planos, como funciona o teste, importar planilha, comissão, bot e encerrar. Um clique põe o texto na caixa, para ajustar antes de mandar. Os preços vêm da mesma tabela do site.
+- Quem conversa no chat do site e depois se cadastra aparece como "Virou cadastro", com o nome da barbearia.
+- A aba Chat mostra os últimos 30 dias:
+  - conversas;
+  - quantas viraram cadastro, em número e porcentagem;
+  - o tempo médio da primeira resposta, só das conversas começadas no horário de atendimento;
+  - quantas ainda estão sem resposta.
+- Avisos do chat em qualquer aba da administração:
+  - um bipe e, se o navegador permitir, uma notificação quando chega conversa nova ou mensagem nova de visitante;
+  - o número de conversas esperando no título da aba do navegador e na aba Chat;
+  - o botão "Ativar avisos do navegador".
+- O visitante vê "(1) Nova mensagem" no título da aba do site quando a equipe responde com o chat fechado.
+
 ### Adicionado (chat do site com a equipe)
 
 - O site ganhou o chat "Fale com a gente", no lugar do botão do WhatsApp. O visitante deixa o nome e o WhatsApp ou e-mail, escreve a dúvida e entra na fila.

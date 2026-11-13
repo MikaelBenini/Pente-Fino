@@ -3,14 +3,19 @@
 // Admin F6: o chat do site na administração. Fila e em atendimento à esquerda; a conversa aberta
 // à direita, com assumir, responder e encerrar. Atualiza a cada poucos segundos.
 import {
+  DIAS_TESTE,
   formatarDataHora,
+  formatarMoeda,
+  precoPorMes,
+  respostasProntasDoChat,
   type ConversaDaEquipe,
   type ConversaNaFila,
+  type ResumoDoChat,
   type UsuarioPlataformaSessao,
 } from '@pente-fino/shared';
 import { Botao, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Aviso } from '../aviso';
 import { Estado, Ficha } from '../pagina';
 import { adminApi } from './admin-api';
@@ -27,6 +32,142 @@ function linkWhatsapp(contato: string): string | null {
   const d = contato.replace(/\D/g, '');
   if (d.length < 10) return null;
   return `https://wa.me/${d.startsWith('55') ? d : `55${d}`}`;
+}
+
+const RESPOSTAS = respostasProntasDoChat({
+  diasTeste: DIAS_TESTE,
+  basico: formatarMoeda(precoPorMes('basico', 'mensal')),
+  pro: formatarMoeda(precoPorMes('pro', 'mensal')),
+  premium: formatarMoeda(precoPorMes('premium', 'mensal')),
+});
+
+/** Bipe curto (sem arquivo de som): avisa conversa ou mensagem nova. */
+function bipe() {
+  try {
+    const ctx = new AudioContext();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    o.connect(g).connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + 0.35);
+  } catch {
+    // Navegador sem áudio liberado: fica só o aviso visual.
+  }
+}
+
+/**
+ * Avisos do chat em qualquer aba da administração: conversa nova ou mensagem nova de visitante
+ * tocam um bipe e, com a permissão do navegador e a aba em segundo plano, mostram uma
+ * notificação. Devolve quantas conversas esperam resposta (o título da aba e a aba Chat mostram).
+ */
+export function useAvisosDoChat(ligado: boolean): number {
+  const q = useQuery({
+    queryKey: ['admin', 'chat', 'abertas'],
+    queryFn: () => adminApi<ConversaNaFila[]>('chat'),
+    refetchInterval: 8000,
+    enabled: ligado,
+  });
+  const vistas = useRef<Map<string, string> | null>(null);
+  const esperando = (q.data ?? []).filter((c) => c.esperandoEquipe);
+  useEffect(() => {
+    if (!q.data) return;
+    const antes = vistas.current;
+    const agora = new Map(q.data.map((c) => [c.id, c.ultimaMensagemEm]));
+    vistas.current = agora;
+    if (!antes) return; // primeira leitura: não avisa o que já estava lá
+    const novas = q.data.filter((c) => c.esperandoEquipe && antes.get(c.id) !== c.ultimaMensagemEm);
+    if (!novas.length) return;
+    bipe();
+    if (
+      typeof Notification !== 'undefined' &&
+      Notification.permission === 'granted' &&
+      document.hidden
+    ) {
+      const c = novas[0]!;
+      new Notification(
+        antes.has(c.id) ? `${c.nome} mandou mensagem` : `${c.nome} está no chat do site`,
+        {
+          body: c.ultimaMensagem,
+          tag: `chat-${c.id}`,
+        },
+      );
+    }
+  }, [q.data]);
+  const n = esperando.length;
+  useEffect(() => {
+    if (!ligado || !n) return;
+    const original = document.title;
+    document.title = `(${n}) Chat · ${original.replace(/^\(\d+\) Chat · /, '')}`;
+    return () => {
+      document.title = original;
+    };
+  }, [ligado, n]);
+  return n;
+}
+
+function AtivarNotificacoes() {
+  const [permissao, setPermissao] = useState(() =>
+    typeof Notification === 'undefined' ? 'indisponivel' : Notification.permission,
+  );
+  if (permissao !== 'default') return null;
+  return (
+    <Botao
+      variante="secundario"
+      onClick={() => void Notification.requestPermission().then((p) => setPermissao(p))}
+    >
+      Ativar avisos do navegador
+    </Botao>
+  );
+}
+
+function ResumoChat() {
+  const r = useQuery({
+    queryKey: ['admin', 'chat', 'resumo'],
+    queryFn: () => adminApi<ResumoDoChat>('chat/resumo'),
+    refetchInterval: 60_000,
+  });
+  if (!r.data) return null;
+  const d = r.data;
+  return (
+    <dl
+      aria-label="Chat nos últimos 30 dias"
+      className="grid gap-3 rounded-lg border border-borda bg-superficie p-4 sm:grid-cols-3"
+    >
+      <div>
+        <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+          Conversas (30 dias)
+        </dt>
+        <dd className="text-2xl font-semibold tabular-nums">{d.conversas}</dd>
+      </div>
+      <div>
+        <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+          Viraram cadastro
+        </dt>
+        <dd className="text-2xl font-semibold tabular-nums">
+          {d.viraramCadastro}
+          <span className="ml-2 text-sm font-normal text-tinta-suave">
+            {Math.round(d.taxaCadastro * 100)}%
+          </span>
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+          1ª resposta, em média
+        </dt>
+        <dd className="text-2xl font-semibold tabular-nums">
+          {d.primeiraRespostaMin === null ? '—' : `${d.primeiraRespostaMin} min`}
+          {d.semResposta > 0 && (
+            <span className="ml-2 text-sm font-normal text-tinta-suave">
+              {d.semResposta} sem resposta
+            </span>
+          )}
+        </dd>
+      </div>
+    </dl>
+  );
 }
 
 export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
@@ -57,6 +198,7 @@ export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
               : 'As 50 últimas conversas encerradas.'}
           </p>
         </div>
+        <AtivarNotificacoes />
         <Selecao
           id="chat-ver"
           rotulo="Mostrar"
@@ -71,6 +213,7 @@ export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
           ]}
         />
       </div>
+      <ResumoChat />
       <div className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <Estado consulta={lista}>
           {() =>
@@ -93,7 +236,14 @@ export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
                       }`}
                     >
                       <span className="flex items-center justify-between gap-2">
-                        <span className="font-semibold">{c.nome}</span>
+                        <span className="font-semibold">
+                          {c.nome}
+                          {c.origem === 'painel' && (
+                            <span className="ml-2 align-middle">
+                              <Ficha tom="neutro">Cliente</Ficha>
+                            </span>
+                          )}
+                        </span>
                         <Ficha
                           tom={
                             c.status === 'fila'
@@ -114,6 +264,11 @@ export function ChatAdmin({ u }: { u: UsuarioPlataformaSessao }) {
                         {c.atendente ? ` · ${c.atendente}` : ''}
                         {c.esperandoEquipe ? ' · esperando resposta' : ''}
                       </span>
+                      {c.virouConta && (
+                        <span className="text-xs font-semibold text-acao-texto">
+                          Virou cadastro: {c.virouConta.nome}
+                        </span>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -202,6 +357,11 @@ function Conversa({
                   {d.pagina ? ` na página ${d.pagina}` : ''}
                   {d.atendente ? ` · atendida por ${d.atendente}` : ''}
                 </p>
+                {d.virouConta && (
+                  <p className="mt-1">
+                    <Ficha tom="acao">Virou cadastro: {d.virouConta.nome}</Ficha>
+                  </p>
+                )}
               </div>
               {d.status !== 'encerrada' && (
                 <div className="flex gap-2">
@@ -249,6 +409,19 @@ function Conversa({
                 }}
                 className="flex items-end gap-2 border-t border-borda p-3"
               >
+                <Selecao
+                  id={`pronta-${id}`}
+                  rotulo="Resposta pronta"
+                  value=""
+                  onChange={(e) => {
+                    const r = RESPOSTAS.find((x) => x.titulo === e.target.value);
+                    if (r) setTexto(r.texto);
+                  }}
+                  opcoes={[
+                    { valor: '', rotulo: 'Escolher…' },
+                    ...RESPOSTAS.map((r) => ({ valor: r.titulo, rotulo: r.titulo })),
+                  ]}
+                />
                 <label className="sr-only" htmlFor={`resposta-${id}`}>
                   Resposta
                 </label>

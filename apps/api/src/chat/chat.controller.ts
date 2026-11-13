@@ -23,6 +23,7 @@ import {
   type ConversaNaFila,
   type IniciarChatEntrada,
   type MensagemChatEntrada,
+  type ResumoDoChat,
   type StatusChat,
 } from '@pente-fino/shared';
 import { AdminAtual, AdminGuard, PapeisPlataforma } from '../admin/admin.guard.js';
@@ -84,6 +85,15 @@ export class AdminChatController {
     if (status && !['fila', 'atendendo', 'encerrada'].includes(status))
       throw Erros.requisicaoInvalida('status_invalido', 'Situação inválida.');
     return this.chat.lista(status as StatusChat | undefined);
+  }
+
+  @Get('resumo')
+  @PapeisPlataforma(...PAPEIS_CHAT)
+  @ApiOperation({
+    summary: 'Últimos 30 dias: conversas, quantas viraram cadastro e a primeira resposta',
+  })
+  resumo(): Promise<ResumoDoChat> {
+    return this.chat.resumo();
   }
 
   @Get(':id')

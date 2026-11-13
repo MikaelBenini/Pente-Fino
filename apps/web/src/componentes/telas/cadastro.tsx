@@ -28,6 +28,7 @@ import type { z } from 'zod';
 import { api, ErroApi } from '@/lib/api';
 import { useTabelaPrecos } from '@/lib/consultas';
 import { lerOrigem } from '@/lib/origem';
+import { conversaDoChat } from '@/componentes/site/chat-site';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
 import { Aviso } from '../aviso';
@@ -137,7 +138,7 @@ export function FormularioCadastro() {
       try {
         await api('publico/contas', {
           // Site T2: de onde veio (anúncio, campanha), guardado ao chegar no site.
-          corpo: { ...dados, abertoEm, site, origem: lerOrigem() },
+          corpo: { ...dados, abertoEm, site, origem: lerOrigem(), chat: conversaDoChat() },
         });
         // Site T1: conversão só no sucesso, com o valor por mês do plano (com o cupom) para o
         // lance por valor do Google Ads. Só sai com a tag carregada e o aceite de cookies.

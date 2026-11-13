@@ -9,7 +9,7 @@ import {
   PERGUNTAS_AJUDA,
   type ArtigoAjuda,
 } from '@pente-fino/shared';
-import { linkWhatsappSuporte, SUPORTE } from '@/lib/contato';
+import { linkWhatsappSuporte } from '@/lib/contato';
 import { Campo } from '@pente-fino/ui';
 import { ArrowLeft, ArrowRight, BookOpen, Lightbulb, Mail, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { EMAIL_CONTATO } from '@/lib/site';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina } from '../pagina';
+import { ChatAjuda } from './chat-ajuda';
 
 const classeLink =
   'font-semibold text-tinta underline underline-offset-4 hover:decoration-modulo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco';
@@ -199,10 +200,8 @@ function Contato() {
       <h2 id="titulo-contato" className="font-semibold">
         Falar com o suporte
       </h2>
-      <p className="text-tinta-suave">
-        Conte o que estava tentando fazer.{' '}
-        {SUPORTE.horario ? `Atendimento: ${SUPORTE.horario}.` : 'Respondemos em dias úteis.'}
-      </p>
+      {/* Admin F6: o chat com a equipe, ligado à conta (o e-mail fica como alternativa). */}
+      <ChatAjuda />
       {whatsapp && (
         <a
           href={whatsapp}

@@ -1703,8 +1703,12 @@ model ConversaSuporte {
   pagina           String?
   tokenHash        String                @unique @map("token_hash")
   atendenteId      String?               @map("atendente_id") @db.Uuid
-  /// Conta da barbearia, quando o visitante já é cliente (entrega 2).
+  /// Conta da barbearia: quem já é cliente (chat da Ajuda) ou quem se cadastrou depois de conversar.
   contaAfetadaId   String?               @map("conta_afetada_id") @db.Uuid
+  /// "site" (visitante) ou "painel" (cliente logado, pela Ajuda).
+  origem           String                @default("site")
+  /// Usuário da barbearia que abriu pela Ajuda (sem chave estrangeira: tabela da administração).
+  usuarioPainelId  String?               @map("usuario_painel_id") @db.Uuid
   criadoEm         DateTime              @default(now()) @map("criado_em") @db.Timestamptz(3)
   assumidaEm       DateTime?             @map("assumida_em") @db.Timestamptz(3)
   encerradaEm      DateTime?             @map("encerrada_em") @db.Timestamptz(3)
@@ -1714,6 +1718,7 @@ model ConversaSuporte {
   mensagens MensagemSuporte[]
 
   @@index([status, ultimaMensagemEm])
+  @@index([usuarioPainelId, criadoEm])
   @@map("conversa_suporte")
 }
 
