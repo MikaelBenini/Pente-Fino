@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (resumo do fechamento do caixa para o dono)
+
+- Quando a recepção fecha o caixa, o dono e o gestor recebem o resumo na central de avisos e no celular: quanto entrou, em quantas comandas e quanto em cada forma de pagamento (Pix, dinheiro, cartão), e quem fechou.
+- Com diferença na gaveta, sai o aviso de diferença, agora com os mesmos totais: um aviso só por fechamento.
+- O resumo do dia e o aviso de caixa sem fechar passam a sair no fechamento da unidade quando ela tem horário de funcionamento cadastrado (antes, só pelo expediente da equipe).
+- O novo aviso pode ser ligado ou desligado no celular, no Perfil, como os outros.
+
 ### Adicionado (temas do site: Clube, Letreiro e Estúdio)
 
 - Na aba Tema de "Minha página", o dono escolhe o estilo do site entre quatro:

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   avisoCaixaDivergente,
+  avisoCaixaFechado,
   avisoCaixaSemFechar,
   avisoComandasPendentes,
   avisoResumoDoDia,
@@ -145,9 +146,58 @@ describe('preferências de avisos', () => {
       'comandas_pendentes',
       'caixa_divergente',
       'caixa_sem_fechar',
+      'caixa_fechado',
       'resumo_dia',
       'clube_online',
       'whatsapp_caiu',
     ]);
+  });
+});
+
+describe('resumo do fechamento do caixa (seção 7)', () => {
+  const totais = {
+    totalRecebido: 123000,
+    fechadas: 18,
+    porForma: [
+      { forma: 'dinheiro' as const, total: 30000 },
+      { forma: 'pix' as const, total: 60000 },
+      { forma: 'credito' as const, total: 33000 },
+      { forma: 'debito' as const, total: 0 },
+    ],
+  };
+
+  it('sem diferença: total, comandas e formas, do maior para o menor', () => {
+    const a = avisoCaixaFechado({
+      caixaId: 'c1',
+      unidade: 'Centro',
+      dia: '2026-11-14',
+      fechadoPor: 'Marina Souza',
+      totais,
+    });
+    expect(a.tipo).toBe('caixa_fechado');
+    expect(a.titulo).toBe('Caixa de 14/11 fechado · Centro');
+    expect(a.texto).toContain('recebidos em 18 comandas: Pix');
+    expect(a.texto).toContain('Gaveta conferida, sem diferença. Fechado por Marina.');
+    expect(a.texto).not.toMatch(/Débito/);
+    expect(
+      destinatariosDoAviso('caixa_fechado', [
+        { usuarioId: 'r', papeis: ['recepcao'] },
+        { usuarioId: 'd', papeis: ['dono'] },
+      ]),
+    ).toEqual(['d']);
+  });
+
+  it('com diferença, o aviso de diferença leva os mesmos totais', () => {
+    const a = avisoCaixaDivergente({
+      caixaId: 'c1',
+      unidade: 'Centro',
+      dia: '2026-11-14',
+      totalSistema: 30000,
+      totalInformado: 28000,
+      fechadoPor: null,
+      totais,
+    });
+    expect(a?.texto).toContain('faltam');
+    expect(a?.texto).toContain('recebidos em 18 comandas');
   });
 });
