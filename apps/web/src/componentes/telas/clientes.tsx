@@ -43,6 +43,12 @@ export function TelaClientes() {
   // "Ver cliente" das Conversas abre a ficha direto (/clientes?id=).
   const idDoLink = useSearchParams().get('id');
   const [aberto, setAberto] = useState<string | null>(idDoLink);
+  // A busca global (Ctrl+K) troca o ?id= com a tela já aberta: abre a ficha do novo link.
+  const [linkVisto, setLinkVisto] = useState(idDoLink);
+  if (idDoLink !== linkVisto) {
+    setLinkVisto(idDoLink);
+    if (idDoLink) setAberto(idDoLink);
+  }
   const [novo, setNovo] = useState(false);
   const lista = <ListaClientes onAbrir={setAberto} />;
 

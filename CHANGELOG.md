@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (busca global)
+
+- Novo botão "Procurar" no menu (e na barra de cima, no celular), que também abre com Ctrl+K (⌘K no Mac). Numa caixa só, acha:
+  - uma tela pelo nome ou por uma palavra do dia a dia ("despesa" leva ao Financeiro, "site" à Minha página);
+  - um cliente pelo nome ou pelo telefone;
+  - uma comanda de hoje pelo nome do cliente.
+- As setas escolhem, Enter abre e Esc fecha. Só aparecem as telas que o papel da pessoa abre.
+- Correção: abrir um cliente pela busca com a tela de Clientes já aberta agora abre a ficha dele.
+
 ### Adicionado (saúde da conta no Início)
 
 - O quadro "Precisa de você agora", no Início, passou a avisar também:

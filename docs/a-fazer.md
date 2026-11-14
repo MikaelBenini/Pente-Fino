@@ -401,7 +401,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
 - [x] Saúde da conta no Início (WhatsApp, link, caixa de ontem, comandas paradas) (14/11, no quadro "Precisa de você agora")
 - [ ] Resumo do fechamento de caixa enviado ao dono
 - [ ] Histórico visível por comanda
-- [ ] Busca global (Ctrl+K)
+- [x] Busca global (Ctrl+K) (botão "Procurar"; telas, clientes e comandas de hoje)
 - [ ] Modo recepção (tela grande)
 
 ## 8. Perto do fim
