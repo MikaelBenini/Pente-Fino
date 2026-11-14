@@ -34,6 +34,7 @@ import { CobrancaAdmin, InicioAdmin } from './inicio-admin';
 import { ConfiguracoesAdmin, SaudeAdmin } from './config-admin';
 import { ChatAdmin, useAvisosDoChat } from './chat-admin';
 import { NovaVenda, VendasPorOrigemAdmin, VendasPorVendedor } from './nova-venda';
+import { VisitasSiteAdmin } from './visitas-admin';
 
 const CHAVE_EU = ['admin', 'eu'] as const;
 const NOME_STATUS: Record<ContaNaPlataforma['status'], string> = {
@@ -273,6 +274,7 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
       rotulo: 'Vendas',
       conteudo: (
         <div className="flex flex-col gap-8">
+          <VisitasSiteAdmin />
           <VendasPorOrigemAdmin />
           <VendasPorVendedor />
         </div>

@@ -219,6 +219,21 @@ export async function apagarContaNaLimpeza(
 }
 
 /** Sessões da administração vencidas ou encerradas há mais de 90 dias. */
+/** Eventos anônimos da página de vendas com mais de 90 dias (tabela da administração). */
+export async function limparVisitasDoSite(
+  prisma: PrismaClient,
+  lote = LOTE_LIMPEZA,
+): Promise<number> {
+  let total = 0;
+  for (;;) {
+    const [r] = await prisma.$queryRaw<{ n: number }[]>`
+      SELECT limpar_visitas_site(${DIAS_GUARDA}::int, ${lote}::int) AS n`;
+    const n = Number(r?.n ?? 0);
+    total += n;
+    if (n < lote) return total;
+  }
+}
+
 export async function limparSessoesDaAdministracao(
   prisma: PrismaClient,
   lote = LOTE_LIMPEZA,

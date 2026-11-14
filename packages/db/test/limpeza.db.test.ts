@@ -11,6 +11,7 @@ import {
   criarPrisma,
   limparDadosDaConta,
   limparSessoesDaAdministracao,
+  limparVisitasDoSite,
   naConta,
   situacaoDaContaNaLimpeza,
   type PrismaClient,
@@ -187,6 +188,19 @@ describe('limpeza de dados', () => {
     });
     expect(registro).toMatchObject({ depois: { conta: 'Barbearia Cancelada' } });
     expect(registro.motivo).toContain('90 dias');
+  });
+
+  it('visitas da página de vendas: passou de 90 dias sai; a aplicação não lê a tabela', async () => {
+    const visitaId = randomUUID();
+    await plataforma.eventoVisitaSite.createMany({
+      data: [
+        { visitaId, tipo: 'entrada', pagina: '/', criadoEm: new Date('2020-01-01') },
+        { visitaId, tipo: 'clique', pagina: '/', valor: 'planos' },
+      ],
+    });
+    expect(await limparVisitasDoSite(app)).toBeGreaterThanOrEqual(1);
+    expect(await plataforma.eventoVisitaSite.count({ where: { visitaId } })).toBe(1);
+    await expect(app.eventoVisitaSite.count()).rejects.toThrow();
   });
 
   it('sessões antigas da administração saem; a rotina grava a execução', async () => {

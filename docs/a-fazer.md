@@ -294,9 +294,9 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
 6. [x] Lote 7g: quem faz cada serviço, com foto (site e agendamento)
 7. [x] Lote 7h: páginas extras Galeria e Clube de assinatura
 8. [x] Lotes 7i, 7j e 7k: temas Clube, Letreiro e Estúdio
-9. Resto da seção 7: saúde da conta no Início, resumo do fechamento de caixa, histórico por
+9. [x] Resto da seção 7: saúde da conta no Início, resumo do fechamento de caixa, histórico por
    comanda, busca global (Ctrl+K) e modo recepção
-10. Saber o que o visitante faz na página de vendas (painel no /admin)
+10. [x] Saber o que o visitante faz na página de vendas (painel no /admin)
 11. Seção 8: plano Agenda (com a regra do cupom), página "Sobre" (N5), página de vendas
     atualizada e vídeo novo
 12. Revisão dos campos de entrada e das validações (CPF, máscaras, avisos das caixas de marcar)
@@ -393,7 +393,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
       exemplo cardápio de produtos ou Instagram) e, para quem quiser ir além, um CSS
       personalizado, aplicado só no site dele e filtrado (sem `@import`, sem `url()` de fora,
       sem `expression`), com um limite de tamanho;
-- [ ] **Saber o que o visitante faz na página de vendas** (pedido do dono em 13/11,
+- [x] **Saber o que o visitante faz na página de vendas** (14/11, quadro na aba Vendas do `/admin`) (pedido do dono em 13/11,
   `seupentefino.com.br`): se um visitante novo entrou, até onde rolou a página, em quais botões
   clicou (planos, cadastro, WhatsApp, vídeo, chat) e de onde veio; painel no `/admin` com o
   funil do dia e da semana. Feito por nós, sem cookie de terceiros (só um id anônimo da visita),

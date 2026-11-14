@@ -3,6 +3,7 @@ import { FaixaOferta } from '@/componentes/site/oferta-lancamento';
 import { RodapeSite } from '@/componentes/site/rodape-site';
 import { AvisoCookies, TagGoogle } from '@/componentes/site/tag-google';
 import { ChatSite } from '@/componentes/site/chat-site';
+import { MedicaoVisita } from '@/componentes/site/medicao-visita';
 
 export default function LayoutSite({ children }: LayoutProps<'/'>) {
   return (
@@ -22,6 +23,7 @@ export default function LayoutSite({ children }: LayoutProps<'/'>) {
       {/* Admin F6: chat com a equipe no lugar do botão do WhatsApp. */}
       <ChatSite />
       <TagGoogle />
+      <MedicaoVisita />
       <AvisoCookies />
     </div>
   );

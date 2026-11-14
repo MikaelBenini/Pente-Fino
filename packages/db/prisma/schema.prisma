@@ -1942,3 +1942,24 @@ model EnderecoAntigo {
   @@index([tipo, slug])
   @@map("endereco_antigo")
 }
+
+/// O que o visitante faz na página de vendas (pedido do dono em 13/11): um evento anônimo por
+/// entrada, marca de rolagem ou clique. Sem dado pessoal; tabela só da administração.
+model EventoVisitaSite {
+  id       String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  visitaId String   @map("visita_id") @db.Uuid
+  /// true = primeira visita neste navegador; null = sem aceite de cookies.
+  novo     Boolean?
+  /// utm_source, "google ads" ou o domínio de origem; null = direto.
+  origem   String?
+  /// "entrada", "rolagem" ou "clique".
+  tipo     String
+  pagina   String
+  /// Rolagem: 25, 50, 75 ou 100; clique: o alvo (planos, cadastro, whatsapp, video, chat).
+  valor    String?
+  criadoEm DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  @@index([criadoEm])
+  @@index([visitaId])
+  @@map("evento_visita_site")
+}
