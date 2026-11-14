@@ -400,7 +400,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
   respeitando o aviso de cookies e o "não rastrear" do navegador;
 - [x] Saúde da conta no Início (WhatsApp, link, caixa de ontem, comandas paradas) (14/11, no quadro "Precisa de você agora")
 - [x] Resumo do fechamento de caixa enviado ao dono (14/11, aviso "caixa fechado" e fim do dia pelo horário da unidade)
-- [ ] Histórico visível por comanda
+- [x] Histórico visível por comanda (seção "Histórico" na tela da comanda, `GET /comandas/:id/historico`)
 - [ ] Busca global (Ctrl+K)
 - [x] Modo recepção (tela grande) (botão "Modo recepção" em Comandas, `/comandas?modo=recepcao`)
 

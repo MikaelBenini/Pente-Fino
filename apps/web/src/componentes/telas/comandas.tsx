@@ -13,6 +13,7 @@ import {
   valorParaCampo,
   type AcaoComanda,
   type ComandaDetalhe,
+  type EventoComanda,
   type ComandaResumo,
   type ItemComandaDetalhe,
   disponivelNaUnidade,
@@ -28,6 +29,7 @@ import {
   ModalConfirmacao,
   Selecao,
 } from '@pente-fino/ui';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Minus,
@@ -342,6 +344,58 @@ function DetalheComanda({ id }: { id: string }) {
       </Link>
       <Estado consulta={comanda}>{() => <Comanda c={comanda.data!} />}</Estado>
     </div>
+  );
+}
+
+/**
+ * Seção 7: a linha do tempo da comanda (aberta, itens, pagamentos, fechar, reabrir com motivo...).
+ * Só busca ao abrir; a chave fica sob o detalhe, então qualquer ação na comanda a atualiza.
+ */
+function HistoricoComanda({ id }: { id: string }) {
+  const [aberto, setAberto] = useState(false);
+  const historico = useQuery({
+    queryKey: [...chavesOperacao.comandas, 'detalhe', id, 'historico'],
+    queryFn: () => api<EventoComanda[]>(`comandas/${id}/historico`),
+    enabled: aberto,
+  });
+  const tom: Record<EventoComanda['tom'], string> = {
+    neutro: 'bg-tinta-suave',
+    aviso: 'bg-aviso-texto',
+    perigo: 'bg-perigo',
+  };
+  return (
+    <details
+      className="rounded-lg border border-borda bg-superficie"
+      onToggle={(e) => setAberto(e.currentTarget.open)}
+    >
+      <summary className="flex min-h-11 cursor-pointer items-center px-4 font-medium">
+        Histórico
+      </summary>
+      <div className="border-t border-borda px-4 py-3">
+        {historico.isPending ? (
+          <p className="text-tinta-suave">Carregando…</p>
+        ) : historico.isError ? (
+          <p className="text-perigo-texto">
+            Não deu para carregar o histórico. Feche e abra de novo.
+          </p>
+        ) : (
+          <ol className="flex flex-col gap-3" aria-label="Histórico da comanda">
+            {historico.data.map((e, i) => (
+              <li key={i} className="flex gap-3">
+                <span aria-hidden className={`mt-2 size-2 shrink-0 rounded-full ${tom[e.tom]}`} />
+                <div className="min-w-0">
+                  <p>{e.texto}</p>
+                  <p className="text-sm text-tinta-suave">
+                    {formatarDiaPorExtenso(e.quando)}, {formatarHora(e.quando)}
+                    {e.quem && ` · ${e.quem}`}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -679,6 +733,7 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
             </div>
           ))}
         </dl>
+        <HistoricoComanda id={c.id} />
       </section>
 
       <aside className="flex flex-col gap-4" aria-label="Ações da comanda">
