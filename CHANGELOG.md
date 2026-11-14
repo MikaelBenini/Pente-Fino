@@ -18,6 +18,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - A medição é nossa e sem dado pessoal: um número anônimo por visita, que some ao fechar a aba. "Primeira vez" só conta para quem aceitou os cookies, e quem liga o "não rastrear" do navegador fica de fora.
 - Os eventos com mais de 90 dias saem na limpeza diária ("Visitas à página de vendas" na Saúde do sistema).
 
+### Adicionado (busca global)
+
+- Novo botão "Procurar" no menu (e na barra de cima, no celular), que também abre com Ctrl+K (⌘K no Mac). Numa caixa só, acha:
+  - uma tela pelo nome ou por uma palavra do dia a dia ("despesa" leva ao Financeiro, "site" à Minha página);
+  - um cliente pelo nome ou pelo telefone;
+  - uma comanda de hoje pelo nome do cliente.
+- As setas escolhem, Enter abre e Esc fecha. Só aparecem as telas que o papel da pessoa abre.
+- Correção: abrir um cliente pela busca com a tela de Clientes já aberta agora abre a ficha dele.
+
 ### Adicionado (modo recepção)
 
 - A tela de Comandas ganhou o botão "Modo recepção", para o monitor do balcão. Em letra grande, mostra a fila do dia:
