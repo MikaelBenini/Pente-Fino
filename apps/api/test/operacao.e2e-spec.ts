@@ -377,6 +377,18 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
     await prisma.$disconnect();
     expect(auditoria.map((a) => a.acao)).toEqual(['fechar', 'reabrir', 'fechar']);
     expect(auditoria[1]!.motivo).toBe('Pagamento lançado errado');
+
+    // Seção 7: o histórico da comanda conta essa história em ordem, com quem fez.
+    const historico = (await recepcao.get(`/comandas/${comanda}/historico`).expect(200)).body as {
+      texto: string;
+      quem: string | null;
+    }[];
+    const textos = historico.map((e) => e.texto);
+    expect(textos[0]).toMatch(/^Comanda aberta/);
+    expect(textos.filter((x) => x === 'Comanda fechada')).toHaveLength(2);
+    expect(historico.find((e) => e.texto.startsWith('Comanda reaberta'))?.texto).toBe(
+      'Comanda reaberta: Pagamento lançado errado',
+    );
   });
 
   it('caixa: entradas por forma, fechar com divergência e travar o dia', async () => {

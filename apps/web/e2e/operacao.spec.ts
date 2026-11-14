@@ -213,6 +213,14 @@ test('agendar, atender, confirmar, receber e reabrir', async ({ browser }, info)
   await expect(
     gestor.getByText('Reaberta', { exact: true }).filter({ visible: true }),
   ).toBeVisible();
+
+  // Seção 7: o histórico conta o que aconteceu, com o motivo da reabertura.
+  await gestor.locator('summary:visible', { hasText: 'Histórico' }).click();
+  const linha = gestor.getByRole('list', { name: 'Histórico da comanda' });
+  await expect(linha.getByText('Comanda fechada')).toBeVisible();
+  await expect(
+    linha.getByText('Comanda reaberta: Forma de pagamento lançada errada'),
+  ).toBeVisible();
 });
 
 test('A2: atendimento de outro dia não é recebido antes de acontecer', async ({

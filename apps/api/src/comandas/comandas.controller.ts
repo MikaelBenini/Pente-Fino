@@ -74,6 +74,15 @@ export class ComandasController {
     return new StreamableFile(Buffer.from(pdf));
   }
 
+  @Get(':id/historico')
+  @Papeis(...TODOS)
+  @ApiOperation({
+    summary: 'Linha do tempo da comanda: abertura, itens, pagamentos, fechar e reabrir',
+  })
+  historico(@Param('id', ParseUUIDPipe) id: string) {
+    return this.servico.historico(id);
+  }
+
   @Get(':id')
   @Papeis(...TODOS)
   @ApiOperation({ summary: 'Comanda com itens e pagamentos' })

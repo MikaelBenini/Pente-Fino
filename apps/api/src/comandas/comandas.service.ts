@@ -36,6 +36,8 @@ import {
   conferirPrecoLivre,
   podeDigitarPrecoLivre,
   restanteAposSinal,
+  historicoDaComanda,
+  type EventoComanda,
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import type { alterarItemSchema } from '@pente-fino/shared';
@@ -257,6 +259,62 @@ export class ComandasService {
       (id) => `${this.config.appUrl}/comandas?id=${id}`,
       `Comandas ${dia}`,
     );
+  }
+
+  /** Seção 7: a linha do tempo da comanda (quem pode ver a comanda vê o histórico). */
+  async historico(id: string): Promise<EventoComanda[]> {
+    return this.banco.daConta(async (tx) => {
+      await this.carregar(tx, id);
+      const c = await tx.comanda.findUniqueOrThrow({
+        where: { id },
+        include: {
+          itens: {
+            include: { servico: { select: { nome: true } }, produto: { select: { nome: true } } },
+          },
+          pagamentos: true,
+        },
+      });
+      const auditoria = await tx.auditoria.findMany({
+        where: { entidade: 'comanda', entidadeId: id },
+        include: { usuario: { select: { nome: true } } },
+        orderBy: { criadoEm: 'asc' },
+      });
+      const nomes = new Map(
+        (
+          await tx.usuario.findMany({
+            where: {
+              id: { in: [c.confirmadaPorId, c.fechadaPorId].filter((x): x is string => !!x) },
+            },
+            select: { id: true, nome: true },
+          })
+        ).map((u) => [u.id, u.nome.split(' ')[0]!]),
+      );
+      return historicoDaComanda({
+        criadaEm: c.criadoEm.toISOString(),
+        iniciadaEm: c.iniciadaEm?.toISOString() ?? null,
+        confirmadaEm: c.confirmadaEm?.toISOString() ?? null,
+        confirmadaPor: c.confirmadaPorId ? (nomes.get(c.confirmadaPorId) ?? null) : null,
+        fechadaEm: c.fechadaEm?.toISOString() ?? null,
+        fechadaPor: c.fechadaPorId ? (nomes.get(c.fechadaPorId) ?? null) : null,
+        itens: c.itens.map((i) => ({
+          nome: i.descricao ?? i.servico?.nome ?? i.produto?.nome ?? 'Item',
+          criadoEm: i.criadoEm.toISOString(),
+        })),
+        pagamentos: c.pagamentos.map((p) => ({
+          forma: p.forma,
+          valor: p.valor,
+          criadoEm: p.criadoEm.toISOString(),
+          sinal: p.sinal,
+          devolvidoEm: p.devolvidoEm?.toISOString() ?? null,
+        })),
+        auditoria: auditoria.map((a) => ({
+          acao: a.acao,
+          criadoEm: a.criadoEm.toISOString(),
+          quem: a.usuario?.nome.split(' ')[0] ?? null,
+          motivo: a.motivo,
+        })),
+      });
+    });
   }
 
   async buscar(id: string): Promise<ComandaDetalhe> {
