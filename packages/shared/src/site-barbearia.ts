@@ -3,7 +3,7 @@
 // os dados vivos (serviços, preços, equipe, nota, horário) vêm do sistema na hora de mostrar.
 import { z } from 'zod';
 
-export const TEMAS_SITE = ['tradicional'] as const;
+export const TEMAS_SITE = ['tradicional', 'clube', 'letreiro', 'estudio'] as const;
 export type TemaSite = (typeof TEMAS_SITE)[number];
 
 /**
@@ -962,3 +962,121 @@ export interface VisualAgendamentoPublico {
   /** Endereço do site publicado (/s/...), quando o dono quer o link para ele. */
   site: string | null;
 }
+
+// ─── Temas (lotes 7i, 7j e 7k) ──────────────────────────────────────────────
+
+export const ROTULO_TEMA: Record<TemaSite, { nome: string; descricao: string }> = {
+  tradicional: {
+    nome: 'Tradicional',
+    descricao: 'Verde-garrafa e papel, cara de barbearia de bairro.',
+  },
+  clube: { nome: 'Clube', descricao: 'Escuro, couro e marfim: elegante, de barbearia premium.' },
+  letreiro: { nome: 'Letreiro', descricao: 'Claro, azul-marinho e a faixa listrada de barbearia.' },
+  estudio: { nome: 'Estúdio', descricao: 'Concreto e preto, moderno e minimalista.' },
+};
+
+/** Fonte que combina com cada tema (o dono pode trocar depois). */
+export const FONTE_DO_TEMA: Record<TemaSite, FonteSite> = {
+  tradicional: 'serifa',
+  clube: 'serifa',
+  letreiro: 'letreiro',
+  estudio: 'condensada',
+};
+
+export interface PaletaSite {
+  /** Fundos escuros (cabeçalho, faixas) e o texto dos botões de destaque. */
+  escuro: string;
+  escuro2: string;
+  escuroBorda: string;
+  /** Texto sobre o escuro. */
+  claro: string;
+  claroSuave: string;
+  rodape: string;
+  rodapeSuave: string;
+  rodapeLinha: string;
+  /** Fundo da página, dos cartões e o texto sobre eles. */
+  papel: string;
+  cartao: string;
+  tinta: string;
+  tintaMedia: string;
+  tintaSuave: string;
+  link: string;
+  linha: string;
+  realce: string;
+}
+
+/** Paletas dos temas; o teste confere o contraste de cada par usado na página. */
+export const PALETAS_SITE: Record<TemaSite, PaletaSite> = {
+  tradicional: {
+    escuro: '#14271C',
+    escuro2: '#1C3426',
+    escuroBorda: '#4E6A57',
+    claro: '#F2F1EC',
+    claroSuave: '#C9D2CB',
+    rodape: '#0F1E15',
+    rodapeSuave: '#8FA095',
+    rodapeLinha: '#22372A',
+    papel: '#F5F4F0',
+    cartao: '#FFFFFF',
+    tinta: '#1A221D',
+    tintaMedia: '#3E4842',
+    tintaSuave: '#4C554F',
+    link: '#1F5135',
+    linha: '#DAD8D0',
+    realce: '#6E5520',
+  },
+  clube: {
+    escuro: '#1E1714',
+    escuro2: '#2A201B',
+    escuroBorda: '#5A4A40',
+    claro: '#F2EBE3',
+    claroSuave: '#CDBFB0',
+    rodape: '#15100E',
+    rodapeSuave: '#A89A8E',
+    rodapeLinha: '#3A2E28',
+    papel: '#231A16',
+    cartao: '#2E241F',
+    tinta: '#F2EBE3',
+    tintaMedia: '#E3D7CA',
+    tintaSuave: '#CDBFB0',
+    link: '#E3C48F',
+    linha: '#46382F',
+    realce: '#E3C48F',
+  },
+  letreiro: {
+    escuro: '#1C2D5A',
+    escuro2: '#24386B',
+    escuroBorda: '#5A6FA8',
+    claro: '#FFFFFF',
+    claroSuave: '#D3DBF0',
+    rodape: '#13204A',
+    rodapeSuave: '#AAB6D9',
+    rodapeLinha: '#2A3C70',
+    papel: '#FFFFFF',
+    cartao: '#F4F6FB',
+    tinta: '#1C2D5A',
+    tintaMedia: '#33416A',
+    tintaSuave: '#4A587A',
+    link: '#1C2D5A',
+    linha: '#D5DAE6',
+    realce: '#9B2335',
+  },
+  estudio: {
+    escuro: '#1A1A1A',
+    escuro2: '#262626',
+    escuroBorda: '#5C5C5C',
+    claro: '#F2F2EF',
+    claroSuave: '#C4C4BE',
+    rodape: '#111111',
+    rodapeSuave: '#9A9A94',
+    rodapeLinha: '#2E2E2E',
+    papel: '#E6E5E0',
+    cartao: '#F4F4F1',
+    tinta: '#1A1A1A',
+    tintaMedia: '#33342F',
+    tintaSuave: '#4A4B45',
+    link: '#1A1A1A',
+    linha: '#BDBDB6',
+    realce: '#4F5D2F',
+  },
+};

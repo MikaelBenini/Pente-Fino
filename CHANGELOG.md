@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (temas do site: Clube, Letreiro e Estúdio)
+
+- Na aba Tema de "Minha página", o dono escolhe o estilo do site entre quatro:
+  - Tradicional: verde-garrafa e papel;
+  - Clube: escuro, couro e marfim, elegante;
+  - Letreiro: claro, azul-marinho, com a faixa listrada de barbearia no topo e fonte de letreiro;
+  - Estúdio: concreto e preto, títulos condensados, moderno.
+- Os quatro usam os mesmos blocos, textos e fotos: trocar de estilo não apaga nada. A cor de destaque, a fonte e o formato dos botões continuam ajustáveis.
+
 ### Adicionado (páginas extras no site: Galeria e Clube)
 
 - Em "Minha página", o quadro "Páginas extras" liga duas páginas novas no site, que entram no menu:

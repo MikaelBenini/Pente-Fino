@@ -7,6 +7,10 @@ import {
   BLOCOS_SITE,
   BOTOES_SITE,
   CAMINHO_PAGINA,
+  FONTE_DO_TEMA,
+  PALETAS_SITE,
+  ROTULO_TEMA,
+  TEMAS_SITE,
   PAGINAS_EXTRAS,
   blocosDaPagina,
   desligarPagina,
@@ -830,13 +834,39 @@ function Tema({ site, onMudar }: { site: SiteBarbearia; onMudar: (s: SiteBarbear
           onMudar({ ...site, logo: f?.id });
         }}
       />
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium">Estilo</p>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-medium">Estilo</legend>
         <p className="text-sm text-tinta-suave">
-          Tradicional. Os estilos Clube, Letreiro e Estúdio chegam em breve, com os mesmos blocos:
-          trocar não apaga nada.
+          Os quatro usam os mesmos blocos e textos: trocar não apaga nada.
         </p>
-      </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {TEMAS_SITE.map((t) => {
+            const p = PALETAS_SITE[t];
+            return (
+              <label
+                key={t}
+                className="flex cursor-pointer flex-col gap-2 rounded-md border border-borda p-3 has-[:checked]:border-acao-texto has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-foco"
+              >
+                <input
+                  type="radio"
+                  name="tema-site"
+                  value={t}
+                  checked={site.tema === t}
+                  onChange={() => onMudar({ ...site, tema: t, fonte: FONTE_DO_TEMA[t] })}
+                  className="sr-only"
+                />
+                <span aria-hidden className="flex h-10 overflow-hidden rounded-sm">
+                  <span className="flex-1" style={{ background: p.escuro }} />
+                  <span className="flex-1" style={{ background: p.papel }} />
+                  <span className="w-6" style={{ background: CORES_SITE[site.cor].hex }} />
+                </span>
+                <span className="font-medium">{ROTULO_TEMA[t].nome}</span>
+                <span className="text-sm text-tinta-suave">{ROTULO_TEMA[t].descricao}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium">Cor de destaque</legend>
         <div className="flex flex-wrap gap-3">

@@ -450,6 +450,26 @@ dialog[open]::backdrop {
 .site-botao:hover::after {
   animation: site-brilho 750ms var(--curva-saida);
 }
+/* Temas do site (lotes 7i, 7j e 7k): a paleta vem em variáveis; aqui, só os detalhes de cada um. */
+.site-tema-letreiro .site-cabecalho {
+  border-top: 8px solid transparent;
+  border-image: repeating-linear-gradient(
+      -45deg,
+      #c8102e 0 12px,
+      #ffffff 12px 24px,
+      #1c2d5a 24px 36px,
+      #ffffff 36px 48px
+    )
+    8;
+}
+.site-tema-estudio h1,
+.site-tema-estudio h2 {
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+.site-tema-clube h1 {
+  letter-spacing: 0.01em;
+}
 .site-cartao {
   transition:
     transform var(--ritmo) var(--curva-saida),
@@ -486,7 +506,7 @@ dialog[open]::backdrop {
   }
   @keyframes site-cabecalho {
     to {
-      background-color: rgb(20 39 28 / 0.86);
+      background-color: color-mix(in srgb, var(--site-escuro) 86%, transparent);
       backdrop-filter: blur(14px) saturate(1.2);
       box-shadow: 0 14px 30px -22px rgb(0 0 0 / 0.7);
     }
