@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { siteInicial } from '@pente-fino/shared';
 
 // Seção 7, lote 7a: o site da barbearia no tema Tradicional. O dono publica (pela API, até o
 // painel do lote 7b), o cliente navega por Início, Serviços, Equipe e Contato e chega ao
@@ -33,9 +34,10 @@ test('site da barbearia: Início, páginas internas, agendar e tirar do ar', asy
   await entrar(page);
   const unidades = (await api(page, 'unidades')).corpo as { id: string; slug: string | null }[];
   const id = unidades.find((u) => u.slug === SLUG)!.id;
-  const { rascunho } = (await api(page, `unidades/${id}/site`)).corpo;
+  // Começa da página sugerida: outro teste pode ter deixado o rascunho mexido.
+  const rascunho = siteInicial('Barbearia Pente Fino (demonstração)');
   rascunho.instagram = 'barbeariademo';
-  rascunho.paginas.inicio[0].titulo = 'Corte com hora marcada nos Jardins';
+  rascunho.paginas.inicio[0]!.titulo = 'Corte com hora marcada nos Jardins';
   expect((await api(page, `unidades/${id}/site`, 'PUT', rascunho)).status).toBe(200);
   const publicado = await api(page, `unidades/${id}/site/publicar`, 'POST');
   expect(publicado.status).toBe(200);
