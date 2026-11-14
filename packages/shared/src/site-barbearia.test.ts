@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCOS_SITE,
+  fotosDoVisual,
+  lerVisualAgendamento,
+  visualAgendamentoInicial,
+  visualAgendamentoSchema,
+  cabecalhoDoSite,
+  limparCssSite,
+  rodapeDoSite,
+  urlDeLinkValida,
   dominioSchema,
   normalizarDominio,
   NOME_ARQUIVO_FOTO,
@@ -184,7 +192,7 @@ describe('operações do painel (lote 7b)', () => {
       visivel: false,
     });
     s = removerBloco(s, 'inicio', 'sobre');
-    expect(blocosParaAdicionar(s, 'inicio')).toEqual(['sobre']);
+    expect(blocosParaAdicionar(s, 'inicio')).toEqual(['sobre', 'botoes']);
     s = adicionarBloco(s, 'inicio', 'sobre', 'Navalha');
     expect(tipos(s).slice(-2)).toEqual(['sobre', 'agendar']);
     expect(s.paginas.inicio.find((b) => b.tipo === 'sobre')?.titulo).toBe('Conheça a Navalha');
@@ -192,10 +200,10 @@ describe('operações do painel (lote 7b)', () => {
   });
 
   it('não repete bloco nem põe bloco de outra página', () => {
-    expect(blocosParaAdicionar(base, 'inicio')).toEqual([]);
+    expect(blocosParaAdicionar(base, 'inicio')).toEqual(['botoes']);
     expect(adicionarBloco(base, 'inicio', 'tabela', 'X')).toBe(base);
     const sem = removerBloco(base, 'contato', 'perguntas');
-    expect(blocosParaAdicionar(sem, 'contato')).toEqual(['perguntas']);
+    expect(blocosParaAdicionar(sem, 'contato')).toEqual(['perguntas', 'botoes']);
   });
 });
 
@@ -261,5 +269,86 @@ describe('domínio próprio (lote 7e)', () => {
       dominio: 'navalha.com.br',
     });
     expect(dominioSchema.safeParse({ dominio: 'nada' }).success).toBe(false);
+  });
+});
+
+describe('cabeçalho, rodapé, botões e CSS (lotes 7m e 7n)', () => {
+  it('cabeçalho e rodapé têm o padrão de sempre e respeitam o que o dono mudou', () => {
+    const base = siteInicial('X');
+    expect(cabecalhoDoSite(base)).toMatchObject({ mostrar: 'ambos', botao: '', links: [] });
+    expect(cabecalhoDoSite(base).menu.map((m) => m.pagina)).toEqual([
+      'inicio',
+      'servicos',
+      'equipe',
+      'contato',
+    ]);
+    const mudado = {
+      ...base,
+      cabecalho: {
+        mostrar: 'logo' as const,
+        menu: [
+          { pagina: 'contato' as const, rotulo: 'Onde estamos', visivel: true },
+          { pagina: 'equipe' as const, rotulo: '', visivel: false },
+        ],
+        botao: 'Marcar agora',
+        links: [{ rotulo: 'Loja', url: 'https://loja.exemplo.com.br' }],
+      },
+    };
+    expect(siteBarbeariaSchema.safeParse(mudado).success).toBe(true);
+    expect(cabecalhoDoSite(mudado).menu.map((m) => m.pagina)).toEqual([
+      'contato',
+      'equipe',
+      'inicio',
+      'servicos',
+    ]);
+    expect(rodapeDoSite(base)).toMatchObject({ creditos: true, endereco: true, links: [] });
+  });
+
+  it('links só da web, nunca script', () => {
+    expect(urlDeLinkValida('https://loja.exemplo.com.br/x')).toBe(true);
+    expect(urlDeLinkValida('javascript:alert(1)')).toBe(false);
+    expect(urlDeLinkValida('data:text/html,oi')).toBe(false);
+    expect(urlDeLinkValida('loja.com')).toBe(false);
+    const base = siteInicial('X');
+    const ruim = {
+      ...base,
+      paginas: {
+        ...base.paginas,
+        inicio: [
+          ...base.paginas.inicio,
+          {
+            id: 'botoes',
+            tipo: 'botoes' as const,
+            visivel: true,
+            itens: [{ titulo: 'Clique', texto: 'javascript:alert(1)' }],
+          },
+        ],
+      },
+    };
+    expect(siteBarbeariaSchema.safeParse(ruim).success).toBe(false);
+  });
+
+  it('CSS do dono sai limpo: nada de fora, nada que rode código, nada que feche a tag', () => {
+    const sujo = `@import url(https://mal.com/x.css);
+.banner { background: url("https://rastreio.com/p.gif"); color: red; }
+</style><script>alert(1)</script>
+div { width: expression(alert(1)); behavior: url(x.htc); }
+a { background: u\\rl(https://x.com) }`;
+    const limpo = limparCssSite(sujo);
+    expect(limpo).not.toMatch(/@import|url\(|<\/style|expression\(|(^|[\s;{])behavior:|\\/i);
+    expect(limpo).toContain('color: red;');
+    expect(limparCssSite(undefined)).toBe('');
+  });
+});
+
+describe('visual da página de agendamento (lote 7l)', () => {
+  it('começa desligado, com a cor e o logotipo do site', () => {
+    const logo = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b';
+    const v = visualAgendamentoInicial({ ...siteInicial('X'), cor: 'salvia', logo });
+    expect(v).toEqual({ ativo: false, cor: 'salvia', logo, titulo: '', texto: '', linkSite: true });
+    expect(visualAgendamentoSchema.safeParse(v).success).toBe(true);
+    expect(fotosDoVisual({ ...v, capa: logo })).toEqual([logo, logo]);
+    expect(lerVisualAgendamento({ ativo: 'sim' })).toBeNull();
+    expect(visualAgendamentoInicial(null).cor).toBe('latao');
   });
 });

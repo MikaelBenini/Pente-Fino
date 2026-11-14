@@ -106,6 +106,13 @@ export const BLOCOS_SITE = {
     titulo: true,
     texto: true,
   },
+  /** Lote 7m: botões próprios com link (cardápio, loja, Instagram...). */
+  botoes: {
+    rotulo: 'Botões com link',
+    paginas: ['inicio', 'servicos', 'equipe', 'contato'],
+    titulo: true,
+    itens: { titulo: 'Texto do botão', texto: 'Endereço (https://...)' },
+  },
 } as const satisfies Record<string, DefinicaoBloco>;
 export type TipoBloco = keyof typeof BLOCOS_SITE;
 const TIPOS = Object.keys(BLOCOS_SITE) as [TipoBloco, ...TipoBloco[]];
@@ -149,9 +156,88 @@ const paginaSchema = (pagina: PaginaSite) =>
             message: `O bloco "${BLOCOS_SITE[b.tipo].rotulo}" não vai na página ${ROTULO_PAGINA[pagina]}.`,
           });
         if (ids.has(b.id)) ctx.addIssue({ code: 'custom', message: 'Bloco repetido.' });
+        if (b.tipo === 'botoes')
+          for (const i of b.itens ?? [])
+            if (i.texto && !urlDeLinkValida(i.texto))
+              ctx.addIssue({
+                code: 'custom',
+                message: `O botão "${i.titulo || 'sem texto'}" tem um endereço inválido: comece com https://`,
+              });
         ids.add(b.id);
       }
     });
+
+/** Link que o dono põe no site: só endereço da web (https), nunca script. */
+export function urlDeLinkValida(url: string): boolean {
+  try {
+    const u = new URL(url.trim());
+    return (u.protocol === 'https:' || u.protocol === 'http:') && !!u.hostname.includes('.');
+  } catch {
+    return false;
+  }
+}
+
+export const linkSiteSchema = z.object({
+  rotulo: z.string().trim().min(1, { error: 'Escreva o texto do link.' }).max(40),
+  url: z
+    .string()
+    .trim()
+    .max(500)
+    .refine(urlDeLinkValida, { error: 'Endereço inválido: comece com https://' }),
+});
+export type LinkSite = z.infer<typeof linkSiteSchema>;
+
+/** Cabeçalho editável (lote 7n). Ausente = o padrão de sempre. */
+export const cabecalhoSiteSchema = z.object({
+  /** O que aparece no canto: o nome, o logotipo ou os dois. */
+  mostrar: z.enum(['ambos', 'logo', 'nome']),
+  /** Itens do menu na ordem do dono, com o texto e se aparecem. */
+  menu: z
+    .array(
+      z.object({
+        pagina: z.enum(PAGINAS_SITE),
+        rotulo: z.string().trim().max(30),
+        visivel: z.boolean(),
+      }),
+    )
+    .max(PAGINAS_SITE.length),
+  /** Texto do botão principal ("Agendar horário" quando vazio). */
+  botao: z.string().trim().max(30),
+  /** Links próprios no menu. */
+  links: z.array(linkSiteSchema).max(3, { error: 'No máximo 3 links no menu.' }),
+});
+export type CabecalhoSite = z.infer<typeof cabecalhoSiteSchema>;
+
+/** Rodapé editável (lote 7n). */
+export const rodapeSiteSchema = z.object({
+  endereco: z.boolean(),
+  horario: z.boolean(),
+  contato: z.boolean(),
+  /** Texto livre (CNPJ, "aceitamos Pix"...). */
+  texto: z.string().trim().max(400),
+  links: z.array(linkSiteSchema).max(6, { error: 'No máximo 6 links no rodapé.' }),
+  /** Redes além do Instagram (endereço completo). */
+  facebook: z
+    .string()
+    .trim()
+    .max(300)
+    .refine((v) => !v || urlDeLinkValida(v), { error: 'Endereço do Facebook inválido.' }),
+  tiktok: z
+    .string()
+    .trim()
+    .max(300)
+    .refine((v) => !v || urlDeLinkValida(v), { error: 'Endereço do TikTok inválido.' }),
+  youtube: z
+    .string()
+    .trim()
+    .max(300)
+    .refine((v) => !v || urlDeLinkValida(v), { error: 'Endereço do YouTube inválido.' }),
+  /** A linha "Site e agenda pelo Pente Fino" (o dono pode desligar). */
+  creditos: z.boolean(),
+});
+export type RodapeSite = z.infer<typeof rodapeSiteSchema>;
+
+export const LIMITE_CSS_SITE = 8000;
 
 export const siteBarbeariaSchema = z.object({
   versao: z.literal(1),
@@ -175,6 +261,13 @@ export const siteBarbeariaSchema = z.object({
     equipe: paginaSchema('equipe'),
     contato: paginaSchema('contato'),
   }),
+  cabecalho: cabecalhoSiteSchema.optional(),
+  rodape: rodapeSiteSchema.optional(),
+  /** CSS do dono para ir além do tema (limpo por limparCssSite antes de entrar na página). */
+  css: z
+    .string()
+    .max(LIMITE_CSS_SITE, { error: `CSS grande demais (até ${LIMITE_CSS_SITE} letras).` })
+    .optional(),
   /** O que aparece de cada barbeiro (por id do profissional): especialidade e apresentação. */
   equipe: z
     .record(
@@ -666,4 +759,118 @@ export type DominioEntrada = z.infer<typeof dominioSchema>;
 export interface DominioPublico {
   siteSlug: string;
   slugAgendamento: string;
+}
+
+// ─── Cabeçalho, rodapé, botões e CSS (lotes 7m e 7n) ────────────────────────
+
+/** Cabeçalho com os valores de sempre onde o dono não mexeu. */
+export function cabecalhoDoSite(site: SiteBarbearia): CabecalhoSite {
+  const c = site.cabecalho;
+  const menu = PAGINAS_SITE.map(
+    (p) => c?.menu.find((m) => m.pagina === p) ?? { pagina: p, rotulo: '', visivel: true },
+  );
+  // A ordem do dono primeiro; página que faltar vai para o fim.
+  const ordem = c?.menu.map((m) => m.pagina) ?? [];
+  menu.sort((a, b) => {
+    const ia = ordem.indexOf(a.pagina);
+    const ib = ordem.indexOf(b.pagina);
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+  });
+  return { mostrar: c?.mostrar ?? 'ambos', menu, botao: c?.botao ?? '', links: c?.links ?? [] };
+}
+
+export function rodapeDoSite(site: SiteBarbearia): RodapeSite {
+  return (
+    site.rodape ?? {
+      endereco: true,
+      horario: true,
+      contato: true,
+      texto: '',
+      links: [],
+      facebook: '',
+      tiktok: '',
+      youtube: '',
+      creditos: true,
+    }
+  );
+}
+
+/**
+ * CSS do dono, limpo para entrar só no site dele: sem buscar nada de fora (@import, url()), sem
+ * truques antigos que rodam código (expression, behavior, -moz-binding, javascript:) e sem fechar
+ * a tag de estilo. O resultado vai dentro de `.site-personalizado { ... }` (aninhamento de CSS),
+ * então não alcança nada fora do site.
+ */
+export function limparCssSite(css: string | undefined): string {
+  if (!css) return '';
+  return (
+    css
+      .slice(0, LIMITE_CSS_SITE)
+      // Primeiro o que serve para disfarçar (barra invertida e comentários: u\\rl, u/**/rl).
+      .replace(/\\/g, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/<\/?\s*style/gi, '')
+      .replace(/<!--|-->/g, '')
+      .replace(/@import[^;]*;?/gi, '')
+      .replace(/@charset[^;]*;?/gi, '')
+      .replace(/@namespace[^;]*;?/gi, '')
+      .replace(/url\s*\([^)]*\)/gi, 'none')
+      .replace(/image-set\s*\([^)]*\)/gi, 'none')
+      .replace(/expression\s*\(/gi, '(')
+      .replace(/javascript\s*:/gi, '')
+      .replace(/behavior\s*:/gi, 'x-behavior:')
+      .replace(/-moz-binding/gi, 'x-moz-binding')
+      .trim()
+  );
+}
+
+// ─── Visual da página de agendamento (lote 7l) ──────────────────────────────
+
+/**
+ * A página de agendamento (/b/<link>) com a cara da barbearia: cor, logotipo, foto de capa e um
+ * texto de boas-vindas. Fica separado do site (decisão do dono: o site é uma coisa, o link é
+ * outra) e vale assim que salva. Desligado = o visual de sempre do Pente Fino.
+ */
+export const visualAgendamentoSchema = z.object({
+  ativo: z.boolean(),
+  cor: z.enum(IDS_CORES),
+  logo: fotoIdSchema.optional(),
+  capa: fotoIdSchema.optional(),
+  titulo: textoCurto(80),
+  texto: textoCurto(300),
+  /** Mostra "Ver o site da barbearia" (só quando o site está publicado). */
+  linkSite: z.boolean(),
+});
+export type VisualAgendamento = z.infer<typeof visualAgendamentoSchema>;
+
+/** Ponto de partida: o que o site já tem (cor e logotipo), desligado. */
+export function visualAgendamentoInicial(site?: SiteBarbearia | null): VisualAgendamento {
+  return {
+    ativo: false,
+    cor: site?.cor ?? 'latao',
+    ...(site?.logo ? { logo: site.logo } : {}),
+    titulo: '',
+    texto: '',
+    linkSite: true,
+  };
+}
+
+export function lerVisualAgendamento(valor: unknown): VisualAgendamento | null {
+  const r = visualAgendamentoSchema.safeParse(valor);
+  return r.success ? r.data : null;
+}
+
+export const fotosDoVisual = (v: VisualAgendamento) =>
+  [v.logo, v.capa].filter((x): x is string => !!x);
+
+/** O que a página de agendamento recebe (só quando o visual está ligado). */
+export interface VisualAgendamentoPublico {
+  /** Cor de destaque (hex), lida bem com o texto escuro dos botões. */
+  cor: string;
+  logo: string | null;
+  capa: string | null;
+  titulo: string;
+  texto: string;
+  /** Endereço do site publicado (/s/...), quando o dono quer o link para ele. */
+  site: string | null;
 }

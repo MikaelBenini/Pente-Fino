@@ -1,7 +1,13 @@
 // Site da barbearia (seção 7, lote 7a): rascunho que o dono edita, publicar, a página pública
 // com os dados vivos da unidade e tirar do ar (volta a página de agendamento).
 import type { INestApplication } from '@nestjs/common';
-import { dataLocal, type SitePainel, type SitePublico } from '@pente-fino/shared';
+import {
+  dataLocal,
+  type SitePainel,
+  type SitePublico,
+  type UnidadePublica,
+  type VisualAgendamento,
+} from '@pente-fino/shared';
 import sharp from 'sharp';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
@@ -332,5 +338,44 @@ describe('site da barbearia', () => {
       .body as SitePainel;
     expect(sem).toMatchObject({ dominio: null, dominioVerificado: false });
     await http().get('/publico/dominio/barbearia-a.teste').expect(404);
+  });
+
+  it('visual da página de agendamento: desligado por padrão, liga na hora, separado do site', async () => {
+    const v = (await dono.get(`/unidades/${a.unidadeA}/agendamento-visual`).expect(200))
+      .body as VisualAgendamento;
+    expect(v).toMatchObject({ ativo: false, linkSite: true });
+    let pub = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body as UnidadePublica;
+    expect(pub.visual).toBeNull();
+
+    await dono
+      .put(`/unidades/${a.unidadeA}/agendamento-visual`, {
+        ...v,
+        ativo: true,
+        cor: 'salvia',
+        titulo: 'Marque seu corte',
+        texto: 'Escolha o barbeiro e o horário.',
+      })
+      .expect(200);
+    pub = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body as UnidadePublica;
+    expect(pub.visual).toMatchObject({
+      cor: '#9DB8A0',
+      titulo: 'Marque seu corte',
+      texto: 'Escolha o barbeiro e o horário.',
+    });
+
+    await dono
+      .put(`/unidades/${a.unidadeA}/agendamento-visual`, {
+        ...v,
+        ativo: true,
+        capa: '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
+      })
+      .expect(400);
+    await barbeiro.get(`/unidades/${a.unidadeA}/agendamento-visual`).expect(403);
+
+    await dono
+      .put(`/unidades/${a.unidadeA}/agendamento-visual`, { ...v, ativo: false })
+      .expect(200);
+    pub = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body as UnidadePublica;
+    expect(pub.visual).toBeNull();
   });
 });

@@ -14,6 +14,19 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - O site da barbearia mostra esse horário, por exemplo "Terça a sexta, 9h às 12h e 13h às 20h".
 - Sem horário cadastrado, tudo continua como antes: vale o expediente da equipe.
 
+### Adicionado (página de agendamento com a cara da barbearia)
+
+- Em "Minha página", o bloco "Página de agendamento": o dono liga o visual da barbearia no link de agendamento, com a cor dos botões, o logotipo, uma foto de capa, um título e um recado, e o link "Ver o site da barbearia" quando o site está publicado.
+- Fica separado do site: vale assim que salva, sem precisar publicar. Desligado, a página fica como sempre.
+
+### Adicionado (cabeçalho e rodapé editáveis, botões com link e CSS no site)
+
+- "Minha página" ganhou a aba "Cabeçalho e rodapé":
+  - no cabeçalho: mostrar logotipo e nome, só o logotipo ou só o nome; renomear, esconder e mudar a ordem dos itens do menu; o texto do botão principal (por exemplo, "Marcar agora"); até 3 links próprios no menu;
+  - no rodapé: ligar e desligar endereço, horário e contatos; um texto livre (CNPJ, formas de pagamento); Facebook, TikTok e YouTube além do Instagram; até 6 links próprios; e a linha "Site e agenda pelo Pente Fino", que o dono pode tirar.
+- Bloco novo "Botões com link", em qualquer página: botões para o cardápio, a loja, o Instagram ou o que o dono quiser.
+- Na aba Tema, em "Avançado", um CSS personalizado para quem quer ir além do tema. Ele vale só no site da barbearia e não aceita buscar nada de fora.
+
 ### Corrigido (ficha do cliente)
 
 - A ficha do cliente ganhou "Editar dados" (dono, gestor e recepção): nome, WhatsApp, e-mail e aniversário. Quem chega pelo bot vem só com nome e WhatsApp, e o aniversário, que dispara a mensagem de aniversário, ficava sem como pôr.

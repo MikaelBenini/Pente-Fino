@@ -7,6 +7,14 @@ import {
   BLOCOS_SITE,
   BOTOES_SITE,
   CAMINHO_PAGINA,
+  visualAgendamentoSchema,
+  type VisualAgendamento,
+  LIMITE_CSS_SITE,
+  cabecalhoDoSite,
+  rodapeDoSite,
+  type CabecalhoSite,
+  type LinkSite,
+  type RodapeSite,
   caminhoDoAgendamento,
   caminhoDoSite,
   enderecoSiteSchema,
@@ -344,6 +352,7 @@ function Editor({
             void cliente.invalidateQueries({ queryKey: chave(unidadeId) });
           }}
         />
+        <VisualDoAgendamento unidadeId={unidadeId} slug={situacao.slug} />
         <DominioProprio
           unidadeId={unidadeId}
           situacao={situacao}
@@ -384,6 +393,11 @@ function Editor({
                   ),
                 },
                 { id: 'tema', rotulo: 'Tema', conteudo: <Tema site={site} onMudar={mudar} /> },
+                {
+                  id: 'cabecalho-rodape',
+                  rotulo: 'Cabeçalho e rodapé',
+                  conteudo: <CabecalhoERodape site={site} onMudar={mudar} />,
+                },
               ]}
             />
           </div>
@@ -501,7 +515,7 @@ function ListaDeBlocos({
       </ol>
       {faltam.length > 0 && (
         <div className="flex flex-col gap-2 rounded-md border border-dashed border-borda-forte p-3">
-          <p className="text-sm font-medium">Pôr de volta</p>
+          <p className="text-sm font-medium">Adicionar bloco</p>
           <div className="flex flex-wrap gap-2">
             {faltam.map((t) => (
               <Botao
@@ -846,6 +860,24 @@ function Tema({ site, onMudar }: { site: SiteBarbearia; onMudar: (s: SiteBarbear
         maxLength={31}
         onChange={(e) => onMudar({ ...site, instagram: e.target.value.replace(/^@/, '') })}
       />
+      <details className="rounded-md border border-borda p-3">
+        <summary className="min-h-11 cursor-pointer content-center font-medium">
+          Avançado: CSS personalizado
+        </summary>
+        <div className="flex flex-col gap-2 pt-2">
+          <CampoTexto
+            id="tema-css"
+            rotulo="CSS"
+            rows={8}
+            spellCheck={false}
+            className="font-mono text-sm"
+            dica={`Para quem conhece CSS: vale só no seu site. Não aceita buscar arquivos de fora (url, @import). Até ${LIMITE_CSS_SITE} letras.`}
+            value={site.css ?? ''}
+            maxLength={LIMITE_CSS_SITE}
+            onChange={(e) => onMudar({ ...site, css: e.target.value })}
+          />
+        </div>
+      </details>
     </div>
   );
 }
@@ -1152,5 +1184,432 @@ function DominioProprio({
       )}
       {erro && situacao.dominio && <Aviso tom="erro">{erro}</Aviso>}
     </section>
+  );
+}
+
+function Marcar({
+  id,
+  rotulo,
+  marcado,
+  onMudar,
+}: {
+  id: string;
+  rotulo: string;
+  marcado: boolean;
+  onMudar: (v: boolean) => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex min-h-11 cursor-pointer items-center gap-3">
+      <input
+        id={id}
+        type="checkbox"
+        checked={marcado}
+        onChange={(e) => onMudar(e.target.checked)}
+        className="size-5 accent-[var(--color-acao)]"
+      />
+      <span>{rotulo}</span>
+    </label>
+  );
+}
+
+/** Links próprios (texto e endereço), com limite. */
+function EditorDeLinks({
+  id,
+  links,
+  maximo,
+  onMudar,
+}: {
+  id: string;
+  links: LinkSite[];
+  maximo: number;
+  onMudar: (l: LinkSite[]) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      {links.map((l, i) => (
+        <div key={i} className="flex flex-col gap-2 rounded-md bg-superficie-2 p-3">
+          <Campo
+            id={`${id}-${i}-rotulo`}
+            rotulo={`Link ${i + 1}: texto`}
+            value={l.rotulo}
+            maxLength={40}
+            onChange={(e) =>
+              onMudar(links.map((x, j) => (j === i ? { ...x, rotulo: e.target.value } : x)))
+            }
+          />
+          <Campo
+            id={`${id}-${i}-url`}
+            rotulo={`Link ${i + 1}: endereço`}
+            placeholder="https://"
+            inputMode="url"
+            value={l.url}
+            maxLength={500}
+            onChange={(e) =>
+              onMudar(links.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))
+            }
+          />
+          <Botao
+            variante="fantasma"
+            className="self-start"
+            onClick={() => onMudar(links.filter((_, j) => j !== i))}
+          >
+            Remover link
+          </Botao>
+        </div>
+      ))}
+      {links.length < maximo && (
+        <Botao
+          variante="secundario"
+          className="self-start"
+          onClick={() => onMudar([...links, { rotulo: '', url: 'https://' }])}
+        >
+          Adicionar link
+        </Botao>
+      )}
+    </div>
+  );
+}
+
+/** Cabeçalho e rodapé editáveis (lote 7n): o dono edita tudo, inclusive a linha do Pente Fino. */
+function CabecalhoERodape({
+  site,
+  onMudar,
+}: {
+  site: SiteBarbearia;
+  onMudar: (s: SiteBarbearia) => void;
+}) {
+  const c = cabecalhoDoSite(site);
+  const r = rodapeDoSite(site);
+  const mudarC = (m: Partial<CabecalhoSite>) => onMudar({ ...site, cabecalho: { ...c, ...m } });
+  const mudarR = (m: Partial<RodapeSite>) => onMudar({ ...site, rodape: { ...r, ...m } });
+  const moverMenu = (i: number, d: -1 | 1) => {
+    const menu = [...c.menu];
+    const j = i + d;
+    if (j < 0 || j >= menu.length) return;
+    [menu[i], menu[j]] = [menu[j]!, menu[i]!];
+    mudarC({ menu });
+  };
+  const icone =
+    'size-9 inline-flex items-center justify-center rounded-md text-tinta-suave hover:bg-superficie-2 hover:text-tinta disabled:opacity-30';
+  return (
+    <div className="flex flex-col gap-6 pt-4">
+      <fieldset className="flex flex-col gap-4">
+        <legend className="mb-2 text-base font-semibold">Cabeçalho</legend>
+        <Selecao
+          id="cab-mostrar"
+          rotulo="No canto do topo"
+          value={c.mostrar}
+          onChange={(e) => mudarC({ mostrar: e.target.value as CabecalhoSite['mostrar'] })}
+          opcoes={[
+            { valor: 'ambos', rotulo: 'Logotipo e nome' },
+            { valor: 'logo', rotulo: 'Só o logotipo' },
+            { valor: 'nome', rotulo: 'Só o nome' },
+          ]}
+        />
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Menu</p>
+          <ol className="flex flex-col gap-2">
+            {c.menu.map((m, i) => (
+              <li key={m.pagina} className="flex flex-col gap-1 rounded-md border border-borda p-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    className={icone}
+                    aria-label={`Subir ${ROTULO_PAGINA[m.pagina]} no menu`}
+                    disabled={i === 0}
+                    onClick={() => moverMenu(i, -1)}
+                  >
+                    <ArrowUp aria-hidden className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className={icone}
+                    aria-label={`Descer ${ROTULO_PAGINA[m.pagina]} no menu`}
+                    disabled={i === c.menu.length - 1}
+                    onClick={() => moverMenu(i, 1)}
+                  >
+                    <ArrowDown aria-hidden className="size-4" />
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <Campo
+                      id={`cab-menu-${m.pagina}`}
+                      rotulo={`Texto de ${ROTULO_PAGINA[m.pagina]}`}
+                      placeholder={ROTULO_PAGINA[m.pagina]}
+                      value={m.rotulo}
+                      maxLength={30}
+                      onChange={(e) =>
+                        mudarC({
+                          menu: c.menu.map((x) =>
+                            x.pagina === m.pagina ? { ...x, rotulo: e.target.value } : x,
+                          ),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <Marcar
+                  id={`cab-menu-${m.pagina}-visivel`}
+                  rotulo={`Mostrar ${ROTULO_PAGINA[m.pagina]} no menu`}
+                  marcado={m.visivel}
+                  onMudar={(v) =>
+                    mudarC({
+                      menu: c.menu.map((x) => (x.pagina === m.pagina ? { ...x, visivel: v } : x)),
+                    })
+                  }
+                />
+              </li>
+            ))}
+          </ol>
+          <p className="text-sm text-tinta-suave">
+            Esconder do menu não apaga a página: quem tiver o endereço continua abrindo.
+          </p>
+        </div>
+        <Campo
+          id="cab-botao"
+          rotulo="Texto do botão principal"
+          placeholder="Agendar horário"
+          value={c.botao}
+          maxLength={30}
+          onChange={(e) => mudarC({ botao: e.target.value })}
+        />
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Links no menu (até 3)</p>
+          <EditorDeLinks
+            id="cab-links"
+            links={c.links}
+            maximo={3}
+            onMudar={(links) => mudarC({ links })}
+          />
+        </div>
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-4">
+        <legend className="mb-2 text-base font-semibold">Rodapé</legend>
+        <Marcar
+          id="rod-endereco"
+          rotulo="Mostrar o endereço"
+          marcado={r.endereco}
+          onMudar={(v) => mudarR({ endereco: v })}
+        />
+        <Marcar
+          id="rod-horario"
+          rotulo="Mostrar o horário"
+          marcado={r.horario}
+          onMudar={(v) => mudarR({ horario: v })}
+        />
+        <Marcar
+          id="rod-contato"
+          rotulo="Mostrar WhatsApp e redes sociais"
+          marcado={r.contato}
+          onMudar={(v) => mudarR({ contato: v })}
+        />
+        <CampoTexto
+          id="rod-texto"
+          rotulo="Texto livre"
+          dica="Por exemplo: CNPJ, formas de pagamento, estacionamento."
+          rows={3}
+          value={r.texto}
+          maxLength={400}
+          onChange={(e) => mudarR({ texto: e.target.value })}
+        />
+        <Campo
+          id="rod-facebook"
+          rotulo="Facebook (endereço)"
+          placeholder="https://facebook.com/..."
+          inputMode="url"
+          value={r.facebook}
+          maxLength={300}
+          onChange={(e) => mudarR({ facebook: e.target.value })}
+        />
+        <Campo
+          id="rod-tiktok"
+          rotulo="TikTok (endereço)"
+          placeholder="https://tiktok.com/@..."
+          inputMode="url"
+          value={r.tiktok}
+          maxLength={300}
+          onChange={(e) => mudarR({ tiktok: e.target.value })}
+        />
+        <Campo
+          id="rod-youtube"
+          rotulo="YouTube (endereço)"
+          placeholder="https://youtube.com/@..."
+          inputMode="url"
+          value={r.youtube}
+          maxLength={300}
+          onChange={(e) => mudarR({ youtube: e.target.value })}
+        />
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium">Links no rodapé (até 6)</p>
+          <EditorDeLinks
+            id="rod-links"
+            links={r.links}
+            maximo={6}
+            onMudar={(links) => mudarR({ links })}
+          />
+        </div>
+        <Marcar
+          id="rod-creditos"
+          rotulo="Mostrar “Site e agenda pelo Pente Fino”"
+          marcado={r.creditos}
+          onMudar={(v) => mudarR({ creditos: v })}
+        />
+      </fieldset>
+    </div>
+  );
+}
+
+/**
+ * Lote 7l: a página de agendamento (/b/<link>) com a cara da barbearia. Separada do site: salva e
+ * já vale, sem "Publicar".
+ */
+function VisualDoAgendamento({ unidadeId, slug }: { unidadeId: string; slug: string | null }) {
+  const consulta = useQuery({
+    queryKey: ['unidades', unidadeId, 'agendamento-visual'],
+    queryFn: () => api<VisualAgendamento>(`unidades/${unidadeId}/agendamento-visual`),
+  });
+  return (
+    <section
+      aria-label="Página de agendamento"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 className="font-semibold">Página de agendamento</h2>
+      <Estado consulta={consulta}>
+        {() => <FormVisual unidadeId={unidadeId} slug={slug} inicial={consulta.data!} />}
+      </Estado>
+    </section>
+  );
+}
+
+function FormVisual({
+  unidadeId,
+  slug,
+  inicial,
+}: {
+  unidadeId: string;
+  slug: string | null;
+  inicial: VisualAgendamento;
+}) {
+  const cliente = useQueryClient();
+  const [v, setV] = useState(inicial);
+  const [estado, setEstado] = useState<'salvo' | 'mudou' | 'salvando'>('salvo');
+  const [erro, setErro] = useState<string | null>(null);
+  const mudar = (m: Partial<VisualAgendamento>) => {
+    setV({ ...v, ...m });
+    setEstado('mudou');
+    setErro(null);
+  };
+  async function salvar() {
+    const r = visualAgendamentoSchema.safeParse(v);
+    if (!r.success) {
+      setErro(r.error.issues[0]?.message ?? 'Revise os campos.');
+      return;
+    }
+    setEstado('salvando');
+    try {
+      await api(`unidades/${unidadeId}/agendamento-visual`, { metodo: 'PUT', corpo: r.data });
+      setEstado('salvo');
+      await cliente.invalidateQueries({ queryKey: ['unidades', unidadeId, 'agendamento-visual'] });
+    } catch (e) {
+      setEstado('mudou');
+      setErro(mensagemDe(e));
+    }
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-tinta-suave">
+        A página onde o cliente marca o horário pode ter a cara da barbearia: cor, logotipo, foto de
+        capa e um recado. Vale assim que salvar; não depende de publicar o site.
+      </p>
+      <Marcar
+        id="visual-ativo"
+        rotulo="Usar o visual da barbearia na página de agendamento"
+        marcado={v.ativo}
+        onMudar={(ativo) => mudar({ ativo })}
+      />
+      {v.ativo && (
+        <>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-sm font-medium">Cor dos botões</legend>
+            <div className="flex flex-wrap gap-3">
+              {(Object.keys(CORES_SITE) as CorSite[]).map((c) => (
+                <label key={c} className="flex cursor-pointer flex-col items-center gap-1 text-xs">
+                  <input
+                    type="radio"
+                    name="cor-agendamento"
+                    value={c}
+                    checked={v.cor === c}
+                    onChange={() => mudar({ cor: c })}
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden
+                    className="size-11 rounded-full border-2 border-superficie shadow-[0_0_0_1px_var(--color-borda)] peer-checked:shadow-[0_0_0_3px_var(--color-tinta)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-foco"
+                    style={{ background: CORES_SITE[c].hex }}
+                  />
+                  {CORES_SITE[c].rotulo}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <CampoFoto
+            rotulo="Logotipo"
+            unidadeId={unidadeId}
+            valor={v.logo}
+            onMudar={(f) => mudar({ logo: f?.id })}
+          />
+          <CampoFoto
+            rotulo="Foto de capa"
+            unidadeId={unidadeId}
+            valor={v.capa}
+            dica="Foto deitada, aparece no topo da página."
+            onMudar={(f) => mudar({ capa: f?.id })}
+          />
+          <Campo
+            id="visual-titulo"
+            rotulo="Título (opcional)"
+            placeholder="Marque seu horário"
+            value={v.titulo}
+            maxLength={80}
+            onChange={(e) => mudar({ titulo: e.target.value })}
+          />
+          <CampoTexto
+            id="visual-texto"
+            rotulo="Recado (opcional)"
+            rows={2}
+            value={v.texto}
+            maxLength={300}
+            onChange={(e) => mudar({ texto: e.target.value })}
+          />
+          <Marcar
+            id="visual-link-site"
+            rotulo="Mostrar o link “Ver o site da barbearia” (quando o site estiver publicado)"
+            marcado={v.linkSite}
+            onMudar={(linkSite) => mudar({ linkSite })}
+          />
+        </>
+      )}
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      <div className="flex flex-wrap items-center gap-2">
+        <Botao onClick={salvar} carregando={estado === 'salvando'} disabled={estado === 'salvo'}>
+          Salvar página de agendamento
+        </Botao>
+        {slug && (
+          <a
+            href={caminhoDoAgendamento(slug)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="toque inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3"
+          >
+            Ver página de agendamento
+            <ExternalLink aria-hidden className="size-4" />
+            <span className="sr-only">(abre em outra aba)</span>
+          </a>
+        )}
+        <span className="text-sm text-tinta-suave" aria-live="polite">
+          {estado === 'salvo' ? 'Salvo.' : estado === 'mudou' ? 'Alterações não salvas.' : ''}
+        </span>
+      </div>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { origemCadastroSchema } from './origem-cadastro.js';
 import { emailSchema, senhaSchema } from './auth.js';
 import { CICLOS, PLANOS } from './planos.js';
+import type { VisualAgendamentoPublico } from './site-barbearia.js';
 
 export const cadastroContaSchema = z.object({
   barbearia: z.string().trim().min(2, { error: 'Informe o nome da barbearia.' }).max(120),
@@ -93,6 +94,8 @@ export interface UnidadePublica {
    * sem sair da página (vazio com uma unidade só). Sem nenhum dado interno.
    */
   outrasUnidades: { slug: string; nome: string; endereco: string | null }[];
+  /** Lote 7l: a página com a cara da barbearia; null = o visual de sempre. */
+  visual: VisualAgendamentoPublico | null;
 }
 
 type ServicoPublico = UnidadePublica['servicos'][number];
