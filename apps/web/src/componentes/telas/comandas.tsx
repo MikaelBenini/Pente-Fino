@@ -30,7 +30,16 @@ import {
   Selecao,
 } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Minus, Pencil, Plus, Printer, ReceiptText, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Minus,
+  MonitorPlay,
+  Pencil,
+  Plus,
+  Printer,
+  ReceiptText,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -51,6 +60,7 @@ import { MoverComanda, useMoverHorario } from '../mover-horario';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado } from '../pagina';
 import { useUnidadeTrabalho } from '../unidade-trabalho';
+import { ModoRecepcao } from './recepcao';
 import { BuscaCliente, clienteParaApi, type ClienteEscolhido } from './busca-cliente';
 
 const mensagemDe = (e: unknown) =>
@@ -67,8 +77,14 @@ export function TelaComandas() {
 }
 
 function Roteador() {
-  const id = useSearchParams().get('id');
-  return id ? <DetalheComanda id={id} /> : <ListaComandas />;
+  const busca = useSearchParams();
+  const { papeis } = useApp();
+  const id = busca.get('id');
+  if (id) return <DetalheComanda id={id} />;
+  // Seção 7: o modo recepção é esta mesma tela, em letra grande, para o monitor do balcão.
+  if (busca.get('modo') === 'recepcao' && papeis.some((p) => p !== 'barbeiro'))
+    return <ModoRecepcao />;
+  return <ListaComandas />;
 }
 
 // ─── Lista ────────────────────────────────────────────────────────────────
@@ -98,9 +114,17 @@ function ListaComandas() {
         pergunta={balcao ? 'O que falta receber?' : 'Suas comandas do dia'}
         acao={
           balcao && (
-            <Botao onClick={() => setNova(true)}>
-              <Plus aria-hidden className="size-5" /> Abrir comanda
-            </Botao>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/comandas?modo=recepcao"
+                className="inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3 focus-visible:outline-2 focus-visible:outline-foco"
+              >
+                <MonitorPlay aria-hidden className="size-5" /> Modo recepção
+              </Link>
+              <Botao onClick={() => setNova(true)}>
+                <Plus aria-hidden className="size-5" /> Abrir comanda
+              </Botao>
+            </div>
           )
         }
       />

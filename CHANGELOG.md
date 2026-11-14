@@ -18,6 +18,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - A medição é nossa e sem dado pessoal: um número anônimo por visita, que some ao fechar a aba. "Primeira vez" só conta para quem aceitou os cookies, e quem liga o "não rastrear" do navegador fica de fora.
 - Os eventos com mais de 90 dias saem na limpeza diária ("Visitas à página de vendas" na Saúde do sistema).
 
+### Adicionado (modo recepção)
+
+- A tela de Comandas ganhou o botão "Modo recepção", para o monitor do balcão. Em letra grande, mostra a fila do dia:
+  - o próximo cliente em destaque, com horário, barbeiro e serviços, e o botão "Chegou: começar atendimento";
+  - a coluna "Chegando", com quem vem depois e quem está atrasado;
+  - a coluna "Na cadeira", com quem está sendo atendido;
+  - a coluna "Para receber", com o valor e o botão "Receber".
+- A tela se atualiza sozinha a cada 30 segundos, mostra a hora e tem o botão "Tela cheia" para esconder o menu.
+
 ### Adicionado (histórico por comanda)
 
 - A tela da comanda ganhou a seção "Histórico", que abre com um toque e mostra em ordem tudo o que aconteceu com ela:
