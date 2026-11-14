@@ -5,6 +5,7 @@ import {
   CAMINHO_PAGINA,
   caminhoDoAgendamento,
   CORES_SITE,
+  PALETAS_SITE,
   ROTULO_PAGINA,
   blocosVisiveis,
   cabecalhoDoSite,
@@ -27,11 +28,11 @@ import type { CSSProperties, ReactNode } from 'react';
 import { CLASSES_FONTES, FONTE_TITULO } from './fontes';
 
 // Paleta do tema: verde-garrafa, papel e tinta. O destaque é a cor que o dono escolhe.
-const VERDE = 'bg-[#14271C]';
+const VERDE = 'bg-[var(--site-escuro)]';
 const TITULO = 'font-[family-name:var(--site-titulo)] font-normal';
 const BOTAO =
   'site-botao inline-flex min-h-11 items-center justify-center rounded-[var(--site-raio)] px-6 py-3 font-semibold transition-[filter] duration-[var(--ritmo-rapido)] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2';
-const BOTAO_DESTAQUE = `${BOTAO} bg-[var(--site-destaque)] text-[#14271C] focus-visible:outline-[var(--site-destaque)]`;
+const BOTAO_DESTAQUE = `${BOTAO} bg-[var(--site-destaque)] text-[var(--site-escuro)] focus-visible:outline-[var(--site-destaque)]`;
 const LARGURA = 'mx-auto w-full max-w-6xl px-4 @2xl:px-6';
 
 const RAIO = { retos: '0px', arredondados: '8px', pilula: '999px' } as const;
@@ -120,7 +121,14 @@ export function SiteDaBarbearia({ dados: brutos, pagina, base, agendar }: Props)
   const dados: DadosDoSite = agendar ? { ...brutos, linkAgendar: agendar } : brutos;
   const { site } = dados;
   const blocos = blocosVisiveis(site, pagina);
+  const paleta = PALETAS_SITE[site.tema] ?? PALETAS_SITE.tradicional;
   const estilo = {
+    ...Object.fromEntries(
+      Object.entries(paleta).map(([k, v]) => [
+        `--site-${k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`,
+        v,
+      ]),
+    ),
     '--site-destaque': CORES_SITE[site.cor].hex,
     '--site-titulo': FONTE_TITULO[site.fonte],
     '--site-raio': RAIO[site.botoes],
@@ -129,7 +137,7 @@ export function SiteDaBarbearia({ dados: brutos, pagina, base, agendar }: Props)
   const css = limparCssSite(site.css);
   return (
     <div
-      className={`${CLASSES_FONTES} site-personalizado @container min-h-dvh bg-[#F5F4F0] font-[family-name:var(--site-fonte-texto)] text-[17px] leading-relaxed text-[#1A221D]`}
+      className={`${CLASSES_FONTES} site-personalizado site-tema-${site.tema} @container min-h-dvh bg-[var(--site-papel)] font-[family-name:var(--site-fonte-texto)] text-[17px] leading-relaxed text-[var(--site-tinta)]`}
       style={estilo}
     >
       {css && (
@@ -212,7 +220,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
       href={l.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex min-h-11 items-center px-3 text-[#C9D2CB] hover:text-white @3xl:min-h-0 @3xl:px-0 @3xl:py-1.5"
+      className="flex min-h-11 items-center px-3 text-[var(--site-claro-suave)] hover:text-white @3xl:min-h-0 @3xl:px-0 @3xl:py-1.5"
     >
       {l.rotulo}
     </a>
@@ -221,9 +229,12 @@ function Cabecalho({ dados, pagina, base }: Props) {
   const mostraNome = config.mostrar !== 'logo' || !dados.site.logo;
   const agendar = <AcaoPrincipal dados={dados} className={BOTAO_DESTAQUE} />;
   return (
-    <header className={`${VERDE} site-cabecalho sticky top-0 z-30 text-[#F2F1EC]`}>
+    <header className={`${VERDE} site-cabecalho sticky top-0 z-30 text-[var(--site-claro)]`}>
       <div className={`${LARGURA} flex items-center justify-between gap-4 py-4`}>
-        <Link href={base || '/'} className="flex min-h-11 items-center gap-3 text-[#F2F1EC]">
+        <Link
+          href={base || '/'}
+          className="flex min-h-11 items-center gap-3 text-[var(--site-claro)]"
+        >
           {mostraLogo &&
             (dados.site.logo ? (
               <Foto
@@ -249,7 +260,7 @@ function Cabecalho({ dados, pagina, base }: Props) {
               key={l.p}
               href={l.href}
               aria-current={l.p === pagina ? 'page' : undefined}
-              className={`border-b-2 py-1.5 ${l.p === pagina ? 'border-[var(--site-destaque)] text-white' : 'border-transparent text-[#C9D2CB] hover:text-white'}`}
+              className={`border-b-2 py-1.5 ${l.p === pagina ? 'border-[var(--site-destaque)] text-white' : 'border-transparent text-[var(--site-claro-suave)] hover:text-white'}`}
             >
               {l.rotulo}
             </Link>
@@ -258,20 +269,20 @@ function Cabecalho({ dados, pagina, base }: Props) {
           {agendar}
         </nav>
         <details className="group relative @3xl:hidden">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-[var(--site-raio)] border border-[#4E6A57] px-4 [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-[var(--site-raio)] border border-[var(--site-escuro-borda)] px-4 [&::-webkit-details-marker]:hidden">
             <Menu aria-hidden className="size-5" strokeWidth={1.75} />
             Menu
           </summary>
           <nav
             aria-label="Principal"
-            className="absolute right-0 z-20 mt-2 flex w-60 flex-col gap-1 bg-[#14271C] p-3 shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
+            className="absolute right-0 z-20 mt-2 flex w-60 flex-col gap-1 bg-[var(--site-escuro)] p-3 shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
           >
             {links.map((l) => (
               <Link
                 key={l.p}
                 href={l.href}
                 aria-current={l.p === pagina ? 'page' : undefined}
-                className={`flex min-h-11 items-center px-3 ${l.p === pagina ? 'text-white underline decoration-[var(--site-destaque)] decoration-2 underline-offset-4' : 'text-[#C9D2CB]'}`}
+                className={`flex min-h-11 items-center px-3 ${l.p === pagina ? 'text-white underline decoration-[var(--site-destaque)] decoration-2 underline-offset-4' : 'text-[var(--site-claro-suave)]'}`}
               >
                 {l.rotulo}
               </Link>
@@ -345,7 +356,7 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
           {/* Véu escuro embaixo, onde fica o texto: leitura garantida em qualquer foto. */}
           <span
             aria-hidden
-            className="absolute inset-0 bg-[linear-gradient(to_top,rgba(20,39,28,0.92)_0%,rgba(20,39,28,0.7)_45%,rgba(20,39,28,0.25)_100%)]"
+            className="absolute inset-0 bg-[linear-gradient(to_top,color-mix(in_srgb,var(--site-escuro)_92%,transparent)_0%,color-mix(in_srgb,var(--site-escuro)_70%,transparent)_45%,color-mix(in_srgb,var(--site-escuro)_25%,transparent)_100%)]"
           />
         </>
       ) : (
@@ -365,7 +376,7 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
           {bloco.titulo || dados.barbearia}
         </h1>
         {bloco.texto && (
-          <p className="max-w-[32em] text-[19px] whitespace-pre-line text-[#DCE4DE] @2xl:text-[20px]">
+          <p className="max-w-[32em] text-[19px] whitespace-pre-line text-[var(--site-claro-suave)] @2xl:text-[20px]">
             {bloco.texto}
           </p>
         )}
@@ -399,7 +410,10 @@ function FaixaServicos({ dados }: { dados: SitePublico }) {
           <span className="font-semibold text-[var(--site-destaque)]">
             {formatarMoeda(s.preco)}
           </span>
-          <span aria-hidden className="ml-7 size-1.5 self-center rounded-full bg-white/40" />
+          <span
+            aria-hidden
+            className="ml-7 size-1.5 self-center rounded-full bg-[var(--site-cartao)]/40"
+          />
         </li>
       ))}
     </ul>
@@ -416,7 +430,7 @@ function FaixaServicos({ dados }: { dados: SitePublico }) {
       </div>
       <label
         htmlFor="pausar-faixa"
-        className="absolute top-1/2 right-2 flex min-h-11 -translate-y-1/2 cursor-pointer items-center rounded-[var(--site-raio)] bg-[#14271C] px-3 text-[13px] text-[#C9D2CB] peer-focus-visible:outline-2 peer-focus-visible:outline-white"
+        className="absolute top-1/2 right-2 flex min-h-11 -translate-y-1/2 cursor-pointer items-center rounded-[var(--site-raio)] bg-[var(--site-escuro)] px-3 text-[13px] text-[var(--site-claro-suave)] peer-focus-visible:outline-2 peer-focus-visible:outline-white"
       >
         Pausar
       </label>
@@ -426,7 +440,7 @@ function FaixaServicos({ dados }: { dados: SitePublico }) {
 
 function Destaques({ dados }: { dados: SitePublico }) {
   const itens: { icone: ReactNode; titulo: string; texto: string }[] = [];
-  const icone = 'size-7 shrink-0 text-[#1F5135]';
+  const icone = 'size-7 shrink-0 text-[var(--site-link)]';
   if (dados.nota)
     itens.push({
       icone: <Star aria-hidden className="size-7 shrink-0 fill-[#B48C3C] text-[#B48C3C]" />,
@@ -452,7 +466,10 @@ function Destaques({ dados }: { dados: SitePublico }) {
       texto: aberto.horario!,
     });
   return (
-    <section aria-label="Destaques" className="border-b border-[#E2E1DA] bg-white">
+    <section
+      aria-label="Destaques"
+      className="border-b border-[var(--site-linha)] bg-[var(--site-cartao)]"
+    >
       <ul
         className={`${LARGURA} grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-5 py-7`}
       >
@@ -461,7 +478,7 @@ function Destaques({ dados }: { dados: SitePublico }) {
             {i.icone}
             <span className="min-w-0">
               <strong className="block">{i.titulo}</strong>
-              <span className="block text-[15px] text-[#4C554F]">{i.texto}</span>
+              <span className="block text-[15px] text-[var(--site-tinta-suave)]">{i.texto}</span>
             </span>
           </li>
         ))}
@@ -487,11 +504,13 @@ function Sobre({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
         <div className="flex min-w-0 flex-col gap-5 @3xl:w-1/2">
           {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
           {bloco.texto && (
-            <p className="text-[19px] whitespace-pre-line text-[#3E4842]">{bloco.texto}</p>
+            <p className="text-[19px] whitespace-pre-line text-[var(--site-tinta-media)]">
+              {bloco.texto}
+            </p>
           )}
           <Link
             href={`${base}/equipe`}
-            className="self-start font-semibold text-[#1F5135] underline-offset-4 hover:underline"
+            className="self-start font-semibold text-[var(--site-link)] underline-offset-4 hover:underline"
           >
             Conheça a equipe
           </Link>
@@ -503,11 +522,13 @@ function Sobre({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
       <div className="site-revelar mx-auto flex max-w-3xl flex-col gap-5 text-center">
         {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
         {bloco.texto && (
-          <p className="text-[19px] whitespace-pre-line text-[#3E4842]">{bloco.texto}</p>
+          <p className="text-[19px] whitespace-pre-line text-[var(--site-tinta-media)]">
+            {bloco.texto}
+          </p>
         )}
         <Link
           href={`${base}/equipe`}
-          className="font-semibold text-[#1F5135] underline-offset-4 hover:underline"
+          className="font-semibold text-[var(--site-link)] underline-offset-4 hover:underline"
         >
           Conheça a equipe
         </Link>
@@ -528,13 +549,13 @@ function ServicosDestaque({
   const lista = servicosEmDestaque(dados.servicos);
   if (!lista.length) return null;
   return (
-    <section className="bg-white">
+    <section className="bg-[var(--site-cartao)]">
       <div className={`${LARGURA} flex flex-col gap-11 py-24 @2xl:py-28`}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Titulo2>{bloco.titulo || 'Serviços'}</Titulo2>
           <Link
             href={`${base}/servicos`}
-            className="font-semibold text-[#1F5135] underline-offset-4 hover:underline"
+            className="font-semibold text-[var(--site-link)] underline-offset-4 hover:underline"
           >
             Ver todos os serviços
           </Link>
@@ -543,15 +564,15 @@ function ServicosDestaque({
           {lista.map((s) => (
             <li
               key={s.id}
-              className="site-revelar site-cartao flex flex-col gap-3 border-t-2 border-[#14271C] bg-white px-1 pt-6 pb-2"
+              className="site-revelar site-cartao flex flex-col gap-3 border-t-2 border-[var(--site-escuro)] bg-[var(--site-cartao)] px-1 pt-6 pb-2"
             >
               <h3 className={`${TITULO} text-[30px] leading-tight`}>{s.nome}</h3>
-              <p className="text-[#4C554F]">{duracao(s.duracaoMin)}</p>
+              <p className="text-[var(--site-tinta-suave)]">{duracao(s.duracaoMin)}</p>
               <p className={`${TITULO} text-[36px] leading-none`}>{formatarMoeda(s.preco)}</p>
               {temAgendamento(dados) && (
                 <Link
                   href={linkAgendar(dados)}
-                  className="mt-1 font-semibold text-[#1F5135] underline-offset-4 hover:underline"
+                  className="mt-1 font-semibold text-[var(--site-link)] underline-offset-4 hover:underline"
                 >
                   Agendar {s.nome.toLowerCase()}
                 </Link>
@@ -575,7 +596,7 @@ function EquipeResumo({
 }) {
   if (!dados.equipe.length) return null;
   return (
-    <section className={`${VERDE} text-[#F2F1EC]`}>
+    <section className={`${VERDE} text-[var(--site-claro)]`}>
       <div className={`${LARGURA} flex flex-col gap-12 py-24 @2xl:py-28`}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <Titulo2>{bloco.titulo || 'A equipe'}</Titulo2>
@@ -602,7 +623,7 @@ function EquipeResumo({
               )}
               <div className="min-w-0">
                 <h3 className={`${TITULO} text-[30px] leading-tight`}>{p.nome}</h3>
-                {p.foco && <p className="text-[#C9D2CB]">{p.foco}</p>}
+                {p.foco && <p className="text-[var(--site-claro-suave)]">{p.foco}</p>}
               </div>
             </li>
           ))}
@@ -616,7 +637,7 @@ function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
   const itens = (bloco.itens ?? []).filter((i) => i.foto);
   if (!itens.length) return null;
   return (
-    <section className="bg-white">
+    <section className="bg-[var(--site-cartao)]">
       <div className={`${LARGURA} flex flex-col gap-11 py-24 @2xl:py-28`}>
         {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
         <ul className="grid grid-cols-2 gap-2 @3xl:grid-cols-3">
@@ -631,7 +652,7 @@ function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
                   className="site-foto-zoom aspect-square w-full object-cover"
                 />
                 {f.titulo && (
-                  <figcaption className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] bg-[#14271C] px-2.5 py-1 text-[14px] text-white">
+                  <figcaption className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] bg-[var(--site-escuro)] px-2.5 py-1 text-[14px] text-white">
                     {f.titulo}
                   </figcaption>
                 )}
@@ -648,7 +669,7 @@ function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
 function PlanosDoClube({ dados }: { dados: SitePublico }) {
   if (!dados.clube)
     return (
-      <section className={`${LARGURA} py-16 text-[#4C554F]`}>
+      <section className={`${LARGURA} py-16 text-[var(--site-tinta-suave)]`}>
         Os planos do clube aparecem aqui quando estiverem cadastrados e o clube online estiver
         ligado.
       </section>
@@ -659,19 +680,19 @@ function PlanosDoClube({ dados }: { dados: SitePublico }) {
         {dados.clube.planos.map((p) => (
           <li
             key={p.id}
-            className="site-revelar site-cartao flex flex-col gap-4 border-t-[3px] border-[var(--site-destaque)] bg-white p-8"
+            className="site-revelar site-cartao flex flex-col gap-4 border-t-[3px] border-[var(--site-destaque)] bg-[var(--site-cartao)] p-8"
           >
             <h2 className={`${TITULO} text-[30px] leading-tight`}>{p.nome}</h2>
             <p className={`${TITULO} text-[40px] leading-none`}>
               {formatarMoeda(p.valor)}
-              <span className="font-[family-name:var(--site-fonte-texto)] text-[16px] text-[#4C554F]">
+              <span className="font-[family-name:var(--site-fonte-texto)] text-[16px] text-[var(--site-tinta-suave)]">
                 {' '}
                 por mês
               </span>
             </p>
-            {p.descricao && <p className="text-[#3E4842]">{p.descricao}</p>}
+            {p.descricao && <p className="text-[var(--site-tinta-media)]">{p.descricao}</p>}
             {p.inclui.length > 0 && (
-              <ul className="flex flex-col gap-1 text-[15px] text-[#3E4842]">
+              <ul className="flex flex-col gap-1 text-[15px] text-[var(--site-tinta-media)]">
                 {p.inclui.map((i) => (
                   <li key={i}>{i}</li>
                 ))}
@@ -679,7 +700,7 @@ function PlanosDoClube({ dados }: { dados: SitePublico }) {
             )}
             <a
               href={`${dados.clube!.link}&p=${encodeURIComponent(p.id)}`}
-              className={`${BOTAO} mt-auto self-start bg-[#14271C] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
+              className={`${BOTAO} mt-auto self-start bg-[var(--site-escuro)] text-[var(--site-claro)] focus-visible:outline-[var(--site-escuro)]`}
             >
               Assinar {p.nome}
             </a>
@@ -706,7 +727,7 @@ function BotoesComLink({ bloco }: { bloco: BlocoSite }) {
             href={i.texto}
             target="_blank"
             rel="noopener noreferrer"
-            className={`${BOTAO} ${n === 0 ? 'bg-[#14271C] text-[#F2F1EC]' : 'border border-[#14271C] text-[#14271C]'} focus-visible:outline-[#14271C]`}
+            className={`${BOTAO} ${n === 0 ? 'bg-[var(--site-escuro)] text-[var(--site-claro)]' : 'border border-[var(--site-escuro)] text-[var(--site-escuro)]'} focus-visible:outline-[var(--site-escuro)]`}
           >
             {i.titulo}
             <span className="sr-only"> (abre em outra aba)</span>
@@ -727,12 +748,16 @@ function Depoimentos({ bloco }: { bloco: BlocoSite }) {
         {itens.map((d, i) => (
           <figure
             key={i}
-            className="site-revelar site-cartao flex flex-col gap-4 border-t-[3px] border-[var(--site-destaque)] bg-white p-8"
+            className="site-revelar site-cartao flex flex-col gap-4 border-t-[3px] border-[var(--site-destaque)] bg-[var(--site-cartao)] p-8"
           >
             <blockquote className={`${TITULO} text-[23px] leading-snug whitespace-pre-line`}>
               “{d.texto}”
             </blockquote>
-            {d.titulo && <figcaption className="text-[15px] text-[#4C554F]">{d.titulo}</figcaption>}
+            {d.titulo && (
+              <figcaption className="text-[15px] text-[var(--site-tinta-suave)]">
+                {d.titulo}
+              </figcaption>
+            )}
           </figure>
         ))}
       </div>
@@ -742,11 +767,11 @@ function Depoimentos({ bloco }: { bloco: BlocoSite }) {
 
 function CabecalhoPagina({ bloco }: { bloco: BlocoSite }) {
   return (
-    <section className="bg-[#1C3426] text-[#F2F1EC]">
+    <section className="bg-[var(--site-escuro2)] text-[var(--site-claro)]">
       <div className={`${LARGURA} site-entrada flex flex-col gap-4 pt-20 pb-14`}>
         <h1 className={`${TITULO} text-[44px] leading-none @2xl:text-[72px]`}>{bloco.titulo}</h1>
         {bloco.texto && (
-          <p className="max-w-[36em] text-[19px] whitespace-pre-line text-[#C9D2CB]">
+          <p className="max-w-[36em] text-[19px] whitespace-pre-line text-[var(--site-claro-suave)]">
             {bloco.texto}
           </p>
         )}
@@ -759,7 +784,7 @@ function TabelaServicos({ dados }: { dados: SitePublico }) {
   const grupos = servicosPorCategoria(dados.servicos);
   if (!grupos.length)
     return (
-      <section className={`${LARGURA} py-20 text-[#4C554F]`}>
+      <section className={`${LARGURA} py-20 text-[var(--site-tinta-suave)]`}>
         Os serviços aparecem aqui assim que tiverem preço nesta unidade.
       </section>
     );
@@ -776,7 +801,7 @@ function TabelaServicos({ dados }: { dados: SitePublico }) {
             <a
               key={g.nome}
               href={`#${ancora(g.nome)}`}
-              className="inline-flex min-h-11 items-center rounded-[var(--site-raio)] border border-[#B9BFB5] px-4 hover:border-[#14271C]"
+              className="inline-flex min-h-11 items-center rounded-[var(--site-raio)] border border-[var(--site-linha)] px-4 hover:border-[var(--site-escuro)]"
             >
               {g.nome}
             </a>
@@ -790,15 +815,17 @@ function TabelaServicos({ dados }: { dados: SitePublico }) {
             {g.itens.map((s) => (
               <li
                 key={s.id}
-                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-[#DAD8D0] py-5"
+                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-[var(--site-linha)] py-5"
               >
                 <div className="min-w-0">
                   <h3 className="text-[20px] font-semibold">{s.nome}</h3>
-                  <p className="text-[15px] text-[#4C554F]">{duracao(s.duracaoMin)}</p>
+                  <p className="text-[15px] text-[var(--site-tinta-suave)]">
+                    {duracao(s.duracaoMin)}
+                  </p>
                   {(() => {
                     const com = quemFaz(dados.equipe, s.id);
                     return com.length > 0 && com.length < dados.equipe.length ? (
-                      <p className="text-[14px] text-[#4C554F]">
+                      <p className="text-[14px] text-[var(--site-tinta-suave)]">
                         Com {com.map((p) => p.nome).join(' e ')}
                       </p>
                     ) : null;
@@ -812,7 +839,7 @@ function TabelaServicos({ dados }: { dados: SitePublico }) {
                     <Link
                       href={linkAgendar(dados)}
                       aria-label={`Agendar ${s.nome}`}
-                      className={`${BOTAO} border border-[#1F5135] px-4 py-2 text-[#1F5135] focus-visible:outline-[#1F5135]`}
+                      className={`${BOTAO} border border-[var(--site-link)] px-4 py-2 text-[var(--site-link)] focus-visible:outline-[var(--site-link)]`}
                     >
                       Agendar
                     </Link>
@@ -855,13 +882,15 @@ function Barbeiros({ dados }: { dados: SitePublico }) {
           <div className="flex min-w-0 flex-col gap-4 @3xl:flex-1">
             <div>
               <h2 className={`${TITULO} text-[48px] leading-none @2xl:text-[56px]`}>{p.nome}</h2>
-              {p.foco && <p className="mt-2 text-[19px] text-[#6E5520]">{p.foco}</p>}
+              {p.foco && <p className="mt-2 text-[19px] text-[var(--site-realce)]">{p.foco}</p>}
             </div>
             {p.sobre && (
-              <p className="max-w-[32em] whitespace-pre-line text-[#3E4842]">{p.sobre}</p>
+              <p className="max-w-[32em] whitespace-pre-line text-[var(--site-tinta-media)]">
+                {p.sobre}
+              </p>
             )}
             {p.servicoIds.length > 0 && (
-              <p className="text-[15px] text-[#4C554F]">
+              <p className="text-[15px] text-[var(--site-tinta-suave)]">
                 Faz:{' '}
                 {dados.servicos
                   .filter((sv) => p.servicoIds.includes(sv.id))
@@ -872,7 +901,7 @@ function Barbeiros({ dados }: { dados: SitePublico }) {
             {temAgendamento(dados) && (
               <Link
                 href={linkAgendar(dados)}
-                className={`${BOTAO} self-start bg-[#14271C] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
+                className={`${BOTAO} self-start bg-[var(--site-escuro)] text-[var(--site-claro)] focus-visible:outline-[var(--site-escuro)]`}
               >
                 Agendar com {p.nome}
               </Link>
@@ -896,7 +925,7 @@ function Contato({ dados }: { dados: SitePublico }) {
               href={linkDoMapa(dados.endereco)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex min-h-11 items-center gap-2 font-semibold text-[#1F5135] underline-offset-4 hover:underline"
+              className="mt-2 inline-flex min-h-11 items-center gap-2 font-semibold text-[var(--site-link)] underline-offset-4 hover:underline"
             >
               <MapPin aria-hidden className="size-5" strokeWidth={1.75} />
               Abrir no Google Maps
@@ -908,11 +937,13 @@ function Contato({ dados }: { dados: SitePublico }) {
             <caption className={`${TITULO} pb-2 text-left text-[32px]`}>Horário</caption>
             <tbody>
               {dados.horario.map((h) => (
-                <tr key={h.dias} className="border-b border-[#DAD8D0] last:border-0">
+                <tr key={h.dias} className="border-b border-[var(--site-linha)] last:border-0">
                   <th scope="row" className="py-2.5 pr-6 text-left font-normal">
                     {h.dias}
                   </th>
-                  <td className={`py-2.5 text-right ${h.horario ? '' : 'text-[#56605A]'}`}>
+                  <td
+                    className={`py-2.5 text-right ${h.horario ? '' : 'text-[var(--site-tinta-suave)]'}`}
+                  >
                     {h.horario ?? 'Fechado'}
                   </td>
                 </tr>
@@ -921,14 +952,14 @@ function Contato({ dados }: { dados: SitePublico }) {
           </table>
         )}
       </div>
-      <div className="flex flex-col gap-4 self-start bg-white p-8">
+      <div className="flex flex-col gap-4 self-start bg-[var(--site-cartao)] p-8">
         <h2 className={`${TITULO} text-[32px]`}>Fale com a gente</h2>
         {dados.whatsapp && (
           <a
             href={dados.whatsapp}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center gap-3 font-medium text-[#1F5135] underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center gap-3 font-medium text-[var(--site-link)] underline-offset-4 hover:underline"
           >
             <MessageCircle aria-hidden className="size-5" strokeWidth={1.75} />
             WhatsApp
@@ -939,14 +970,14 @@ function Contato({ dados }: { dados: SitePublico }) {
             href={`https://instagram.com/${dados.site.instagram}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center gap-3 font-medium text-[#1F5135] underline-offset-4 hover:underline"
+            className="inline-flex min-h-11 items-center gap-3 font-medium text-[var(--site-link)] underline-offset-4 hover:underline"
           >
             <IconeInstagram className="size-5" />
             Instagram @{dados.site.instagram}
           </a>
         )}
         {!dados.whatsapp && !dados.site.instagram && (
-          <p className="text-[#4C554F]">
+          <p className="text-[var(--site-tinta-suave)]">
             Agende pelo botão abaixo; a confirmação chega no seu WhatsApp.
           </p>
         )}
@@ -959,23 +990,23 @@ function Perguntas({ bloco }: { bloco: BlocoSite }) {
   const itens = (bloco.itens ?? []).filter((i) => i.titulo && i.texto);
   if (!itens.length) return null;
   return (
-    <section className="bg-white">
+    <section className="bg-[var(--site-cartao)]">
       <div className="mx-auto flex max-w-3xl flex-col px-4 py-20 @2xl:px-6">
         {bloco.titulo && (
           <Titulo2 className="mb-6 text-[36px] @2xl:text-[44px]">{bloco.titulo}</Titulo2>
         )}
         {itens.map((q, i) => (
-          <details key={i} className="group border-b border-[#DAD8D0] py-4">
+          <details key={i} className="group border-b border-[var(--site-linha)] py-4">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-[19px] font-semibold [&::-webkit-details-marker]:hidden">
               {q.titulo}
               <span
                 aria-hidden
-                className="text-[24px] leading-none text-[#4C554F] transition-transform duration-[var(--ritmo)] group-open:rotate-45"
+                className="text-[24px] leading-none text-[var(--site-tinta-suave)] transition-transform duration-[var(--ritmo)] group-open:rotate-45"
               >
                 +
               </span>
             </summary>
-            <p className="mt-2 whitespace-pre-line text-[#3E4842]">{q.texto}</p>
+            <p className="mt-2 whitespace-pre-line text-[var(--site-tinta-media)]">{q.texto}</p>
           </details>
         ))}
       </div>
@@ -986,7 +1017,7 @@ function Perguntas({ bloco }: { bloco: BlocoSite }) {
 function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
   if (!temAgendamento(dados) && !dados.whatsapp) return null;
   return (
-    <section className="bg-[var(--site-destaque)] text-[#14271C]">
+    <section className="bg-[var(--site-destaque)] text-[var(--site-escuro)]">
       <div
         className={`${LARGURA} site-revelar flex flex-wrap items-center justify-between gap-6 py-16`}
       >
@@ -998,7 +1029,7 @@ function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }
         </div>
         <AcaoPrincipal
           dados={dados}
-          className={`${BOTAO} bg-[#14271C] text-[18px] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
+          className={`${BOTAO} bg-[var(--site-escuro)] text-[18px] text-[var(--site-claro)] focus-visible:outline-[var(--site-escuro)]`}
         />
       </div>
     </section>
@@ -1006,7 +1037,7 @@ function FaixaAgendar({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }
 }
 
 function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
-  const link = 'text-[#C9D2CB] underline-offset-4 hover:text-white hover:underline';
+  const link = 'text-[var(--site-claro-suave)] underline-offset-4 hover:text-white hover:underline';
   const r = rodapeDoSite(dados.site);
   const redes = [
     dados.site.instagram
@@ -1018,18 +1049,20 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
   ].filter((x): x is { nome: string; url: string } => x !== null);
   const temContato = r.contato && (dados.whatsapp || redes.length > 0);
   return (
-    <footer className="bg-[#0F1E15] text-[#C9D2CB]">
+    <footer className="bg-[var(--site-rodape)] text-[var(--site-claro-suave)]">
       <div
         className={`${LARGURA} grid grid-cols-[repeat(auto-fit,minmax(min(100%,210px),1fr))] gap-10 pt-16 pb-10`}
       >
         <div className="flex flex-col gap-2">
-          <span className={`${TITULO} text-[24px] text-[#F2F1EC]`}>{dados.barbearia}</span>
+          <span className={`${TITULO} text-[24px] text-[var(--site-claro)]`}>
+            {dados.barbearia}
+          </span>
           {dados.site.slogan && <span>{dados.site.slogan}</span>}
           {r.texto && <span className="text-[14px] whitespace-pre-line">{r.texto}</span>}
         </div>
         {r.endereco && dados.endereco && (
           <div className="flex flex-col gap-1.5">
-            <strong className="text-[#F2F1EC]">Endereço</strong>
+            <strong className="text-[var(--site-claro)]">Endereço</strong>
             <span>{dados.endereco}</span>
             <Link
               href={`${base}/contato`}
@@ -1041,7 +1074,7 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
         )}
         {r.horario && dados.horario.some((h) => h.horario) && (
           <div className="flex flex-col gap-1.5">
-            <strong className="text-[#F2F1EC]">Horário</strong>
+            <strong className="text-[var(--site-claro)]">Horário</strong>
             {dados.horario
               .filter((h) => h.horario)
               .map((h) => (
@@ -1053,7 +1086,7 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
         )}
         {temContato && (
           <div className="flex flex-col gap-1.5">
-            <strong className="text-[#F2F1EC]">Fale com a gente</strong>
+            <strong className="text-[var(--site-claro)]">Fale com a gente</strong>
             {dados.whatsapp && (
               <a href={dados.whatsapp} target="_blank" rel="noopener noreferrer" className={link}>
                 WhatsApp
@@ -1074,7 +1107,7 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
         )}
         {r.links.length > 0 && (
           <div className="flex flex-col gap-1.5">
-            <strong className="text-[#F2F1EC]">Links</strong>
+            <strong className="text-[var(--site-claro)]">Links</strong>
             {r.links.map((l) => (
               <a
                 key={l.url}
@@ -1090,7 +1123,7 @@ function Rodape({ dados, base }: { dados: SitePublico; base: string }) {
         )}
       </div>
       <div
-        className={`${LARGURA} flex flex-wrap justify-between gap-3 border-t border-[#22372A] pt-5 pb-8 text-[14px] text-[#8FA095]`}
+        className={`${LARGURA} flex flex-wrap justify-between gap-3 border-t border-[var(--site-rodape-linha)] pt-5 pb-8 text-[14px] text-[var(--site-rodape-suave)]`}
       >
         <span>{dados.barbearia}</span>
         {r.creditos && (

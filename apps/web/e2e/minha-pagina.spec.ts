@@ -96,6 +96,9 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
   await page.getByRole('tab', { name: 'Tema' }).click();
   await page.getByText('Sálvia', { exact: true }).click();
   await expect(page.getByLabel('Sálvia')).toBeChecked();
+  // Lotes 7i a 7k: os temas.
+  await page.getByText('Estúdio', { exact: true }).click();
+  await expect(page.getByRole('radio', { name: /Estúdio/ })).toBeChecked();
   await page.getByRole('button', { name: 'Celular' }).click();
   await expect(page.getByRole('button', { name: 'Celular' })).toHaveAttribute(
     'aria-pressed',
@@ -129,6 +132,7 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
     visitante.getByRole('link', { name: 'Marcar agora' }).filter({ visible: true }).first(),
   ).toBeVisible();
   await expect(visitante.getByRole('contentinfo')).toContainText('Aceitamos Pix e cartão.');
+  await expect(visitante.locator('.site-tema-estudio')).toHaveCount(1);
   await visitante.goto(`${siteDoTeste}/galeria`);
   await expect(visitante.getByRole('heading', { level: 1, name: 'Nosso trabalho' })).toBeVisible();
   await visitante.goto(siteDoTeste);

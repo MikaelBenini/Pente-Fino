@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCOS_SITE,
+  FONTE_DO_TEMA,
+  PALETAS_SITE,
+  ROTULO_TEMA,
   blocosDaPagina,
   desligarPagina,
   ligarPagina,
@@ -373,5 +376,34 @@ describe('páginas extras Galeria e Clube (lote 7h)', () => {
     expect(siteBarbeariaSchema.safeParse(comClube).success).toBe(true);
     expect(blocosParaAdicionar(ligarPagina(base, 'galeria'), 'galeria')).toEqual(['botoes']);
     expect(paginaLigada(desligarPagina(comClube, 'clube'), 'clube')).toBe(false);
+  });
+});
+
+describe('temas do site (lotes 7i, 7j e 7k)', () => {
+  it('cada tema tem leitura em todos os pares de cor usados na página', () => {
+    for (const [tema, p] of Object.entries(PALETAS_SITE)) {
+      const pares: [string, string, string][] = [
+        ['tinta/papel', p.tinta, p.papel],
+        ['tintaMedia/papel', p.tintaMedia, p.papel],
+        ['tintaSuave/papel', p.tintaSuave, p.papel],
+        ['tinta/cartao', p.tinta, p.cartao],
+        ['tintaSuave/cartao', p.tintaSuave, p.cartao],
+        ['link/papel', p.link, p.papel],
+        ['realce/papel', p.realce, p.papel],
+        ['claro/escuro', p.claro, p.escuro],
+        ['claroSuave/escuro', p.claroSuave, p.escuro],
+        ['claro/escuro2', p.claro, p.escuro2],
+        ['claroSuave/escuro2', p.claroSuave, p.escuro2],
+        ['rodapeSuave/rodape', p.rodapeSuave, p.rodape],
+        ['claroSuave/rodape', p.claroSuave, p.rodape],
+      ];
+      for (const [nome, a, b] of pares)
+        expect(contraste(a, b), `${tema} ${nome}`).toBeGreaterThanOrEqual(4.5);
+      // Botão de destaque: a cor do dono com o texto escuro do tema.
+      for (const { hex } of Object.values(CORES_SITE))
+        expect(contraste(hex, p.escuro), `${tema} destaque ${hex}`).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(Object.keys(ROTULO_TEMA)).toEqual(['tradicional', 'clube', 'letreiro', 'estudio']);
+    expect(FONTE_DO_TEMA.estudio).toBe('condensada');
   });
 });
