@@ -28,6 +28,10 @@ import {
   type UnidadeDetalhe,
   type UnidadeEntrada,
   copiarCatalogoSchema,
+  diasQueAbre,
+  horarioFuncionamentoSchema,
+  lerFuncionamento,
+  type HorarioFuncionamento,
   dominioSchema,
   enderecoSiteSchema,
   type DominioEntrada,
@@ -105,6 +109,55 @@ export class UnidadesController {
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
   ) {}
+
+  @Get(':id/funcionamento')
+  @Papeis(...GESTAO)
+  @ApiOperation({ summary: 'Horário de funcionamento da unidade (turnos por dia da semana)' })
+  funcionamento(@Param('id', ParseUUIDPipe) id: string): Promise<HorarioFuncionamento> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const u = await tx.unidade.findUnique({ where: { id } });
+      if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
+      return { turnos: lerFuncionamento(u.horarioFuncionamento) };
+    });
+  }
+
+  @Put(':id/funcionamento')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({
+    summary:
+      'Gravar o horário de funcionamento: o agendamento só oferece horário dentro dele (vazio = sem limite)',
+  })
+  gravarFuncionamento(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(horarioFuncionamentoSchema) dados: HorarioFuncionamento,
+  ): Promise<HorarioFuncionamento> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const u = await tx.unidade.findUnique({ where: { id } });
+      if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
+      const turnos = [...dados.turnos].sort(
+        (a, b) => a.diaSemana - b.diaSemana || a.inicioMin - b.inicioMin,
+      );
+      await tx.unidade.update({
+        where: { id },
+        data: {
+          horarioFuncionamento: turnos as unknown as Prisma.InputJsonValue,
+          // Os dias de trabalho seguem o horário (uma fonte só); sem horário, ficam como estavam.
+          ...(turnos.length ? { diasTrabalho: diasQueAbre(turnos) } : {}),
+        },
+      });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'funcionamento',
+        antes: { turnos: lerFuncionamento(u.horarioFuncionamento) },
+        depois: { turnos },
+      });
+      return { turnos };
+    });
+  }
 
   @Get(':id/agendamento-visual')
   @Papeis(...GESTAO)

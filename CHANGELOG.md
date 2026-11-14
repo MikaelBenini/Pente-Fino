@@ -14,6 +14,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - No site, cada barbeiro mostra os serviços que faz, e a lista de serviços diz com quem é, quando não são todos que fazem.
 - Sem nada marcado, tudo continua como antes: todos fazem tudo.
 
+### Adicionado (horário de funcionamento da unidade)
+
+- Em Configurações, Unidades, o botão "Horário de funcionamento" (dono e gestor): para cada dia, a hora em que a unidade abre e fecha, com intervalo para o almoço, se quiser. Há o atalho "Usar este horário nos outros dias abertos".
+- O cliente só consegue marcar dentro desse horário, pelo link, pelo WhatsApp ou no balcão, mesmo que o barbeiro tenha expediente maior. Os dias de trabalho da unidade passam a seguir o horário.
+- O site da barbearia mostra esse horário, por exemplo "Terça a sexta, 9h às 12h e 13h às 20h".
+- Sem horário cadastrado, tudo continua como antes: vale o expediente da equipe.
+
 ### Adicionado (página de agendamento com a cara da barbearia)
 
 - Em "Minha página", o bloco "Página de agendamento": o dono liga o visual da barbearia no link de agendamento, com a cor dos botões, o logotipo, uma foto de capa, um título e um recado, e o link "Ver o site da barbearia" quando o site está publicado.
