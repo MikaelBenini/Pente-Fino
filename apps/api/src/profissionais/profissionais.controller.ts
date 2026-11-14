@@ -24,6 +24,8 @@ import {
   type HorariosEntrada,
   type NovaRegraComissaoEntrada,
   type NovoProfissionalEntrada,
+  servicosDoProfissionalSchema,
+  type ServicosDoProfissional,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada } from '../auditoria/auditoria.js';
@@ -80,6 +82,19 @@ export class ProfissionaisController {
   @ApiOperation({ summary: 'Expediente semanal (substitui o atual)' })
   horarios(@Param('id', ParseUUIDPipe) id: string, @Corpo(horariosSchema) dados: HorariosEntrada) {
     return this.servico.definirHorarios(id, dados);
+  }
+
+  @Put(':id/servicos')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({
+    summary: 'Serviços que o barbeiro faz (vazio = todos); vale no link, bot e site',
+  })
+  servicos(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(servicosDoProfissionalSchema) dados: ServicosDoProfissional,
+  ) {
+    return this.servico.definirServicos(id, dados.servicoIds);
   }
 
   @Post(':id/regras-comissao')

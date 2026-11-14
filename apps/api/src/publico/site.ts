@@ -78,6 +78,7 @@ export async function montarSitePublico(
       nome: p.usuario.nome.split(' ')[0]!,
       foco: site.equipe[p.id]?.foco ?? '',
       sobre: site.equipe[p.id]?.sobre ?? '',
+      servicoIds: p.servicoIds,
     })),
     // O horário da unidade, quando cadastrado; sem ele, o expediente da equipe.
     horario: lerFuncionamento(u.horarioFuncionamento).length

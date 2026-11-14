@@ -291,7 +291,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
 3. Lote 7n: cabeçalho e rodapé editáveis, junto com o 7m (botões com link e CSS personalizado)
 4. Horário de funcionamento da unidade (base do agendamento e dos avisos de resumo)
 5. [x] Lote 7l: editar o visual da página de agendamento no mesmo painel
-6. Lote 7g: quem faz cada serviço, com foto (site e agendamento)
+6. [x] Lote 7g: quem faz cada serviço, com foto (site e agendamento)
 7. Lote 7h: páginas extras Galeria e Clube de assinatura
 8. Lotes 7i, 7j e 7k: temas Clube, Letreiro e Estúdio
 9. Resto da seção 7: saúde da conta no Início, resumo do fechamento de caixa, histórico por
@@ -375,7 +375,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
       saem na hora certa de cada unidade;
     - o site e a página de agendamento mostram esse horário (hoje sai do expediente da
       equipe); sem horário cadastrado, continua como hoje;
-  - [ ] **Lote 7g** quem faz cada serviço (P5): o dono marca os serviços de cada barbeiro, com
+  - [x] **Lote 7g** (14/11, documentado na linha de desenvolvimento) quem faz cada serviço (P5): o dono marca os serviços de cada barbeiro, com
     foto; vale no site e no agendamento;
   - [ ] **Lote 7h** páginas extras Galeria e Clube de assinatura;
   - [ ] **Lotes 7i, 7j e 7k** temas Clube, Letreiro e Estúdio, um por PR.

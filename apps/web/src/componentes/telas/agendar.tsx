@@ -18,6 +18,7 @@ import {
   type HorarioLivre,
   type UnidadePublica,
   linkDeAgendamento,
+  fazOsServicos,
   urlDaFoto,
   type VisualAgendamentoPublico,
 } from '@pente-fino/shared';
@@ -505,11 +506,14 @@ function Formulario({
                       checked={servicos.includes(s.id)}
                       onChange={(e) => {
                         setHorario(null);
-                        setServicos(
-                          e.target.checked
-                            ? [...servicos, s.id]
-                            : servicos.filter((x) => x !== s.id),
-                        );
+                        const novos = e.target.checked
+                          ? [...servicos, s.id]
+                          : servicos.filter((x) => x !== s.id);
+                        setServicos(novos);
+                        // P5: o barbeiro escolhido não faz o serviço novo? Volta a "Sem preferência".
+                        const escolhido = u.profissionais.find((p) => p.id === profissional);
+                        if (escolhido && !fazOsServicos(escolhido.servicoIds ?? [], novos))
+                          setProfissional('');
                       }}
                     />
                     <span className="font-denso text-lg tabular-nums">
@@ -524,7 +528,11 @@ function Formulario({
               <legend className="mb-2 text-lg font-semibold">2. Com quem?</legend>
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
-                  {[{ id: '', nome: 'Sem preferência' }, ...u.profissionais].map((p) => (
+                  {[
+                    { id: '', nome: 'Sem preferência' },
+                    // P5: só quem faz todos os serviços escolhidos.
+                    ...u.profissionais.filter((p) => fazOsServicos(p.servicoIds ?? [], servicos)),
+                  ].map((p) => (
                     <button
                       key={p.id || 'qualquer'}
                       type="button"
@@ -535,7 +543,17 @@ function Formulario({
                         setHorario(null);
                       }}
                     >
-                      {p.nome}
+                      <span className="inline-flex items-center gap-2">
+                        {'foto' in p && p.foto && (
+                          // eslint-disable-next-line @next/next/no-img-element -- foto já reduzida
+                          <img
+                            src={urlDaFoto(p.foto, 640)}
+                            alt=""
+                            className="size-8 rounded-full object-cover"
+                          />
+                        )}
+                        {p.nome}
+                      </span>
                     </button>
                   ))}
                 </div>

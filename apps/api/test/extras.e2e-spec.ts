@@ -302,7 +302,9 @@ describe('link público de agendamento', () => {
     expect(r.servicos).toEqual([
       { id: corte, nome: 'Corte', duracaoMin: 30, ehExtra: false, preco: 5000 },
     ]);
-    expect(r.profissionais).toEqual([{ id: prof, nome: 'Barbeiro', precos: {} }]);
+    expect(r.profissionais).toEqual([
+      { id: prof, nome: 'Barbeiro', precos: {}, servicoIds: [], foto: null },
+    ]);
     expect(JSON.stringify(r)).not.toMatch(/email|custo|contaId/);
   });
 

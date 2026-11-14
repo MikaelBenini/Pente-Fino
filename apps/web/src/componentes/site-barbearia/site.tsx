@@ -13,6 +13,7 @@ import {
   urlDeLinkValida,
   formatarMoeda,
   linkDoMapa,
+  quemFaz,
   servicosEmDestaque,
   servicosPorCategoria,
   urlDaFoto,
@@ -746,6 +747,14 @@ function TabelaServicos({ dados }: { dados: SitePublico }) {
                 <div className="min-w-0">
                   <h3 className="text-[20px] font-semibold">{s.nome}</h3>
                   <p className="text-[15px] text-[#4C554F]">{duracao(s.duracaoMin)}</p>
+                  {(() => {
+                    const com = quemFaz(dados.equipe, s.id);
+                    return com.length > 0 && com.length < dados.equipe.length ? (
+                      <p className="text-[14px] text-[#4C554F]">
+                        Com {com.map((p) => p.nome).join(' e ')}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="flex items-center gap-5">
                   <span className={`${TITULO} text-[30px] leading-none`}>
@@ -802,6 +811,15 @@ function Barbeiros({ dados }: { dados: SitePublico }) {
             </div>
             {p.sobre && (
               <p className="max-w-[32em] whitespace-pre-line text-[#3E4842]">{p.sobre}</p>
+            )}
+            {p.servicoIds.length > 0 && (
+              <p className="text-[15px] text-[#4C554F]">
+                Faz:{' '}
+                {dados.servicos
+                  .filter((sv) => p.servicoIds.includes(sv.id))
+                  .map((sv) => sv.nome)
+                  .join(', ')}
+              </p>
             )}
             {temAgendamento(dados) && (
               <Link

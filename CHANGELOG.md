@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (quem faz cada serviço)
+
+- Em Equipe, o botão "Serviços que faz": o dono marca os serviços de cada barbeiro. Com tudo marcado, ele faz todos, inclusive os serviços criados depois.
+- Na página de agendamento, ao escolher o serviço, só aparecem os barbeiros que fazem esse serviço, com a foto de cada um (a mesma do site). Os horários livres seguem a mesma regra, e o bot do WhatsApp também.
+- No site, cada barbeiro mostra os serviços que faz, e a lista de serviços diz com quem é, quando não são todos que fazem.
+- Sem nada marcado, tudo continua como antes: todos fazem tudo.
+
 ### Adicionado (horário de funcionamento da unidade)
 
 - Em Configurações, Unidades, o botão "Horário de funcionamento" (dono e gestor): para cada dia, a hora em que a unidade abre e fecha, com intervalo para o almoço, se quiser. Há o atalho "Usar este horário nos outros dias abertos".

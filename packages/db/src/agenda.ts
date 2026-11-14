@@ -15,6 +15,7 @@ import {
   type DataISO,
   recorrentesNoDia,
   type AvisoEncaixe,
+  fazOsServicos,
   limitarAoFuncionamento,
   lerFuncionamento,
 } from '@pente-fino/shared';
@@ -188,13 +189,18 @@ export async function calcularLivres(
   duracaoMin: number,
   profissionalId?: string,
   agora = new Date(),
-  /** `ignorar`: o próprio agendamento, ao remarcar (o horário dele conta como livre). */
-  opcoes: { antecedenciaMin?: number; ignorar?: string } = {},
+  /**
+   * `ignorar`: o próprio agendamento, ao remarcar (o horário dele conta como livre).
+   * `servicoIds`: só entram os barbeiros que fazem todos esses serviços (P5).
+   */
+  opcoes: { antecedenciaMin?: number; ignorar?: string; servicoIds?: readonly string[] } = {},
 ): Promise<HorarioLivre[]> {
   const regras = await regrasDaUnidade(tx, unidadeId);
-  const profs = await tx.profissional.findMany({
-    where: { unidadeId, ativo: true, ...(profissionalId ? { id: profissionalId } : {}) },
-  });
+  const profs = (
+    await tx.profissional.findMany({
+      where: { unidadeId, ativo: true, ...(profissionalId ? { id: profissionalId } : {}) },
+    })
+  ).filter((p) => !opcoes.servicoIds || fazOsServicos(p.servicoIds, opcoes.servicoIds));
   const aPartirDe = new Date(agora.getTime() + (opcoes.antecedenciaMin ?? 0) * 60_000);
   const r: HorarioLivre[] = [];
   for (const p of profs) {
@@ -279,6 +285,12 @@ export async function criarAgendamentoNoBanco(
 ): Promise<{ comandaId: string; agendamentoId: string; fim: Date; total: number }> {
   const duracao = await duracaoDosServicos(tx, d.servicoIds);
   const fim = new Date(d.inicio.getTime() + duracao * 60_000);
+  // P5: o barbeiro precisa fazer os serviços (o encaixe do balcão decide na hora).
+  if (!d.encaixe) {
+    const prof = await tx.profissional.findUnique({ where: { id: d.profissionalId } });
+    if (prof && !fazOsServicos(prof.servicoIds, d.servicoIds))
+      throw new ErroAgenda('conflito', 'Este barbeiro não faz um dos serviços escolhidos.');
+  }
   // Encaixe: a recepção já viu os avisos e confirmou; só outro cliente no horário impede.
   if (d.encaixe) await avisosDoEncaixe(tx, d.profissionalId, d.unidadeId, d.inicio, fim);
   else await validarHorario(tx, d.profissionalId, d.unidadeId, d.inicio, fim);
