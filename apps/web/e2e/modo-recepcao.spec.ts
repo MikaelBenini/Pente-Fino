@@ -10,6 +10,18 @@ async function entrar(page: Page) {
   await page.waitForURL(/inicio|agenda|hoje|comandas/);
 }
 
+// A comanda de teste ocupa o barbeiro: cancela no fim (mesmo se o teste falhar), para não
+// tirar o horário livre dos outros testes do Centro (operacao.spec).
+let criada: string | null = null;
+test.afterEach(async ({ page }) => {
+  if (!criada) return;
+  await page.request.post(`/api/comandas/${criada}/cancelar`, {
+    data: { motivo: 'Teste do modo recepção' },
+    headers: { origin: new URL(page.url()).origin },
+  });
+  criada = null;
+});
+
 test('modo recepção: a comanda anda de "na cadeira" para "receber"', async ({ page }) => {
   await entrar(page);
   // Uma comanda na hora (cliente sem horário), aberta pela API do painel.
@@ -41,6 +53,7 @@ test('modo recepção: a comanda anda de "na cadeira" para "receber"', async ({ 
   });
   expect(aberta.status()).toBe(201);
   const { id } = (await aberta.json()) as { id: string };
+  criada = id;
 
   await page.goto('/comandas');
   await page.getByRole('link', { name: 'Modo recepção' }).click();
