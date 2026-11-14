@@ -59,8 +59,11 @@ import {
   lerConfiguracaoPublica,
   type TabelaPrecosPlanos,
   temRecurso,
+  CORES_SITE,
   lerSite,
+  lerVisualAgendamento,
   normalizarDominio,
+  type VisualAgendamentoPublico,
   type DominioPublico,
   type SitePublico,
   type TipoEndereco,
@@ -87,6 +90,24 @@ import { montarSitePublico } from './site.js';
 import { lerFoto } from '../site/fotos.js';
 
 const slugParam = new PipeZod(slugSchema);
+
+/** Lote 7l: o visual da página de agendamento, só quando o dono ligou. */
+function visualPublico(u: {
+  agendamentoVisual: unknown;
+  sitePublicado: unknown;
+  siteSlug: string | null;
+}): VisualAgendamentoPublico | null {
+  const v = lerVisualAgendamento(u.agendamentoVisual);
+  if (!v?.ativo) return null;
+  return {
+    cor: CORES_SITE[v.cor].hex,
+    logo: v.logo ?? null,
+    capa: v.capa ?? null,
+    titulo: v.titulo,
+    texto: v.texto,
+    site: v.linkSite && u.sitePublicado && u.siteSlug ? `/s/${u.siteSlug}` : null,
+  };
+}
 const consultaDominio = z.object({ domain: z.string().min(4).max(260) });
 
 /** "Prefere pelo WhatsApp?": o bot conectado e marcando pela conversa. */
@@ -380,6 +401,7 @@ export class PublicoController {
             orderBy: { nome: 'asc' },
           })
         ).map((o) => ({ slug: o.slug!, nome: o.nome, endereco: o.endereco })),
+        visual: visualPublico(u),
       };
     });
   }

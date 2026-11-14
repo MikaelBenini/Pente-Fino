@@ -290,7 +290,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
 2. Merge do PR #198 (site sem o link de agendamento)
 3. Lote 7n: cabeçalho e rodapé editáveis, junto com o 7m (botões com link e CSS personalizado)
 4. Horário de funcionamento da unidade (base do agendamento e dos avisos de resumo)
-5. Lote 7l: editar o visual da página de agendamento no mesmo painel
+5. [x] Lote 7l: editar o visual da página de agendamento no mesmo painel
 6. Lote 7g: quem faz cada serviço, com foto (site e agendamento)
 7. Lote 7h: páginas extras Galeria e Clube de assinatura
 8. Lotes 7i, 7j e 7k: temas Clube, Letreiro e Estúdio
@@ -380,7 +380,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
   - [ ] **Lote 7h** páginas extras Galeria e Clube de assinatura;
   - [ ] **Lotes 7i, 7j e 7k** temas Clube, Letreiro e Estúdio, um por PR.
   - pedidos do dono em 13/11 (depois dos endereços separados):
-    - [ ] **Lote 7l** editar a página de agendamento (`/b/<link>`) no mesmo painel: cor,
+    - [x] **Lote 7l** (14/11, documentado na linha de desenvolvimento) editar a página de agendamento (`/b/<link>`) no mesmo painel: cor,
       logotipo, foto de capa e textos, no mesmo visual do site;
     - [x] **Lote 7n** (13/11, documentado na linha de desenvolvimento) **Cabeçalho e rodapé editáveis** (pergunta do dono em 13/11; hoje só o logotipo, a
       frase do rodapé e o Instagram mudam): no cabeçalho, nome, só logotipo ou os dois, menu

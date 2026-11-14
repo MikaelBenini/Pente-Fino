@@ -823,3 +823,54 @@ export function limparCssSite(css: string | undefined): string {
       .trim()
   );
 }
+
+// ─── Visual da página de agendamento (lote 7l) ──────────────────────────────
+
+/**
+ * A página de agendamento (/b/<link>) com a cara da barbearia: cor, logotipo, foto de capa e um
+ * texto de boas-vindas. Fica separado do site (decisão do dono: o site é uma coisa, o link é
+ * outra) e vale assim que salva. Desligado = o visual de sempre do Pente Fino.
+ */
+export const visualAgendamentoSchema = z.object({
+  ativo: z.boolean(),
+  cor: z.enum(IDS_CORES),
+  logo: fotoIdSchema.optional(),
+  capa: fotoIdSchema.optional(),
+  titulo: textoCurto(80),
+  texto: textoCurto(300),
+  /** Mostra "Ver o site da barbearia" (só quando o site está publicado). */
+  linkSite: z.boolean(),
+});
+export type VisualAgendamento = z.infer<typeof visualAgendamentoSchema>;
+
+/** Ponto de partida: o que o site já tem (cor e logotipo), desligado. */
+export function visualAgendamentoInicial(site?: SiteBarbearia | null): VisualAgendamento {
+  return {
+    ativo: false,
+    cor: site?.cor ?? 'latao',
+    ...(site?.logo ? { logo: site.logo } : {}),
+    titulo: '',
+    texto: '',
+    linkSite: true,
+  };
+}
+
+export function lerVisualAgendamento(valor: unknown): VisualAgendamento | null {
+  const r = visualAgendamentoSchema.safeParse(valor);
+  return r.success ? r.data : null;
+}
+
+export const fotosDoVisual = (v: VisualAgendamento) =>
+  [v.logo, v.capa].filter((x): x is string => !!x);
+
+/** O que a página de agendamento recebe (só quando o visual está ligado). */
+export interface VisualAgendamentoPublico {
+  /** Cor de destaque (hex), lida bem com o texto escuro dos botões. */
+  cor: string;
+  logo: string | null;
+  capa: string | null;
+  titulo: string;
+  texto: string;
+  /** Endereço do site publicado (/s/...), quando o dono quer o link para ele. */
+  site: string | null;
+}

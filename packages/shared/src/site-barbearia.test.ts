@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCOS_SITE,
+  fotosDoVisual,
+  lerVisualAgendamento,
+  visualAgendamentoInicial,
+  visualAgendamentoSchema,
   cabecalhoDoSite,
   limparCssSite,
   rodapeDoSite,
@@ -334,5 +338,17 @@ a { background: u\\rl(https://x.com) }`;
     expect(limpo).not.toMatch(/@import|url\(|<\/style|expression\(|(^|[\s;{])behavior:|\\/i);
     expect(limpo).toContain('color: red;');
     expect(limparCssSite(undefined)).toBe('');
+  });
+});
+
+describe('visual da página de agendamento (lote 7l)', () => {
+  it('começa desligado, com a cor e o logotipo do site', () => {
+    const logo = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b';
+    const v = visualAgendamentoInicial({ ...siteInicial('X'), cor: 'salvia', logo });
+    expect(v).toEqual({ ativo: false, cor: 'salvia', logo, titulo: '', texto: '', linkSite: true });
+    expect(visualAgendamentoSchema.safeParse(v).success).toBe(true);
+    expect(fotosDoVisual({ ...v, capa: logo })).toEqual([logo, logo]);
+    expect(lerVisualAgendamento({ ativo: 'sim' })).toBeNull();
+    expect(visualAgendamentoInicial(null).cor).toBe('latao');
   });
 });
