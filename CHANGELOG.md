@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (saúde da conta no Início)
+
+- O quadro "Precisa de você agora", no Início, passou a avisar também:
+  - o caixa de um dia anterior que ficou aberto, com o caminho para fechar;
+  - as comandas de dias anteriores que não foram fechadas nem canceladas;
+  - a unidade com o link de agendamento desligado, onde o cliente não consegue marcar sozinho.
+- O que já aparecia continua: WhatsApp desconectado, clientes esperando atendente, comandas para confirmar e fechar e o caixa de hoje.
+
 ### Adicionado (páginas extras no site: Galeria e Clube)
 
 - Em "Minha página", o quadro "Páginas extras" liga duas páginas novas no site, que entram no menu:
