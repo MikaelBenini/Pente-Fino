@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (histórico por comanda)
+
+- A tela da comanda ganhou a seção "Histórico", que abre com um toque e mostra em ordem tudo o que aconteceu com ela:
+  - quando foi aberta, quando o atendimento começou e quando o barbeiro confirmou;
+  - cada item lançado e cada pagamento, inclusive o sinal e a devolução;
+  - fechar, reabrir (com o motivo), cancelar, falta e preço fora da tabela, com quem fez.
+
 ### Adicionado (saúde da conta no Início)
 
 - O quadro "Precisa de você agora", no Início, passou a avisar também:
