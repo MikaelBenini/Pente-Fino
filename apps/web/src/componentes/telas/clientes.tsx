@@ -9,6 +9,7 @@ import {
   NOME_MOTIVO_RECUPERAR,
   type AdesaoDetalhe,
   type ClienteParaRecuperar,
+  type ClienteDetalhe,
   type ClienteResumo,
 } from '@pente-fino/shared';
 import { Abas, Botao, Campo, Dialogo, EstadoVazio } from '@pente-fino/ui';
@@ -243,6 +244,7 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
   const veConversa = papeis.some((p) => p === 'dono' || p === 'gestor' || p === 'recepcao');
   const [nota, setNota] = useState('');
   const [erro, setErro] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
   const anotar = useAcao(
     (texto: string) => api(`clientes/${id}/notas`, { corpo: { texto } }),
     [chavesOperacao.clientes],
@@ -263,6 +265,12 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
       <Estado consulta={cliente}>
         {() => (
           <div className="flex flex-col gap-6">
+            {veConversa && (
+              <Botao variante="secundario" className="self-start" onClick={() => setEditando(true)}>
+                Editar dados
+              </Botao>
+            )}
+            {editando && <EditarCliente cliente={c!} onFechar={() => setEditando(false)} />}
             <ClubeDoCliente clienteId={c!.id} />
             <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
@@ -434,6 +442,92 @@ function ConversaWhatsapp({
         }
       </Estado>
     </section>
+  );
+}
+
+/**
+ * Corrigir ou completar os dados do cliente (pedido do dono em 13/11): quem chega pelo bot vem só
+ * com nome e WhatsApp, e o aniversário (que dispara a mensagem de aniversário) ficava sem como pôr.
+ */
+function EditarCliente({ cliente, onFechar }: { cliente: ClienteDetalhe; onFechar: () => void }) {
+  const [f, setF] = useState({
+    nome: cliente.nome,
+    telefone: cliente.telefone ? formatarTelefone(cliente.telefone) : '',
+    email: cliente.email ?? '',
+    aniversario: cliente.aniversario ?? '',
+  });
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useAcao(
+    (corpo: object) => api(`clientes/${cliente.id}`, { metodo: 'PATCH', corpo }),
+    [chavesOperacao.clientes],
+  );
+  const telefoneAntes = cliente.telefone ? formatarTelefone(cliente.telefone) : '';
+  return (
+    <Dialogo aberto titulo={`Editar ${cliente.nome}`} onFechar={onFechar}>
+      <form
+        method="post"
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setErro(null);
+          try {
+            await salvar.mutateAsync({
+              nome: f.nome,
+              // Telefone oculto (barbeiro) ou sem mudança: não mexe.
+              ...(cliente.telefoneOculto || f.telefone === telefoneAntes
+                ? {}
+                : { telefone: f.telefone || undefined }),
+              email: f.email,
+              aniversario: f.aniversario || null,
+            });
+            onFechar();
+          } catch (er) {
+            setErro(mensagemDe(er));
+          }
+        }}
+      >
+        {erro && <Aviso tom="erro">{erro}</Aviso>}
+        <Campo
+          id="editar-cliente-nome"
+          rotulo="Nome"
+          value={f.nome}
+          onChange={(e) => setF({ ...f, nome: e.target.value })}
+        />
+        {!cliente.telefoneOculto && (
+          <Campo
+            id="editar-cliente-telefone"
+            rotulo="WhatsApp"
+            inputMode="tel"
+            value={f.telefone}
+            onChange={(e) => setF({ ...f, telefone: e.target.value })}
+          />
+        )}
+        <Campo
+          id="editar-cliente-email"
+          rotulo="E-mail (opcional)"
+          type="email"
+          value={f.email}
+          onChange={(e) => setF({ ...f, email: e.target.value })}
+        />
+        <Campo
+          id="editar-cliente-aniversario"
+          rotulo="Aniversário (opcional)"
+          type="date"
+          dica="Com a data, o cliente recebe a mensagem de aniversário, se ela estiver ligada em Automações."
+          value={f.aniversario}
+          onChange={(e) => setF({ ...f, aniversario: e.target.value })}
+        />
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Botao variante="secundario" onClick={onFechar}>
+            Cancelar
+          </Botao>
+          <Botao type="submit" carregando={salvar.isPending}>
+            Salvar dados
+          </Botao>
+        </div>
+      </form>
+    </Dialogo>
   );
 }
 

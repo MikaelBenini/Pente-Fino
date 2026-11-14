@@ -14,6 +14,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - O site da barbearia mostra esse horário, por exemplo "Terça a sexta, 9h às 12h e 13h às 20h".
 - Sem horário cadastrado, tudo continua como antes: vale o expediente da equipe.
 
+### Corrigido (ficha do cliente)
+
+- A ficha do cliente ganhou "Editar dados" (dono, gestor e recepção): nome, WhatsApp, e-mail e aniversário. Quem chega pelo bot vem só com nome e WhatsApp, e o aniversário, que dispara a mensagem de aniversário, ficava sem como pôr.
+
 ### Alterado (site sem o link de agendamento)
 
 - O site da barbearia pode ser publicado e funciona mesmo com o link de agendamento desligado. Nesse caso, no lugar de "Agendar horário" aparece "Falar no WhatsApp", com o telefone da unidade; os "Agendar" de cada serviço e barbeiro somem. Ligando o link depois, os botões voltam sozinhos.
