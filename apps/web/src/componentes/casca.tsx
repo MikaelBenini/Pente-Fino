@@ -454,10 +454,10 @@ function BotaoAvisos({ className }: { className: string }) {
 function BarraTopo() {
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-borda bg-fundo/95 pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] backdrop-blur lg:hidden">
-      <Link href="/app" className="py-2" aria-label="Pente Fino, início">
+      <Link href="/app" className="shrink-0 py-2" aria-label="Pente Fino, início">
         <Marca compacta />
       </Link>
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1">
         <button
           type="button"
           onClick={abrirBusca}
