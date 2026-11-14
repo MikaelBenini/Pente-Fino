@@ -350,6 +350,7 @@ export function ChatSite() {
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}
+        data-medir={aberto ? undefined : 'chat'}
         aria-expanded={aberto}
         aria-controls={idPainel}
         aria-label={naoLidas ? `Chat: ${naoLidas} mensagem nova` : 'Abrir o chat com o Pente Fino'}

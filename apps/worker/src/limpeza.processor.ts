@@ -16,6 +16,7 @@ import {
   contasParaLimpeza,
   limparDadosDaConta,
   limparSessoesDaAdministracao,
+  limparVisitasDoSite,
   repetirDespesasDoMes,
   situacaoDaContaNaLimpeza,
   type PrismaClient,
@@ -117,6 +118,7 @@ export async function executarLimpeza(
   }
   try {
     apagados.sessoesAdmin = await limparSessoesDaAdministracao(prisma, d.lote);
+    apagados.visitasSite = await limparVisitasDoSite(prisma, d.lote);
     apagados.filas = await d.limparFilas(DIAS_GUARDA * 86_400_000);
   } catch (e) {
     falhas.push((e as Error).message);

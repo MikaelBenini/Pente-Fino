@@ -7,6 +7,17 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (visitantes da página de vendas)
+
+- Na administração, a aba Vendas ganhou o quadro "Visitantes da página de vendas", de hoje ou dos últimos 7 dias:
+  - o funil: entrou, rolou até a metade, viu os planos e foi ao cadastro;
+  - até onde rolaram a página (25%, 50%, 75% e 100%);
+  - em que clicaram (planos, cadastro, WhatsApp, vídeo e chat);
+  - de onde vieram (campanha ou site de origem);
+  - as visitas por dia e quantas são de quem veio pela primeira vez.
+- A medição é nossa e sem dado pessoal: um número anônimo por visita, que some ao fechar a aba. "Primeira vez" só conta para quem aceitou os cookies, e quem liga o "não rastrear" do navegador fica de fora.
+- Os eventos com mais de 90 dias saem na limpeza diária ("Visitas à página de vendas" na Saúde do sistema).
+
 ### Adicionado (histórico por comanda)
 
 - A tela da comanda ganhou a seção "Histórico", que abre com um toque e mostra em ordem tudo o que aconteceu com ela:

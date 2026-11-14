@@ -51,6 +51,7 @@ const PUBLICAS = new Set([
   'POST /publico/horario/:token/antecipar',
   'POST /publico/horario/:token/cancelar',
   'POST /publico/horario/:token/remarcar',
+  'POST /visitas', // eventos anônimos da página de vendas (limite padrão por IP)
   'POST /webhooks/asaas', // token do Asaas no cabeçalho
   'POST /webhooks/whatsapp', // assinatura da instância
 ]);
