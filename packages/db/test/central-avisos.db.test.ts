@@ -183,3 +183,33 @@ describe('fim do dia', () => {
     expect((await avisosDe(donoId)).filter((a) => a.tipo === 'resumo_dia')).toHaveLength(1);
   });
 });
+
+describe('fim do dia pelo horário de funcionamento (seção 7)', () => {
+  it('a unidade que fecha às 17h manda o resumo depois das 17h30, mesmo com barbeiro até as 19h', async () => {
+    const jardins = await naMinhaConta(async (tx) => {
+      const u = await tx.unidade.create({
+        data: {
+          nome: 'Jardins',
+          horarioFuncionamento: [{ diaSemana: 2, inicioMin: 9 * 60, fimMin: 17 * 60 }],
+        },
+      });
+      await tx.profissional.create({
+        data: {
+          usuarioId: barbeiroId,
+          unidadeId: u.id,
+          dataEntrada: dataParaBanco('2026-01-01'),
+          horarios: { create: [{ diaSemana: 2, inicioMin: 9 * 60, fimMin: 19 * 60 }] },
+        },
+      });
+      return u.id;
+    });
+    const resumosDaJardins = async () =>
+      (await avisosDe(donoId)).filter((a) => a.tipo === 'resumo_dia' && a.unidadeId === jardins);
+    // 17h10 em São Paulo: ainda não.
+    await rotinaDosAvisos(prisma, conta, new Date('2026-12-01T20:10:00Z'));
+    expect(await resumosDaJardins()).toHaveLength(0);
+    // 17h45: passou do fechamento (17h + meia hora), sai o resumo.
+    await rotinaDosAvisos(prisma, conta, new Date('2026-12-01T20:45:00Z'));
+    expect(await resumosDaJardins()).toHaveLength(1);
+  });
+});

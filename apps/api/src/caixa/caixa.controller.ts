@@ -4,6 +4,7 @@ import { gravarAviso, type Transacao } from '@pente-fino/db';
 import {
   abrirCaixaSchema,
   avisoCaixaDivergente,
+  avisoCaixaFechado,
   dataLocal,
   fecharCaixaSchema,
   statusEfetivo,
@@ -201,18 +202,34 @@ export class CaixaController {
         acao: 'fechar',
         depois: { esperado: atual.dinheiroEsperado, informado: d.totalInformado, divergencia },
       });
-      // Diferença na gaveta: aviso para gestor e dono (central de avisos e celular).
+      // Resumo do fechamento para dono e gestor (central de avisos e celular). Com diferença na
+      // gaveta, sai o aviso de diferença, com os mesmos totais (um aviso só por fechamento).
       const unidade = await tx.unidade.findUniqueOrThrow({ where: { id: d.unidadeId } });
-      const aviso = avisoCaixaDivergente({
-        caixaId: caixa.id,
-        unidade: unidade.nome,
-        dia: d.data,
-        totalSistema: atual.dinheiroEsperado,
-        totalInformado: d.totalInformado,
-        fechadoPor:
-          (await tx.usuario.findUnique({ where: { id: Contexto.usuario().id } }))?.nome ?? null,
-      });
-      if (aviso) push = await gravarAviso(tx, Contexto.usuario().contaId, d.unidadeId, aviso);
+      const fechadoPor =
+        (await tx.usuario.findUnique({ where: { id: Contexto.usuario().id } }))?.nome ?? null;
+      const totais = {
+        totalRecebido: atual.totalRecebido,
+        fechadas: atual.fechadas,
+        porForma: atual.porForma,
+      };
+      const aviso =
+        avisoCaixaDivergente({
+          caixaId: caixa.id,
+          unidade: unidade.nome,
+          dia: d.data,
+          totalSistema: atual.dinheiroEsperado,
+          totalInformado: d.totalInformado,
+          fechadoPor,
+          totais,
+        }) ??
+        avisoCaixaFechado({
+          caixaId: caixa.id,
+          unidade: unidade.nome,
+          dia: d.data,
+          fechadoPor,
+          totais,
+        });
+      push = await gravarAviso(tx, Contexto.usuario().contaId, d.unidadeId, aviso);
       return this.montar(tx, d.unidadeId, d.data);
     });
     for (const n of push) await this.filas.notificacoes.add('push', n).catch(() => undefined);
