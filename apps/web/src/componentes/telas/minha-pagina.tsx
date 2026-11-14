@@ -7,6 +7,8 @@ import {
   BLOCOS_SITE,
   BOTOES_SITE,
   CAMINHO_PAGINA,
+  visualAgendamentoSchema,
+  type VisualAgendamento,
   LIMITE_CSS_SITE,
   cabecalhoDoSite,
   rodapeDoSite,
@@ -350,6 +352,7 @@ function Editor({
             void cliente.invalidateQueries({ queryKey: chave(unidadeId) });
           }}
         />
+        <VisualDoAgendamento unidadeId={unidadeId} slug={situacao.slug} />
         <DominioProprio
           unidadeId={unidadeId}
           situacao={situacao}
@@ -1452,6 +1455,161 @@ function CabecalhoERodape({
           onMudar={(v) => mudarR({ creditos: v })}
         />
       </fieldset>
+    </div>
+  );
+}
+
+/**
+ * Lote 7l: a página de agendamento (/b/<link>) com a cara da barbearia. Separada do site: salva e
+ * já vale, sem "Publicar".
+ */
+function VisualDoAgendamento({ unidadeId, slug }: { unidadeId: string; slug: string | null }) {
+  const consulta = useQuery({
+    queryKey: ['unidades', unidadeId, 'agendamento-visual'],
+    queryFn: () => api<VisualAgendamento>(`unidades/${unidadeId}/agendamento-visual`),
+  });
+  return (
+    <section
+      aria-label="Página de agendamento"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 className="font-semibold">Página de agendamento</h2>
+      <Estado consulta={consulta}>
+        {() => <FormVisual unidadeId={unidadeId} slug={slug} inicial={consulta.data!} />}
+      </Estado>
+    </section>
+  );
+}
+
+function FormVisual({
+  unidadeId,
+  slug,
+  inicial,
+}: {
+  unidadeId: string;
+  slug: string | null;
+  inicial: VisualAgendamento;
+}) {
+  const cliente = useQueryClient();
+  const [v, setV] = useState(inicial);
+  const [estado, setEstado] = useState<'salvo' | 'mudou' | 'salvando'>('salvo');
+  const [erro, setErro] = useState<string | null>(null);
+  const mudar = (m: Partial<VisualAgendamento>) => {
+    setV({ ...v, ...m });
+    setEstado('mudou');
+    setErro(null);
+  };
+  async function salvar() {
+    const r = visualAgendamentoSchema.safeParse(v);
+    if (!r.success) {
+      setErro(r.error.issues[0]?.message ?? 'Revise os campos.');
+      return;
+    }
+    setEstado('salvando');
+    try {
+      await api(`unidades/${unidadeId}/agendamento-visual`, { metodo: 'PUT', corpo: r.data });
+      setEstado('salvo');
+      await cliente.invalidateQueries({ queryKey: ['unidades', unidadeId, 'agendamento-visual'] });
+    } catch (e) {
+      setEstado('mudou');
+      setErro(mensagemDe(e));
+    }
+  }
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-tinta-suave">
+        A página onde o cliente marca o horário pode ter a cara da barbearia: cor, logotipo, foto de
+        capa e um recado. Vale assim que salvar; não depende de publicar o site.
+      </p>
+      <Marcar
+        id="visual-ativo"
+        rotulo="Usar o visual da barbearia na página de agendamento"
+        marcado={v.ativo}
+        onMudar={(ativo) => mudar({ ativo })}
+      />
+      {v.ativo && (
+        <>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-sm font-medium">Cor dos botões</legend>
+            <div className="flex flex-wrap gap-3">
+              {(Object.keys(CORES_SITE) as CorSite[]).map((c) => (
+                <label key={c} className="flex cursor-pointer flex-col items-center gap-1 text-xs">
+                  <input
+                    type="radio"
+                    name="cor-agendamento"
+                    value={c}
+                    checked={v.cor === c}
+                    onChange={() => mudar({ cor: c })}
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden
+                    className="size-11 rounded-full border-2 border-superficie shadow-[0_0_0_1px_var(--color-borda)] peer-checked:shadow-[0_0_0_3px_var(--color-tinta)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-foco"
+                    style={{ background: CORES_SITE[c].hex }}
+                  />
+                  {CORES_SITE[c].rotulo}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <CampoFoto
+            rotulo="Logotipo"
+            unidadeId={unidadeId}
+            valor={v.logo}
+            onMudar={(f) => mudar({ logo: f?.id })}
+          />
+          <CampoFoto
+            rotulo="Foto de capa"
+            unidadeId={unidadeId}
+            valor={v.capa}
+            dica="Foto deitada, aparece no topo da página."
+            onMudar={(f) => mudar({ capa: f?.id })}
+          />
+          <Campo
+            id="visual-titulo"
+            rotulo="Título (opcional)"
+            placeholder="Marque seu horário"
+            value={v.titulo}
+            maxLength={80}
+            onChange={(e) => mudar({ titulo: e.target.value })}
+          />
+          <CampoTexto
+            id="visual-texto"
+            rotulo="Recado (opcional)"
+            rows={2}
+            value={v.texto}
+            maxLength={300}
+            onChange={(e) => mudar({ texto: e.target.value })}
+          />
+          <Marcar
+            id="visual-link-site"
+            rotulo="Mostrar o link “Ver o site da barbearia” (quando o site estiver publicado)"
+            marcado={v.linkSite}
+            onMudar={(linkSite) => mudar({ linkSite })}
+          />
+        </>
+      )}
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      <div className="flex flex-wrap items-center gap-2">
+        <Botao onClick={salvar} carregando={estado === 'salvando'} disabled={estado === 'salvo'}>
+          Salvar página de agendamento
+        </Botao>
+        {slug && (
+          <a
+            href={caminhoDoAgendamento(slug)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="toque inline-flex min-h-11 items-center gap-2 rounded-md border border-borda bg-superficie-2 px-4 font-semibold hover:bg-superficie-3"
+          >
+            Ver página de agendamento
+            <ExternalLink aria-hidden className="size-4" />
+            <span className="sr-only">(abre em outra aba)</span>
+          </a>
+        )}
+        <span className="text-sm text-tinta-suave" aria-live="polite">
+          {estado === 'salvo' ? 'Salvo.' : estado === 'mudou' ? 'Alterações não salvas.' : ''}
+        </span>
+      </div>
     </div>
   );
 }

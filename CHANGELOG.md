@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (página de agendamento com a cara da barbearia)
+
+- Em "Minha página", o bloco "Página de agendamento": o dono liga o visual da barbearia no link de agendamento, com a cor dos botões, o logotipo, uma foto de capa, um título e um recado, e o link "Ver o site da barbearia" quando o site está publicado.
+- Fica separado do site: vale assim que salva, sem precisar publicar. Desligado, a página fica como sempre.
+
 ### Adicionado (cabeçalho e rodapé editáveis, botões com link e CSS no site)
 
 - "Minha página" ganhou a aba "Cabeçalho e rodapé":

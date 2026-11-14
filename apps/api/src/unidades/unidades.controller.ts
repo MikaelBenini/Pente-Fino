@@ -34,8 +34,13 @@ import {
   envioFotoSchema,
   type EnderecoSite,
   fotosDoSite,
+  fotosDoVisual,
   lerSite,
+  lerVisualAgendamento,
   siteBarbeariaSchema,
+  visualAgendamentoInicial,
+  visualAgendamentoSchema,
+  type VisualAgendamento,
   type EnvioFoto,
   type FotoEnviada,
   type SiteBarbearia,
@@ -78,6 +83,12 @@ const SELECAO = {
 /** Fotos enviadas por unidade (cada uma ocupa uns 300 KB no disco). */
 const LIMITE_FOTOS_UNIDADE = 300;
 
+/** Site gravado, ou null quando não há (não cria o sugerido). */
+const lerSiteOuNulo = (valor: unknown) =>
+  valor === null || valor === undefined
+    ? null
+    : (siteBarbeariaSchema.safeParse(valor).data ?? null);
+
 const periodoSchema = z.object({
   de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
   ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
@@ -94,6 +105,57 @@ export class UnidadesController {
     @Inject(BancoService) private readonly banco: BancoService,
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
   ) {}
+
+  @Get(':id/agendamento-visual')
+  @Papeis(...GESTAO)
+  @ApiOperation({ summary: 'Visual da página de agendamento (cor, logotipo, capa, boas-vindas)' })
+  visualAgendamento(@Param('id', ParseUUIDPipe) id: string): Promise<VisualAgendamento> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const u = await tx.unidade.findUnique({ where: { id } });
+      if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
+      return (
+        lerVisualAgendamento(u.agendamentoVisual) ??
+        visualAgendamentoInicial(lerSiteOuNulo(u.sitePublicado) ?? lerSiteOuNulo(u.siteRascunho))
+      );
+    });
+  }
+
+  @Put(':id/agendamento-visual')
+  @Papeis(...GESTAO)
+  @Auditada()
+  @ApiOperation({ summary: 'Gravar o visual da página de agendamento (vale na hora)' })
+  gravarVisualAgendamento(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(visualAgendamentoSchema) visual: VisualAgendamento,
+  ): Promise<VisualAgendamento> {
+    exigirUnidade(id, GESTAO);
+    return this.banco.daConta(async (tx) => {
+      const u = await tx.unidade.findUnique({ where: { id } });
+      if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
+      const fotos = fotosDoVisual(visual);
+      if (
+        fotos.length &&
+        (await tx.fotoSite.count({ where: { id: { in: fotos } } })) !== new Set(fotos).size
+      )
+        throw Erros.requisicaoInvalida(
+          'foto_invalida',
+          'Uma das fotos não existe mais. Envie de novo.',
+        );
+      await tx.unidade.update({
+        where: { id },
+        data: { agendamentoVisual: visual as unknown as Prisma.InputJsonValue },
+      });
+      await auditar(tx, {
+        entidade: 'unidade',
+        entidadeId: id,
+        acao: 'agendamento_visual',
+        antes: null,
+        depois: { ativo: visual.ativo, cor: visual.cor },
+      });
+      return visual;
+    });
+  }
 
   @Get(':id/regras-agendamento')
   @Papeis(...GESTAO)

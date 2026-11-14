@@ -384,6 +384,9 @@ model Unidade {
   dominio             String?   @unique
   /// Quando o DNS do domínio foi conferido apontando para o Pente Fino; nulo = ainda não.
   dominioVerificadoEm DateTime? @map("dominio_verificado_em") @db.Timestamptz(3)
+  /// Visual da página de agendamento (lote 7l): cor, logotipo, capa e boas-vindas. Nulo = o de
+  /// sempre do Pente Fino. Separado do site; vale assim que o dono salva.
+  agendamentoVisual   Json?     @map("agendamento_visual")
   criadoEm            DateTime  @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm        DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 

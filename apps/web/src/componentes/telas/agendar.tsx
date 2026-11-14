@@ -18,6 +18,8 @@ import {
   type HorarioLivre,
   type UnidadePublica,
   linkDeAgendamento,
+  urlDaFoto,
+  type VisualAgendamentoPublico,
 } from '@pente-fino/shared';
 import { Botao, Campo, Carregando, cn, EstadoVazio, Marcador } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -122,20 +124,65 @@ export function Moldura({
   u,
 }: {
   children: React.ReactNode;
-  u?: { nome: string; barbearia: string; endereco: string | null };
+  u?: {
+    nome: string;
+    barbearia: string;
+    endereco: string | null;
+    visual?: VisualAgendamentoPublico | null;
+  };
 }) {
+  const visual = u?.visual ?? null;
+  // Lote 7l: com o visual da barbearia ligado, a cor dela vira a cor dos botões e da marcação.
+  const estilo = visual
+    ? ({ '--acao': visual.cor, '--sobre-acao': '#14271C' } as React.CSSProperties)
+    : undefined;
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-6 px-[max(1rem,env(safe-area-inset-left))] pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-10">
+    <div
+      style={estilo}
+      className="mx-auto flex min-h-dvh w-full max-w-xl flex-col gap-6 px-[max(1rem,env(safe-area-inset-left))] pt-[max(1.5rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-10"
+    >
+      {visual?.capa && (
+        // eslint-disable-next-line @next/next/no-img-element -- foto já reduzida, em WebP
+        <img
+          src={urlDaFoto(visual.capa, 1600)}
+          srcSet={`${urlDaFoto(visual.capa, 640)} 640w, ${urlDaFoto(visual.capa, 1600)} 1600w`}
+          sizes="(min-width: 640px) 576px, 100vw"
+          alt=""
+          fetchPriority="high"
+          className="aspect-[16/7] w-full rounded-lg object-cover"
+        />
+      )}
       {u && (
         <header className="flex flex-col gap-1">
-          <p className="text-sm font-semibold uppercase tracking-wider text-modulo-texto">
-            {u.nome}
-          </p>
+          {visual?.logo ? (
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element -- logotipo já reduzido */}
+              <img
+                src={urlDaFoto(visual.logo, 640)}
+                alt=""
+                className="h-14 w-auto max-w-[160px] object-contain"
+              />
+              <p className="text-sm font-semibold uppercase tracking-wider text-modulo-texto">
+                {u.nome}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm font-semibold uppercase tracking-wider text-modulo-texto">
+              {u.nome}
+            </p>
+          )}
           <h1 className="font-denso text-4xl font-bold uppercase leading-none">{u.barbearia}</h1>
+          {visual?.titulo && <p className="text-xl font-semibold">{visual.titulo}</p>}
+          {visual?.texto && <p className="whitespace-pre-line text-tinta-suave">{visual.texto}</p>}
           {u.endereco && (
             <p className="flex items-center gap-1.5 text-tinta-suave">
               <MapPin aria-hidden className="size-4 shrink-0" /> {u.endereco}
             </p>
+          )}
+          {visual?.site && (
+            <a href={visual.site} className="self-start font-semibold underline underline-offset-4">
+              Ver o site da barbearia
+            </a>
           )}
         </header>
       )}
