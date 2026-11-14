@@ -22,6 +22,7 @@ import {
   Lock,
   MailCheck,
   Moon,
+  Search,
   SunMedium,
   X,
 } from 'lucide-react';
@@ -46,6 +47,7 @@ import { useTema } from '@/lib/tema';
 import { Contexto, nomeDaUnidade, useApp, type ContextoApp } from './contexto-app';
 import { ICONES_MENU } from './icones-menu';
 import { Marca } from './marca';
+import { abrirBusca, BuscaGlobal } from './busca-global';
 
 /** Telas que qualquer papel abre, mesmo fora do menu. */
 const LIVRES = ['/app', '/unidade', '/perfil'];
@@ -164,6 +166,7 @@ export function Casca({ children }: { children: ReactNode }) {
         </div>
         <MenuInferior />
       </div>
+      <BuscaGlobal />
     </Contexto>
   );
 }
@@ -219,6 +222,18 @@ function MenuLateral() {
         <BotaoAvisos className="grid size-11 shrink-0 place-items-center rounded-md text-tinta-suave hover:bg-superficie-2 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco" />
       </div>
       <SeletorUnidade />
+      <button
+        type="button"
+        onClick={abrirBusca}
+        aria-keyshortcuts="Control+K Meta+K"
+        className="-mt-3 flex min-h-11 items-center gap-3 rounded-md border border-borda px-3 text-[0.95rem] text-tinta-suave hover:bg-superficie-2 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco"
+      >
+        <Search aria-hidden className="size-5" strokeWidth={1.75} />
+        Procurar
+        <kbd className="ml-auto rounded border border-borda px-1.5 font-sans text-xs text-tinta-fraca">
+          Ctrl K
+        </kbd>
+      </button>
       <nav
         aria-label="Menu principal"
         className="-mr-3 flex flex-1 flex-col gap-4 overflow-y-auto pr-3"
@@ -291,7 +306,7 @@ function SeletorUnidade({ compacto = false }: { compacto?: boolean }) {
             Unidade
           </span>
         )}
-        <span className="truncate font-semibold text-tinta">{nome}</span>
+        <span className="max-w-full truncate font-semibold text-tinta">{nome}</span>
       </span>
       {c.podeTrocarUnidade && (
         <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-tinta-suave" />
@@ -439,10 +454,18 @@ function BotaoAvisos({ className }: { className: string }) {
 function BarraTopo() {
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-borda bg-fundo/95 pt-[env(safe-area-inset-top)] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] backdrop-blur lg:hidden">
-      <Link href="/app" className="py-2" aria-label="Pente Fino, início">
+      <Link href="/app" className="shrink-0 py-2" aria-label="Pente Fino, início">
         <Marca compacta />
       </Link>
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={abrirBusca}
+          aria-label="Procurar"
+          className="grid size-11 shrink-0 place-items-center rounded-md text-tinta-suave hover:bg-superficie-2 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco"
+        >
+          <Search aria-hidden className="size-5" />
+        </button>
         <BotaoAvisos className="relative grid size-11 shrink-0 place-items-center rounded-md text-tinta-suave hover:bg-superficie-2 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco" />
         <SeletorUnidade compacto />
       </div>
