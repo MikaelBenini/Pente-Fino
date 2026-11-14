@@ -14,6 +14,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - O resumo do dia e o aviso de caixa sem fechar passam a sair no fechamento da unidade quando ela tem horário de funcionamento cadastrado (antes, só pelo expediente da equipe).
 - O novo aviso pode ser ligado ou desligado no celular, no Perfil, como os outros.
 
+### Adicionado (saúde da conta no Início)
+
+- O quadro "Precisa de você agora", no Início, passou a avisar também:
+  - o caixa de um dia anterior que ficou aberto, com o caminho para fechar;
+  - as comandas de dias anteriores que não foram fechadas nem canceladas;
+  - a unidade com o link de agendamento desligado, onde o cliente não consegue marcar sozinho.
+- O que já aparecia continua: WhatsApp desconectado, clientes esperando atendente, comandas para confirmar e fechar e o caixa de hoje.
+
 ### Adicionado (temas do site: Clube, Letreiro e Estúdio)
 
 - Na aba Tema de "Minha página", o dono escolhe o estilo do site entre quatro:

@@ -127,3 +127,24 @@ describe('meses do histórico (painel M2)', () => {
     expect(mesesDoHistorico('2026-11', null)).toHaveLength(12);
   });
 });
+
+describe('saúde da conta no Início (seção 7)', () => {
+  it('caixa de outro dia aberto, comandas paradas e link desligado', () => {
+    const r = pendenciasDoDia({
+      ...base,
+      saude: { caixaAnterior: { data: '2026-11-13', unidade: 'Centro' }, comandasParadas: 3 },
+      linkDesligado: ['Jardins'],
+    });
+    expect(r.map((p) => [p.chave, p.tom])).toEqual([
+      ['caixa-anterior', 'perigo'],
+      ['comandas-paradas', 'aviso'],
+      ['link', 'neutro'],
+    ]);
+    expect(r[0]!.texto).toBe('O caixa de 13/11 (Centro) ficou aberto: feche para o dinheiro bater');
+    expect(r[1]!.texto).toBe('3 comandas de dias anteriores sem fechar');
+    expect(r[2]!.rota).toBe('/configuracoes?aba=link');
+    expect(
+      pendenciasDoDia({ ...base, saude: { caixaAnterior: null, comandasParadas: 0 } }),
+    ).toEqual([]);
+  });
+});

@@ -1,6 +1,6 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { ResumoDoDia, ResumoDoMes } from '@pente-fino/shared';
+import type { ResumoDoDia, ResumoDoMes, SaudeDaConta } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Papeis } from '../auth/decoradores.js';
 import { GESTAO } from '../comum/escopo.js';
@@ -15,6 +15,7 @@ const diaSchema = z.object({
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Data inválida.' }),
   ...filtros,
 });
+const saudeSchema = z.object({ unidadeId: filtros.unidadeId });
 const mesSchema = z.object({
   mes: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, { error: 'Mês inválido.' }),
   ...filtros,
@@ -31,6 +32,15 @@ export class ResumoController {
   @ApiOperation({ summary: 'O que tem para o dia e o que já foi feito, por profissional' })
   dia(@Consulta(diaSchema) c: z.infer<typeof diaSchema>): Promise<ResumoDoDia> {
     return this.servico.dia(c.data, c.unidadeId, c.profissionalId);
+  }
+
+  @Get('saude')
+  @Papeis(...GESTAO)
+  @ApiOperation({
+    summary: 'Saúde da conta no Início: caixa de dia anterior aberto e comandas paradas',
+  })
+  saude(@Consulta(saudeSchema) c: z.infer<typeof saudeSchema>): Promise<SaudeDaConta> {
+    return this.servico.saude(c.unidadeId);
   }
 
   @Get('mes')

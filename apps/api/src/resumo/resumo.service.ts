@@ -6,6 +6,7 @@ import {
   dataLocal,
   diasDeTrabalho,
   fazAniversario,
+  instanteLocal,
   proximoAtendimento,
   resumoPorDia,
   situacaoNoDia,
@@ -14,11 +15,12 @@ import {
   type Ocupacao,
   type ResumoDoDia,
   type ResumoDoMes,
+  type SaudeDaConta,
   type StatusComanda,
 } from '@pente-fino/shared';
 import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
-import { data, dataTexto, exigirUnidade, GESTAO } from '../comum/escopo.js';
+import { data, dataTexto, exigirUnidade, filtroUnidade, GESTAO } from '../comum/escopo.js';
 import { DesempenhoService } from '../desempenho/desempenho.service.js';
 import {
   escopoUnidades,
@@ -311,6 +313,41 @@ export class ResumoService {
           comissao: total.comissoes,
           diasTrabalhados: linhas.filter((l) => l.trabalha && l.data <= hoje).length,
         },
+      };
+    });
+  }
+
+  /**
+   * Saúde da conta no Início (seção 7): o caixa mais recente de um dia anterior que ficou aberto
+   * e as comandas de dias anteriores que não foram fechadas nem canceladas.
+   */
+  async saude(unidadeId?: string): Promise<SaudeDaConta> {
+    if (unidadeId) exigirUnidade(unidadeId, GESTAO);
+    const hoje = dataLocal(new Date());
+    const inicioDeHoje = instanteLocal(hoje, 0);
+    return this.banco.daConta(async (tx) => {
+      const filtro = unidadeId ? { unidadeId } : filtroUnidade(GESTAO);
+      const caixa = await tx.caixaDia.findFirst({
+        where: { ...filtro, fechadoEm: null, data: { lt: data(hoje) } },
+        orderBy: { data: 'desc' },
+        include: { unidade: { select: { nome: true } } },
+      });
+      const comandasParadas = await tx.comanda.count({
+        where: {
+          ...filtro,
+          OR: [
+            {
+              status: { in: ['em_atendimento', 'confirmada', 'pendente', 'reaberta'] },
+              criadoEm: { lt: inicioDeHoje },
+            },
+            // Horário de dia anterior que ninguém atendeu nem marcou como falta.
+            { status: 'prevista', agendamento: { inicio: { lt: inicioDeHoje } } },
+          ],
+        },
+      });
+      return {
+        caixaAnterior: caixa ? { data: dataTexto(caixa.data), unidade: caixa.unidade.nome } : null,
+        comandasParadas,
       };
     });
   }

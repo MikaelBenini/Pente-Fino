@@ -24,6 +24,18 @@ export interface DadosPainelDia {
   esperandoAtendente: number;
   whatsappCaido: string[];
   notasBaixas: number;
+  /** Saúde da conta (seção 7): caixa de outro dia que ficou aberto e comandas paradas. */
+  saude?: SaudeDaConta | null;
+  /** Unidades com o link de agendamento desligado (o cliente não marca sozinho). */
+  linkDesligado?: string[];
+}
+
+/** Saúde da conta no Início: o que ficou para trás de dias anteriores. */
+export interface SaudeDaConta {
+  /** Caixa de um dia anterior que não foi fechado (o mais recente). */
+  caixaAnterior: { data: string; unidade: string } | null;
+  /** Comandas de dias anteriores que não foram fechadas nem canceladas. */
+  comandasParadas: number;
 }
 
 const n = (q: number, um: string, varios: string) => `${q} ${q === 1 ? um : varios}`;
@@ -51,6 +63,22 @@ export function pendenciasDoDia(d: DadosPainelDia): PendenciaDoDia[] {
       tom: 'perigo',
       rota: '/caixa',
       texto: 'O caixa de hoje fechou com diferença',
+    });
+  if (d.saude?.caixaAnterior) {
+    const [, m, dia] = d.saude.caixaAnterior.data.split('-');
+    r.push({
+      chave: 'caixa-anterior',
+      tom: 'perigo',
+      rota: '/caixa',
+      texto: `O caixa de ${dia}/${m} (${d.saude.caixaAnterior.unidade}) ficou aberto: feche para o dinheiro bater`,
+    });
+  }
+  if (d.saude?.comandasParadas)
+    r.push({
+      chave: 'comandas-paradas',
+      tom: 'aviso',
+      rota: '/comandas',
+      texto: `${n(d.saude.comandasParadas, 'comanda de dias anteriores', 'comandas de dias anteriores')} sem fechar`,
     });
   if (d.notasBaixas)
     r.push({
@@ -80,6 +108,13 @@ export function pendenciasDoDia(d: DadosPainelDia): PendenciaDoDia[] {
       tom: 'aviso',
       rota: '/caixa',
       texto: 'O caixa de hoje ainda não foi aberto',
+    });
+  if (d.linkDesligado?.length)
+    r.push({
+      chave: 'link',
+      tom: 'neutro',
+      rota: '/configuracoes?aba=link',
+      texto: `Link de agendamento desligado em ${d.linkDesligado.join(', ')}: o cliente não consegue marcar sozinho`,
     });
   if (d.totais.faltas)
     r.push({
