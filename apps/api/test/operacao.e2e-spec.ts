@@ -409,6 +409,8 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
     const doGestor = (await gestor.get('/avisos').expect(200)).body as Caixa;
     const divergente = doGestor.avisos.find((x) => x.tipo === 'caixa_divergente');
     expect(divergente?.texto).toMatch(/sobram R\$\s5,00/);
+    // Seção 7: o aviso de diferença leva os totais do fechamento (um aviso só).
+    expect(divergente?.texto).toMatch(/recebidos em 1 comanda: Pix R\$\s140,00/);
     expect(doGestor.naoLidos).toBeGreaterThan(0);
     expect(
       ((await dono.get('/avisos').expect(200)).body as Caixa).avisos.some(
@@ -420,6 +422,14 @@ describe('agenda e comanda: agendar → atender → confirmar → fechar', () =>
         (x) => x.tipo === 'caixa_divergente',
       ),
     ).toBe(false);
+    // Fechamento sem diferença: o resumo do fechamento vai para o dono.
+    await dono
+      .post('/caixa/fechar', { unidadeId: cenario.unidadeB, data: HOJE, totalInformado: 0 })
+      .expect(200);
+    const fechadoSemDiferenca = ((await dono.get('/avisos').expect(200)).body as Caixa).avisos.find(
+      (x) => x.tipo === 'caixa_fechado',
+    );
+    expect(fechadoSemDiferenca?.texto).toMatch(/Gaveta conferida, sem diferença/);
     // Marcar como lido vale só para quem leu; o do outro não muda.
     await recepcao.post(`/avisos/${divergente!.id}/lido`, {}).expect(204);
     expect(((await gestor.get('/avisos').expect(200)).body as Caixa).naoLidos).toBe(

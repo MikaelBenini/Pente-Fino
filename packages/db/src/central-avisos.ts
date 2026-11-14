@@ -6,6 +6,7 @@ import {
   avisoResumoDoDia,
   emailResumoDoDia,
   fimDoDiaDaUnidade,
+  lerFuncionamento,
   lerPreferenciasAvisos,
   vaiParaOCelular,
   dataLocal,
@@ -228,7 +229,12 @@ export async function rotinaDosAvisos(
     });
     const saida: SaidaDaRotina = { notificacoes: [], emails: [] };
     for (const u of unidades) {
-      const turnos = u.profissionais.flatMap((p) => p.horarios.filter((h) => h.diaSemana === ds));
+      // O horário de funcionamento da unidade, quando cadastrado, manda no fim do dia (os avisos
+      // de resumo saem no fechamento); sem ele, o expediente da equipe.
+      const daUnidade = lerFuncionamento(u.horarioFuncionamento).filter((t) => t.diaSemana === ds);
+      const turnos = daUnidade.length
+        ? daUnidade
+        : u.profissionais.flatMap((p) => p.horarios.filter((h) => h.diaSemana === ds));
       if (podeAvisarAgora(turnos, minuto))
         saida.notificacoes.push(...(await comandasPendentes(tx, contaId, u.id, agora)));
       const fim = fimDoDiaDaUnidade(turnos);
