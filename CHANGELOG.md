@@ -15,6 +15,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - Bloco novo "Botões com link", em qualquer página: botões para o cardápio, a loja, o Instagram ou o que o dono quiser.
 - Na aba Tema, em "Avançado", um CSS personalizado para quem quer ir além do tema. Ele vale só no site da barbearia e não aceita buscar nada de fora.
 
+### Corrigido (ficha do cliente)
+
+- A ficha do cliente ganhou "Editar dados" (dono, gestor e recepção): nome, WhatsApp, e-mail e aniversário. Quem chega pelo bot vem só com nome e WhatsApp, e o aniversário, que dispara a mensagem de aniversário, ficava sem como pôr.
+
 ### Alterado (site sem o link de agendamento)
 
 - O site da barbearia pode ser publicado e funciona mesmo com o link de agendamento desligado. Nesse caso, no lugar de "Agendar horário" aparece "Falar no WhatsApp", com o telefone da unidade; os "Agendar" de cada serviço e barbeiro somem. Ligando o link depois, os botões voltam sozinhos.
