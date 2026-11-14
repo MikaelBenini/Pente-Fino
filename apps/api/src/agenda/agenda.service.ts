@@ -239,7 +239,7 @@ export class AgendaService {
     dia: string,
     duracaoMin: number,
     profissionalId?: string,
-    opcoes: { antecedenciaMin?: number; ignorar?: string } = {},
+    opcoes: { antecedenciaMin?: number; ignorar?: string; servicoIds?: readonly string[] } = {},
   ): Promise<HorarioLivre[]> {
     return traduzir(() =>
       calcularLivres(tx, unidadeId, dia, duracaoMin, profissionalId, new Date(), opcoes),

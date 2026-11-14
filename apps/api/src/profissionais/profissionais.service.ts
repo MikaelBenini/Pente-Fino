@@ -51,6 +51,7 @@ function detalhe(p: ComInclusoes, verRegras: boolean): ProfissionalDetalhe {
     dataSaida: p.dataSaida ? dataTexto(p.dataSaida) : null,
     ativo: p.ativo,
     custoFixoMensal: verRegras ? p.custoFixoMensal : null,
+    servicoIds: p.servicoIds,
     horarios: p.horarios
       .map((h) => ({ diaSemana: h.diaSemana, inicioMin: h.inicioMin, fimMin: h.fimMin }))
       .sort((a, b) => a.diaSemana - b.diaSemana || a.inicioMin - b.inicioMin),
@@ -225,6 +226,26 @@ export class ProfissionaisService {
           custoFixoMensal: antes.custoFixoMensal,
         },
         depois: d,
+      });
+      return detalhe(await this.carregar(tx, id), true);
+    });
+  }
+
+  /** P5: os serviços que o barbeiro faz (vazio = todos); só os da conta entram. */
+  async definirServicos(id: string, servicoIds: string[]): Promise<ProfissionalDetalhe> {
+    return this.banco.daConta(async (tx) => {
+      await this.carregar(tx, id);
+      const unicos = [...new Set(servicoIds)];
+      const existem = await tx.servico.count({ where: { id: { in: unicos } } });
+      if (existem !== unicos.length) throw Erros.naoEncontrado('Serviço não encontrado.');
+      const antes = await tx.profissional.findUniqueOrThrow({ where: { id } });
+      await tx.profissional.update({ where: { id }, data: { servicoIds: unicos } });
+      await auditar(tx, {
+        entidade: 'profissional',
+        entidadeId: id,
+        acao: 'servicos',
+        antes: { servicoIds: antes.servicoIds },
+        depois: { servicoIds: unicos },
       });
       return detalhe(await this.carregar(tx, id), true);
     });

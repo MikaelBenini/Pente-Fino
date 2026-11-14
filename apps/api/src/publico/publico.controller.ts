@@ -62,6 +62,7 @@ import {
   CORES_SITE,
   lerSite,
   lerVisualAgendamento,
+  siteBarbeariaSchema,
   normalizarDominio,
   type VisualAgendamentoPublico,
   type DominioPublico,
@@ -371,6 +372,9 @@ export class PublicoController {
         // Só o que tem preço na unidade pode ser agendado pelo cliente.
         servicos: comPreco.filter((s) => s.preco !== null),
         profissionais: await (async () => {
+          // Fotos da equipe postas no site (publicado ou, sem ele, o rascunho).
+          const fotosDaEquipe =
+            siteBarbeariaSchema.safeParse(u.sitePublicado ?? u.siteRascunho).data?.equipe ?? {};
           // Preço por barbeiro: o próprio de cada serviço (só os que ele mudou), numa consulta só.
           const proprios = await precosPropriosVigentes(
             tx,
@@ -381,6 +385,8 @@ export class PublicoController {
           return profissionais.map((p) => ({
             id: p.id,
             nome: p.usuario.nome.split(' ')[0]!,
+            servicoIds: p.servicoIds,
+            foto: fotosDaEquipe[p.id]?.foto ?? null,
             precos: Object.fromEntries(
               Object.entries(proprios.get(p.id) ?? {}).filter(([id]) => doCatalogo.has(id)),
             ),
@@ -545,6 +551,7 @@ export class PublicoController {
       const duracao = await this.duracao(tx, c.servicoIds, u.id);
       return this.agenda.calcularLivres(tx, u.id, c.data, duracao, c.profissionalId, {
         antecedenciaMin: regras.antecedenciaMin,
+        servicoIds: c.servicoIds,
       });
     });
   }

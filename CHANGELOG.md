@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (quem faz cada serviço)
+
+- Em Equipe, o botão "Serviços que faz": o dono marca os serviços de cada barbeiro. Com tudo marcado, ele faz todos, inclusive os serviços criados depois.
+- Na página de agendamento, ao escolher o serviço, só aparecem os barbeiros que fazem esse serviço, com a foto de cada um (a mesma do site). Os horários livres seguem a mesma regra, e o bot do WhatsApp também.
+- No site, cada barbeiro mostra os serviços que faz, e a lista de serviços diz com quem é, quando não são todos que fazem.
+- Sem nada marcado, tudo continua como antes: todos fazem tudo.
+
 ### Adicionado (página de agendamento com a cara da barbearia)
 
 - Em "Minha página", o bloco "Página de agendamento": o dono liga o visual da barbearia no link de agendamento, com a cor dos botões, o logotipo, uma foto de capa, um título e um recado, e o link "Ver o site da barbearia" quando o site está publicado.

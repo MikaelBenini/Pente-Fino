@@ -33,6 +33,7 @@ import {
   chaves,
   useAcao,
   useProfissionais,
+  useServicos,
   useUnidadesDetalhe,
   useUsuariosEquipe,
 } from '@/lib/consultas';
@@ -88,6 +89,7 @@ function Profissionais() {
   const [novo, setNovo] = useState(false);
   const [completar, setCompletar] = useState<BarbeiroSemCadastro | null>(null);
   const [horarios, setHorarios] = useState<ProfissionalDetalhe | null>(null);
+  const [servicosDe, setServicosDe] = useState<ProfissionalDetalhe | null>(null);
   const [regra, setRegra] = useState<ProfissionalDetalhe | null>(null);
   const [fixo, setFixo] = useState<ProfissionalDetalhe | null>(null);
   const [desligar, setDesligar] = useState<ProfissionalDetalhe | null>(null);
@@ -243,6 +245,9 @@ function Profissionais() {
                           <Botao variante="secundario" onClick={() => setHorarios(p)}>
                             Horários
                           </Botao>
+                          <Botao variante="secundario" onClick={() => setServicosDe(p)}>
+                            Serviços que faz
+                          </Botao>
                           <Botao variante="secundario" onClick={() => setRegra(p)}>
                             Mudar comissão
                           </Botao>
@@ -289,6 +294,9 @@ function Profissionais() {
               }}
             />
             <Horarios profissional={horarios} onFechar={() => setHorarios(null)} />
+            {servicosDe && (
+              <ServicosQueFaz profissional={servicosDe} onFechar={() => setServicosDe(null)} />
+            )}
             <NovaRegra profissional={regra} onFechar={() => setRegra(null)} />
             <ValorFixo profissional={fixo} onFechar={() => setFixo(null)} />
             <ModalConfirmacao
@@ -1136,6 +1144,99 @@ function EditarPapeis({
           </Botao>
           <Botao type="submit" carregando={salvar.isPending} disabled={atuais.size === 0}>
             Salvar papéis
+          </Botao>
+        </div>
+      </form>
+    </Dialogo>
+  );
+}
+
+/**
+ * P5 (lote 7g): os serviços que o barbeiro faz. Vale no link, no bot, no balcão e no site. Com
+ * tudo marcado, guarda "faz todos" (serviço novo também entra).
+ */
+function ServicosQueFaz({
+  profissional,
+  onFechar,
+}: {
+  profissional: ProfissionalDetalhe;
+  onFechar: () => void;
+}) {
+  const servicos = useServicos();
+  const daUnidade = (servicos.data ?? []).filter(
+    (s) => s.ativo !== false && s.unidadeIds.includes(profissional.unidadeId),
+  );
+  const [marcados, setMarcados] = useState<string[] | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useAcao(
+    (servicoIds: string[]) =>
+      api(`profissionais/${profissional.id}/servicos`, { metodo: 'PUT', corpo: { servicoIds } }),
+    [chaves.profissionais],
+  );
+  const atuais =
+    marcados ??
+    (profissional.servicoIds.length ? profissional.servicoIds : daUnidade.map((s) => s.id));
+  const todos = daUnidade.length > 0 && daUnidade.every((s) => atuais.includes(s.id));
+  return (
+    <Dialogo
+      aberto
+      titulo={`Serviços que ${profissional.nome.split(' ')[0]} faz`}
+      descricao="O cliente só consegue marcar com ele o que estiver marcado aqui, pelo link, pelo WhatsApp ou no balcão."
+      onFechar={onFechar}
+    >
+      <form
+        method="post"
+        noValidate
+        className="flex flex-col gap-3"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setErro(null);
+          if (!atuais.some((id) => daUnidade.some((s) => s.id === id)))
+            return setErro('Marque pelo menos um serviço.');
+          try {
+            await salvar.mutateAsync(todos ? [] : atuais);
+            onFechar();
+          } catch (er) {
+            setErro(mensagemDe(er));
+          }
+        }}
+      >
+        {erro && <Aviso tom="erro">{erro}</Aviso>}
+        {servicos.isPending ? (
+          <p className="text-tinta-suave">Carregando os serviços…</p>
+        ) : daUnidade.length === 0 ? (
+          <p className="text-tinta-suave">Nenhum serviço nesta unidade ainda.</p>
+        ) : (
+          <>
+            <Marcador
+              id="faz-todos"
+              rotulo="Faz todos os serviços (inclusive os que forem criados depois)"
+              checked={todos}
+              onChange={(e) => setMarcados(e.target.checked ? daUnidade.map((s) => s.id) : [])}
+            />
+            <div className="flex flex-col gap-1 border-t border-borda pt-2">
+              {daUnidade.map((s) => (
+                <Marcador
+                  key={s.id}
+                  id={`faz-${s.id}`}
+                  rotulo={s.nome}
+                  checked={atuais.includes(s.id)}
+                  onChange={(e) =>
+                    setMarcados(
+                      e.target.checked ? [...atuais, s.id] : atuais.filter((x) => x !== s.id),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          </>
+        )}
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Botao variante="secundario" onClick={onFechar}>
+            Cancelar
+          </Botao>
+          <Botao type="submit" carregando={salvar.isPending}>
+            Salvar serviços
           </Botao>
         </div>
       </form>

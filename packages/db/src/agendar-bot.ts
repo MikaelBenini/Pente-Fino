@@ -159,7 +159,7 @@ async function horariosDoDia(
     duracao,
     a.profissionalId ?? undefined,
     d.agora,
-    { antecedenciaMin: d.regras.antecedenciaMin },
+    { antecedenciaMin: d.regras.antecedenciaMin, servicoIds: a.servicoIds },
   );
   const porHorario = new Map<string, string>();
   for (const l of livres)
@@ -240,7 +240,7 @@ async function irParaDias(tx: Tx, a: AgendaNaConversa, d: DadosDaConversa, aviso
       duracao,
       a.profissionalId ?? undefined,
       d.agora,
-      { antecedenciaMin: d.regras.antecedenciaMin },
+      { antecedenciaMin: d.regras.antecedenciaMin, servicoIds: a.servicoIds },
     );
     if (livres.some((l) => l.inicios.length > 0)) dias.push(dia);
   }

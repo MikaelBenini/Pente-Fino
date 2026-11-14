@@ -523,7 +523,8 @@ export interface SitePublico {
     preco: number;
     ehExtra: boolean;
   }[];
-  equipe: { id: string; nome: string; foco: string; sobre: string }[];
+  /** `servicoIds`: os serviços que faz (P5); vazio = todos. */
+  equipe: { id: string; nome: string; foco: string; sobre: string; servicoIds: string[] }[];
   horario: LinhaHorario[];
   nota: { media: number; total: number } | null;
   /** Medidas das fotos usadas (evita a página pular enquanto carrega). */

@@ -12,15 +12,23 @@ async function entrar(page: Page, email: string, senha = SENHA) {
   await page.waitForURL(/inicio|agenda|hoje/);
 }
 
-/** Dias à frente (pelo calendário de São Paulo) até o próximo dia de expediente do Centro. */
-function diasAteProximoUtil(): number {
+/**
+ * Dias à frente (pelo calendário de São Paulo) até o próximo dia de expediente. `semSegunda`: a
+ * Jardins não abre às segundas (rodar no sábado caía na segunda e não havia horário).
+ */
+function diasAteProximoUtil(semSegunda = false): number {
   const hojeSp = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(
     new Date(),
   );
   const d = new Date(`${hojeSp}T12:00:00Z`);
   for (let n = 1; ; n++) {
     d.setUTCDate(d.getUTCDate() + 1);
-    if (d.getUTCDay() !== 0 && !/-11-(02|15)$/.test(d.toISOString().slice(0, 10))) return n;
+    if (
+      d.getUTCDay() !== 0 &&
+      !(semSegunda && d.getUTCDay() === 1) &&
+      !/-11-(02|15)$/.test(d.toISOString().slice(0, 10))
+    )
+      return n;
   }
 }
 
@@ -111,7 +119,7 @@ test('cliente troca de unidade no meio do agendamento sem perder o que fez', asy
   // E agenda na unidade nova.
   await page
     .getByRole('button', { name: /^(domingo|segunda|terça|quarta|quinta|sexta|sábado), \d+ de / })
-    .nth(diasAteProximoUtil())
+    .nth(diasAteProximoUtil(true))
     .click();
   await page
     .getByRole('group', { name: /Horários livres/ })

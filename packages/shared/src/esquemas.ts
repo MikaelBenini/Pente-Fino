@@ -296,4 +296,6 @@ export interface ProfissionalDetalhe {
   custoFixoMensal: number | null;
   horarios: { diaSemana: number; inicioMin: number; fimMin: number }[];
   regras: RegraComissaoDetalhe[];
+  /** Serviços que faz (P5); vazio = todos. */
+  servicoIds: string[];
 }
