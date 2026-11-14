@@ -7,6 +7,13 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (páginas extras no site: Galeria e Clube)
+
+- Em "Minha página", o quadro "Páginas extras" liga duas páginas novas no site, que entram no menu:
+  - Galeria: as fotos dos trabalhos, com legenda;
+  - Clube: os planos de assinatura cadastrados no sistema, com o valor, o que cada um inclui e o botão "Assinar", que leva ao link de assinatura do clube online.
+- As duas começam desligadas e funcionam também no domínio próprio (`/galeria` e `/clube`).
+
 ### Adicionado (quem faz cada serviço)
 
 - Em Equipe, o botão "Serviços que faz": o dono marca os serviços de cada barbeiro. Com tudo marcado, ele faz todos, inclusive os serviços criados depois.

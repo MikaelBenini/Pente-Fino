@@ -36,13 +36,24 @@ export const BOTOES_SITE = {
 export type BotoesSite = keyof typeof BOTOES_SITE;
 const IDS_BOTOES = Object.keys(BOTOES_SITE) as [BotoesSite, ...BotoesSite[]];
 
-export const PAGINAS_SITE = ['inicio', 'servicos', 'equipe', 'contato'] as const;
+export const PAGINAS_SITE = [
+  'inicio',
+  'servicos',
+  'equipe',
+  'contato',
+  'galeria',
+  'clube',
+] as const;
+/** Lote 7h: páginas que o dono liga quando quer (começam desligadas). */
+export const PAGINAS_EXTRAS = ['galeria', 'clube'] as const;
 export type PaginaSite = (typeof PAGINAS_SITE)[number];
 export const ROTULO_PAGINA: Record<PaginaSite, string> = {
   inicio: 'Início',
   servicos: 'Serviços',
   equipe: 'Equipe',
   contato: 'Contato',
+  galeria: 'Galeria',
+  clube: 'Clube',
 };
 /** Caminho de cada página dentro de /b/<slug>. */
 export const CAMINHO_PAGINA: Record<PaginaSite, string> = {
@@ -50,6 +61,8 @@ export const CAMINHO_PAGINA: Record<PaginaSite, string> = {
   servicos: '/servicos',
   equipe: '/equipe',
   contato: '/contato',
+  galeria: '/galeria',
+  clube: '/clube',
 };
 
 interface DefinicaoBloco {
@@ -75,7 +88,7 @@ export const BLOCOS_SITE = {
   equipe: { rotulo: 'Equipe', paginas: ['inicio'], titulo: true },
   galeria: {
     rotulo: 'Galeria de fotos',
-    paginas: ['inicio'],
+    paginas: ['inicio', 'galeria'],
     titulo: true,
     itens: { titulo: 'Legenda', texto: '', foto: true },
   },
@@ -87,11 +100,13 @@ export const BLOCOS_SITE = {
   },
   cabecalho: {
     rotulo: 'Título da página',
-    paginas: ['servicos', 'equipe', 'contato'],
+    paginas: ['servicos', 'equipe', 'contato', 'galeria', 'clube'],
     titulo: true,
     texto: true,
   },
   tabela: { rotulo: 'Lista de serviços', paginas: ['servicos'] },
+  /** Lote 7h: os planos do clube cadastrados no sistema, com "Assinar". */
+  planos: { rotulo: 'Planos do clube', paginas: ['clube'] },
   barbeiros: { rotulo: 'Barbeiros', paginas: ['equipe'] },
   contato: { rotulo: 'Endereço, horário e contatos', paginas: ['contato'] },
   perguntas: {
@@ -102,14 +117,14 @@ export const BLOCOS_SITE = {
   },
   agendar: {
     rotulo: 'Faixa de agendamento',
-    paginas: ['inicio', 'servicos', 'equipe', 'contato'],
+    paginas: ['inicio', 'servicos', 'equipe', 'contato', 'galeria', 'clube'],
     titulo: true,
     texto: true,
   },
   /** Lote 7m: botões próprios com link (cardápio, loja, Instagram...). */
   botoes: {
     rotulo: 'Botões com link',
-    paginas: ['inicio', 'servicos', 'equipe', 'contato'],
+    paginas: ['inicio', 'servicos', 'equipe', 'contato', 'galeria', 'clube'],
     titulo: true,
     itens: { titulo: 'Texto do botão', texto: 'Endereço (https://...)' },
   },
@@ -260,6 +275,8 @@ export const siteBarbeariaSchema = z.object({
     servicos: paginaSchema('servicos'),
     equipe: paginaSchema('equipe'),
     contato: paginaSchema('contato'),
+    galeria: paginaSchema('galeria').optional(),
+    clube: paginaSchema('clube').optional(),
   }),
   cabecalho: cabecalhoSiteSchema.optional(),
   rodape: rodapeSiteSchema.optional(),
@@ -408,9 +425,68 @@ export function lerSite(valor: unknown, barbearia: string): SiteBarbearia {
   return r.success ? r.data : siteInicial(barbearia);
 }
 
+/** Blocos da página (vazio para página extra desligada). */
+export function blocosDaPagina(site: SiteBarbearia, pagina: PaginaSite): BlocoSite[] {
+  return site.paginas[pagina] ?? [];
+}
+
+/** A página aparece no site? As quatro de sempre, sim; as extras, só ligadas. */
+export function paginaLigada(site: SiteBarbearia, pagina: PaginaSite): boolean {
+  return !(PAGINAS_EXTRAS as readonly string[]).includes(pagina) || !!site.paginas[pagina];
+}
+
+/** Liga uma página extra com os blocos sugeridos (Galeria ou Clube). */
+export function ligarPagina(site: SiteBarbearia, pagina: (typeof PAGINAS_EXTRAS)[number]) {
+  if (site.paginas[pagina]) return site;
+  const blocos: BlocoSite[] =
+    pagina === 'galeria'
+      ? [
+          {
+            id: 'cabecalho',
+            tipo: 'cabecalho',
+            visivel: true,
+            titulo: 'Nosso trabalho',
+            texto: 'Alguns dos cortes e barbas que saíram daqui.',
+          },
+          { id: 'galeria', tipo: 'galeria', visivel: true, titulo: '', itens: [] },
+          {
+            id: 'agendar',
+            tipo: 'agendar',
+            visivel: true,
+            titulo: 'Gostou? Marque o seu.',
+            texto: '',
+          },
+        ]
+      : [
+          {
+            id: 'cabecalho',
+            tipo: 'cabecalho',
+            visivel: true,
+            titulo: 'Clube de assinatura',
+            texto: 'Pague um valor fixo por mês e venha quantas vezes o plano permitir.',
+          },
+          { id: 'planos', tipo: 'planos', visivel: true },
+          {
+            id: 'agendar',
+            tipo: 'agendar',
+            visivel: true,
+            titulo: 'Marque seu horário',
+            texto: '',
+          },
+        ];
+  return { ...site, paginas: { ...site.paginas, [pagina]: blocos } };
+}
+
+/** Desliga a página extra (sai do site e do menu; o que estava nela é descartado). */
+export function desligarPagina(site: SiteBarbearia, pagina: (typeof PAGINAS_EXTRAS)[number]) {
+  const paginas = { ...site.paginas };
+  delete paginas[pagina];
+  return { ...site, paginas };
+}
+
 /** Blocos que aparecem na página, na ordem do dono. */
 export function blocosVisiveis(site: SiteBarbearia, pagina: PaginaSite): BlocoSite[] {
-  return site.paginas[pagina].filter((b) => b.visivel);
+  return blocosDaPagina(site, pagina).filter((b) => b.visivel);
 }
 
 // ─── Horário da unidade ─────────────────────────────────────────────────────
@@ -529,6 +605,17 @@ export interface SitePublico {
   nota: { media: number; total: number } | null;
   /** Medidas das fotos usadas (evita a página pular enquanto carrega). */
   fotos: Record<string, { largura: number; altura: number }>;
+  /** Lote 7h: planos do clube (página Clube ligada e clube online ativo); null = sem planos. */
+  clube: {
+    planos: {
+      id: string;
+      nome: string;
+      descricao: string | null;
+      valor: number;
+      inclui: string[];
+    }[];
+    link: string;
+  } | null;
 }
 
 /** Serviços em destaque no Início: os três primeiros principais (extras não entram). */
@@ -609,7 +696,7 @@ export function moverBloco(
   id: string,
   delta: -1 | 1,
 ): SiteBarbearia {
-  const blocos = [...site.paginas[pagina]];
+  const blocos = [...blocosDaPagina(site, pagina)];
   const i = blocos.findIndex((b) => b.id === id);
   const j = i + delta;
   if (i < 0 || j < 0 || j >= blocos.length) return site;
@@ -627,7 +714,7 @@ export function editarBloco(
   return comPagina(
     site,
     pagina,
-    site.paginas[pagina].map((b) => (b.id === id ? { ...b, ...mudanca } : b)),
+    blocosDaPagina(site, pagina).map((b) => (b.id === id ? { ...b, ...mudanca } : b)),
   );
 }
 
@@ -635,13 +722,13 @@ export function removerBloco(site: SiteBarbearia, pagina: PaginaSite, id: string
   return comPagina(
     site,
     pagina,
-    site.paginas[pagina].filter((b) => b.id !== id),
+    blocosDaPagina(site, pagina).filter((b) => b.id !== id),
   );
 }
 
 /** Tipos que ainda dá para pôr na página (cada bloco aparece uma vez por página). */
 export function blocosParaAdicionar(site: SiteBarbearia, pagina: PaginaSite): TipoBloco[] {
-  const presentes = new Set(site.paginas[pagina].map((b) => b.tipo));
+  const presentes = new Set(blocosDaPagina(site, pagina).map((b) => b.tipo));
   return TIPOS.filter(
     (t) => (BLOCOS_SITE[t].paginas as readonly string[]).includes(pagina) && !presentes.has(t),
   );
@@ -658,12 +745,12 @@ export function adicionarBloco(
   barbearia: string,
 ): SiteBarbearia {
   if (!blocosParaAdicionar(site, pagina).includes(tipo)) return site;
-  const modelo = siteInicial(barbearia).paginas[pagina].find((b) => b.tipo === tipo);
-  const usados = new Set(site.paginas[pagina].map((b) => b.id));
+  const modelo = blocosDaPagina(siteInicial(barbearia), pagina).find((b) => b.tipo === tipo);
+  const usados = new Set(blocosDaPagina(site, pagina).map((b) => b.id));
   let id: string = tipo;
   for (let n = 2; usados.has(id); n++) id = `${tipo}-${n}`;
   const novo: BlocoSite = { ...(modelo ?? { tipo, visivel: true }), id, visivel: true };
-  const blocos = [...site.paginas[pagina]];
+  const blocos = [...blocosDaPagina(site, pagina)];
   const fim = blocos.findIndex((b) => b.tipo === 'agendar');
   blocos.splice(fim < 0 || tipo === 'agendar' ? blocos.length : fim, 0, novo);
   return comPagina(site, pagina, blocos);
@@ -689,7 +776,7 @@ export function fotosDoSite(site: SiteBarbearia): string[] {
   const ids = new Set<string>();
   if (site.logo) ids.add(site.logo);
   for (const p of PAGINAS_SITE)
-    for (const b of site.paginas[p]) {
+    for (const b of blocosDaPagina(site, p)) {
       if (b.foto) ids.add(b.foto);
       for (const i of b.itens ?? []) if (i.foto) ids.add(i.foto);
     }
@@ -767,7 +854,7 @@ export interface DominioPublico {
 /** Cabeçalho com os valores de sempre onde o dono não mexeu. */
 export function cabecalhoDoSite(site: SiteBarbearia): CabecalhoSite {
   const c = site.cabecalho;
-  const menu = PAGINAS_SITE.map(
+  const menu = PAGINAS_SITE.filter((p) => paginaLigada(site, p)).map(
     (p) => c?.menu.find((m) => m.pagina === p) ?? { pagina: p, rotulo: '', visivel: true },
   );
   // A ordem do dono primeiro; página que faltar vai para o fim.

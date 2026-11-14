@@ -1,6 +1,8 @@
 import { precoServicoVigente, type Prisma, type Transacao } from '@pente-fino/db';
 import {
+  caminhoAssinarClube,
   dataLocal,
+  textoInclui,
   fotosDoSite,
   horarioDaUnidade,
   lerFuncionamento,
@@ -89,5 +91,35 @@ export async function montarSitePublico(
         ),
     nota: notaDoSite(notas.map((n) => n.notaBarbearia!)),
     fotos: Object.fromEntries(fotos.map((f) => [f.id, { largura: f.largura, altura: f.altura }])),
+    clube: await planosDoClube(tx, u, site),
+  };
+}
+
+/**
+ * Lote 7h: planos do clube para a página Clube do site, só com a página ligada, o clube online
+ * ativo (a barbearia recebe pelo Asaas) e o link de assinatura (precisa do endereço da unidade).
+ */
+async function planosDoClube(
+  tx: Transacao,
+  u: UnidadeDoSite,
+  site: SiteBarbearia,
+): Promise<SitePublico['clube']> {
+  if (!site.paginas.clube || !u.slug) return null;
+  if (!(await tx.recebimentoOnline.findFirst())) return null;
+  const planos = await tx.itemClube.findMany({
+    where: { unidadeId: u.id, ativo: true },
+    include: { servicos: { include: { servico: true } } },
+    orderBy: { valor: 'asc' },
+  });
+  if (!planos.length) return null;
+  return {
+    link: caminhoAssinarClube(u.slug),
+    planos: planos.map((p) => ({
+      id: p.id,
+      nome: p.nome,
+      descricao: p.descricao,
+      valor: p.valor,
+      inclui: p.servicos.map((s) => textoInclui(s.servico.nome, s.quantidade)),
+    })),
   };
 }

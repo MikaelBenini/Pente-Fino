@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   BLOCOS_SITE,
+  blocosDaPagina,
+  desligarPagina,
+  ligarPagina,
+  paginaLigada,
   fotosDoVisual,
   lerVisualAgendamento,
   visualAgendamentoInicial,
@@ -21,7 +25,6 @@ import {
   moverBloco,
   removerBloco,
   CORES_SITE,
-  PAGINAS_SITE,
   blocosVisiveis,
   formatarMinutos,
   horarioDaUnidade,
@@ -52,7 +55,8 @@ describe('site da barbearia (lote 7a)', () => {
   it('a página inicial sugerida é válida e traz as quatro páginas montadas', () => {
     const site = siteInicial('Barbearia do Carlos');
     expect(siteBarbeariaSchema.parse(site)).toEqual(site);
-    for (const p of PAGINAS_SITE) expect(site.paginas[p].length).toBeGreaterThan(1);
+    for (const p of ['inicio', 'servicos', 'equipe', 'contato'] as const)
+      expect(site.paginas[p].length).toBeGreaterThan(1);
     expect(site.paginas.inicio.find((b) => b.tipo === 'sobre')?.titulo).toBe(
       'Conheça a Barbearia do Carlos',
     );
@@ -350,5 +354,24 @@ describe('visual da página de agendamento (lote 7l)', () => {
     expect(fotosDoVisual({ ...v, capa: logo })).toEqual([logo, logo]);
     expect(lerVisualAgendamento({ ativo: 'sim' })).toBeNull();
     expect(visualAgendamentoInicial(null).cor).toBe('latao');
+  });
+});
+
+describe('páginas extras Galeria e Clube (lote 7h)', () => {
+  it('começam desligadas; ligar põe os blocos sugeridos e o menu; desligar tira', () => {
+    const base = siteInicial('X');
+    expect(paginaLigada(base, 'galeria')).toBe(false);
+    expect(paginaLigada(base, 'servicos')).toBe(true);
+    expect(cabecalhoDoSite(base).menu.map((m) => m.pagina)).not.toContain('clube');
+    const comClube = ligarPagina(base, 'clube');
+    expect(blocosDaPagina(comClube, 'clube').map((b) => b.tipo)).toEqual([
+      'cabecalho',
+      'planos',
+      'agendar',
+    ]);
+    expect(cabecalhoDoSite(comClube).menu.map((m) => m.pagina)).toContain('clube');
+    expect(siteBarbeariaSchema.safeParse(comClube).success).toBe(true);
+    expect(blocosParaAdicionar(ligarPagina(base, 'galeria'), 'galeria')).toEqual(['botoes']);
+    expect(paginaLigada(desligarPagina(comClube, 'clube'), 'clube')).toBe(false);
   });
 });
