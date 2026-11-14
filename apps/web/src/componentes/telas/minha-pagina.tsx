@@ -7,6 +7,11 @@ import {
   BLOCOS_SITE,
   BOTOES_SITE,
   CAMINHO_PAGINA,
+  PAGINAS_EXTRAS,
+  blocosDaPagina,
+  desligarPagina,
+  ligarPagina,
+  paginaLigada,
   visualAgendamentoSchema,
   type VisualAgendamento,
   LIMITE_CSS_SITE,
@@ -372,8 +377,38 @@ function Editor({
               rotulo="Página"
               value={pagina}
               onChange={(e) => setPagina(e.target.value as PaginaSite)}
-              opcoes={PAGINAS_SITE.map((p) => ({ valor: p, rotulo: ROTULO_PAGINA[p] }))}
+              opcoes={PAGINAS_SITE.filter((p) => paginaLigada(site, p)).map((p) => ({
+                valor: p,
+                rotulo: ROTULO_PAGINA[p],
+              }))}
             />
+            <fieldset className="flex flex-col gap-1 rounded-md border border-borda p-3">
+              <legend className="px-1 text-sm font-medium">Páginas extras</legend>
+              {PAGINAS_EXTRAS.map((p) => (
+                <Marcar
+                  key={p}
+                  id={`pagina-extra-${p}`}
+                  rotulo={
+                    p === 'galeria'
+                      ? 'Galeria: fotos dos trabalhos'
+                      : 'Clube: os planos de assinatura, com o botão Assinar'
+                  }
+                  marcado={paginaLigada(site, p)}
+                  onMudar={(v) => {
+                    if (v) {
+                      mudar(ligarPagina(site, p));
+                      setPagina(p);
+                    } else {
+                      if (pagina === p) setPagina('inicio');
+                      mudar(desligarPagina(site, p));
+                    }
+                  }}
+                />
+              ))}
+              <p className="text-sm text-tinta-suave">
+                Ligada, a página entra no menu do site. Desligar apaga o que estava nela.
+              </p>
+            </fieldset>
             <Abas
               rotulo="Montar a página"
               atual={aba}
@@ -473,7 +508,7 @@ function ListaDeBlocos({
   onMudar: (s: SiteBarbearia) => void;
 }) {
   const [aberto, setAberto] = useState<string | null>(null);
-  const blocos = site.paginas[pagina];
+  const blocos = blocosDaPagina(site, pagina);
   const faltam = blocosParaAdicionar(site, pagina);
   return (
     <div className="flex flex-col gap-3 pt-4">

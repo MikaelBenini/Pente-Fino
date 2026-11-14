@@ -102,6 +102,11 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
     'true',
   );
 
+  // Lote 7h: liga a página extra Galeria (entra no seletor e no menu do site).
+  await page.getByText('Galeria: fotos dos trabalhos').click();
+  await expect(page.getByLabel('Página', { exact: true })).toHaveValue('galeria');
+  await page.getByLabel('Página', { exact: true }).selectOption('inicio');
+
   // Lote 7n: cabeçalho e rodapé editáveis, inclusive a linha do Pente Fino.
   await page.getByRole('tab', { name: 'Cabeçalho e rodapé' }).click();
   await page.getByLabel('Texto do botão principal').fill('Marcar agora');
@@ -124,6 +129,9 @@ test('Minha página: editar, ver a prévia, publicar e tirar do ar', async ({ pa
     visitante.getByRole('link', { name: 'Marcar agora' }).filter({ visible: true }).first(),
   ).toBeVisible();
   await expect(visitante.getByRole('contentinfo')).toContainText('Aceitamos Pix e cartão.');
+  await visitante.goto(`${siteDoTeste}/galeria`);
+  await expect(visitante.getByRole('heading', { level: 1, name: 'Nosso trabalho' })).toBeVisible();
+  await visitante.goto(siteDoTeste);
   await expect(visitante.getByText('Site e agenda pelo Pente Fino')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Tirar do ar' }).click();

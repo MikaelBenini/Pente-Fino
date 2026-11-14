@@ -20,7 +20,7 @@ export function ehHostDoPenteFino(host: string, appUrl: string | undefined): boo
   }
 }
 
-const PAGINAS = new Set(['/servicos', '/equipe', '/contato']);
+const PAGINAS = new Set(['/servicos', '/equipe', '/contato', '/galeria', '/clube']);
 /** Caminhos que funcionam iguais em qualquer domínio (arquivos, fotos, ponte da API, horário). */
 const PASSAM = ['/_next/', '/f/', '/api/', '/horario', '/b/', '/s/', '/icones/', '/video/'];
 const ARQUIVOS = new Set(['/favicon.ico', '/manifest.webmanifest', '/sw.js', '/icon.svg']);

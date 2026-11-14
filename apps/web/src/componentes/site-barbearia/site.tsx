@@ -303,6 +303,8 @@ function Bloco({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
       return <Depoimentos bloco={bloco} />;
     case 'botoes':
       return <BotoesComLink bloco={bloco} />;
+    case 'planos':
+      return <PlanosDoClube dados={dados} />;
     case 'cabecalho':
       return <CabecalhoPagina bloco={bloco} />;
     case 'tabela':
@@ -638,6 +640,52 @@ function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
           ))}
         </ul>
       </div>
+    </section>
+  );
+}
+
+/** Lote 7h: os planos do clube cadastrados no sistema, com o link de assinatura. */
+function PlanosDoClube({ dados }: { dados: SitePublico }) {
+  if (!dados.clube)
+    return (
+      <section className={`${LARGURA} py-16 text-[#4C554F]`}>
+        Os planos do clube aparecem aqui quando estiverem cadastrados e o clube online estiver
+        ligado.
+      </section>
+    );
+  return (
+    <section className={`${LARGURA} py-20`}>
+      <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,280px),1fr))] gap-6">
+        {dados.clube.planos.map((p) => (
+          <li
+            key={p.id}
+            className="site-revelar site-cartao flex flex-col gap-4 border-t-[3px] border-[var(--site-destaque)] bg-white p-8"
+          >
+            <h2 className={`${TITULO} text-[30px] leading-tight`}>{p.nome}</h2>
+            <p className={`${TITULO} text-[40px] leading-none`}>
+              {formatarMoeda(p.valor)}
+              <span className="font-[family-name:var(--site-fonte-texto)] text-[16px] text-[#4C554F]">
+                {' '}
+                por mês
+              </span>
+            </p>
+            {p.descricao && <p className="text-[#3E4842]">{p.descricao}</p>}
+            {p.inclui.length > 0 && (
+              <ul className="flex flex-col gap-1 text-[15px] text-[#3E4842]">
+                {p.inclui.map((i) => (
+                  <li key={i}>{i}</li>
+                ))}
+              </ul>
+            )}
+            <a
+              href={`${dados.clube!.link}&p=${encodeURIComponent(p.id)}`}
+              className={`${BOTAO} mt-auto self-start bg-[#14271C] text-[#F2F1EC] focus-visible:outline-[#14271C]`}
+            >
+              Assinar {p.nome}
+            </a>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

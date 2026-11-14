@@ -1,4 +1,4 @@
-import { ROTULO_PAGINA, type PaginaSite } from '@pente-fino/shared';
+import { ROTULO_PAGINA, paginaLigada, type PaginaSite } from '@pente-fino/shared';
 import { Carregando } from '@pente-fino/ui';
 import type { Metadata } from 'next';
 import { notFound, permanentRedirect } from 'next/navigation';
@@ -17,6 +17,9 @@ const INTERNAS: Record<string, PaginaSite> = {
   servicos: 'servicos',
   equipe: 'equipe',
   contato: 'contato',
+  // Lote 7h: só existem quando o dono liga.
+  galeria: 'galeria',
+  clube: 'clube',
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -35,6 +38,7 @@ async function Conteudo({ params }: Props) {
   const p = INTERNAS[pagina];
   const site = p ? await sitePublico(slug) : null;
   if (!p) notFound();
+  if (site && !paginaLigada(site.site, p)) notFound();
   if (!site) {
     const novo = await enderecoAtual('site', slug);
     if (novo) permanentRedirect(`/s/${novo}/${pagina}`);

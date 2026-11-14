@@ -378,4 +378,26 @@ describe('site da barbearia', () => {
     pub = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body as UnidadePublica;
     expect(pub.visual).toBeNull();
   });
+
+  it('páginas extras: Clube ligado sem clube online fica sem planos; desligada não existe', async () => {
+    const { rascunho } = (await dono.get(`/unidades/${a.unidadeA}/site`)).body as SitePainel;
+    const comClube = {
+      ...rascunho,
+      paginas: {
+        ...rascunho.paginas,
+        clube: [{ id: 'planos', tipo: 'planos', visivel: true }],
+      },
+    };
+    await dono.put(`/unidades/${a.unidadeA}/site`, comClube).expect(200);
+    const previa = (await dono.get(`/unidades/${a.unidadeA}/site/previa`).expect(200))
+      .body as SitePublico;
+    expect(previa.site.paginas.clube).toHaveLength(1);
+    expect(previa.clube).toBeNull();
+    await dono
+      .put(`/unidades/${a.unidadeA}/site`, {
+        ...rascunho,
+        paginas: { ...rascunho.paginas, clube: [{ id: 'x', tipo: 'tabela', visivel: true }] },
+      })
+      .expect(400);
+  });
 });
