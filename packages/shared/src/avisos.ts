@@ -4,11 +4,13 @@ import { z } from 'zod';
 import type { ResumoUnidade } from './assistente.js';
 import { formatarHora, formatarMoeda } from './formatacao.js';
 import type { Papel } from './papeis.js';
+import { NOME_FORMA, type FormaPagamento } from './esquemas-operacao.js';
 
 export const TIPOS_AVISO = [
   'comandas_pendentes',
   'caixa_divergente',
   'caixa_sem_fechar',
+  'caixa_fechado',
   'resumo_dia',
   'clube_online',
   'whatsapp_caiu',
@@ -19,6 +21,7 @@ export const NOME_TIPO_AVISO: Readonly<Record<TipoAviso, string>> = {
   comandas_pendentes: 'Comandas esperando confirmação do barbeiro',
   caixa_divergente: 'Caixa do dia fechado com diferença',
   caixa_sem_fechar: 'Caixa que ficou sem fechar no fim do dia',
+  caixa_fechado: 'Resumo do fechamento do caixa',
   resumo_dia: 'Resumo do dia da unidade',
   clube_online: 'Cliente que assinou o clube pelo link',
   whatsapp_caiu: 'WhatsApp da unidade desconectado (o bot parou)',
@@ -32,6 +35,7 @@ export const QUEM_RECEBE: Readonly<Record<TipoAviso, readonly (readonly Papel[])
   comandas_pendentes: [['recepcao'], ['gestor'], ['dono']],
   caixa_divergente: [['gestor', 'dono']],
   caixa_sem_fechar: [['gestor', 'dono']],
+  caixa_fechado: [['dono', 'gestor']],
   resumo_dia: [['dono', 'gestor']],
   clube_online: [['dono', 'gestor']],
   whatsapp_caiu: [['dono', 'gestor']],
@@ -93,6 +97,43 @@ export function avisoComandasPendentes(d: {
   };
 }
 
+/** Totais do fechamento: o recebido do dia por forma de pagamento (seção 7). */
+export interface TotaisDoFechamento {
+  totalRecebido: number;
+  fechadas: number;
+  porForma: { forma: FormaPagamento; total: number }[];
+}
+
+/** "R$ 1.230,00 recebidos em 18 comandas: Pix R$ 600,00, Dinheiro R$ 300,00." */
+export function linhaDosTotais(t: TotaisDoFechamento): string {
+  const formas = t.porForma
+    .filter((f) => f.total > 0)
+    .sort((a, b) => b.total - a.total)
+    .map((f) => `${NOME_FORMA[f.forma]} ${formatarMoeda(f.total)}`);
+  return `${formatarMoeda(t.totalRecebido)} recebidos em ${t.fechadas} ${t.fechadas === 1 ? 'comanda' : 'comandas'}${formas.length ? `: ${formas.join(', ')}` : ''}.`;
+}
+
+/**
+ * Resumo do fechamento do caixa (seção 7): sai para dono e gestor quando a recepção fecha o caixa
+ * sem diferença. Com diferença, o aviso de diferença leva os mesmos totais (um aviso só).
+ */
+export function avisoCaixaFechado(d: {
+  caixaId: string;
+  unidade: string;
+  dia: string;
+  fechadoPor: string | null;
+  totais: TotaisDoFechamento;
+}): AvisoNovo {
+  const ddmm = `${d.dia.slice(8, 10)}/${d.dia.slice(5, 7)}`;
+  return {
+    tipo: 'caixa_fechado',
+    titulo: `Caixa de ${ddmm} fechado · ${d.unidade}`,
+    texto: `${linhaDosTotais(d.totais)} Gaveta conferida, sem diferença.${d.fechadoPor ? ` Fechado por ${primeiro(d.fechadoPor)}.` : ''}`,
+    link: `/caixa?dia=${d.dia}`,
+    chave: `caixa-fechado:${d.caixaId}`,
+  };
+}
+
 export function avisoCaixaDivergente(d: {
   caixaId: string;
   unidade: string;
@@ -100,6 +141,7 @@ export function avisoCaixaDivergente(d: {
   totalSistema: number;
   totalInformado: number;
   fechadoPor: string | null;
+  totais?: TotaisDoFechamento;
 }): AvisoNovo | null {
   const diferenca = d.totalInformado - d.totalSistema;
   if (diferenca === 0) return null;
@@ -109,7 +151,7 @@ export function avisoCaixaDivergente(d: {
   return {
     tipo: 'caixa_divergente',
     titulo: `Caixa de ${ddmm} fechado com diferença`,
-    texto: `${d.unidade}: sistema ${formatarMoeda(d.totalSistema)}, contado ${formatarMoeda(d.totalInformado)} (${sobra}).${d.fechadoPor ? ` Fechado por ${primeiro(d.fechadoPor)}.` : ''}`,
+    texto: `${d.unidade}: sistema ${formatarMoeda(d.totalSistema)}, contado ${formatarMoeda(d.totalInformado)} (${sobra}).${d.fechadoPor ? ` Fechado por ${primeiro(d.fechadoPor)}.` : ''}${d.totais ? ` ${linhaDosTotais(d.totais)}` : ''}`,
     link: `/caixa?dia=${d.dia}`,
     chave: `caixa:${d.caixaId}:${d.totalInformado}`,
   };

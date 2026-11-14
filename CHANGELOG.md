@@ -16,6 +16,20 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - As setas escolhem, Enter abre e Esc fecha. Só aparecem as telas que o papel da pessoa abre.
 - Correção: abrir um cliente pela busca com a tela de Clientes já aberta agora abre a ficha dele.
 
+### Adicionado (histórico por comanda)
+
+- A tela da comanda ganhou a seção "Histórico", que abre com um toque e mostra em ordem tudo o que aconteceu com ela:
+  - quando foi aberta, quando o atendimento começou e quando o barbeiro confirmou;
+  - cada item lançado e cada pagamento, inclusive o sinal e a devolução;
+  - fechar, reabrir (com o motivo), cancelar, falta e preço fora da tabela, com quem fez.
+
+### Adicionado (resumo do fechamento do caixa para o dono)
+
+- Quando a recepção fecha o caixa, o dono e o gestor recebem o resumo na central de avisos e no celular: quanto entrou, em quantas comandas e quanto em cada forma de pagamento (Pix, dinheiro, cartão), e quem fechou.
+- Com diferença na gaveta, sai o aviso de diferença, agora com os mesmos totais: um aviso só por fechamento.
+- O resumo do dia e o aviso de caixa sem fechar passam a sair no fechamento da unidade quando ela tem horário de funcionamento cadastrado (antes, só pelo expediente da equipe).
+- O novo aviso pode ser ligado ou desligado no celular, no Perfil, como os outros.
+
 ### Adicionado (saúde da conta no Início)
 
 - O quadro "Precisa de você agora", no Início, passou a avisar também:
