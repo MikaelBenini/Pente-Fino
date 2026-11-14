@@ -15,6 +15,8 @@ import {
   type DataISO,
   recorrentesNoDia,
   type AvisoEncaixe,
+  limitarAoFuncionamento,
+  lerFuncionamento,
 } from '@pente-fino/shared';
 import type { OrigemAgendamento, Prisma } from './generated/prisma/client.js';
 import { partesDoServico } from './clube.js';
@@ -74,9 +76,12 @@ export async function expedienteDoProfissional(
   const ds = diaDaSemana(dia);
   const abre = excecao ? excecao.trabalha : !!unidade?.diasTrabalho.includes(ds);
   if (!abre) return [];
-  return prof.horarios
-    .filter((h) => h.diaSemana === ds)
-    .map((h) => ({ inicio: instanteLocal(dia, h.inicioMin), fim: instanteLocal(dia, h.fimMin) }));
+  // Dentro do horário de funcionamento da unidade, quando ela tem um (pedido do dono, 13/11).
+  return limitarAoFuncionamento(
+    prof.horarios.filter((h) => h.diaSemana === ds),
+    lerFuncionamento(unidade?.horarioFuncionamento),
+    ds,
+  ).map((h) => ({ inicio: instanteLocal(dia, h.inicioMin), fim: instanteLocal(dia, h.fimMin) }));
 }
 
 /** Agendamentos ativos e bloqueios do profissional no dia. */

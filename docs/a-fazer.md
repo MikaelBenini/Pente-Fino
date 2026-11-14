@@ -365,7 +365,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
   - [ ] **Aniversário do cliente que veio pelo bot** (pedido do dono em 13/11): quando o cliente
     chega pelo WhatsApp, não dá para informar a data de aniversário; corrigir no cadastro e,
     se fizer sentido, o bot perguntar (opcional);
-  - [ ] **Horário de funcionamento da unidade** (pedido do dono em 13/11, logo depois do 7f):
+  - [x] **Horário de funcionamento da unidade** (13/11, documentado na linha de desenvolvimento; o resumo do fechamento, no item 9, já usa `fechamentoDoDia`):
     - o dono define, por dia da semana, a hora em que a unidade abre e fecha (com intervalo
       opcional, como o almoço), em Configurações, Unidades;
     - o agendamento pelo link, pelo bot e pelo balcão só oferece horário dentro dele, mesmo

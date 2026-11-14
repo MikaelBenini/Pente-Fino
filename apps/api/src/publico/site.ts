@@ -3,6 +3,8 @@ import {
   dataLocal,
   fotosDoSite,
   horarioDaUnidade,
+  lerFuncionamento,
+  linhasDoFuncionamento,
   linkWhatsappDaUnidade,
   notaDoSite,
   type SiteBarbearia,
@@ -77,10 +79,13 @@ export async function montarSitePublico(
       foco: site.equipe[p.id]?.foco ?? '',
       sobre: site.equipe[p.id]?.sobre ?? '',
     })),
-    horario: horarioDaUnidade(
-      profissionais.flatMap((p) => p.horarios),
-      u.diasTrabalho,
-    ),
+    // O horário da unidade, quando cadastrado; sem ele, o expediente da equipe.
+    horario: lerFuncionamento(u.horarioFuncionamento).length
+      ? linhasDoFuncionamento(lerFuncionamento(u.horarioFuncionamento))
+      : horarioDaUnidade(
+          profissionais.flatMap((p) => p.horarios),
+          u.diasTrabalho,
+        ),
     nota: notaDoSite(notas.map((n) => n.notaBarbearia!)),
     fotos: Object.fromEntries(fotos.map((f) => [f.id, { largura: f.largura, altura: f.altura }])),
   };
