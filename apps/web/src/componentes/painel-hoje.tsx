@@ -27,6 +27,8 @@ import {
   useMetas,
   useResumoDia,
   useResumoMes,
+  useSaudeConta,
+  useUnidadesDetalhe,
 } from '@/lib/consultas';
 import { limitesDoMes, mesAtual } from '@/lib/periodo';
 import { useApp } from './contexto-app';
@@ -70,6 +72,8 @@ export function PainelHoje() {
   const conversas = useConversas(unidadeAtiva ?? 'todas', gestao);
   const bot = useBot(gestao);
   const avaliacoes = useAvaliacoes(unidadeAtiva, de, ate);
+  const saude = useSaudeConta(unidadeAtiva, gestao);
+  const detalhes = useUnidadesDetalhe();
 
   const r = resumo.data;
   if (!r) return null;
@@ -88,6 +92,13 @@ export function PainelHoje() {
     esperandoAtendente: conversas.data?.aguardando ?? 0,
     whatsappCaido: caidas,
     notasBaixas: avaliacoes.data?.baixas.length ?? 0,
+    saude: saude.data ?? null,
+    linkDesligado: gestao
+      ? (detalhes.data ?? [])
+          .filter((u) => u.ativa && !u.agendamentoPublico)
+          .filter((u) => !unidadeUnica || u.id === unidadeUnica)
+          .map((u) => u.nome)
+      : [],
   });
 
   // Meta de faturamento do mês (somada quando são várias unidades).

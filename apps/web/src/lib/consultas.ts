@@ -3,6 +3,7 @@
 import type {
   CaixaDeAvisos,
   ConfigPrecoLivre,
+  SaudeDaConta,
   OcupacaoDaUnidade,
   DiaCalendario,
   ProfissionalDetalhe,
@@ -317,6 +318,18 @@ export const useFichaProfissional = (id: string | null, de: string, ate: string)
 const comProfissional = (id: string | null) => (id ? `&profissionalId=${id}` : '');
 
 /** O que tem para o dia e o que já foi feito; atualiza sozinho a cada minuto. */
+/** Saúde da conta no Início (seção 7): caixa de dia anterior aberto e comandas paradas. */
+export const useSaudeConta = (unidade: string | null, ativo: boolean) =>
+  useQuery({
+    queryKey: [...chavesResultados.desempenho, 'saude', unidade],
+    queryFn: () =>
+      api<SaudeDaConta>(
+        `resumo/saude${unidade && unidade !== 'todas' ? `?unidadeId=${unidade}` : ''}`,
+      ),
+    enabled: ativo,
+    refetchInterval: 5 * 60_000,
+  });
+
 export const useResumoDia = (unidade: string | null, data: string, profissional: string | null) =>
   useQuery({
     queryKey: [...chavesResultados.desempenho, 'dia', unidade, data, profissional],
