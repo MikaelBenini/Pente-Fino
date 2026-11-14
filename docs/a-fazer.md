@@ -402,7 +402,7 @@ PR, mergeado quando o CI passar (autorização do dono para os próximos):
 - [x] Resumo do fechamento de caixa enviado ao dono (14/11, aviso "caixa fechado" e fim do dia pelo horário da unidade)
 - [ ] Histórico visível por comanda
 - [ ] Busca global (Ctrl+K)
-- [ ] Modo recepção (tela grande)
+- [x] Modo recepção (tela grande) (botão "Modo recepção" em Comandas, `/comandas?modo=recepcao`)
 
 ## 8. Perto do fim
 

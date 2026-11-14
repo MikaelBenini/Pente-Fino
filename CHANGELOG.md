@@ -7,6 +7,15 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (modo recepção)
+
+- A tela de Comandas ganhou o botão "Modo recepção", para o monitor do balcão. Em letra grande, mostra a fila do dia:
+  - o próximo cliente em destaque, com horário, barbeiro e serviços, e o botão "Chegou: começar atendimento";
+  - a coluna "Chegando", com quem vem depois e quem está atrasado;
+  - a coluna "Na cadeira", com quem está sendo atendido;
+  - a coluna "Para receber", com o valor e o botão "Receber".
+- A tela se atualiza sozinha a cada 30 segundos, mostra a hora e tem o botão "Tela cheia" para esconder o menu.
+
 ### Adicionado (resumo do fechamento do caixa para o dono)
 
 - Quando a recepção fecha o caixa, o dono e o gestor recebem o resumo na central de avisos e no celular: quanto entrou, em quantas comandas e quanto em cada forma de pagamento (Pix, dinheiro, cartão), e quem fechou.
