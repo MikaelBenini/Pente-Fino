@@ -306,7 +306,7 @@ function SeletorUnidade({ compacto = false }: { compacto?: boolean }) {
             Unidade
           </span>
         )}
-        <span className="truncate font-semibold text-tinta">{nome}</span>
+        <span className="max-w-full truncate font-semibold text-tinta">{nome}</span>
       </span>
       {c.podeTrocarUnidade && (
         <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-tinta-suave" />
