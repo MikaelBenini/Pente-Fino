@@ -26,13 +26,19 @@ export interface FluxoAnuncio {
 
 export const FLUXO_ANUNCIO_PADRAO: Readonly<FluxoAnuncio> = {
   ativo: false,
-  frases: ['Olá! Quero saber mais.', 'Vi o anúncio'],
+  // Vazio por padrão (18/11/2026): "Olá! Quero saber mais." é também a frase do botão do
+  // WhatsApp no Instagram e no Facebook, e mandava o fluxo do anúncio para quem não veio dele.
+  frases: [],
   etapas: [
     'Oi, {cliente}! Que bom que você veio pelo nosso anúncio. 😊 Qual serviço te interessou?',
     'Perfeito! Qual dia e horário ficam melhores para você?',
   ],
   final: 'Anotado! Já passei para a nossa equipe, que te responde por aqui em instantes.',
 };
+
+/** A frase pronta do anúncio: inteira (12 letras ou mais, 3 palavras ou mais). */
+const fraseValida = (f: string) =>
+  f.trim().length >= 12 && f.trim().split(/\s+/).filter(Boolean).length >= 3;
 
 const textoEtapa = z
   .string()
@@ -43,7 +49,16 @@ const textoEtapa = z
 export const fluxoAnuncioSchema = z.object({
   ativo: z.boolean(),
   frases: z
-    .array(z.string().trim().min(3, { error: 'Frase muito curta.' }).max(120))
+    .array(
+      z
+        .string()
+        .trim()
+        .max(120)
+        // Frase curta ("Olá", "Oi, tudo bem") pega conversa comum: só a frase inteira do anúncio.
+        .refine(fraseValida, {
+          error: 'Use a frase inteira que o anúncio deixa pronta (pelo menos 3 palavras).',
+        }),
+    )
     .max(10, { error: 'No máximo 10 frases.' }),
   etapas: z
     .array(textoEtapa)
@@ -57,6 +72,14 @@ export type FluxoAnuncioDoEscopo = FluxoAnuncio & { proprio: boolean };
 
 /** O que está gravado passa de novo pelo esquema; estragado ou vazio = o padrão (desligado). */
 export function lerFluxoAnuncio(valor: unknown): FluxoAnuncio {
+  // Configuração antiga com frase curta ("Olá"): a frase sai, o resto do fluxo continua valendo.
+  if (valor && typeof valor === 'object' && Array.isArray((valor as { frases?: unknown }).frases))
+    valor = {
+      ...(valor as object),
+      frases: ((valor as { frases: unknown[] }).frases ?? []).filter(
+        (f) => typeof f === 'string' && fraseValida(f),
+      ),
+    };
   const r = fluxoAnuncioSchema.safeParse(valor);
   return r.success ? r.data : (structuredClone(FLUXO_ANUNCIO_PADRAO) as FluxoAnuncio);
 }
@@ -93,14 +116,33 @@ export interface ResultadoAnuncio {
  * Começa com o anúncio detectado pelo WhatsApp ou com a frase pronta; segue enquanto há
  * etapas; no fim manda a mensagem final e passa para a equipe.
  */
+/** Quem pode entrar no fluxo do anúncio (18/11/2026: o fluxo ia para quem não veio de anúncio). */
+export interface ChegadaDoAnuncio {
+  /** O WhatsApp marcou a mensagem como vinda de anúncio (a prova forte). */
+  doAnuncio: boolean;
+  /** O número nunca tinha escrito para a barbearia: só então a frase pronta vale. */
+  primeiroContato: boolean;
+  /** Já passou pelo fluxo do anúncio há pouco (30 dias): não recebe de novo. */
+  anuncioRecente: boolean;
+}
+
+/** Quem passou pelo fluxo do anúncio não recebe de novo neste prazo. */
+export const DIAS_SEM_REPETIR_ANUNCIO = 30;
+
 export function responderAnuncio(
   fluxo: FluxoAnuncio,
   sessaoAnterior: SessaoBot | null,
   entrada: string,
   agora: Date,
-  doAnuncio: boolean,
+  chegada: ChegadaDoAnuncio | boolean,
   cliente: string | null,
 ): ResultadoAnuncio | null {
+  // `true`/`false` (simulador e testes antigos): a marca do WhatsApp, numa conversa nova.
+  const c: ChegadaDoAnuncio =
+    typeof chegada === 'boolean'
+      ? { doAnuncio: chegada, primeiroContato: true, anuncioRecente: false }
+      : chegada;
+  const doAnuncio = c.doAnuncio;
   if (!fluxo.ativo || fluxo.etapas.length === 0) return null;
   const texto = (t: string) => preencher(t, { cliente: cliente?.trim().split(/\s+/)[0] ?? null });
   const agoraIso = agora.toISOString();
@@ -150,7 +192,11 @@ export function responderAnuncio(
   const conversaNova =
     !sessaoAnterior ||
     agora.getTime() - Date.parse(sessaoAnterior.ultimaEm) > EXPIRACAO_SESSAO_MIN * 60_000;
-  if (!doAnuncio && !(conversaNova && ehFraseDeAnuncio(fluxo, entrada))) return null;
+  // Já passou pelo fluxo há pouco: segue o bot normal (nada de repetir o anúncio).
+  if (c.anuncioRecente) return null;
+  // A frase só vale para quem nunca escreveu: cliente da casa não vira "cliente de anúncio".
+  if (!doAnuncio && !(conversaNova && c.primeiroContato && ehFraseDeAnuncio(fluxo, entrada)))
+    return null;
   return {
     respostas: [texto(fluxo.etapas[0]!)],
     sessao: {

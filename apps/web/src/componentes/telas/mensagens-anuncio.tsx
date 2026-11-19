@@ -125,7 +125,7 @@ function Formulario({
       <p className="text-tinta-suave">
         Para quem chega por um anúncio do Facebook ou do Instagram que abre o WhatsApp. O bot manda
         estas mensagens em sequência, esperando a resposta do cliente depois de cada uma, e no fim
-        passa a conversa para a equipe. Em Conversas, a conversa aparece marcada &quot;Veio de
+        passa a conversa para a equipe. Cada número recebe no máximo uma vez a cada 30 dias. Em Conversas, a conversa aparece marcada &quot;Veio de
         anúncio&quot;, com as respostas do cliente.
       </p>
       <fieldset disabled={!podeEditar} className="flex min-w-0 flex-col gap-5">
@@ -138,7 +138,8 @@ function Formulario({
         <CampoTexto
           id="anuncio-frases"
           rotulo="Frases prontas do anúncio (uma por linha)"
-          dica='A mensagem que o anúncio deixa escrita para o cliente, como "Olá! Quero saber mais.". O WhatsApp normalmente já avisa que veio do anúncio; a frase garante quando ele não avisa.'
+          dica="Opcional. O WhatsApp já avisa quando a pessoa veio do anúncio, e isso basta (recomendado: deixe vazio). Se usar, ponha a frase inteira que o seu anúncio deixa pronta (pelo menos 3 palavras); ela só vale para quem nunca escreveu para a barbearia. Não use a frase do botão do Instagram ou do Facebook: ela pega cliente que não veio de anúncio."
+
           rows={3}
           value={frases}
           onChange={(e) => setFrases(e.target.value)}

@@ -44,7 +44,9 @@ import {
   lerFuncionamento,
   lerPedidoNatural,
   responderAnuncio,
+  type ChegadaDoAnuncio,
   type FluxoAnuncio,
+  DIAS_SEM_REPETIR_ANUNCIO,
   linkDeAgendamento,
 } from '@pente-fino/shared';
 import { Prisma, type PrismaClient } from './generated/prisma/client.js';
@@ -332,7 +334,7 @@ export async function responderComAgenda(
     ctx: ContextoConversa;
     dados: DadosDaConversa;
     /** Fluxo de quem vem de anúncio e se esta mensagem veio de um (pedido do dono em 16/11). */
-    anuncio?: { fluxo: FluxoAnuncio; doAnuncio: boolean };
+    anuncio?: { fluxo: FluxoAnuncio; chegada: ChegadaDoAnuncio | boolean };
   },
 ): Promise<
   ResultadoConversa & {
@@ -353,7 +355,7 @@ export async function responderComAgenda(
       d.sessao,
       d.entrada,
       d.dados.agora,
-      d.anuncio.doAnuncio,
+      d.anuncio.chegada,
       d.ctx.cliente,
     );
     if (a)
@@ -711,7 +713,13 @@ export async function atenderMensagem(
           },
           anuncio: {
             fluxo: await fluxoAnuncioDaUnidade(tx, u),
-            doAnuncio: !!evento.anuncio,
+            chegada: {
+              doAnuncio: !!evento.anuncio,
+              primeiroContato: !conversouAntes,
+              anuncioRecente:
+                !!salva?.anuncioEm &&
+                agora.getTime() - salva.anuncioEm.getTime() < DIAS_SEM_REPETIR_ANUNCIO * 86_400_000,
+            },
           },
         });
         if (r.avaliacao) await gravarRespostaPesquisa(tx, r.avaliacao, agora);

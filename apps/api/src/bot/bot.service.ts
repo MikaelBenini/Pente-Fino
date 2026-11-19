@@ -507,7 +507,7 @@ export class BotService {
       const r = await responderComAgenda(tx, {
         anuncio: {
           fluxo: await fluxoAnuncioDaUnidade(tx, u),
-          doAnuncio: d.doAnuncio,
+          chegada: d.doAnuncio,
         },
         menu,
         mensagens: await mensagensDoBot(tx, u.id),

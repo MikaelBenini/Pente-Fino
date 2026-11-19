@@ -70,6 +70,38 @@ describe('lerWebhookEvolution', () => {
     expect(
       lerWebhookEvolution(mensagem({ contextInfo: { conversionSource: 'FB_Ads' } }), agora),
     ).toMatchObject({ anuncio: { titulo: null, origemId: null } });
+    // 18/11/2026: cartão de link ou publicação compartilhada (com sourceId, sem "ad") e origens
+    // comuns (link wa.me, Threads, busca) não são anúncio.
+    const cartao = (externalAdReply: object, extra: object = {}) =>
+      lerWebhookEvolution(
+        mensagem({
+          message: {
+            extendedTextMessage: { text: 'oi', contextInfo: { externalAdReply, ...extra } },
+          },
+        }),
+        agora,
+      );
+    expect(cartao({ title: 'Post', sourceType: 'post', sourceId: '99' })).toMatchObject({
+      anuncio: null,
+    });
+    expect(cartao({ title: 'Link', sourceId: '99' })).toMatchObject({ anuncio: null });
+    for (const origem of ['click_to_chat_link', 'threads', 'global_search_new_chat'])
+      expect(
+        lerWebhookEvolution(
+          mensagem({ contextInfo: { entryPointConversionSource: origem } }),
+          agora,
+        ),
+      ).toMatchObject({ anuncio: null });
+    // O clique no anúncio (ctwaClid) e a origem ctwa contam.
+    expect(cartao({ title: 'Anúncio', ctwaClid: 'abc' })).toMatchObject({
+      anuncio: { titulo: 'Anúncio' },
+    });
+    expect(
+      lerWebhookEvolution(
+        mensagem({ contextInfo: { entryPointConversionSource: 'ctwa_ad' } }),
+        agora,
+      ),
+    ).toMatchObject({ anuncio: { titulo: null } });
     // Resposta comum a outra mensagem: não é anúncio.
     expect(
       lerWebhookEvolution(

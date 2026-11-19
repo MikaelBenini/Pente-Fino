@@ -712,6 +712,14 @@ descrição, OpenGraph (título, descrição e imagem 1200×630) e o cartão do 
 - [x] P2: `?servico=` e `?profissional=` nos botões do site e a reserva já marcada
 - Feito em 17/11 na branch `fix/aviso-unidade-e-servico` (CHANGELOG e linha de desenvolvimento)
 
+## 8o. Mensagem de anúncio indo sozinha para clientes (pedido do dono em 18/11)
+
+- [x] Marca do WhatsApp estrita (sourceType "ad", ctwaClid, FB_Ads/ctwa); frase pronta vazia por
+  padrão, só para número que nunca escreveu e com 3 palavras ou mais; uma vez por número a cada
+  30 dias; teste de banco pelo caminho real (`anuncio.db.test.ts`)
+- [ ] **Com o dono:** o TXT do Google não está no DNS (só o do Brevo). O DNS do domínio é o da
+  Hostinger (`dns-parking.com`): criar lá o TXT `@` com `google-site-verification=…`
+
 ## 9. Por último: verificação final do ecossistema
 
 - [x] Rodar a [verificação final](verificacao-final.md) (feita em 15/11: números, segurança e produção conferidos; correções C1 a C6; ficam com o dono o backup no Kuma, uma restauração de teste e o Tag Assistant) (pedido do dono em 11/11/2026): rotinas

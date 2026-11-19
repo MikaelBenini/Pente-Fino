@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (mensagem de anúncio indo para quem não veio de anúncio)
+
+- **O fluxo do anúncio só vai para quem veio de anúncio:** vale a marca que o próprio WhatsApp manda no anúncio de verdade (o cartão marcado como anúncio, o clique no anúncio ou a origem "FB_Ads"/"ctwa"). Cartão de link, publicação compartilhada e outras origens não contam mais.
+- **A frase pronta vem vazia** (antes, "Olá! Quero saber mais.", que é também a frase do botão do WhatsApp no Instagram e no Facebook) e, quando usada, só vale para número que nunca escreveu para a barbearia, com a frase inteira (3 palavras ou mais). Frase curta salva antes sai sozinha; o resto da configuração continua.
+- **Uma vez por número:** quem passou pelo fluxo do anúncio não recebe de novo por 30 dias.
+
 ### Corrigido (aviso na unidade certa e reserva com o serviço escolhido)
 
 - **Aviso abre a unidade e o dia certos:** o link de cada aviso leva a unidade dele, e o painel passa para ela ao abrir (só se a pessoa tiver acesso). O resumo do dia abre o Resumo daquele dia, não o Início de hoje. Vale também para os avisos antigos e para a notificação do celular.
