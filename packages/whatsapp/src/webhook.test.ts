@@ -40,6 +40,7 @@ describe('lerWebhookEvolution', () => {
       telefone: '5511988887777',
       nome: 'João Silva',
       texto: 'oi',
+      conteudo: 'texto',
       anuncio: null,
       recebidaEm: new Date(1_793_811_600_000).toISOString(),
     });
@@ -147,6 +148,29 @@ describe('lerWebhookEvolution', () => {
     expect(
       lerWebhookEvolution(mensagem({ key: { remoteJid: '1203@g.us', fromMe: false, id: 'A' } })),
     ).toBeNull();
+  });
+
+  // Cenários de 19/11/2026: reação a uma mensagem, apagada ou editada não é conversa; áudio e
+  // figurinha chegam marcados, sem texto.
+  it('reação, mensagem apagada e editada são ignoradas; áudio e mídia vêm marcados', () => {
+    const com = (message: object) => lerWebhookEvolution(mensagem({ message }), agora);
+    expect(com({ reactionMessage: { text: '👍', key: { id: 'X' } } })).toBeNull();
+    expect(com({ protocolMessage: { type: 'REVOKE' } })).toBeNull();
+    expect(com({ editedMessage: { message: { conversation: 'corrigido' } } })).toBeNull();
+    expect(com({ senderKeyDistributionMessage: {} })).toBeNull();
+    expect(com({ audioMessage: { seconds: 5 } })).toMatchObject({ texto: '', conteudo: 'audio' });
+    expect(com({ stickerMessage: {} })).toMatchObject({ texto: '', conteudo: 'midia' });
+    expect(com({ imageMessage: { caption: 'meu cabelo' } })).toMatchObject({
+      texto: 'meu cabelo',
+      conteudo: 'texto',
+    });
+    // Mensagem temporária: o texto está dentro dela.
+    expect(com({ ephemeralMessage: { message: { conversation: 'oi temporário' } } })).toMatchObject(
+      {
+        texto: 'oi temporário',
+        conteudo: 'texto',
+      },
+    );
   });
 
   it('sem horário válido usa a hora de chegada', () => {

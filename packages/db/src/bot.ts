@@ -45,6 +45,7 @@ import {
   ORIGEM_ANUNCIO,
   lerFuncionamento,
   lerPedidoNatural,
+  respostaSimNao,
   responderAnuncio,
   type ChegadaDoAnuncio,
   type FluxoAnuncio,
@@ -402,7 +403,8 @@ export async function responderComAgenda(
   // a conversa normal (e o lembrete sai da sessão).
   if (lembrete && base && !base.comAtendente) {
     const numeros = lerNumeros(d.entrada);
-    const um = numeros.length === 1 ? numeros[0]! : null;
+    // "sim" ou "confirmo" também confirmam o lembrete (cenários de 19/11/2026).
+    const um = numeros.length === 1 ? numeros[0]! : respostaSimNao(texto) === 1 ? 1 : null;
     const sessao: SessaoBot = { ...base, ultimaEm: agoraIso, erros: 0 };
     if (um === 1) {
       const ok = await confirmarPeloCliente(tx, lembrete.agendamentoId, d.dados.agora);
@@ -731,6 +733,8 @@ export async function atenderMensagem(
           cliente: clienteNovo ? null : cliente.nome,
           clienteId: cliente.id,
           pedirConsentimento: cliente.consentimentoEm === null && !conversouAntes,
+          // Áudio, figurinha ou foto sem texto: o motor não responde "não entendi".
+          conteudo: evento.conteudo ?? (evento.texto.trim() ? 'texto' : 'midia'),
           agendarPelaConversa: await podeAgendarPelaConversa(tx, unidadeId, dataLocal(agora)),
         });
         const menu = lerMenu((await menuPublicado(tx, unidadeId)).menu);

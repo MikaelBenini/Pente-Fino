@@ -7,6 +7,14 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (respostas que o bot dava e não devia)
+
+- **Reação (👍), mensagem apagada ou editada** não são mais tratadas como mensagem do cliente: o bot não responde nada (antes, "Não entendi" com as opções).
+- **Figurinha ou foto sem texto** no meio da conversa: o bot fica quieto. **Áudio:** avisa uma vez que só lê texto e oferece falar com a equipe.
+- **"Obrigado", "valeu":** "Por nada! Qualquer coisa, é só chamar." uma vez por conversa; **"ok", "beleza", "tchau"**: o bot não responde.
+- **"Oi" duas vezes seguidas:** o menu vai uma vez só.
+- **"Sim", "confirmo", "ok"** confirmam o horário na conversa e o lembrete; **"não", "cancela"** desistem (antes, só os números).
+
 ### Corrigido (mensagem de anúncio indo para quem não veio de anúncio)
 
 - **O fluxo do anúncio só vai para quem veio de anúncio:** vale a marca que o próprio WhatsApp manda no anúncio de verdade (o cartão marcado como anúncio, o clique no anúncio ou a origem "FB_Ads"/"ctwa"). Cartão de link, publicação compartilhada e outras origens não contam mais.

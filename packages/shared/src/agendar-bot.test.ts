@@ -90,3 +90,14 @@ describe('aniversário pela conversa', () => {
     expect(lerAniversario('amanhã')).toBeNull();
   });
 });
+
+describe('sim e não escritos (cenários de 19/11/2026)', () => {
+  it('"sim", "confirmo" e "ok" valem 1; "não" e "cancela" valem 0; o resto, nada', async () => {
+    const { respostaSimNao } = await import('./agendar-bot.js');
+    const { normalizar } = await import('./bot.js');
+    for (const t of ['Sim', 'sim!', 'confirmo', 'OK', 'pode ser', 'Estarei lá'])
+      expect(respostaSimNao(normalizar(t))).toBe(1);
+    for (const t of ['Não', 'cancela', 'não vou']) expect(respostaSimNao(normalizar(t))).toBe(0);
+    for (const t of ['talvez', 'que horas', '']) expect(respostaSimNao(normalizar(t))).toBeNull();
+  });
+});
