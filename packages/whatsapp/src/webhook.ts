@@ -101,10 +101,14 @@ export function anuncioDaMensagem(
   ].filter((c): c is Solto => !!c);
   for (const c of contextos) {
     const ad = objeto(c.externalAdReply);
-    const fonte = `${texto(c.conversionSource) ?? ''} ${texto(c.entryPointConversionSource) ?? ''}`;
+    // Só o anúncio de verdade (18/11/2026): o cartão marcado como anúncio, o id do clique no
+    // anúncio (ctwaClid) ou a origem FB_Ads/ctwa. Cartão de link, publicação compartilhada e
+    // "sourceId" sozinho não contam: mandavam o fluxo do anúncio para quem não veio dele.
+    const origem = (v: unknown) => (texto(v) ?? '').toLowerCase();
+    const fontes = [origem(c.conversionSource), origem(c.entryPointConversionSource)];
     const deAnuncio =
-      (ad && (texto(ad.sourceType) === 'ad' || texto(ad.sourceId) || texto(ad.ctwaClid))) ||
-      /ads|ctwa/i.test(fonte);
+      (ad && (origem(ad.sourceType) === 'ad' || !!texto(ad.ctwaClid))) ||
+      fontes.some((f) => f === 'fb_ads' || f === 'ctwa_ad' || f.startsWith('ctwa'));
     if (deAnuncio)
       return { titulo: texto(ad?.title) ?? texto(ad?.body), origemId: texto(ad?.sourceId) };
   }

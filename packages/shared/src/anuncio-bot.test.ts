@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ehFraseDeAnuncio,
   FLUXO_ANUNCIO_PADRAO,
+  fluxoAnuncioSchema,
   lerFluxoAnuncio,
   resumoDoAnuncio,
   responderAnuncio,
@@ -103,5 +104,33 @@ describe('cliente comum não cai no anúncio (16/11/2026)', () => {
     ).toBe(true);
     // Com a marca do WhatsApp, vale mesmo no meio de uma conversa.
     expect(responderAnuncio(fluxo, emConversa, 'oi', agora, true, null)?.comecou).toBe(true);
+  });
+});
+
+// 18/11/2026: "está indo sozinha a mensagem de anúncio para os clientes".
+describe('o fluxo do anúncio só vai para quem veio de anúncio', () => {
+  const nova = { doAnuncio: false, primeiroContato: true, anuncioRecente: false };
+  it('cliente da casa (já escreveu antes) não entra pela frase; com a marca do WhatsApp, entra', () => {
+    const daCasa = { ...nova, primeiroContato: false };
+    expect(responderAnuncio(fluxo, null, 'Olá! Quero saber mais.', agora, daCasa, null)).toBeNull();
+    expect(
+      responderAnuncio(fluxo, null, 'oi', agora, { ...daCasa, doAnuncio: true }, null)?.comecou,
+    ).toBe(true);
+  });
+
+  it('quem já passou pelo fluxo há pouco não recebe de novo, nem com a marca', () => {
+    const recente = { doAnuncio: true, primeiroContato: false, anuncioRecente: true };
+    expect(responderAnuncio(fluxo, null, 'oi', agora, recente, null)).toBeNull();
+  });
+
+  it('frase curta não é aceita; a antiga salva sai, e o resto do fluxo continua', () => {
+    expect(fluxoAnuncioSchema.safeParse({ ...fluxo, frases: ['Olá'] }).success).toBe(false);
+    expect(fluxoAnuncioSchema.safeParse({ ...fluxo, frases: ['Oi tudo'] }).success).toBe(false);
+    const lido = lerFluxoAnuncio({ ...fluxo, frases: ['Olá', 'Vi o anúncio de vocês'] });
+    expect(lido).toMatchObject({ ativo: true, frases: ['Vi o anúncio de vocês'] });
+  });
+
+  it('o padrão vem sem frase nenhuma (a do Instagram pegava cliente comum)', () => {
+    expect(FLUXO_ANUNCIO_PADRAO.frases).toEqual([]);
   });
 });
