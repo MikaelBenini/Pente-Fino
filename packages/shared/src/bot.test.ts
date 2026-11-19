@@ -15,6 +15,8 @@ import {
   type ContextoConversa,
   type MenuBot,
   type SessaoBot,
+  TEXTO_AUDIO,
+  TEXTO_POR_NADA,
 } from './bot.js';
 
 const agora = new Date('2026-11-04T14:00:00-03:00'); // quarta, 14h
@@ -152,7 +154,7 @@ describe('conversa', () => {
   it('erros seguidos: o 2º oferece o menu e o atendente, do 3º em diante o bot fica quieto', () => {
     let s = fala(null, 'oi').sessao;
     s = fala(s, 'kkkk').sessao;
-    const segundo = fala(s, 'blz');
+    const segundo = fala(s, 'xpto');
     expect(segundo.respostas).toEqual([MENSAGENS_BOT_PADRAO.nao_entendi_de_novo]);
     const terceiro = fala(segundo.sessao, 'hein');
     expect(terceiro.respostas).toEqual([]);
@@ -548,5 +550,46 @@ describe('opção Clube', () => {
       menuComClube,
     );
     expect(outro.respostas[0]).toContain('• Clube: R$ 99,90 por mês (4 corte)');
+  });
+});
+
+// Cenários de 19/11/2026: respostas que o bot dava e não devia.
+describe('cenários do dia a dia (sem resposta constrangedora)', () => {
+  const depois = (min: number) => ctx({ agora: new Date(agora.getTime() + min * 60_000) });
+  const conversa = () => fala(null, 'oi').sessao;
+
+  it('figurinha ou foto sem texto no meio da conversa: silêncio, nada de "não entendi"', () => {
+    const r = fala(conversa(), '', { ...depois(3), conteudo: 'midia' });
+    expect(r.respostas).toEqual([]);
+  });
+
+  it('áudio: avisa uma vez que só lê texto; no segundo áudio, silêncio', () => {
+    const r1 = fala(conversa(), '', { ...depois(3), conteudo: 'audio' });
+    expect(r1.respostas).toEqual([TEXTO_AUDIO]);
+    expect(fala(r1.sessao, '', { ...depois(4), conteudo: 'audio' }).respostas).toEqual([]);
+  });
+
+  it('a primeira mensagem sem texto (figurinha) ainda abre a conversa com o menu', () => {
+    expect(fala(null, '', ctx({ conteudo: 'midia' })).respostas.join('\n')).toContain(
+      MENU_BOT_PADRAO.menu.texto,
+    );
+  });
+
+  it('"obrigado": "por nada" uma vez; "valeu" depois, silêncio; "ok" e "tchau", silêncio', () => {
+    const r1 = fala(conversa(), 'Muito obrigado!', depois(3));
+    expect(r1.respostas).toEqual([TEXTO_POR_NADA]);
+    expect(fala(r1.sessao, 'valeu', depois(4)).respostas).toEqual([]);
+    for (const t of ['ok', 'Beleza', 'tá bom', 'tchau', 'combinado'])
+      expect(fala(conversa(), t, depois(3)).respostas).toEqual([]);
+  });
+
+  it('"oi" duas vezes seguidas: o menu vai uma vez só', () => {
+    expect(fala(conversa(), 'oi', depois(1)).respostas).toEqual([]);
+    // Bem depois (mais de 2 min), cumprimentar de novo mostra o menu.
+    expect(fala(conversa(), 'oi', depois(10)).respostas.length).toBeGreaterThan(0);
+  });
+
+  it('pergunta de verdade continua com resposta', () => {
+    expect(fala(conversa(), 'quero ver os preços', depois(3)).respostas.join('\n')).toContain('R$');
   });
 });

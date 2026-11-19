@@ -130,6 +130,9 @@ const sessaoSchema: z.ZodType<SessaoBot> = z.object({
     })
     .optional(),
   respostasAnuncio: z.array(z.string().max(300)).max(10).optional(),
+  menuNaTela: z.boolean().optional(),
+  avisouAudio: z.boolean().optional(),
+  agradeceu: z.boolean().optional(),
 });
 
 export const simularBotSchema = z.object({

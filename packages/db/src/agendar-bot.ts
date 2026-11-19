@@ -3,6 +3,7 @@
 import {
   agendaNova,
   normalizar,
+  respostaSimNao,
   dataLocal,
   DIAS_POR_VEZ,
   formatarDiaPorExtenso,
@@ -739,12 +740,14 @@ export async function passoDaAgenda(
       return seguir(a, [textoConfirmar(await resumo(tx, a, d))]);
     }
     case 'confirmar': {
-      if (um === 0) return sair(['Tudo bem, não marquei nada.']);
-      if (um === 2) return irParaHorarios(tx, agenda, d, agenda.dia!, 0);
+      // "sim", "ok", "confirmo" valem 1; "não", "cancela" valem 0 (cenários de 19/11/2026).
+      const c = um ?? respostaSimNao(pedido);
+      if (c === 0) return sair(['Tudo bem, não marquei nada.']);
+      if (c === 2) return irParaHorarios(tx, agenda, d, agenda.dia!, 0);
       // Troca só o profissional: o serviço fica (lista do dono em 16/11).
-      if (um === 3 && (await profissionaisDaUnidade(tx, d.unidadeId)).length > 1)
+      if (c === 3 && (await profissionaisDaUnidade(tx, d.unidadeId)).length > 1)
         return irParaProfissional(tx, { ...agenda, escolha: null, profissionalId: null }, d);
-      if (um !== 1)
+      if (c !== 1)
         return naoServiu(
           agenda,
           'Responda 1 para confirmar, 2 para outro horário, 3 para trocar o profissional ou 0 para cancelar.',

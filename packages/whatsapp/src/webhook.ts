@@ -115,8 +115,57 @@ export function anuncioDaMensagem(
   return null;
 }
 
+/**
+ * O que a mensagem é (cenários de 19/11/2026): texto, áudio, outra mídia (foto, figurinha,
+ * documento, contato, localização) ou nada que o cliente tenha escrito (reação, mensagem apagada
+ * ou editada, voto em enquete, aviso de chave), que o bot ignora.
+ */
+export type ConteudoMensagem = 'texto' | 'audio' | 'midia' | 'ignorar';
+
+const CHAVES_DE_MIDIA = [
+  'imageMessage',
+  'videoMessage',
+  'stickerMessage',
+  'documentMessage',
+  'documentWithCaptionMessage',
+  'contactMessage',
+  'contactsArrayMessage',
+  'locationMessage',
+  'liveLocationMessage',
+  'ptvMessage',
+];
+
+/** Desembrulha as mensagens temporárias e de visualização única. */
+function desembrulhar(m: Solto | null): Solto | null {
+  let atual = m;
+  for (let i = 0; i < 3 && atual; i++) {
+    const dentro =
+      objeto(objeto(atual.ephemeralMessage)?.message) ??
+      objeto(objeto(atual.viewOnceMessage)?.message) ??
+      objeto(objeto(atual.viewOnceMessageV2)?.message) ??
+      objeto(objeto(atual.viewOnceMessageV2Extension)?.message);
+    if (!dentro) break;
+    atual = dentro;
+  }
+  return atual;
+}
+
+export function conteudoDa(message: unknown, texto: string): ConteudoMensagem {
+  if (texto.trim()) return 'texto';
+  const m = desembrulhar(objeto(message));
+  if (!m) return 'ignorar';
+  if (m.audioMessage) return 'audio';
+  if (CHAVES_DE_MIDIA.some((k) => m[k])) return 'midia';
+  // Reação, apagada/editada (protocolMessage, editedMessage), enquete, fixar, chave: não é
+  // mensagem do cliente; responder "não entendi" a um 👍 é constrangedor.
+  return 'ignorar';
+}
+
 function textoDa(m: z.infer<typeof mensagem> | null | undefined): string {
   if (!m) return '';
+  // Temporária ou de visualização única: o texto está dentro.
+  const d = desembrulhar(objeto(m)) as typeof m | null;
+  if (d && d !== m) return textoDa(d);
   return (
     m.conversation ??
     m.extendedTextMessage?.text ??
@@ -143,6 +192,10 @@ export function lerWebhookEvolution(corpo: unknown, agora = new Date()): EventoW
       telefoneDoJid(key.senderPn);
     if (!telefone) return null;
     const segundos = Number(messageTimestamp);
+    const texto = textoDa(message);
+    // Reação, mensagem apagada ou editada, enquete: não é conversa (nem da equipe pelo celular).
+    const conteudo = conteudoDa(message, texto);
+    if (conteudo === 'ignorar') return null;
     // Saiu do próprio número: pode ser o bot (o eco) ou a equipe pelo celular; quem decide é o
     // banco, que sabe o que o bot mandou.
     if (key.fromMe)
@@ -151,7 +204,7 @@ export function lerWebhookEvolution(corpo: unknown, agora = new Date()): EventoW
         instancia: msg.data.instance,
         idExterno: key.id,
         telefone,
-        texto: textoDa(message),
+        texto,
         recebidaEm: (Number.isFinite(segundos) && segundos > 0
           ? new Date(segundos * 1000)
           : agora
@@ -163,7 +216,8 @@ export function lerWebhookEvolution(corpo: unknown, agora = new Date()): EventoW
       idExterno: key.id,
       telefone,
       nome: pushName?.trim().slice(0, 80) || null,
-      texto: textoDa(message),
+      texto,
+      conteudo,
       anuncio: anuncioDaMensagem(msg.data.data),
       recebidaEm: (Number.isFinite(segundos) && segundos > 0
         ? new Date(segundos * 1000)

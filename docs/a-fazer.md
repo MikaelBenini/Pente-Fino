@@ -723,6 +723,15 @@ descrição, OpenGraph (título, descrição e imagem 1200×630) e o cartão do 
 - [ ] **Com o dono:** o TXT do Google não está no DNS (só o do Brevo). O DNS do domínio é o da
   Hostinger (`dns-parking.com`): criar lá o TXT `@` com `google-site-verification=…`
 
+## 8p. Cenários do dia a dia no WhatsApp (pedido do dono em 19/11: "imagine cenários")
+
+- [x] Reação, apagada e editada ignoradas no webhook (`conteudoDa`); mídia sem texto em silêncio;
+  áudio avisado uma vez
+- [x] Agradecimento com "por nada" uma vez; "ok"/"beleza"/"tchau" sem resposta; "oi" repetido sem
+  repetir o menu (`menuNaTela`)
+- [x] "sim"/"não" escritos na confirmação e no lembrete (`respostaSimNao`)
+- Feito em 19/11 na branch `fix/cenarios-do-bot` (CHANGELOG e linha de desenvolvimento)
+
 ## 9. Por último: verificação final do ecossistema
 
 - [x] Rodar a [verificação final](verificacao-final.md) (feita em 15/11: números, segurança e produção conferidos; correções C1 a C6; ficam com o dono o backup no Kuma, uma restauração de teste e o Tag Assistant) (pedido do dono em 11/11/2026): rotinas

@@ -102,6 +102,8 @@ export type EventoWhatsapp =
       nome: string | null;
       /** Texto da mensagem; vazio para áudio, foto e figurinha. */
       texto: string;
+      /** Texto, áudio ou outra mídia (o webhook já descarta reação, apagada e editada). */
+      conteudo?: 'texto' | 'audio' | 'midia';
       recebidaEm: string;
       /**
        * Chegou por um anúncio do Facebook/Instagram (clique para o WhatsApp): o título do

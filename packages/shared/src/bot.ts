@@ -543,6 +543,12 @@ export interface SessaoBot {
    * horário): a equipe vê na conversa (lista do dono em 16/11/2026).
    */
   pedido?: AgendaNaConversa;
+  /** A última resposta do bot foi o menu principal ("oi" de novo não repete o menu). */
+  menuNaTela?: boolean;
+  /** Já avisou que não ouve áudio nesta conversa (cenários de 19/11/2026). */
+  avisouAudio?: boolean;
+  /** Já respondeu "por nada" nesta conversa. */
+  agradeceu?: boolean;
   /** Conversa automática de quem veio de anúncio, em andamento (pedido do dono em 16/11/2026). */
   anuncio?: { etapa: number; respostas: string[] };
   /** Respostas do fluxo do anúncio, para a equipe ver depois da passagem. */
@@ -594,6 +600,28 @@ export interface ContextoConversa {
   agendarPelaConversa?: boolean;
   /** Planos da unidade e o plano de quem conversa (opção "Clube"). */
   clube?: ClubeNoBot;
+  /** Texto, áudio ou outra mídia sem texto (figurinha, foto) (cenários de 19/11/2026). */
+  conteudo?: 'texto' | 'audio' | 'midia';
+}
+
+/** Áudio no meio da conversa: avisa uma vez que o bot só lê texto. */
+export const TEXTO_AUDIO =
+  'Recebi seu áudio, mas por aqui eu só consigo ler mensagens escritas. 🙂 Escreva o que precisa, ou responda ATENDENTE para falar com a nossa equipe.';
+/** Agradecimento: responde uma vez por conversa. */
+export const TEXTO_POR_NADA = 'Por nada! Qualquer coisa, é só chamar. 😉';
+
+/** "obrigado", "valeu", "obg", "muito obrigada" (texto já normalizado). */
+export function ehAgradecimento(texto: string): boolean {
+  return /^(?:muito )?(?:obrigad[oa]|obg|brigad[oa]|valeu|vlw|tmj|grato|grata)(?: (?:demais|mesmo|viu|muito|pela ajuda|ai|meu|mano|irmao))*$/.test(
+    texto,
+  );
+}
+
+/** "ok", "beleza", "certo", "tá bom", "combinado", "tchau": não pede resposta. */
+export function ehConfirmacaoSolta(texto: string): boolean {
+  return /^(?:ok|okay|okk+|blz|beleza|certo|ta bom|ta|show|top|perfeito|combinado|entendi|joia|otimo|massa|fechou|fechado|tchau|ate mais|ate logo|falou|flw)(?: (?:entao|obrigado|obrigada|valeu))?$/.test(
+    texto,
+  );
 }
 
 export interface ResultadoConversa {
@@ -801,17 +829,17 @@ export function responder(
   // Qualquer resposta entendida zera a conta; só o "não entendi" lá embaixo soma.
   const errosAntes = expirou ? 0 : (sessao.erros ?? 0);
   sessao.erros = 0;
+  // O menu principal como o cliente vê: marca na sessão quando foi a última coisa enviada.
+  const menuPrincipal = textoDoMenu(m.menu, valores, false);
   const resultado = (
     respostas: string[],
     extra: Partial<Omit<ResultadoConversa, 'respostas'>> = {},
-  ): ResultadoConversa => ({
-    respostas: respostas.filter((r) => r.trim()),
-    sessao,
-    acao: null,
-    consentimento: null,
-    avaliacao: null,
-    ...extra,
-  });
+  ): ResultadoConversa => {
+    const lista = respostas.filter((r) => r.trim());
+    // Sem resposta, o que estava na tela continua lá.
+    if (lista.length) sessao.menuNaTela = lista.includes(menuPrincipal);
+    return { respostas: lista, sessao, acao: null, consentimento: null, avaliacao: null, ...extra };
+  };
   // Conversa nova de quem ainda não escolheu: o convite fecha a primeira resposta.
   const comConvite = (r: ResultadoConversa): ResultadoConversa =>
     expirou && ctx.pedirConsentimento && !sessao.comAtendente
@@ -940,6 +968,16 @@ export function responder(
     }
   };
 
+  // Figurinha, foto ou áudio sem texto no meio da conversa: nada de "não entendi" (cenários de
+  // 19/11/2026). Áudio ganha um aviso, uma vez por conversa; o resto, silêncio.
+  if (!texto && !expirou) {
+    if (ctx.conteudo === 'audio' && !sessao.avisouAudio) {
+      sessao.avisouAudio = true;
+      return resultado([TEXTO_AUDIO]);
+    }
+    return resultado([]);
+  }
+
   // Palavra-chave em qualquer ponto da conversa.
   const grupo = grupoMaisEspecifico(m, texto);
   if (grupo) return comConvite(executar(grupo.resposta, grupo.acao));
@@ -952,6 +990,22 @@ export function responder(
 
   // Conversa nova sem palavra-chave: abertura, menu e (se for o caso) o convite.
   if (expirou) return comConvite(resultado([...abertura, menuAtual()]));
+
+  // Agradeceu: "por nada", uma vez; "ok", "beleza", "tchau": não pede resposta.
+  if (ehAgradecimento(texto)) {
+    if (sessao.agradeceu) return resultado([]);
+    sessao.agradeceu = true;
+    return resultado([TEXTO_POR_NADA]);
+  }
+  if (ehConfirmacaoSolta(texto) && !ehSaudacao(texto)) return resultado([]);
+
+  // Cumprimentou de novo logo depois do menu ("oi" duas vezes): o menu já está na tela.
+  if (
+    ehSaudacao(texto) &&
+    sessaoAnterior?.menuNaTela &&
+    ctx.agora.getTime() - Date.parse(sessaoAnterior.ultimaEm) < 2 * 60_000
+  )
+    return resultado([]);
 
   // Cumprimentou no meio da conversa: recomeça do menu principal, com as boas-vindas.
   if (ehSaudacao(texto)) {

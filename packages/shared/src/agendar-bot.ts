@@ -363,3 +363,18 @@ export function lerAniversario(texto: string): string | null {
   if (dia > ultimo) return null;
   return `2000-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 }
+
+/**
+ * "sim", "ok", "confirmo" valem 1; "não", "cancela" valem 0 (cenários de 19/11/2026: quem
+ * respondia "sim" à confirmação ou ao lembrete recebia "não entendi"). `texto` já normalizado.
+ */
+export function respostaSimNao(texto: string): 1 | 0 | null {
+  if (
+    /^(?:sim|s|ss|sim sim|confirmo|confirmado|confirmar|confirma|ok|okay|pode ser|pode|isso|claro|fechado|beleza|blz|bora|perfeito|vou sim|estarei|estarei la)$/.test(
+      texto,
+    )
+  )
+    return 1;
+  if (/^(?:nao|n|cancela|cancelar|desisto|nao vou|nao posso)$/.test(texto)) return 0;
+  return null;
+}
