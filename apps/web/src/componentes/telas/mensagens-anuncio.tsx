@@ -125,8 +125,9 @@ function Formulario({
       <p className="text-tinta-suave">
         Para quem chega por um anúncio do Facebook ou do Instagram que abre o WhatsApp. O bot manda
         estas mensagens em sequência, esperando a resposta do cliente depois de cada uma, e no fim
-        passa a conversa para a equipe. Cada número recebe no máximo uma vez a cada 30 dias. Em Conversas, a conversa aparece marcada &quot;Veio de
-        anúncio&quot;, com as respostas do cliente.
+        passa a conversa para a equipe. Cada número recebe no máximo uma vez a cada 30 dias. Em
+        Conversas, a conversa aparece marcada &quot;Veio de anúncio&quot;, com as respostas do
+        cliente.
       </p>
       <fieldset disabled={!podeEditar} className="flex min-w-0 flex-col gap-5">
         <Marcador

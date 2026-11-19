@@ -560,6 +560,14 @@ export interface RespostaPesquisa {
   concluida: boolean;
 }
 
+/**
+ * Trava contra conversa em loop (pedido do dono em 18/11/2026): com tantas respostas do bot para
+ * o mesmo número nesta janela, do outro lado provavelmente há outro robô; o bot para e passa a
+ * conversa para a equipe.
+ */
+export const LIMITE_RESPOSTAS_DO_BOT = 30;
+export const JANELA_RESPOSTAS_DO_BOT_MIN = 10;
+
 /** A partir deste erro seguido, o bot para de responder até o cliente acertar. */
 export const ERROS_ATE_SILENCIO = 3;
 

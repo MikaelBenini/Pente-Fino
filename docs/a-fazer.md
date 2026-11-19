@@ -717,6 +717,9 @@ descrição, OpenGraph (título, descrição e imagem 1200×630) e o cartão do 
 - [x] Marca do WhatsApp estrita (sourceType "ad", ctwaClid, FB_Ads/ctwa); frase pronta vazia por
   padrão, só para número que nunca escreveu e com 3 palavras ou mais; uma vez por número a cada
   30 dias; teste de banco pelo caminho real (`anuncio.db.test.ts`)
+- [x] O bot não responde número conectado ao sistema (`numero_conectado_ao_sistema()`), nada
+  automático sai para ele, e a trava contra loop (30 respostas em 10 min) passa para a equipe
+  (pedido do dono em 18/11; `travas-bot.db.test.ts`)
 - [ ] **Com o dono:** o TXT do Google não está no DNS (só o do Brevo). O DNS do domínio é o da
   Hostinger (`dns-parking.com`): criar lá o TXT `@` com `google-site-verification=…`
 

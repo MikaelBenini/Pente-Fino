@@ -39,6 +39,8 @@ import {
   caminhoAssinarClube,
   avisoContatoAnuncio,
   formatarTelefone,
+  JANELA_RESPOSTAS_DO_BOT_MIN,
+  LIMITE_RESPOSTAS_DO_BOT,
   lerFluxoAnuncio,
   ORIGEM_ANUNCIO,
   lerFuncionamento,
@@ -534,6 +536,10 @@ export type ResultadoAtendimento =
   | { tipo: 'sem_conexao' }
   | { tipo: 'repetida' }
   | { tipo: 'sem_bot' }
+  // Outro número conectado ao sistema (unidade sua ou de outra barbearia): o bot não responde.
+  | { tipo: 'numero_do_sistema' }
+  // Muitas respostas seguidas para o mesmo número: parou e passou para a equipe.
+  | { tipo: 'loop' }
   | {
       tipo: 'respondida';
       contaId: string;
@@ -678,9 +684,48 @@ export async function atenderMensagem(
         // Sem as Automações (Agenda ou Básico sem contratar), o WhatsApp só manda os avisos do
         // agendamento: a mensagem fica em Conversas e o bot não responde sozinho.
         if (!(await temNaConta(tx, 'bot'))) return { tipo: 'sem_bot' } as const;
+        // Número de outra unidade (ou de outra barbearia do sistema): a mensagem fica em
+        // Conversas, mas o bot não responde; dois bots se respondendo viram um loop.
+        const [doSistema] = await tx.$queryRaw<{ sim: boolean }[]>`
+          SELECT numero_conectado_ao_sistema(${variantes}::text[]) AS sim`;
+        if (doSistema?.sim) return { tipo: 'numero_do_sistema' } as const;
         const salva = await tx.botSessao.findUnique({
           where: { unidadeId_telefone: { unidadeId, telefone: evento.telefone } },
         });
+        // Trava contra loop: muitas respostas do bot (sem ninguém da equipe) para este número em
+        // poucos minutos. Para, e a conversa vai para a equipe (fila de Conversas).
+        const respostasDoBot = await tx.mensagem.count({
+          where: {
+            unidadeId,
+            telefone: { in: variantes },
+            direcao: 'saida',
+            autorId: null,
+            peloCelular: false,
+            criadoEm: { gte: new Date(agora.getTime() - JANELA_RESPOSTAS_DO_BOT_MIN * 60_000) },
+          },
+        });
+        if (respostasDoBot >= LIMITE_RESPOSTAS_DO_BOT) {
+          const antes = (salva?.sessao as unknown as SessaoBot | undefined) ?? null;
+          const sessao: SessaoBot = {
+            caminho: [],
+            erros: 0,
+            ultimaEm: agora.toISOString(),
+            ...(antes ?? {}),
+            comAtendente: true,
+          };
+          await tx.botSessao.upsert({
+            where: { unidadeId_telefone: { unidadeId, telefone: evento.telefone } },
+            create: {
+              unidadeId,
+              telefone: evento.telefone,
+              clienteId: cliente.id,
+              sessao: json(sessao),
+              atendenteDesde: agora,
+            },
+            update: { sessao: json(sessao), atendenteDesde: salva?.atendenteDesde ?? agora },
+          });
+          return { tipo: 'loop' } as const;
+        }
         const ctx = await contextoDaConversa(tx, u, agora, opcoes.appUrl, {
           // Só cumprimenta pelo nome quem a barbearia já conhecia.
           cliente: clienteNovo ? null : cliente.nome,
@@ -901,6 +946,13 @@ export async function prepararEnvio(
       select: { id: true },
     });
     if (!falou) return descartar('O número nunca falou com a barbearia.');
+    // Número conectado ao sistema (outra unidade, outra barbearia): nada automático vai para ele
+    // (pedido do dono em 18/11/2026). A resposta escrita pela equipe no painel continua saindo.
+    if (m.autorId === null) {
+      const [doSistema] = await tx.$queryRaw<{ sim: boolean }[]>`
+        SELECT numero_conectado_ao_sistema(${variantesTelefone(m.telefone)}::text[]) AS sim`;
+      if (doSistema?.sim) return descartar('O número é de outra unidade conectada ao sistema.');
+    }
     const conexao = m.unidade.botConexao;
     if (!conexao || conexao.status !== 'conectado')
       return descartar('O WhatsApp da unidade não está conectado.');
