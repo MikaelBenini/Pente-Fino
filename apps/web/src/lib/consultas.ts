@@ -22,6 +22,7 @@ import type {
   EnvioParaCliente,
   EstadoBot,
   ListaConversas,
+  EstadoConversaRegistro,
   MensagemDoCliente,
   ResumoDoDia,
   ResumoDoMes,
@@ -399,6 +400,15 @@ export const useMensagensConversa = (id: string | null) =>
     queryFn: () => api<MensagemDoCliente[]>(`conversas/${id}/mensagens`),
     enabled: !!id,
     refetchInterval: 5_000,
+  });
+
+/** Histórico do estado da conversa aberta (testes de 19/11/2026). */
+export const useEstadosConversa = (id: string | null) =>
+  useQuery({
+    queryKey: [...chaveConversas, 'estados', id],
+    queryFn: () => api<EstadoConversaRegistro[]>(`conversas/${id}/estados`),
+    enabled: !!id,
+    refetchInterval: 15_000,
   });
 
 /** Dá para mandar pelo número da barbearia? Consulta só com a janela aberta. */

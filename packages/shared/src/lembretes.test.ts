@@ -57,3 +57,19 @@ describe('textoLembrete', () => {
     );
   });
 });
+
+describe('lembrete sem madrugada (20/11/2026)', () => {
+  it('horário às 8h: o de 2 h sai às 21h59 da véspera, não às 6h', () => {
+    const oito = new Date('2026-11-21T08:00:00-03:00');
+    const marcado = new Date('2026-11-18T10:00:00-03:00');
+    expect(momentosDosLembretes(oito, marcado, marcado)).toEqual([
+      { tipo: '24h', quando: new Date('2026-11-20T08:00:00-03:00') },
+      { tipo: '2h', quando: new Date('2026-11-20T21:59:00-03:00') },
+    ]);
+  });
+  it('marcou às 23h para as 8h: o de 2 h não sai', () => {
+    const oito = new Date('2026-11-21T08:00:00-03:00');
+    const marcado = new Date('2026-11-20T23:00:00-03:00');
+    expect(momentosDosLembretes(oito, marcado, marcado)).toEqual([]);
+  });
+});

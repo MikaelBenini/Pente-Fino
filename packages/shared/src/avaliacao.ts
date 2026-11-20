@@ -14,6 +14,8 @@ function normalizar(texto: string): string {
 
 /** A pesquisa sai este tempo depois do fechamento da comanda. */
 export const PESQUISA_ATRASO_MIN = 60;
+/** Pesquisa que cairia de madrugada sai às 9h (pedido do dono em 20/11/2026). */
+export const HORA_PESQUISA_DE_MANHA = 9;
 /** Sem resposta neste prazo, a pesquisa expira sem insistir. */
 export const PESQUISA_VALIDADE_HORAS = 48;
 /** No máximo uma pesquisa por cliente neste intervalo. */

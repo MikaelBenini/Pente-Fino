@@ -3,7 +3,7 @@
 // quem está tentando. O IP que errar demais leva 429 por 10 minutos: o Asaas e a Evolution
 // nunca erram o segredo, então o limite não pega neles. Sem Redis, só registra no log.
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
-import { dataLocal, normalizarIp } from '@pente-fino/shared';
+import { dataLocal, normalizarIp, type MotivoRecusaWebhook } from '@pente-fino/shared';
 import type { Redis } from 'ioredis';
 import { ErroApp } from './erros.js';
 import { REDIS } from '../filas/filas.module.js';
@@ -17,7 +17,13 @@ const porIp = (ip: string) => `webhook:falhas:${ip}`;
 
 export interface ResumoRecusas {
   total7Dias: number;
-  ultimos: { rota: string; ip: string | null; quando: string }[];
+  ultimos: {
+    rota: string;
+    ip: string | null;
+    quando: string;
+    motivo?: MotivoRecusaWebhook;
+    evento?: string | null;
+  }[];
 }
 
 @Injectable()
@@ -49,9 +55,16 @@ export class WebhooksRecusados {
   }
 
   /** Segredo errado: registra (log, contagem do dia, últimas) e conta para o limite do IP. */
-  async registrar(rota: 'asaas' | 'whatsapp', ipBruto: string | undefined): Promise<void> {
+  async registrar(
+    rota: 'asaas' | 'whatsapp',
+    ipBruto: string | undefined,
+    detalhe: { motivo?: MotivoRecusaWebhook; evento?: string | null } = {},
+  ): Promise<void> {
     const ip = normalizarIp(ipBruto) ?? null;
-    this.logger.warn(`Webhook ${rota} recusado (segredo errado) de ${ip ?? 'IP desconhecido'}`);
+    const evento = detalhe.evento ? String(detalhe.evento).slice(0, 60) : null;
+    this.logger.warn(
+      `Webhook ${rota} recusado (${detalhe.motivo ?? 'segredo errado'}${evento ? `, evento ${evento}` : ''}) de ${ip ?? 'IP desconhecido'}`,
+    );
     if (!(await this.pronto())) return;
     const quando = new Date();
     try {
@@ -60,7 +73,16 @@ export class WebhooksRecusados {
         .multi()
         .incr(dia)
         .expire(dia, 8 * 86_400)
-        .lpush(ULTIMOS, JSON.stringify({ rota, ip, quando: quando.toISOString() }))
+        .lpush(
+          ULTIMOS,
+          JSON.stringify({
+            rota,
+            ip,
+            quando: quando.toISOString(),
+            ...(detalhe.motivo ? { motivo: detalhe.motivo } : {}),
+            ...(evento ? { evento } : {}),
+          }),
+        )
         .ltrim(ULTIMOS, 0, 19)
         .exec();
       if (ip) {

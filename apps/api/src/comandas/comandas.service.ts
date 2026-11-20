@@ -38,6 +38,7 @@ import {
   restanteAposSinal,
   historicoDaComanda,
   type EventoComanda,
+  variantesTelefone,
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import type { alterarItemSchema } from '@pente-fino/shared';
@@ -647,7 +648,10 @@ export class ComandasService {
     unidadeId: string,
   ): Promise<string> {
     if (novo.telefone) {
-      const existente = await tx.cliente.findFirst({ where: { telefone: novo.telefone } });
+      const existente = await tx.cliente.findFirst({
+        where: { telefone: { in: variantesTelefone(novo.telefone) } },
+        orderBy: { criadoEm: 'asc' },
+      });
       if (existente) return existente.id;
     }
     const c = await tx.cliente.create({

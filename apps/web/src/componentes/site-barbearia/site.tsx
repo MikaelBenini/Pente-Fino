@@ -5,7 +5,7 @@ import {
   CAMINHO_PAGINA,
   caminhoDoAgendamento,
   CORES_SITE,
-  PALETAS_SITE,
+  paletaDoSite,
   ROTULO_PAGINA,
   blocosVisiveis,
   cabecalhoDoSite,
@@ -132,7 +132,8 @@ export function SiteDaBarbearia({ dados: brutos, pagina, base, agendar }: Props)
   const dados: DadosDoSite = agendar ? { ...brutos, linkAgendar: agendar } : brutos;
   const { site } = dados;
   const blocos = blocosVisiveis(site, pagina);
-  const paleta = PALETAS_SITE[site.tema] ?? PALETAS_SITE.tradicional;
+  // Cores próprias por cima do tema (pedido do dono em 20/11/2026), sem precisar de CSS.
+  const { destaque, ...paleta } = paletaDoSite(site.tema, site.coresProprias);
   const estilo = {
     ...Object.fromEntries(
       Object.entries(paleta).map(([k, v]) => [
@@ -140,7 +141,7 @@ export function SiteDaBarbearia({ dados: brutos, pagina, base, agendar }: Props)
         v,
       ]),
     ),
-    '--site-destaque': CORES_SITE[site.cor].hex,
+    '--site-destaque': destaque ?? CORES_SITE[site.cor].hex,
     '--site-titulo': FONTE_TITULO[site.fonte],
     '--site-ajuste-titulo': AJUSTE_TITULO[site.fonte],
     '--site-raio': RAIO[site.botoes],
@@ -194,6 +195,7 @@ function Foto({
   className,
   tamanhos = '100vw',
   prioridade = false,
+  foco,
 }: {
   id: string;
   dados: SitePublico;
@@ -201,6 +203,8 @@ function Foto({
   className?: string;
   tamanhos?: string;
   prioridade?: boolean;
+  /** Recorte escolhido pelo dono: o ponto da foto que fica sempre à vista. */
+  foco?: { x: number; y: number };
 }) {
   const medida = dados.fotos[id];
   return (
@@ -216,6 +220,7 @@ function Foto({
       fetchPriority={prioridade ? 'high' : undefined}
       decoding="async"
       className={className}
+      style={foco ? { objectPosition: `${foco.x}% ${foco.y}%` } : undefined}
     />
   );
 }
@@ -335,6 +340,8 @@ function Bloco({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; b
       return <Depoimentos bloco={bloco} />;
     case 'botoes':
       return <BotoesComLink bloco={bloco} />;
+    case 'colunas':
+      return <Colunas bloco={bloco} dados={dados} />;
     case 'planos':
       return <PlanosDoClube dados={dados} />;
     case 'cabecalho':
@@ -361,6 +368,9 @@ function Titulo2({ children, className }: { children: ReactNode; className?: str
 }
 
 function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; base: string }) {
+  // Foto ao lado do texto (pedido do dono em 20/11/2026); no celular, a foto vem antes.
+  if (bloco.foto && (bloco.disposicao === 'direita' || bloco.disposicao === 'esquerda'))
+    return <BannerComFotoAoLado bloco={bloco} dados={dados} base={base} />;
   return (
     <section className={`${VERDE} relative overflow-hidden text-white`}>
       {bloco.foto ? (
@@ -371,6 +381,7 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
               dados={dados}
               alt={`Foto da ${dados.barbearia}`}
               prioridade
+              foco={bloco.foco}
               className="site-zoom size-full object-cover"
             />
           </div>
@@ -412,6 +423,105 @@ function Banner({ bloco, dados, base }: { bloco: BlocoSite; dados: SitePublico; 
         </div>
       </div>
       <FaixaServicos dados={dados} />
+    </section>
+  );
+}
+
+function BannerComFotoAoLado({
+  bloco,
+  dados,
+  base,
+}: {
+  bloco: BlocoSite;
+  dados: SitePublico;
+  base: string;
+}) {
+  const esquerda = bloco.disposicao === 'esquerda';
+  return (
+    <section className={`${VERDE} relative overflow-hidden text-white`}>
+      <div
+        className={`${LARGURA} grid items-center gap-8 py-10 @3xl:grid-cols-2 @3xl:gap-14 @3xl:py-20`}
+      >
+        <div className={`relative overflow-hidden ${esquerda ? '' : '@3xl:order-2'}`}>
+          <Foto
+            id={bloco.foto!}
+            dados={dados}
+            alt={`Foto da ${dados.barbearia}`}
+            prioridade
+            foco={bloco.foco}
+            tamanhos="(min-width: 768px) 50vw, 100vw"
+            className="aspect-[4/3] w-full rounded-[var(--site-raio)] object-cover @3xl:aspect-[4/5]"
+          />
+        </div>
+        <div className="site-entrada flex flex-col gap-7">
+          <h1
+            className={`${TITULO} max-w-[11em] text-[2.5rem] leading-none @2xl:text-[3.75rem] @5xl:text-[4.5rem]`}
+          >
+            {bloco.titulo || dados.barbearia}
+          </h1>
+          {bloco.texto && (
+            <p className="max-w-[32em] text-[1.1875rem] whitespace-pre-line text-[var(--site-claro-suave)]">
+              {bloco.texto}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <AcaoPrincipal dados={dados} className={`${BOTAO_DESTAQUE} text-[1.125rem]`} />
+            <Link
+              href={`${base}/servicos`}
+              className={`${BOTAO} border border-white text-[1.125rem] text-white focus-visible:outline-white`}
+            >
+              Ver serviços e preços
+            </Link>
+          </div>
+        </div>
+      </div>
+      <FaixaServicos dados={dados} />
+    </section>
+  );
+}
+
+/**
+ * Colunas livres (pedido do dono em 20/11/2026): foto, título, texto e botão em até 4 colunas,
+ * que viram uma embaixo da outra no celular.
+ */
+function Colunas({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
+  const itens = (bloco.itens ?? []).filter((i) => i.titulo || i.texto || i.foto);
+  if (!itens.length) return null;
+  return (
+    <section className={`${LARGURA} site-revelar flex flex-col gap-10 py-20`}>
+      {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
+      <ul
+        className={`grid gap-8 ${itens.length >= 3 ? '@3xl:grid-cols-3' : ''} ${itens.length === 2 ? '@2xl:grid-cols-2' : ''} ${itens.length >= 4 ? '@5xl:grid-cols-4' : ''}`}
+      >
+        {itens.map((i, n) => (
+          <li key={`${i.titulo}-${n}`} className="flex flex-col gap-4">
+            {i.foto && (
+              <Foto
+                id={i.foto}
+                dados={dados}
+                alt={i.titulo || `Foto da ${dados.barbearia}`}
+                tamanhos="(min-width: 768px) 33vw, 100vw"
+                className="aspect-[4/3] w-full rounded-[var(--site-raio)] object-cover"
+              />
+            )}
+            {i.titulo && <h3 className={`${TITULO} text-[1.75rem] leading-tight`}>{i.titulo}</h3>}
+            {i.texto && (
+              <p className="whitespace-pre-line text-[var(--site-tinta-media)]">{i.texto}</p>
+            )}
+            {i.botao && i.link && urlDeLinkValida(i.link) && (
+              <a
+                href={i.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${BOTAO} self-start bg-[var(--site-escuro)] text-[var(--site-claro)] focus-visible:outline-[var(--site-escuro)]`}
+              >
+                {i.botao}
+                <span className="sr-only"> (abre em outra aba)</span>
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -659,6 +769,48 @@ function EquipeResumo({
 function Galeria({ bloco, dados }: { bloco: BlocoSite; dados: SitePublico }) {
   const itens = (bloco.itens ?? []).filter((i) => i.foto);
   if (!itens.length) return null;
+  // Cartões numerados rolando para o lado (pedido do dono em 20/11/2026).
+  if (bloco.estilo === 'carrossel')
+    return (
+      <section className="bg-[var(--site-cartao)]">
+        <div className={`${LARGURA} flex flex-col gap-10 py-24 @2xl:py-28`}>
+          {bloco.titulo && <Titulo2>{bloco.titulo}</Titulo2>}
+          <ol
+            aria-label={bloco.titulo || 'Galeria'}
+            tabIndex={0}
+            className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-4 [scrollbar-width:thin] @2xl:-mx-6 @2xl:scroll-px-6 @2xl:px-6"
+          >
+            {itens.map((f, i) => (
+              <li
+                key={`${f.foto}-${i}`}
+                className="w-[78%] max-w-[22rem] shrink-0 snap-start @2xl:w-[40%] @5xl:w-[28%]"
+              >
+                <figure className="flex flex-col gap-3">
+                  <div className="relative overflow-hidden rounded-[var(--site-raio)]">
+                    <Foto
+                      id={f.foto!}
+                      dados={dados}
+                      alt={f.titulo || `Trabalho da ${dados.barbearia}`}
+                      tamanhos="(min-width: 768px) 30vw, 80vw"
+                      className="aspect-[4/5] w-full object-cover"
+                    />
+                    <span
+                      aria-hidden
+                      className={`${TITULO} absolute top-3 left-3 bg-[var(--site-escuro)] px-2.5 py-1 text-[1.125rem] text-[var(--site-destaque)]`}
+                    >
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                  </div>
+                  {f.titulo && (
+                    <figcaption className="text-[1.0625rem] font-semibold">{f.titulo}</figcaption>
+                  )}
+                </figure>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    );
   return (
     <section className="bg-[var(--site-cartao)]">
       <div className={`${LARGURA} flex flex-col gap-11 py-24 @2xl:py-28`}>
@@ -980,7 +1132,7 @@ function Contato({ dados }: { dados: SitePublico }) {
             <h2 className={`${TITULO} mb-2 text-[2rem]`}>Onde fica</h2>
             <p className="text-[1.1875rem]">{dados.endereco}</p>
             <a
-              href={linkDoMapa(dados.endereco)}
+              href={dados.mapa ?? linkDoMapa(dados.endereco)}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 inline-flex min-h-11 items-center gap-2 font-semibold text-[var(--site-link)] underline-offset-4 hover:underline"

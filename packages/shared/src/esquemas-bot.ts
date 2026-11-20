@@ -236,6 +236,23 @@ export interface ConversaResumo {
   } | null;
   /** Chegou por anúncio: desde quando e o título do anúncio, quando o WhatsApp manda. */
   anuncio: { desde: string; titulo: string | null } | null;
+  /**
+   * A última mudança de estado e o motivo ("O cliente pediu atendente", "Trava contra loop..."),
+   * para o operador saber por que o bot parou (testes de 19/11/2026).
+   */
+  ultimoEstado: { em: string; origem: string; origemTexto: string; quem: string | null } | null;
+}
+
+/** Uma mudança de estado da conversa, no histórico (testes de 19/11/2026). */
+export interface EstadoConversaRegistro {
+  id: string;
+  em: string;
+  de: 'bot' | 'aguardando' | 'atendimento' | null;
+  para: 'bot' | 'aguardando' | 'atendimento';
+  origem: string;
+  origemTexto: string;
+  /** Primeiro nome de quem fez, quando foi alguém da equipe pelo painel. */
+  quem: string | null;
 }
 
 export interface ListaConversas {

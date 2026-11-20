@@ -35,7 +35,7 @@ principal() {
 
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT
-  for f in docker-compose.prod.yml Caddyfile atualizar.sh admin.sh backup.sh restaurar.sh vigia.sh implantar.sh instalar.sh chave-deploy.sh status.sh status-kuma.mjs status.css backup-externo.sh; do
+  for f in docker-compose.prod.yml Caddyfile atualizar.sh admin.sh backup.sh restaurar.sh vigia.sh implantar.sh instalar.sh chave-deploy.sh status.sh status-kuma.mjs status.css backup-externo.sh diagnostico-backup.sh; do
     curl -fsSL -m 30 "https://raw.githubusercontent.com/$REPO/$SHA/infra/$f" -o "$TMP/$f"
   done
   mkdir -p "$TMP/postgres/init"
@@ -49,6 +49,9 @@ principal() {
   # Pasta deixada pelo Docker no lugar de um arquivo que ainda não existia (ex.: status.css).
   for f in "$TMP"/*; do [[ -f "$f" && -d "$(basename "$f")" ]] && { rmdir "$(basename "$f")" 2>/dev/null || true; }; done
   cp -r "$TMP"/. .
+  # Antes da atualização também (20/11/2026): se ela falhar, o set -e parava o script e o cron do
+  # backup nunca era posto.
+  garantir_cron
   ./atualizar.sh "$SHA"
   garantir_cron
   # O aviso do Compose sobre valor com "$" traria o valor para o log público: sai escondido.

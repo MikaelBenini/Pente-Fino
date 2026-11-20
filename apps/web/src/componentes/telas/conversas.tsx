@@ -1,6 +1,12 @@
 'use client';
 
-import { formatarHora, formatarTelefone, type ConversaResumo } from '@pente-fino/shared';
+import {
+  formatarHora,
+  formatarTelefone,
+  ROTULO_SITUACAO,
+  type ConversaResumo,
+  type SituacaoConversa,
+} from '@pente-fino/shared';
 import {
   Botao,
   CampoTexto,
@@ -20,7 +26,13 @@ import {
   tocarAviso,
   usePreferenciasAvisos,
 } from '@/lib/avisos';
-import { chaveConversas, useAcao, useConversas, useMensagensConversa } from '@/lib/consultas';
+import {
+  chaveConversas,
+  useAcao,
+  useConversas,
+  useEstadosConversa,
+  useMensagensConversa,
+} from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { ListaMensagens } from '../lista-mensagens';
@@ -75,13 +87,75 @@ function FichaAnuncio({ c }: { c: ConversaResumo }) {
   );
 }
 
+/**
+ * Estado claro (testes de 19/11/2026): "Esperando agora" não dizia que o bot estava pausado.
+ */
 function FichaSituacao({ c }: { c: ConversaResumo }) {
   if (c.situacao === 'aguardando')
-    return <Ficha tom="aviso">Esperando {c.aguardandoDesde && haQuanto(c.aguardandoDesde)}</Ficha>;
-  if (c.situacao === 'atendimento') return <Ficha tom="acao">Com a equipe</Ficha>;
+    return (
+      <Ficha tom="aviso">
+        {ROTULO_SITUACAO.aguardando}
+        {c.aguardandoDesde && ` · ${haQuanto(c.aguardandoDesde)}`}
+      </Ficha>
+    );
+  if (c.situacao === 'atendimento') return <Ficha tom="acao">{ROTULO_SITUACAO.atendimento}</Ficha>;
   // O selo segue a conexão real da unidade: desconectado, o bot não responde ninguém.
   if (!c.conectado) return <Ficha tom="perigo">Bot parado: WhatsApp desconectado</Ficha>;
-  return <Ficha tom="neutro">Bot respondendo</Ficha>;
+  return <Ficha tom="neutro">{ROTULO_SITUACAO.bot}</Ficha>;
+}
+
+/** Por que a conversa está assim: a última mudança, com quem e quando. */
+function textoMotivo(c: ConversaResumo): string | null {
+  const e = c.ultimoEstado;
+  if (!e) return null;
+  return `${e.origemTexto}${e.quem ? ` (${e.quem})` : ''} · ${haQuanto(e.em)}`;
+}
+
+const ROTULO_CURTO: Record<SituacaoConversa, string> = {
+  bot: 'Bot respondendo',
+  aguardando: 'Aguardando atendente',
+  atendimento: 'Em atendimento humano',
+};
+
+/** Cada mudança de estado com horário, de, para e origem (testes de 19/11/2026). */
+function HistoricoEstados({ id }: { id: string }) {
+  const estados = useEstadosConversa(id);
+  const lista = estados.data ?? [];
+  return (
+    <details className="rounded-md border border-borda bg-superficie px-3 py-2 text-sm">
+      <summary className="cursor-pointer font-semibold">
+        Histórico do estado{lista.length > 0 && ` (${lista.length})`}
+      </summary>
+      {lista.length === 0 ? (
+        <p className="mt-2 text-tinta-suave">Nenhuma mudança registrada ainda.</p>
+      ) : (
+        <ol className="mt-2 flex flex-col gap-1.5">
+          {[...lista].reverse().map((e) => (
+            <li key={e.id} className="flex flex-wrap gap-x-2">
+              <time dateTime={e.em} className="font-denso tabular-nums text-tinta-suave">
+                {new Date(e.em).toLocaleString('pt-BR', {
+                  timeZone: 'America/Sao_Paulo',
+                  day: '2-digit',
+                  month: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                })}
+              </time>
+              <span>
+                {e.de ? `${ROTULO_CURTO[e.de]} → ` : ''}
+                <strong>{ROTULO_CURTO[e.para]}</strong>
+              </span>
+              <span className="text-tinta-suave">
+                {e.origemTexto}
+                {e.quem && ` · ${e.quem}`}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </details>
+  );
 }
 
 /**
@@ -304,13 +378,15 @@ function Conversa({
   const [texto, setTexto] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [devolver, setDevolver] = useState(false);
+  const [gravado, setGravado] = useState<SituacaoConversa | null>(null);
   const responder = useAcao(
     (t: string) => api(`conversas/${c.id}/responder`, { corpo: { texto: t } }),
     [chaveConversas],
   );
   const assumir = useAcao(() => api(`conversas/${c.id}/assumir`, { corpo: {} }), [chaveConversas]);
   const devolverAoBot = useAcao(
-    () => api(`conversas/${c.id}/devolver`, { corpo: {} }),
+    () =>
+      api<{ ok: true; situacao: SituacaoConversa }>(`conversas/${c.id}/devolver`, { corpo: {} }),
     [chaveConversas],
   );
 
@@ -362,6 +438,11 @@ function Conversa({
           </p>
         )}
         {textoEquipe(c) && <p className="w-full text-sm text-tinta-suave">{textoEquipe(c)}</p>}
+        {c.situacao !== 'bot' && textoMotivo(c) && (
+          <p className="w-full text-sm">
+            <span className="font-semibold">Por que o bot está pausado:</span> {textoMotivo(c)}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <FichaSituacao c={c} />
           {c.anuncio && <FichaAnuncio c={c} />}
@@ -392,9 +473,17 @@ function Conversa({
           )}
         </div>
       </div>
+      {gravado && (
+        <Aviso tom={gravado === 'bot' ? 'sucesso' : 'aviso'}>
+          Estado gravado agora: {ROTULO_SITUACAO[gravado]}.
+          {gravado === 'bot' &&
+            ' A próxima mensagem do cliente já é respondida pelo bot (AGENDAR, por exemplo).'}
+        </Aviso>
+      )}
       <Estado consulta={mensagens}>
         {() => <ListaMensagens mensagens={mensagens.data!} className="h-[50dvh] min-h-64" />}
       </Estado>
+      <HistoricoEstados id={c.id} />
       {erro && <Aviso tom="erro">{erro}</Aviso>}
       <form
         method="post"
@@ -437,14 +526,15 @@ function Conversa({
       <ModalConfirmacao
         aberto={devolver}
         titulo="Devolver a conversa ao bot?"
-        descricao="O cliente recebe a mensagem de encerramento e o bot volta a responder pelo menu."
+        descricao="O cliente recebe a mensagem de encerramento e o bot volta a responder na hora, mesmo que ele mande AGENDAR antes de a mensagem chegar."
         textoConfirmar="Devolver ao bot"
         carregando={devolverAoBot.isPending}
         onCancelar={() => setDevolver(false)}
         onConfirmar={async () => {
           setErro(null);
           try {
-            await devolverAoBot.mutateAsync(undefined);
+            const r = await devolverAoBot.mutateAsync(undefined);
+            setGravado(r.situacao);
           } catch (e) {
             setErro(mensagemDe(e));
           }

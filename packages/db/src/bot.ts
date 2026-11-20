@@ -39,8 +39,18 @@ import {
   caminhoAssinarClube,
   avisoContatoAnuncio,
   formatarTelefone,
-  JANELA_RESPOSTAS_DO_BOT_MIN,
-  LIMITE_RESPOSTAS_DO_BOT,
+  emHorarioDeSilencio,
+  enderecoCompleto,
+  linkMapaDaUnidade,
+  numeroWhatsappDaUnidade,
+  PALAVRAS_VOLTAR_AO_BOT,
+  proximoHorarioDeEnvio,
+  RESPOSTA_ATE_MIN,
+  VALIDADE_SEGURADA_H,
+  inicioDaJanelaDoLoop,
+  pareceLoop,
+  situacaoDaConversa,
+  type OrigemConversa,
   lerFluxoAnuncio,
   ORIGEM_ANUNCIO,
   lerFuncionamento,
@@ -75,6 +85,30 @@ import { precoServicoVigente } from './vigencia.js';
 type Tx = Prisma.TransactionClient;
 
 export const json = (v: unknown) => structuredClone(v) as Prisma.InputJsonValue;
+
+/** O WhatsApp da unidade nos botões do cliente: o do bot conectado, senão o telefone. */
+export async function whatsappDaUnidade(
+  tx: Tx,
+  unidade: { id: string; telefone: string | null },
+): Promise<string | null> {
+  const conexao = await tx.botConexao.findUnique({
+    where: { unidadeId: unidade.id },
+    select: { status: true, numero: true },
+  });
+  return numeroWhatsappDaUnidade({ conexao, telefone: unidade.telefone });
+}
+
+/**
+ * De onde vem a próxima mudança de estado da conversa (testes de 19/11/2026): o gatilho
+ * bot_sessao_estado grava no histórico com esta origem e, quando houver, quem fez.
+ */
+export async function origemDaConversa(
+  tx: Tx,
+  origem: OrigemConversa,
+  autorId: string | null = null,
+): Promise<void> {
+  await tx.$queryRaw`SELECT set_config('app.origem_conversa', ${origem}, true), set_config('app.autor_conversa', ${autorId ?? ''}, true)`;
+}
 
 const lerCanal = (c: string | null): CanalAgendamento | null =>
   c === 'conversa' || c === 'site' ? c : null;
@@ -218,7 +252,9 @@ export async function contextoDaConversa(
     agora,
     barbearia: conta?.nome ?? u.nome,
     unidade: u.nome,
-    endereco: u.endereco,
+    // Com cidade e UF: o mapa não pode cair numa rua igual de outra cidade (testes de 19/11).
+    endereco: enderecoCompleto(u),
+    mapa: linkMapaDaUnidade(u),
     horario: s.descricao,
     dentroDoHorario: s.aberto,
     link: s.link,
@@ -694,20 +730,35 @@ export async function atenderMensagem(
         const salva = await tx.botSessao.findUnique({
           where: { unidadeId_telefone: { unidadeId, telefone: evento.telefone } },
         });
-        // Trava contra loop: muitas respostas do bot (sem ninguém da equipe) para este número em
-        // poucos minutos. Para, e a conversa vai para a equipe (fila de Conversas).
-        const respostasDoBot = await tx.mensagem.count({
-          where: {
-            unidadeId,
-            telefone: { in: variantes },
-            direcao: 'saida',
-            autorId: null,
-            peloCelular: false,
-            criadoEm: { gte: new Date(agora.getTime() - JANELA_RESPOSTAS_DO_BOT_MIN * 60_000) },
-          },
-        });
-        if (respostasDoBot >= LIMITE_RESPOSTAS_DO_BOT) {
-          const antes = (salva?.sessao as unknown as SessaoBot | undefined) ?? null;
+        // Trava contra loop: muitas respostas do bot E muitas mensagens do número em poucos
+        // minutos, contando só depois que o bot voltou (testes de 19/11/2026: a contagem antiga
+        // pegava o teste de uma pessoa logo depois de "Devolver ao bot"). Para, e a conversa vai
+        // para a equipe (fila de Conversas), com o motivo no histórico.
+        const salvaSessao = (salva?.sessao as unknown as SessaoBot | undefined) ?? null;
+        const desde = inicioDaJanelaDoLoop(agora, salvaSessao?.botDesde);
+        const [respostasDoBot, entradasRecentes] = await Promise.all([
+          tx.mensagem.count({
+            where: {
+              unidadeId,
+              telefone: { in: variantes },
+              direcao: 'saida',
+              autorId: null,
+              peloCelular: false,
+              criadoEm: { gte: desde },
+            },
+          }),
+          tx.mensagem.count({
+            where: {
+              unidadeId,
+              telefone: { in: variantes },
+              direcao: 'entrada',
+              criadoEm: { gte: desde },
+            },
+          }),
+        ]);
+        if (pareceLoop(respostasDoBot, entradasRecentes)) {
+          const antes = salvaSessao;
+          await origemDaConversa(tx, 'trava_loop');
           const sessao: SessaoBot = {
             caminho: [],
             erros: 0,
@@ -744,10 +795,17 @@ export async function atenderMensagem(
           (salva?.sessao as unknown as SessaoBot | undefined) ?? null,
           agora,
         );
+        // Esperando atendente e ninguém assumiu: MENU volta ao bot (a transferência avisa).
+        const voltouPeloCliente =
+          !!salva?.atendenteDesde &&
+          sessaoSalva?.comAtendente === true &&
+          (PALAVRAS_VOLTAR_AO_BOT as readonly string[]).includes(normalizar(evento.texto));
         const r = await responderComAgenda(tx, {
           menu,
           mensagens: await mensagensDoBot(tx, unidadeId),
-          sessao: sessaoSalva,
+          sessao: voltouPeloCliente
+            ? { ...sessaoSalva!, comAtendente: false, caminho: [], erros: 0 }
+            : sessaoSalva,
           entrada: evento.texto,
           ctx,
           dados: {
@@ -806,6 +864,25 @@ export async function atenderMensagem(
 
         // Pediu atendente agora: entra na fila da tela Conversas; o bot voltou: sai dela.
         const atendenteDesde = r.sessao.comAtendente ? (salva?.atendenteDesde ?? agora) : null;
+        // Histórico do estado (testes de 19/11/2026): de onde veio a mudança, se houver.
+        const antes = situacaoDaConversa(
+          salva?.atendenteDesde ?? null,
+          sessaoSalva?.comAtendente === true,
+        );
+        const depois = situacaoDaConversa(atendenteDesde, r.sessao.comAtendente);
+        if (antes !== depois) {
+          if (depois === 'bot') r.sessao.botDesde = agora.toISOString();
+          await origemDaConversa(
+            tx,
+            depois === 'bot'
+              ? voltouPeloCliente
+                ? 'cliente_voltou'
+                : 'atendimento_venceu'
+              : r.sessao.respostasAnuncio && !sessaoSalva?.respostasAnuncio
+                ? 'anuncio'
+                : 'cliente_pediu',
+          );
+        }
         // Veio de anúncio (o WhatsApp avisou, ou entrou no fluxo pela frase): a conversa fica marcada.
         const deAnuncio = !!evento.anuncio || !!r.anuncioComecou;
         // Cliente novo que entrou pela frase do anúncio: a origem também é o anúncio.
@@ -920,7 +997,10 @@ export async function atenderMensagem(
 // ─── Envio ────────────────────────────────────────────────────────────────
 
 export type PreparoEnvio =
-  { tipo: 'enviar'; instancia: string; telefone: string; texto: string } | { tipo: 'pular' };
+  | { tipo: 'enviar'; instancia: string; telefone: string; texto: string }
+  | { tipo: 'pular' }
+  /** Automático de madrugada (não é resposta): segura até o horário de envio. */
+  | { tipo: 'adiar'; ate: string };
 
 /**
  * Antes de enviar: só mensagem pendente, só para quem já falou com esta unidade
@@ -930,6 +1010,7 @@ export async function prepararEnvio(
   prisma: PrismaClient,
   contaId: string,
   mensagemId: string,
+  agora: Date = new Date(),
 ): Promise<PreparoEnvio> {
   return naConta(prisma, contaId, async (tx) => {
     const m = await tx.mensagem.findUnique({
@@ -960,6 +1041,26 @@ export async function prepararEnvio(
     const conexao = m.unidade.botConexao;
     if (!conexao || conexao.status !== 'conectado')
       return descartar('O WhatsApp da unidade não está conectado.');
+    // Madrugada (22h às 7h): mensagem automática que não responde a quem acabou de escrever
+    // (lembrete, pesquisa, aviso, fim da espera) fica segurada até as 7h; se até lá perder o
+    // sentido (mais de 12 h), é descartada (pedido do dono em 20/11/2026).
+    if (m.autorId === null && emHorarioDeSilencio(agora)) {
+      const acabouDeEscrever = await tx.mensagem.findFirst({
+        where: {
+          unidadeId: m.unidadeId,
+          telefone: { in: variantesTelefone(m.telefone) },
+          direcao: 'entrada',
+          criadoEm: { gte: new Date(agora.getTime() - RESPOSTA_ATE_MIN * 60_000) },
+        },
+        select: { id: true },
+      });
+      if (!acabouDeEscrever) {
+        const ate = proximoHorarioDeEnvio(agora);
+        if (ate.getTime() - m.criadoEm.getTime() > VALIDADE_SEGURADA_H * 3_600_000)
+          return descartar('Automática de madrugada: perdeu o sentido até o horário de envio.');
+        return { tipo: 'adiar', ate: ate.toISOString() } as const;
+      }
+    }
     return {
       tipo: 'enviar',
       instancia: conexao.instancia,
@@ -1000,15 +1101,26 @@ export async function encerrarEsperaDoAtendente(
     });
     if (!s?.atendenteDesde || s.atendenteDesde.toISOString() !== job.desde) return null;
     const sessao = s.sessao as unknown as SessaoBot;
+    const agora = new Date();
+    await origemDaConversa(tx, 'espera_venceu');
     await tx.botSessao.update({
       where: { id: s.id },
       data: {
-        sessao: json({ ...sessao, comAtendente: false, caminho: [], erros: 0 }),
+        sessao: json({
+          ...sessao,
+          comAtendente: false,
+          caminho: [],
+          erros: 0,
+          botDesde: agora.toISOString(),
+        }),
         atendenteDesde: null,
       },
     });
     const conexao = s.unidade.botConexao;
     if (conexao?.status !== 'conectado') return null;
+    // De madrugada o bot volta em silêncio (pedido do dono em 20/11/2026: "mensagens saindo de
+    // madrugada, com conversa encerrada"); se o cliente escrever, o bot já responde.
+    if (emHorarioDeSilencio(agora)) return null;
     const texto = (await mensagensDoBot(tx, job.unidadeId)).atendente_sem_resposta;
     const m = await tx.mensagem.create({
       data: {
@@ -1024,8 +1136,21 @@ export async function encerrarEsperaDoAtendente(
   });
 }
 
-/** Janela em que uma mensagem igual que o bot mandou ainda pode ser o eco dela. */
-const JANELA_ECO_MS = 5 * 60_000;
+/**
+ * Janela em que uma mensagem igual que o bot mandou ainda pode ser o eco dela. A fila espaça as
+ * respostas: com várias na frente, o eco pode chegar alguns minutos depois de gravada.
+ */
+const JANELA_ECO_MS = 15 * 60_000;
+
+/** Texto comparável do eco: sem diferença de fim de linha, espaços nas pontas ou em sequência. */
+export function textoDoEco(t: string): string {
+  return t
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((l) => l.replace(/[ \t\u00a0]+/g, ' ').trim())
+    .join('\n')
+    .trim();
+}
 
 /**
  * Mensagem que saiu do próprio número (pedido do dono em 16/11/2026: "se respondo pelo meu zap,
@@ -1048,17 +1173,27 @@ export async function registrarMensagemPropria(
       return 'eco';
     const variantes = variantesTelefone(evento.telefone);
     const agora = new Date();
-    const doBot = await tx.mensagem.findFirst({
+    // O texto do eco pode voltar com outro fim de linha ou espaço sobrando: compara normalizado.
+    const recentes = await tx.mensagem.findMany({
       where: {
         unidadeId,
         telefone: { in: variantes },
         direcao: 'saida',
-        texto: evento.texto,
-        criadoEm: { gte: new Date(agora.getTime() - JANELA_ECO_MS) },
+        peloCelular: false,
+        // Recém-gravada, recém-enviada (a segurada da madrugada sai horas depois de gravada) ou
+        // ainda na fila (o eco pode chegar antes de o envio ser registrado).
+        OR: [
+          { criadoEm: { gte: new Date(agora.getTime() - JANELA_ECO_MS) } },
+          { enviadaEm: { gte: new Date(agora.getTime() - JANELA_ECO_MS) } },
+          { status: 'pendente' },
+        ],
       },
-      select: { id: true },
+      select: { texto: true },
+      orderBy: { criadoEm: 'desc' },
+      take: 50,
     });
-    if (doBot) return 'eco';
+    const alvo = textoDoEco(evento.texto);
+    if (recentes.some((m) => textoDoEco(m.texto) === alvo)) return 'eco';
     const cliente = await tx.cliente.findFirst({
       where: { telefone: { in: variantes } },
       orderBy: { criadoEm: 'asc' },
@@ -1082,6 +1217,7 @@ export async function registrarMensagemPropria(
       where: { unidadeId_telefone: { unidadeId, telefone: evento.telefone } },
     });
     const antes = (salva?.sessao as unknown as SessaoBot | undefined) ?? null;
+    await origemDaConversa(tx, 'celular_respondeu');
     // A equipe assumiu: o bot para (e larga o agendamento ou o fluxo que estava no meio).
     const sessao: SessaoBot = {
       caminho: [],

@@ -52,6 +52,10 @@ Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linh
 - **Projeção** = faturamento até hoje ÷ dias trabalhados até hoje × dias de trabalho do mês (calendário da unidade).
 - **Lucro do serviço** = receita − (custo de produto + comissão).
 - Barbeiro vê só os próprios dados; telefone do cliente pode ser oculto para ele.
+- **Um telefone, um cliente:** o banco guarda o celular sempre com o nono dígito (gatilho `cliente_telefone_canonico`, igual a `telefoneCanonico`) e a restrição (conta, telefone) é única. Buscar cliente por telefone sempre com `variantesTelefone`.
+- **WhatsApp nos botões do cliente:** regra única `numeroWhatsappDaUnidade` (número conectado ao bot da unidade; sem ele, o telefone da unidade), via `whatsappDaUnidade`. Não montar `wa.me` com `unidade.telefone` direto.
+- **Estado da conversa** (bot, aguardando, atendimento): toda mudança fica em `bot_sessao_evento` pelo gatilho; antes de gravar a sessão por um caminho novo, chamar `origemDaConversa(tx, origem, autor)`.
+- **Nada automático de madrugada:** mensagem automática que não responde a quem acabou de escrever não sai entre 22h e 7h (`emHorarioDeSilencio`, conferido no `prepararEnvio`).
 
 ## Papéis
 

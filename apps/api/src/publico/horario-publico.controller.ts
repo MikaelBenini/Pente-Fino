@@ -7,6 +7,7 @@ import {
   hashTokenHorario,
   remarcarPeloCliente,
   type Transacao,
+  whatsappDaUnidade,
 } from '@pente-fino/db';
 import {
   consultaHorariosDoLink,
@@ -18,6 +19,7 @@ import {
   type HorarioDoLink,
   type HorarioLivre,
   type RemarcarPeloLinkEntrada,
+  linkWaMe,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { AgendaService, traduzir } from '../agenda/agenda.service.js';
@@ -92,7 +94,8 @@ export class HorarioPublicoController {
         barbearia: conta.nome,
         unidade: ag.unidade.nome,
         endereco: ag.unidade.endereco,
-        linkWhatsapp: ag.unidade.telefone ? `https://wa.me/${ag.unidade.telefone}` : null,
+        // Mesma regra do agendamento e da confirmação (testes de 19/11/2026).
+        linkWhatsapp: linkWaMe(await whatsappDaUnidade(tx, ag.unidade)),
         inicio: ag.inicio.toISOString(),
         fim: ag.fim.toISOString(),
         servicos: (ag.comanda?.itens ?? []).map((i) => i.servico?.nome ?? 'Serviço'),

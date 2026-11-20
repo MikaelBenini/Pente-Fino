@@ -16,6 +16,7 @@ import {
   type EnviarParaClienteEntrada,
   type EnvioParaCliente,
   type ListaConversas,
+  type EstadoConversaRegistro,
   type MensagemDoCliente,
   type ResponderConversaEntrada,
 } from '@pente-fino/shared';
@@ -71,6 +72,13 @@ export class ConversasController {
   @ApiOperation({ summary: 'Mensagens da conversa, em ordem (as 200 mais recentes)' })
   mensagens(@Param('id', ParseUUIDPipe) id: string): Promise<MensagemDoCliente[]> {
     return this.servico.mensagens(id);
+  }
+
+  @Get(':id/estados')
+  @Papeis(...QUEM_CONVERSA)
+  @ApiOperation({ summary: 'Histórico do estado da conversa (bot, aguardando, atendimento)' })
+  estados(@Param('id', ParseUUIDPipe) id: string): Promise<EstadoConversaRegistro[]> {
+    return this.servico.estados(id);
   }
 
   @Post(':id/responder')

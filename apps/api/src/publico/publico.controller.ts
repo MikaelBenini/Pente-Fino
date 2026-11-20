@@ -27,6 +27,7 @@ import {
   temNaConta,
   paginasDeBarbeariaNoGoogle,
   sitesDeBarbeariaNoGoogle,
+  whatsappDaUnidade,
 } from '@pente-fino/db';
 import {
   lerRegrasAgendamento,
@@ -66,6 +67,7 @@ import {
   lerSite,
   estiloDoAgendamento,
   lerVisualAgendamento,
+  previaDoLink,
   siteBarbeariaSchema,
   normalizarDominio,
   type VisualAgendamentoPublico,
@@ -74,6 +76,9 @@ import {
   type TipoEndereco,
   automacoesAParte,
   DIAS_TESTE_INDICADA,
+  linkWaMe,
+  enderecoCompleto,
+  linkMapaDaUnidade,
 } from '@pente-fino/shared';
 import { IndicacaoService } from '../indicacao/indicacao.controller.js';
 import type { Request, Response } from 'express';
@@ -391,8 +396,10 @@ export class PublicoController {
         nome: u.nome,
         barbearia: conta.nome,
         aparecerNoGoogle: u.aparecerNoGoogle,
-        endereco: u.endereco,
+        endereco: enderecoCompleto(u),
+        mapa: linkMapaDaUnidade(u),
         telefone: u.telefone,
+        whatsapp: await whatsappDaUnidade(tx, u),
         // Só o que tem preço na unidade pode ser agendado pelo cliente.
         servicos: comPreco.filter((s) => s.preco !== null),
         profissionais: await (async () => {
@@ -432,6 +439,10 @@ export class PublicoController {
           })
         ).map((o) => ({ slug: o.slug!, nome: o.nome, endereco: o.endereco })),
         visual: visualPublico(u),
+        previa: previaDoLink(
+          lerVisualAgendamento(u.agendamentoVisual),
+          siteBarbeariaSchema.safeParse(u.sitePublicado ?? u.siteRascunho).data ?? null,
+        ),
       };
     });
   }
@@ -622,7 +633,10 @@ export class PublicoController {
         throw Erros.conflito(
           'O agendamento pelo link está indisponível no momento. Fale com a barbearia pelo telefone ou WhatsApp.',
         );
-      const cliente = await tx.cliente.findFirst({ where: { telefone: d.telefone } });
+      const cliente = await tx.cliente.findFirst({
+        where: { telefone: { in: variantesTelefone(d.telefone) } },
+        orderBy: { criadoEm: 'asc' },
+      });
       if (
         cliente &&
         bloqueadoPorFaltas(await faltasRecentes(tx, cliente.id, new Date(), regras), regras)
@@ -748,6 +762,7 @@ export class PublicoController {
     const servicos = r.itens.map((i) => i.servico?.nome ?? 'Serviço');
     const profissional = r.profissional.usuario.nome.split(' ')[0]!;
     const quando = `${formatarDiaPorExtenso(r.agendamento!.inicio)} às ${formatarHora(r.agendamento!.inicio)}`;
+    const whatsapp = await this.banco.naConta(u.contaId, (tx) => whatsappDaUnidade(tx, u));
     const mensagem = `Olá! Agendei pelo link: ${servicos.join(' + ')} na ${u.nome}, ${quando}, com ${profissional}. Nome: ${d.nome}.`;
     return {
       inicio: r.agendamento!.inicio.toISOString(),
@@ -755,9 +770,8 @@ export class PublicoController {
       profissional,
       servicos,
       total: r.totalLiquido,
-      linkWhatsapp: u.telefone
-        ? `https://wa.me/${u.telefone}?text=${encodeURIComponent(mensagem)}`
-        : null,
+      // O mesmo número do "Prefere marcar pelo WhatsApp?" (testes de 19/11/2026).
+      linkWhatsapp: linkWaMe(whatsapp, mensagem),
       linkGerenciar: caminhoDoHorario(r.token),
       lembretes: r.lembretes,
       linkLembretes: r.linkLembretes,
@@ -796,7 +810,10 @@ export class PublicoController {
       const telefone = doLink?.cliente.telefone ?? d.telefone;
       const cliente =
         doLink?.cliente ??
-        (await tx.cliente.findFirst({ where: { telefone } })) ??
+        (await tx.cliente.findFirst({
+          where: { telefone: { in: variantesTelefone(telefone) } },
+          orderBy: { criadoEm: 'asc' },
+        })) ??
         (await tx.cliente.create({
           data: { nome: d.nome, telefone, unidadeOrigemId: u.id, origemLead: 'site' },
         }));

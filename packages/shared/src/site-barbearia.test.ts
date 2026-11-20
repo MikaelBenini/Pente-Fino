@@ -40,6 +40,11 @@ import {
   servicosPorCategoria,
   siteBarbeariaSchema,
   siteInicial,
+  TEMAS_SITE,
+  PALETAS_PRONTAS,
+  problemasDeContraste,
+  paletaDoSite,
+  contrasteCores,
 } from './site-barbearia.js';
 
 /** Contraste WCAG entre duas cores #RRGGBB. */
@@ -200,7 +205,7 @@ describe('operações do painel (lote 7b)', () => {
       visivel: false,
     });
     s = removerBloco(s, 'inicio', 'sobre');
-    expect(blocosParaAdicionar(s, 'inicio')).toEqual(['sobre', 'botoes']);
+    expect(blocosParaAdicionar(s, 'inicio')).toEqual(['sobre', 'colunas', 'botoes']);
     s = adicionarBloco(s, 'inicio', 'sobre', 'Navalha');
     expect(tipos(s).slice(-2)).toEqual(['sobre', 'agendar']);
     expect(s.paginas.inicio.find((b) => b.tipo === 'sobre')?.titulo).toBe('Conheça a Navalha');
@@ -208,10 +213,10 @@ describe('operações do painel (lote 7b)', () => {
   });
 
   it('não repete bloco nem põe bloco de outra página', () => {
-    expect(blocosParaAdicionar(base, 'inicio')).toEqual(['botoes']);
+    expect(blocosParaAdicionar(base, 'inicio')).toEqual(['colunas', 'botoes']);
     expect(adicionarBloco(base, 'inicio', 'tabela', 'X')).toBe(base);
     const sem = removerBloco(base, 'contato', 'perguntas');
-    expect(blocosParaAdicionar(sem, 'contato')).toEqual(['perguntas', 'botoes']);
+    expect(blocosParaAdicionar(sem, 'contato')).toEqual(['perguntas', 'colunas', 'botoes']);
   });
 });
 
@@ -375,7 +380,10 @@ describe('páginas extras Galeria e Clube (lote 7h)', () => {
     ]);
     expect(cabecalhoDoSite(comClube).menu.map((m) => m.pagina)).toContain('clube');
     expect(siteBarbeariaSchema.safeParse(comClube).success).toBe(true);
-    expect(blocosParaAdicionar(ligarPagina(base, 'galeria'), 'galeria')).toEqual(['botoes']);
+    expect(blocosParaAdicionar(ligarPagina(base, 'galeria'), 'galeria')).toEqual([
+      'colunas',
+      'botoes',
+    ]);
     expect(paginaLigada(desligarPagina(comClube, 'clube'), 'clube')).toBe(false);
   });
 });
@@ -434,5 +442,69 @@ describe('estilo da página de agendamento (pedido do dono em 15/11)', () => {
 
   it('sem site publicado, começa no tradicional', () => {
     expect(estiloDoAgendamento(visual, null).tema).toBe('tradicional');
+  });
+});
+
+describe('Minha página sem CSS (pedido do dono em 20/11/2026)', () => {
+  it('as paletas prontas passam no contraste em todos os temas', () => {
+    for (const tema of TEMAS_SITE)
+      for (const p of PALETAS_PRONTAS)
+        expect(problemasDeContraste(tema, p.cores, '#C8A55C'), `${tema} ${p.nome}`).toEqual([]);
+  });
+
+  it('cor própria ilegível é recusada com o motivo', () => {
+    const site = { ...siteInicial('Navalha'), coresProprias: { escuro: '#F0F0F0' } };
+    const r = siteBarbeariaSchema.safeParse(site);
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toMatch(/Fica difícil de ler/);
+    expect(
+      siteBarbeariaSchema.safeParse({
+        ...siteInicial('Navalha'),
+        coresProprias: PALETAS_PRONTAS[1]!.cores,
+      }).success,
+    ).toBe(true);
+  });
+
+  it('a paleta usa as cores próprias e deriva os tons', () => {
+    const p = paletaDoSite('tradicional', {
+      escuro: '#0F1E33',
+      papel: '#F6F1E7',
+      destaque: '#E8B04B',
+    });
+    expect(p.escuro).toBe('#0F1E33');
+    expect(p.papel).toBe('#F6F1E7');
+    expect(p.destaque).toBe('#E8B04B');
+    expect(p.escuro2).not.toBe(PALETAS_SITE.tradicional.escuro2);
+    expect(contrasteCores('#000000', '#FFFFFF')).toBeCloseTo(21, 0);
+  });
+
+  it('banner com a foto ao lado e recorte; galeria em cartões; colunas com botão', () => {
+    const site = siteInicial('Navalha');
+    const inicio = site.paginas.inicio.map((b) =>
+      b.tipo === 'banner' ? { ...b, disposicao: 'direita' as const, foco: { x: 30, y: 60 } } : b,
+    );
+    inicio.push(
+      { id: 'fotos', tipo: 'galeria', visivel: true, estilo: 'carrossel', itens: [] },
+      {
+        id: 'colunas',
+        tipo: 'colunas',
+        visivel: true,
+        itens: [
+          { titulo: 'Corte', texto: 'Na tesoura', botao: 'Agendar', link: 'https://x.com.br' },
+        ],
+      },
+    );
+    expect(
+      siteBarbeariaSchema.safeParse({ ...site, paginas: { ...site.paginas, inicio } }).success,
+    ).toBe(true);
+    const ruim = inicio.map((b) =>
+      b.tipo === 'colunas'
+        ? { ...b, itens: [{ titulo: 'X', texto: '', link: 'javascript:alert(1)' }] }
+        : b,
+    );
+    expect(
+      siteBarbeariaSchema.safeParse({ ...site, paginas: { ...site.paginas, inicio: ruim } })
+        .success,
+    ).toBe(false);
   });
 });

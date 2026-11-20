@@ -28,12 +28,24 @@ test('procurar: acha a tela por outra palavra e o cliente pelo nome', async ({ p
   };
   await abrir();
   const caixa = page.getByRole('dialog', { name: 'Procurar' });
-  const campo = caixa.getByRole('combobox', { name: 'Tela, cliente ou comanda de hoje' });
+  const campo = caixa.getByRole('combobox', {
+    name: 'Tela, opção, ajuda, cliente ou comanda de hoje',
+  });
   await campo.fill('despesa');
-  await expect(caixa.getByRole('option')).toHaveCount(1);
-  await expect(caixa.getByRole('option', { name: /Financeiro/ })).toBeVisible();
+  // A tela vem primeiro; artigos da Ajuda podem aparecer depois (20/11/2026).
+  await expect(caixa.getByRole('option').first()).toHaveAccessibleName(/Financeiro/);
   await campo.press('Enter');
   await expect(page).toHaveURL(/\/financeiro/);
+  await expect(caixa).toBeHidden();
+
+  // Opções dentro das telas: "instagram" leva à Minha página (pedido do dono em 20/11/2026).
+  await abrir();
+  await campo.fill('instagram');
+  await expect(
+    caixa.getByRole('option', { name: /Instagram e redes sociais do site/ }),
+  ).toBeVisible();
+  await campo.press('Enter');
+  await expect(page).toHaveURL(/\/pagina/);
   await expect(caixa).toBeHidden();
 
   await abrir();

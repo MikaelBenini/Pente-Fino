@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-// Etapa 11: regras de agendamento da unidade em Configurações → Agendamento.
+// Etapa 11: regras de agendamento da unidade em Configurações → Link e agendamento (20/11/2026).
 test('dono muda a janela de agendamento e desliga o segundo lembrete', async ({ page }, info) => {
   test.skip(
     info.project.name === 'celular',
@@ -12,7 +12,7 @@ test('dono muda a janela de agendamento e desliga o segundo lembrete', async ({ 
   await page.getByRole('button', { name: 'Entrar' }).click();
   await page.waitForURL(/inicio/);
   await page.goto('/configuracoes');
-  await page.getByRole('tab', { name: 'Agendamento', exact: true }).click();
+  await page.getByRole('tab', { name: 'Link e agendamento', exact: true }).click();
 
   const janela = page.getByLabel('Até quantos dias à frente', { exact: true });
   await expect(janela).toHaveValue('45');
@@ -22,7 +22,7 @@ test('dono muda a janela de agendamento e desliga o segundo lembrete', async ({ 
   await expect(page.getByText('Regras salvas.')).toBeVisible();
 
   await page.reload();
-  await page.getByRole('tab', { name: 'Agendamento', exact: true }).click();
+  await page.getByRole('tab', { name: 'Link e agendamento', exact: true }).click();
   await expect(page.getByLabel('Até quantos dias à frente', { exact: true })).toHaveValue('30');
   await expect(page.getByLabel('Segundo lembrete')).not.toBeChecked();
 

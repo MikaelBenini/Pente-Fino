@@ -55,7 +55,7 @@ import {
   type TrabalhoWhatsappSaida,
 } from '@pente-fino/shared';
 import { ProvedorEvolution, ProvedorFalso, type ProvedorWhatsApp } from '@pente-fino/whatsapp';
-import { type Job, Queue, Worker } from 'bullmq';
+import { DelayedError, type Job, Queue, Worker } from 'bullmq';
 import { Redis } from 'ioredis';
 import { Banco } from './banco.js';
 import { Batimento, rotinaDoTrabalho } from './batimento.js';
@@ -97,10 +97,15 @@ export async function agendarRespostas(
 
 /** Uma mensagem da fila de saída: confere se pode sair, envia e registra. */
 export function processadorDeSaida(prisma: PrismaClient, provedor: ProvedorWhatsApp) {
-  return async (job: Job<TrabalhoWhatsappSaida>): Promise<'enviada' | 'pulada'> => {
+  return async (job: Job<TrabalhoWhatsappSaida>, token?: string): Promise<'enviada' | 'pulada'> => {
     const { contaId, mensagemId } = job.data;
     const preparo = await prepararEnvio(prisma, contaId, mensagemId);
     if (preparo.tipo === 'pular') return 'pulada';
+    // Automática de madrugada: volta para a fila e sai no horário de envio (20/11/2026).
+    if (preparo.tipo === 'adiar') {
+      await job.moveToDelayed(Date.parse(preparo.ate), token);
+      throw new DelayedError();
+    }
     try {
       const r = await provedor.enviarTexto(preparo.instancia, preparo.telefone, preparo.texto);
       await registrarEnvio(prisma, contaId, mensagemId, { ok: true, idExterno: r.idExterno });

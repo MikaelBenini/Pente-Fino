@@ -553,6 +553,11 @@ export interface SessaoBot {
   anuncio?: { etapa: number; respostas: string[] };
   /** Respostas do fluxo do anúncio, para a equipe ver depois da passagem. */
   respostasAnuncio?: string[];
+  /**
+   * Quando o bot voltou a atender (devolução, fim da espera): a trava contra loop só conta o que
+   * veio depois (testes de 19/11/2026).
+   */
+  botDesde?: string;
 }
 
 export type PassoPesquisa = 'atendimento' | 'barbearia' | 'comentario';
@@ -567,12 +572,13 @@ export interface RespostaPesquisa {
 }
 
 /**
- * Trava contra conversa em loop (pedido do dono em 18/11/2026): com tantas respostas do bot para
- * o mesmo número nesta janela, do outro lado provavelmente há outro robô; o bot para e passa a
- * conversa para a equipe.
+ * Fixo depois de passar para a equipe (testes de 19/11/2026): o cliente sabe que o bot pausou e
+ * como voltar. Vale com qualquer texto que a barbearia pôs na opção "Falar com um atendente".
  */
-export const LIMITE_RESPOSTAS_DO_BOT = 30;
-export const JANELA_RESPOSTAS_DO_BOT_MIN = 10;
+export const TEXTO_BOT_PAUSADO =
+  'Enquanto isso, as respostas automáticas ficam pausadas. Para voltar ao menu antes de alguém responder, mande MENU.';
+
+// A trava contra loop está em estado-conversa.ts (pareceLoop), refeita nos testes de 19/11/2026.
 
 /** A partir deste erro seguido, o bot para de responder até o cliente acertar. */
 export const ERROS_ATE_SILENCIO = 3;
@@ -585,6 +591,8 @@ export interface ContextoConversa {
   barbearia: string;
   unidade: string;
   endereco: string | null;
+  /** Link do mapa já pronto (o da barbearia ou a busca pelo endereço completo). */
+  mapa?: string | null;
   horario: string;
   dentroDoHorario: boolean;
   link: string | null;
@@ -810,9 +818,11 @@ export function responder(
     barbearia: ctx.barbearia,
     unidade: ctx.unidade,
     endereco: ctx.endereco,
-    mapa: ctx.endereco
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ctx.endereco)}`
-      : null,
+    mapa:
+      ctx.mapa ??
+      (ctx.endereco
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ctx.endereco)}`
+        : null),
     horario: ctx.horario,
     link: ctx.link,
   };
@@ -961,7 +971,9 @@ export function responder(
           !ctx.dentroDoHorario && ctx.proximaAbertura
             ? `A recepção volta ${ctx.proximaAbertura}. Deixe aqui o que precisa que respondemos assim que abrir.`
             : '';
-        return resultado([...abertura, corpo || msg('transferencia'), volta], { acao });
+        return resultado([...abertura, corpo || msg('transferencia'), volta, TEXTO_BOT_PAUSADO], {
+          acao,
+        });
       }
       default:
         return resultado([...abertura, corpo, 'Digite 0 para ver o menu.'], { acao });

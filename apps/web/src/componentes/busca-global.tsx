@@ -1,9 +1,12 @@
 'use client';
 
 // Busca global (seção 7): Ctrl+K (⌘K no Mac) ou o botão "Procurar" abre uma caixa só para achar
-// uma tela, um cliente ou uma comanda de hoje. Setas escolhem, Enter abre, Esc fecha.
+// uma tela, uma opção das configurações, um artigo da Ajuda, um cliente ou uma comanda de hoje
+// (opções e Ajuda: pedido do dono em 20/11/2026). Setas escolhem, Enter abre, Esc fecha.
 import {
   buscaDeClienteValida,
+  buscarAjuda,
+  buscarOpcoes,
   buscarTelas,
   dataLocal,
   formatarHora,
@@ -14,7 +17,7 @@ import {
 } from '@pente-fino/shared';
 import { cn, Dialogo } from '@pente-fino/ui';
 import { useQuery } from '@tanstack/react-query';
-import { ReceiptText, Search, UserRound } from 'lucide-react';
+import { CircleHelp, ReceiptText, Search, SlidersHorizontal, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useMemo, useState, type ComponentType } from 'react';
 import { api } from '@/lib/api';
@@ -24,7 +27,7 @@ import { ICONES_MENU } from './icones-menu';
 
 interface Resultado {
   id: string;
-  grupo: 'Telas' | 'Comandas de hoje' | 'Clientes';
+  grupo: 'Telas' | 'Opções e configurações' | 'Ajuda' | 'Comandas de hoje' | 'Clientes';
   titulo: string;
   detalhe?: string;
   rota: string;
@@ -80,7 +83,7 @@ export function BuscaGlobal() {
 }
 
 function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
-  const { menu, unidadeAtiva } = useApp();
+  const { menu, unidadeAtiva, papeis } = useApp();
   const router = useRouter();
   const id = useId();
   const [termo, setTermo] = useState('');
@@ -114,7 +117,30 @@ function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
         rota: i.rota,
         Icone: ICONES_MENU[i.id],
       }));
+    const opcoes = buscarOpcoes(menu, termo)
+      .slice(0, 5)
+      .map<Resultado>((o) => ({
+        id: `opcao-${o.id}`,
+        grupo: 'Opções e configurações',
+        titulo: o.titulo,
+        detalhe: o.onde,
+        rota: o.rota,
+        Icone: SlidersHorizontal,
+      }));
     const t = normalizar(termo);
+    const ajuda =
+      t.length >= 3 && menu.some((i) => i.id === 'ajuda')
+        ? buscarAjuda(termo, papeis)
+            .slice(0, 3)
+            .map<Resultado>((a) => ({
+              id: `ajuda-${a.id}`,
+              grupo: 'Ajuda',
+              titulo: a.titulo,
+              detalhe: a.categoria,
+              rota: `/ajuda?artigo=${a.id}`,
+              Icone: CircleHelp,
+            }))
+        : [];
     const deHoje =
       t.length >= 2
         ? (comandas.data ?? [])
@@ -142,8 +168,8 @@ function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
             Icone: UserRound,
           }))
         : [];
-    return [...telas, ...deHoje, ...achados];
-  }, [menu, termo, comandas.data, clientes.data, buscarCliente, atrasado]);
+    return [...telas, ...opcoes, ...deHoje, ...achados, ...ajuda];
+  }, [menu, papeis, termo, comandas.data, clientes.data, buscarCliente, atrasado]);
 
   const indice = Math.min(marcado, Math.max(resultados.length - 1, 0));
   function abrir(r: Resultado | undefined) {
@@ -167,8 +193,8 @@ function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
           aria-expanded={resultados.length > 0}
           aria-controls={`${id}-lista`}
           aria-activedescendant={resultados[indice] ? `${id}-${resultados[indice].id}` : undefined}
-          aria-label="Tela, cliente ou comanda de hoje"
-          placeholder="Tela, cliente ou comanda de hoje"
+          aria-label="Tela, opção, ajuda, cliente ou comanda de hoje"
+          placeholder="Tela, opção, ajuda, cliente ou comanda"
           autoComplete="off"
           value={termo}
           onChange={(e) => {
@@ -225,7 +251,7 @@ function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
         {buscando
           ? 'Procurando clientes…'
           : resultados.length === 0
-            ? 'Nada encontrado. Tente o nome do cliente, o telefone ou o nome de uma tela.'
+            ? 'Nada encontrado. Tente o nome do cliente, o telefone, uma tela ou uma opção (Instagram, feriado, lembrete).'
             : termo.trim() && !buscarCliente
               ? 'Digite 2 letras ou 4 números para procurar clientes.'
               : null}

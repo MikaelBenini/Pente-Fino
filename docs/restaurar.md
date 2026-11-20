@@ -12,6 +12,13 @@ criptografado (AES-256, senha `BACKUP_SENHA` do `.env`):
 Ficam 30 diários e 12 mensais em `/opt/barbearia/backups`. Com `BACKUP_DESTINO` no `.env`, a pasta
 é espelhada no armazenamento externo pelo rclone. O log fica em `/opt/barbearia/backups/backup.log`.
 
+**O backup não rodou sozinho?** (20/11/2026) Na VPS: `cd /opt/barbearia && ./diagnostico-backup.sh`.
+Ele confere o serviço do cron, as linhas do backup e do vigia no crontab, permissões, o grupo
+`docker`, os arquivos das últimas 26 h, o fim do `backup.log` e o que a Saúde do sistema recebeu, e
+mostra o comando para testar no ambiente mínimo do cron. Como rede de segurança, o `vigia.sh` (a cada
+5 minutos) roda o backup quando não há arquivo das últimas 26 h (passadas as 4h); o `backup.sh` não
+roda em dobro (`flock`).
+
 > **Guarde a `BACKUP_SENHA` fora do servidor** (gerenciador de senhas). Se a VPS se perder, sem
 > ela o backup não abre. Ver: `grep BACKUP_SENHA /opt/barbearia/.env`.
 

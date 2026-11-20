@@ -263,10 +263,8 @@ export function Moldura({
  */
 function SemAgendamentoOnline({ u }: { u: UnidadePublica }) {
   const whatsapp =
-    u.linkWhatsappAgendar ?? linkWhatsapp(u.telefone, `Olá! Quero marcar um horário na ${u.nome}.`);
-  const mapa = u.endereco
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(u.endereco)}`
-    : null;
+    u.linkWhatsappAgendar ?? linkWhatsapp(u.whatsapp, `Olá! Quero marcar um horário na ${u.nome}.`);
+  const mapa = u.mapa;
   const classeLink =
     'inline-flex min-h-11 items-center gap-2 font-semibold text-modulo-texto underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foco';
   return (

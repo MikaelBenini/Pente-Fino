@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buscaDeClienteValida, buscarTelas } from './busca-global.js';
+import { buscaDeClienteValida, buscarOpcoes, buscarTelas } from './busca-global.js';
 import { menuPara } from './menu.js';
 
 const dono = menuPara(['dono']);
@@ -45,5 +45,21 @@ describe('buscaDeClienteValida', () => {
     expect(buscaDeClienteValida('119')).toBe(false);
     expect(buscaDeClienteValida('(11) 9')).toBe(false);
     expect(buscaDeClienteValida('9876')).toBe(true);
+  });
+});
+
+describe('opções dentro das telas (20/11/2026)', () => {
+  const menuDono = [
+    { id: 'configuracoes', rotulo: 'Configurações', rota: '/configuracoes', grupo: 'Conta' },
+    { id: 'pagina', rotulo: 'Minha página', rota: '/pagina', grupo: 'Cadastros' },
+  ] as unknown as Parameters<typeof buscarOpcoes>[0];
+  it('acha o Instagram e a cidade da unidade', () => {
+    expect(buscarOpcoes(menuDono, 'instagram')[0]?.rota).toBe('/pagina');
+    expect(buscarOpcoes(menuDono, 'cidade')[0]?.rota).toBe('/configuracoes?aba=unidades');
+    expect(buscarOpcoes(menuDono, 'lembrete').map((o) => o.id)).toContain('regras-agendamento');
+  });
+  it('não mostra opção de tela que o papel não abre; termo curto não busca', () => {
+    expect(buscarOpcoes(menuDono, 'qr code')).toEqual([]);
+    expect(buscarOpcoes(menuDono, 'a')).toEqual([]);
   });
 });

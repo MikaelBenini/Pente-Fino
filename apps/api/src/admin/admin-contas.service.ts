@@ -5,6 +5,7 @@ import {
   fichaDaContaPlataforma,
   aplicarSituacaoDaConta,
   marcarContaInterna,
+  mudarWhatsappDoDono,
   mudarPlanoDaConta,
   mudarTesteDaConta,
   situacaoDaContaPlataforma,
@@ -25,6 +26,7 @@ import {
   valorDaCobranca,
   type AcaoContaEntrada,
   type ContaInternaEntrada,
+  type WhatsappDonoEntrada,
   type FichaContaPlataforma,
   type MudarPlanoContaEntrada,
   type MudarTesteContaEntrada,
@@ -49,6 +51,8 @@ import { BancoPlataforma } from './banco-plataforma.js';
 function traduzir(e: unknown): never {
   const msg = e instanceof Error ? e.message : '';
   if (msg.includes('conta_inexistente')) throw Erros.naoEncontrado('Conta não encontrada.');
+  if (msg.includes('dono_inexistente'))
+    throw Erros.naoEncontrado('Esse e-mail não é de um dono desta conta.');
   if (msg.includes('conta_parada'))
     throw Erros.conflito(
       'A conta está bloqueada ou cancelada: desbloqueie ou reative com o próximo passo.',
@@ -343,6 +347,27 @@ export class AdminContasService {
       ip,
     });
     this.valeNaHora(contaId);
+  }
+
+  /** Troca o WhatsApp do dono (pedido do dono em 20/11/2026), com motivo e auditoria. */
+  async mudarWhatsappDono(
+    contaId: string,
+    d: WhatsappDonoEntrada,
+    a: AdminAutenticado,
+    ip: string | null,
+  ) {
+    const antes = await mudarWhatsappDoDono(this.banco.prisma, contaId, d.email, d.telefone).catch(
+      traduzir,
+    );
+    await this.auth.auditar({
+      usuarioId: a.id,
+      acao: 'mudar_whatsapp_dono',
+      contaId,
+      antes: { email: d.email, telefone: antes },
+      depois: { email: d.email, telefone: d.telefone },
+      motivo: d.motivo,
+      ip,
+    });
   }
 
   async registrarPagamento(

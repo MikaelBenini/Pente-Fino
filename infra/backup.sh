@@ -15,6 +15,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 umask 077
+# Um backup por vez (o cron e o vigia podem chamar no mesmo minuto, 20/11/2026).
+exec 8>/tmp/pente-fino-backup.lock
+flock -n 8 || { echo "$(date '+%F %T') outro backup já está rodando"; exit 0; }
 
 ler() { sed -n "s/^$1=//p" .env | tail -1 | sed "s/^['\"]//; s/['\"]$//"; }
 export BACKUP_SENHA="$(ler BACKUP_SENHA)"

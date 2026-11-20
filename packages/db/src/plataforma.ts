@@ -212,6 +212,18 @@ export async function marcarContaInterna(
   return r!.antes;
 }
 
+/** Troca o WhatsApp do dono da conta (achado pelo e-mail); devolve o telefone de antes. */
+export async function mudarWhatsappDoDono(
+  prisma: PrismaClient,
+  contaId: string,
+  email: string,
+  telefone: string,
+): Promise<string | null> {
+  const [r] = await prisma.$queryRaw<{ antes: string | null }[]>`
+    SELECT plataforma_mudar_whatsapp_dono(${contaId}::uuid, ${email}, ${telefone}) AS antes`;
+  return r!.antes;
+}
+
 /** Grava a mudança que a regra (transicaoDaConta) decidiu; devolve como estava. */
 export async function aplicarSituacaoDaConta(
   prisma: PrismaClient,

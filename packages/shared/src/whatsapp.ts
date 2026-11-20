@@ -26,6 +26,17 @@ export function variantesTelefone(telefone: string): string[] {
   return [d];
 }
 
+/**
+ * Telefone do cliente como o banco guarda: só dígitos, com o 55 e, no celular, com o nono dígito
+ * (o mesmo do gatilho cliente_telefone_canonico). "44 9976-4653" e "44 99976-4653" viram um só
+ * cadastro (pedido do dono em 20/11/2026: com ou sem o 9, nasciam dois clientes).
+ */
+export function telefoneCanonico(telefone: string): string {
+  const d = telefone.replace(/\D/g, '');
+  const completo = d.length === 10 || d.length === 11 ? `55${d}` : d;
+  return variantesTelefone(completo)[0]!;
+}
+
 /** Envio para o mesmo número da barbearia: nunca mais que isto por minuto. */
 export const LIMITE_ENVIOS_POR_MINUTO = 30;
 /** Intervalo mínimo entre duas mensagens do mesmo número (segue do limite por minuto). */
@@ -49,4 +60,25 @@ export function proximoEnvio(
       : Math.max(agoraMs, ultimoAgendadoMs + INTERVALO_MINIMO_ENVIO_MS);
   // A primeira mensagem de uma conversa parada também espera um pouco (tempo de "digitar").
   return base + variacao;
+}
+
+/**
+ * O WhatsApp da unidade para os botões do cliente (testes de 19/11/2026: o agendamento abria o
+ * número do bot e a confirmação e a gestão da reserva, o telefone do cadastro). Regra única: o
+ * número conectado ao bot da unidade; sem ele, o telefone da unidade. Só dígitos com o 55.
+ */
+export function numeroWhatsappDaUnidade(d: {
+  conexao?: { status: string; numero: string | null } | null;
+  telefone: string | null;
+}): string | null {
+  const doBot = d.conexao?.status === 'conectado' ? (d.conexao.numero ?? '') : '';
+  const bruto = doBot.replace(/\D/g, '') || (d.telefone ?? '').replace(/\D/g, '');
+  const completo = bruto.length === 10 || bruto.length === 11 ? `55${bruto}` : bruto;
+  return /^\d{12,13}$/.test(completo) ? completo : null;
+}
+
+/** wa.me do número, com a mensagem pronta quando houver. */
+export function linkWaMe(numero: string | null, mensagem?: string): string | null {
+  if (!numero) return null;
+  return `https://wa.me/${numero}${mensagem ? `?text=${encodeURIComponent(mensagem)}` : ''}`;
 }

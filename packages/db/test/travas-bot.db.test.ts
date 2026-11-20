@@ -97,29 +97,107 @@ describe('travas do bot', () => {
     expect(await saidas('5511912340003')).toBeGreaterThan(0);
   });
 
-  it('respostas demais em poucos minutos (outro robô do outro lado): para e vai para a equipe', async () => {
+  it('respostas demais dos dois lados em poucos minutos (outro robô): para e vai para a equipe', async () => {
     const tel = '5511912340004';
-    await naConta(prisma, conta, (tx) =>
-      tx.mensagem.createMany({
-        data: Array.from({ length: 30 }, () => ({
+    await naConta(prisma, conta, async (tx) => {
+      await tx.mensagem.createMany({
+        data: Array.from({ length: 20 }, () => ({
           unidadeId: unidadeB,
           telefone: tel,
           direcao: 'saida' as const,
           texto: 'Como posso ajudar?',
           status: 'enviada' as const,
         })),
-      }),
-    );
+      });
+      await tx.mensagem.createMany({
+        data: Array.from({ length: 14 }, (_, i) => ({
+          unidadeId: unidadeB,
+          telefone: tel,
+          direcao: 'entrada' as const,
+          texto: 'Olá! Sou o atendimento automático.',
+          status: 'recebida' as const,
+          idExterno: `robo-${i}`,
+        })),
+      });
+    });
     const r = await atenderMensagem(prisma, evento(tel, 'Olá! Sou o atendimento automático.'), {
       appUrl: '',
     });
     expect(r.tipo).toBe('loop');
-    expect(await saidas(tel)).toBe(30);
+    expect(await saidas(tel)).toBe(20);
     const s = await naConta(prisma, conta, (tx) =>
-      tx.botSessao.findFirstOrThrow({ where: { unidadeId: unidadeB, telefone: tel } }),
+      tx.botSessao.findFirstOrThrow({
+        where: { unidadeId: unidadeB, telefone: tel },
+        include: { eventos: true },
+      }),
     );
     expect((s.sessao as unknown as SessaoBot).comAtendente).toBe(true);
     expect(s.atendenteDesde).not.toBeNull();
+    // O motivo fica no histórico (testes de 19/11/2026).
+    expect(s.eventos.map((e) => [e.de, e.para, e.origem])).toEqual([
+      [null, 'aguardando', 'trava_loop'],
+    ]);
+  });
+
+  it('teste longo de uma pessoa (muitas respostas, poucas mensagens dela): não trava', async () => {
+    // Testes de 19/11/2026: 30 respostas do bot em 10 minutos travavam a conversa do dono.
+    const tel = '5511912340005';
+    await naConta(prisma, conta, (tx) =>
+      tx.mensagem.createMany({
+        data: Array.from({ length: 30 }, () => ({
+          unidadeId: unidadeB,
+          telefone: tel,
+          direcao: 'saida' as const,
+          texto: 'Corte · R$ 45,00 · 30 min',
+          status: 'enviada' as const,
+        })),
+      }),
+    );
+    const r = await atenderMensagem(prisma, evento(tel, 'AGENDAR'), { appUrl: '' });
+    expect(r.tipo).toBe('respondida');
+  });
+
+  it('depois de devolver ao bot, o que veio antes não conta para a trava', async () => {
+    const tel = '5511912340006';
+    const antes = new Date(Date.now() - 60_000);
+    await naConta(prisma, conta, async (tx) => {
+      await tx.mensagem.createMany({
+        data: [
+          ...Array.from({ length: 20 }, () => ({
+            unidadeId: unidadeB,
+            telefone: tel,
+            direcao: 'saida' as const,
+            texto: 'Qual serviço você quer?',
+            status: 'enviada' as const,
+            criadoEm: antes,
+          })),
+          ...Array.from({ length: 14 }, (_, i) => ({
+            unidadeId: unidadeB,
+            telefone: tel,
+            direcao: 'entrada' as const,
+            texto: '2',
+            status: 'recebida' as const,
+            idExterno: `antes-${i}`,
+            criadoEm: antes,
+          })),
+        ],
+      });
+      // Devolvida agora: o bot voltou depois daquelas mensagens.
+      await tx.botSessao.create({
+        data: {
+          unidadeId: unidadeB,
+          telefone: tel,
+          sessao: {
+            caminho: [],
+            ultimaEm: new Date().toISOString(),
+            comAtendente: false,
+            botDesde: new Date().toISOString(),
+          },
+        },
+      });
+    });
+    const r = await atenderMensagem(prisma, evento(tel, 'AGENDAR'), { appUrl: '' });
+    expect(r.tipo).toBe('respondida');
   });
 
   it('nada automático sai para número do sistema (mesmo que ele já tenha escrito)', async () => {

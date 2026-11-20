@@ -1,4 +1,9 @@
-import { precoServicoVigente, type Prisma, type Transacao } from '@pente-fino/db';
+import {
+  precoServicoVigente,
+  whatsappDaUnidade,
+  type Prisma,
+  type Transacao,
+} from '@pente-fino/db';
 import {
   caminhoAssinarClube,
   dataLocal,
@@ -7,10 +12,14 @@ import {
   horarioDaUnidade,
   lerFuncionamento,
   linhasDoFuncionamento,
-  linkWhatsappDaUnidade,
   notaDoSite,
   type SiteBarbearia,
   type SitePublico,
+  linkWaMe,
+  lerVisualAgendamento,
+  previaDoLink,
+  enderecoCompleto,
+  linkMapaDaUnidade,
 } from '@pente-fino/shared';
 import { umPorVez } from '../comum/sequencia.js';
 
@@ -69,9 +78,11 @@ export async function montarSitePublico(
     barbearia: conta.nome,
     unidade: u.nome,
     site,
-    endereco: u.endereco,
+    endereco: enderecoCompleto(u),
+    mapa: linkMapaDaUnidade(u),
+    previa: previaDoLink(lerVisualAgendamento(u.agendamentoVisual), site),
     telefone: u.telefone,
-    whatsapp: linkWhatsappDaUnidade(u.telefone),
+    whatsapp: linkWaMe(await whatsappDaUnidade(tx, u)),
     aparecerNoGoogle: u.aparecerNoGoogle,
     // Só o que tem preço na unidade pode ser agendado: o resto não aparece no site.
     servicos: comPreco.flatMap((s) => (s.preco === null ? [] : [{ ...s, preco: s.preco }])),

@@ -5,6 +5,7 @@ import {
   FILA_WHATSAPP_ENTRADA,
   MENSAGENS_BOT_PADRAO,
   type EnvioParaCliente,
+  type EstadoConversaRegistro,
   type ListaConversas,
   type MensagemDoCliente,
   type TrabalhoWhatsappEntrada,
@@ -181,7 +182,20 @@ describe('responder e devolver', () => {
   });
 
   it('devolver ao bot manda o encerramento e o bot volta a responder', async () => {
-    await recepcao.post(`/conversas/${sessaoId}/devolver`).expect(200);
+    // A tela mostra o estado efetivamente gravado (testes de 19/11/2026).
+    const dev = await recepcao.post(`/conversas/${sessaoId}/devolver`).expect(200);
+    expect(dev.body).toEqual({ ok: true, situacao: 'bot' });
+    const estados = (await recepcao.get(`/conversas/${sessaoId}/estados`).expect(200))
+      .body as EstadoConversaRegistro[];
+    expect(estados.at(-1)).toMatchObject({
+      de: 'atendimento',
+      para: 'bot',
+      origem: 'painel_devolveu',
+      origemTexto: 'Devolveu ao bot pelo painel',
+      quem: expect.any(String),
+    });
+    expect(estados.map((e) => e.origem)).toContain('painel_respondeu');
+    await barbeiro.get(`/conversas/${sessaoId}/estados`).expect(403);
     const lista = (await recepcao.get(`/conversas?unidadeId=${a.unidadeA}`).expect(200))
       .body as ListaConversas;
     expect(lista.conversas.find((c) => c.id === sessaoId)).toMatchObject({

@@ -16,6 +16,8 @@ import {
   type EsperaEntrada,
   type OrigemEspera,
   type StatusEspera,
+  telefoneCanonico,
+  variantesTelefone,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
@@ -95,13 +97,19 @@ export class EsperaController {
         throw Erros.naoEncontrado('Cliente não encontrado.');
       return d.clienteId;
     }
-    const telefone = d.clienteNovo!.telefone?.replace(/\D/g, '');
+    const digitos = d.clienteNovo!.telefone?.replace(/\D/g, '');
+    const telefone = digitos ? telefoneCanonico(digitos) : null;
+    // Telefone já cadastrado (com ou sem o nono dígito): usa o cadastro que existe.
+    if (telefone) {
+      const existente = await tx.cliente.findFirst({
+        where: { telefone: { in: variantesTelefone(telefone) } },
+        orderBy: { criadoEm: 'asc' },
+        select: { id: true },
+      });
+      if (existente) return existente.id;
+    }
     const c = await tx.cliente.create({
-      data: {
-        nome: d.clienteNovo!.nome,
-        telefone: telefone ? (telefone.length <= 11 ? `55${telefone}` : telefone) : null,
-        unidadeOrigemId: d.unidadeId,
-      },
+      data: { nome: d.clienteNovo!.nome, telefone, unidadeOrigemId: d.unidadeId },
     });
     return c.id;
   }

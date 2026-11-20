@@ -1,10 +1,11 @@
 import { formatarMoeda, precoInicial } from '@pente-fino/shared';
-import { ImageResponse } from 'next/og';
+import { imagemDaPrevia, TAMANHO_PREVIA } from '@/lib/servidor/imagem-previa';
 import { unidadePublica } from '@/lib/servidor/pagina-publica';
 
 // Painel P1: a prévia do link no WhatsApp e no Instagram mostra a barbearia, não o Pente Fino.
+// Desde 20/11/2026, com o logotipo, o título, o texto e a cor que a barbearia escolheu.
 export const alt = 'Agende online';
-export const size = { width: 1200, height: 630 };
+export const size = TAMANHO_PREVIA;
 export const contentType = 'image/png';
 
 export default async function Imagem({ params }: { params: Promise<{ slug: string }> }) {
@@ -12,52 +13,16 @@ export default async function Imagem({ params }: { params: Promise<{ slug: strin
   const u = await unidadePublica(slug);
   const preco = u ? precoInicial(u) : null;
   const unidade = u && u.nome.toLowerCase() !== u.barbearia.toLowerCase() ? u.nome : null;
-  return new ImageResponse(
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        background: '#0b0b0b',
-        color: '#f4f4ef',
-        padding: 72,
-        fontFamily: 'sans-serif',
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {unidade && (
-          <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: 3, color: '#f5d33b' }}>
-            {unidade.toUpperCase()}
-          </div>
-        )}
-        <div style={{ fontSize: 92, fontWeight: 800, lineHeight: 1, textTransform: 'uppercase' }}>
-          {u?.barbearia ?? 'Agende seu horário'}
-        </div>
-        {u?.endereco && <div style={{ fontSize: 30, color: '#aaaaa1' }}>{u.endereco}</div>}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div
-          style={{
-            display: 'flex',
-            padding: '20px 36px',
-            borderRadius: 14,
-            background: '#a3e635',
-            color: '#0b0b0b',
-            fontSize: 40,
-            fontWeight: 800,
-          }}
-        >
-          Agende online
-        </div>
-        {preco !== null && (
-          <div style={{ display: 'flex', fontSize: 36, color: '#f4f4ef' }}>
-            {`a partir de ${formatarMoeda(preco)}`}
-          </div>
-        )}
-      </div>
-    </div>,
-    size,
-  );
+  return imagemDaPrevia({
+    previa: u?.previa ?? null,
+    barbearia: u?.barbearia ?? 'Agende seu horário',
+    unidade,
+    linha:
+      u?.previa.descricao ??
+      ([u?.endereco, preco !== null ? `a partir de ${formatarMoeda(preco)}` : null]
+        .filter(Boolean)
+        .join(' · ') ||
+        null),
+    botao: 'Agende online',
+  });
 }
