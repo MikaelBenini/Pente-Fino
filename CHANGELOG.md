@@ -12,6 +12,7 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - **"Ligar notificações" diz o que deu errado:** antes, qualquer falha virava "Não foi possível ligar neste aparelho". Agora aparece o motivo e o que fazer: notificações bloqueadas no cadeado, o Brave com o push do Google desligado, aba anônima, iPhone fora do app instalado, ou o app ainda instalando. Vale no Perfil, em Avisos e na administração.
 - **Aparelho com inscrição antiga se refaz sozinho:** se as chaves do servidor mudaram, ligar de novo troca a inscrição em vez de falhar.
 - **"Mandar um teste" fala a verdade:** diz para quantos aparelhos mandou, ou que nenhum está ligado, em vez de "Teste enviado" mesmo quando nada saía.
+- **Deploy sem falso erro no fim:** o job "Implantar na VPS" acusava `syntax error near unexpected token 'do'` depois de já ter implantado tudo, porque o script de deploy se trocava pela versão nova enquanto rodava. Agora ele entra como arquivo novo e termina sem ler o resto.
 
 ### Corrigido (testes de 19/11 no WhatsApp)
 
