@@ -48,7 +48,12 @@ principal() {
   cmp -s "$TMP/Caddyfile" Caddyfile || caddy_mudou=1
   # Pasta deixada pelo Docker no lugar de um arquivo que ainda não existia (ex.: status.css).
   for f in "$TMP"/*; do [[ -f "$f" && -d "$(basename "$f")" ]] && { rmdir "$(basename "$f")" 2>/dev/null || true; }; done
+  # O próprio implantar.sh entra por mv (arquivo novo): o bash que está rodando continua lendo o
+  # antigo. Copiado por cima, o bash lia a versão nova na posição da antiga e quebrava no fim
+  # (20/11/2026: "syntax error near unexpected token do", com tudo já implantado).
+  mv -f "$TMP/implantar.sh" ./implantar.sh.novo
   cp -r "$TMP"/. .
+  mv -f ./implantar.sh.novo ./implantar.sh
   # Antes da atualização também (20/11/2026): se ela falhar, o set -e parava o script e o cron do
   # backup nunca era posto.
   garantir_cron
@@ -62,5 +67,5 @@ principal() {
   fi
   echo "Implantado: $SHA"
 }
-principal "$@"
-exit $?
+# Na mesma linha: o bash lê a linha inteira antes de rodar, então sai sem ler mais nada do arquivo.
+principal "$@"; exit $?
