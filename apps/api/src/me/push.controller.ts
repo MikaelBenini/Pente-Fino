@@ -83,8 +83,18 @@ export class PushController {
   @LivreSemAssinatura()
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Mandar uma notificação de teste para os aparelhos ligados' })
-  async teste(): Promise<{ ok: true }> {
+  async teste(): Promise<{ ok: true; aparelhos: number }> {
     const u = Contexto.usuario();
+    // Antes respondia "enviado" mesmo sem nada para entregar (pedido do dono em 20/11/2026).
+    if (!this.config.vapidChavePublica)
+      throw Erros.conflito('As notificações no celular ainda não estão ligadas no servidor.');
+    const aparelhos = await this.banco.daConta((tx) =>
+      tx.inscricaoPush.count({ where: { usuarioId: u.id } }),
+    );
+    if (!aparelhos)
+      throw Erros.conflito(
+        'Nenhum aparelho ligado para você. Toque em "Ligar notificações" neste aparelho primeiro.',
+      );
     await this.filas.notificacoes.add('push', {
       contaId: u.contaId,
       usuarioId: u.id,
@@ -93,6 +103,6 @@ export class PushController {
       url: '/perfil',
       etiqueta: 'teste',
     });
-    return { ok: true };
+    return { ok: true, aparelhos };
   }
 }

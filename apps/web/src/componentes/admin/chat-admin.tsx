@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Aviso } from '../aviso';
 import { Estado, Ficha } from '../pagina';
+import { inscreverAparelho, motivoDoErroPush, pushSuportado } from '@/lib/push';
 import { adminApi } from './admin-api';
 
 const NOME_STATUS = {
@@ -99,17 +100,6 @@ export function useAvisosDoChat(ligado: boolean): number {
   return n;
 }
 
-/** Chave VAPID (base64url) no formato que o navegador pede. */
-function chaveDoServidor(base64: string): Uint8Array<ArrayBuffer> {
-  const b = (base64 + '='.repeat((4 - (base64.length % 4)) % 4))
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-  const bruto = atob(b);
-  const saida = new Uint8Array(new ArrayBuffer(bruto.length));
-  for (let i = 0; i < bruto.length; i++) saida[i] = bruto.charCodeAt(i);
-  return saida;
-}
-
 /**
  * Admin F6: aviso no celular (push), mesmo com o navegador fechado. Liga neste aparelho; no
  * iPhone, só com o Pente Fino instalado na tela de início.
@@ -122,8 +112,7 @@ function PushNoCelular() {
   const [inscrito, setInscrito] = useState<boolean | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  const suportado =
-    typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
+  const suportado = pushSuportado();
 
   useEffect(() => {
     if (!suportado) return;
@@ -139,21 +128,11 @@ function PushNoCelular() {
     setErro(null);
     setOcupado(true);
     try {
-      if ((await Notification.requestPermission()) !== 'granted')
-        throw new Error('O navegador não deu permissão para notificações.');
-      const r =
-        (await navigator.serviceWorker.getRegistration('/')) ??
-        (await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }));
-      const s =
-        (await r.pushManager.getSubscription()) ??
-        (await r.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: chaveDoServidor(estado.data!.chavePublica!),
-        }));
+      const s = await inscreverAparelho(estado.data!.chavePublica!);
       await adminApi('chat/push', { corpo: s.toJSON() });
       setInscrito(true);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não deu para ligar o aviso no celular.');
+      setErro(motivoDoErroPush(e));
     } finally {
       setOcupado(false);
     }

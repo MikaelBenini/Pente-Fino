@@ -7,33 +7,12 @@ import { Bell } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { useAcao } from '@/lib/consultas';
+import { inscreverAparelho, motivoDoErroPush, pushSuportado } from '@/lib/push';
 import { Aviso } from './aviso';
 
 const chave = ['me', 'push'] as const;
 
-/** Chave VAPID (base64url) no formato que o navegador pede. */
-function chaveDoServidor(base64: string): Uint8Array<ArrayBuffer> {
-  const b = (base64 + '='.repeat((4 - (base64.length % 4)) % 4))
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
-  const bruto = atob(b);
-  const saida = new Uint8Array(new ArrayBuffer(bruto.length));
-  for (let i = 0; i < bruto.length; i++) saida[i] = bruto.charCodeAt(i);
-  return saida;
-}
-
-const suportado = () =>
-  typeof window !== 'undefined' &&
-  'serviceWorker' in navigator &&
-  'PushManager' in window &&
-  'Notification' in window;
-
-async function registro() {
-  return (
-    (await navigator.serviceWorker.getRegistration('/')) ??
-    (await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }))
-  );
-}
+const suportado = pushSuportado;
 
 const PERGUNTADO = 'pf-push-perguntado';
 const lerPerguntado = () => {
@@ -83,30 +62,17 @@ export function usePushAparelho() {
     setOcupado(true);
     marcarPerguntado();
     try {
-      const p = await Notification.requestPermission();
-      setPermissao(p);
-      if (p !== 'granted') {
-        setErro(
-          'O navegador bloqueou as notificações. Libere nas configurações do site (o cadeado ao lado do endereço) e tente de novo.',
-        );
-        return false;
-      }
-      const r = await registro();
-      await navigator.serviceWorker.ready;
-      const s =
-        (await r.pushManager.getSubscription()) ??
-        (await r.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: chaveDoServidor(chavePublica),
-        }));
+      const s = await inscreverAparelho(chavePublica);
       await api('me/push', { corpo: s.toJSON() });
       setInscrito(true);
       void estado.refetch();
       return true;
     } catch (e) {
-      setErro(e instanceof ErroApi ? e.message : 'Não foi possível ligar neste aparelho.');
+      // O motivo de verdade (antes, sempre "Não foi possível ligar"): pedido de 20/11/2026.
+      setErro(e instanceof ErroApi ? e.message : motivoDoErroPush(e));
       return false;
     } finally {
+      setPermissao(suportado() ? Notification.permission : null);
       setOcupado(false);
     }
   }
@@ -191,8 +157,11 @@ export function ConviteNotificacoes() {
 export function NotificacoesAparelho() {
   const push = usePushAparelho();
   const { inscrito, erro, ocupado, ligar, desligar } = push;
-  const [testou, setTestou] = useState(false);
-  const teste = useAcao(() => api('me/push/teste', { corpo: {} }), []);
+  const [testou, setTestou] = useState<string | null>(null);
+  const teste = useAcao(
+    () => api<{ ok: true; aparelhos: number }>('me/push/teste', { corpo: {} }),
+    [],
+  );
   if (!push.chavePublica) return null;
 
   return (
@@ -220,15 +189,27 @@ export function NotificacoesAparelho() {
               <Bell aria-hidden className="size-5 text-acao-texto" /> Ligadas neste aparelho
             </p>
             {testou && (
-              <p className="text-sm text-tinta-suave">Teste enviado. Deve chegar em instantes.</p>
+              <p className="text-sm text-tinta-suave" role="status">
+                {testou}
+              </p>
             )}
             <div className="flex flex-wrap gap-2">
               <Botao
                 variante="secundario"
                 carregando={teste.isPending}
                 onClick={async () => {
-                  await teste.mutateAsync(undefined).catch(() => undefined);
-                  setTestou(true);
+                  try {
+                    const r = await teste.mutateAsync(undefined);
+                    setTestou(
+                      `Teste enviado para ${r.aparelhos} ${r.aparelhos === 1 ? 'aparelho' : 'aparelhos'}. Deve chegar em instantes; se não chegar, desligue e ligue de novo neste aparelho.`,
+                    );
+                  } catch (e) {
+                    setTestou(
+                      e instanceof ErroApi
+                        ? e.message
+                        : 'Não deu para mandar o teste. Tente de novo.',
+                    );
+                  }
                 }}
               >
                 Mandar um teste
@@ -237,7 +218,7 @@ export function NotificacoesAparelho() {
                 variante="fantasma"
                 carregando={ocupado}
                 onClick={() => {
-                  setTestou(false);
+                  setTestou(null);
                   void desligar();
                 }}
               >
