@@ -26,6 +26,7 @@ import {
   type DataISO,
   type RecebimentoClube,
   type RecebimentoNaTela,
+  variantesTelefone,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -204,7 +205,10 @@ export class ClubeOnlineService {
       });
       if (!plano) throw Erros.naoEncontrado('Este plano não está disponível.');
       const cliente =
-        (await tx.cliente.findFirst({ where: { telefone: d.telefone } })) ??
+        (await tx.cliente.findFirst({
+          where: { telefone: { in: variantesTelefone(d.telefone) } },
+          orderBy: { criadoEm: 'asc' },
+        })) ??
         (await tx.cliente.create({
           data: {
             nome: d.nome,

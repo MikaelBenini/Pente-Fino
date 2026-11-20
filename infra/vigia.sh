@@ -23,6 +23,17 @@ fi
 docker exec pente-fino-postgres-1 psql -U postgres -d "$BANCO" -q -c \
   "INSERT INTO configuracao_plataforma (chave, valor, atualizado_em) VALUES ('estado_servidor', '{\"quando\":\"$(date -Is)\",\"discoPct\":$disco,\"memoriaPct\":$memoria,\"tlsAte\":$tls}'::jsonb, now()) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor, atualizado_em = now();" \
   >/dev/null 2>&1 || true
+# Rede de segurança do backup (20/11/2026: "o backup não faz automático"): sem arquivo novo em
+# 26 h, passada a hora do cron (3h), o vigia roda o backup.sh em segundo plano. O próprio
+# backup.sh trava em dobro (flock) e grava o resultado na Saúde do sistema.
+PASTA_BACKUP=/opt/barbearia/backups
+hora_sp=$((10#$(TZ=America/Sao_Paulo date +%H)))
+if [[ -x ./backup.sh ]] && (( hora_sp >= 4 )) &&
+  [[ -z "$(find "$PASTA_BACKUP/diario" -maxdepth 1 -name '*.enc' -mmin -1560 2>/dev/null | head -1)" ]]; then
+  mkdir -p "$PASTA_BACKUP"
+  echo "$(date '+%F %T') vigia: sem backup em 26 h, rodando agora" >> "$PASTA_BACKUP/backup.log"
+  nohup ./backup.sh >> "$PASTA_BACKUP/backup.log" 2>&1 &
+fi
 [[ -n "$URL" ]] || exit 0
 status=up
 (( disco > 80 || memoria > 90 )) && status=down

@@ -1,11 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { json, mensagensDoBot, type Prisma } from '@pente-fino/db';
+import { json, mensagensDoBot, origemDaConversa, type Prisma } from '@pente-fino/db';
 import {
   dataLocal,
   descreverPedido,
   resumoDoAnuncio,
   preencher,
+  rotuloOrigem,
+  situacaoDaConversa,
   variantesTelefone,
+  type EstadoConversaRegistro,
+  type SituacaoConversa,
   type ConversaResumo,
   type EnvioParaCliente,
   type ListaConversas,
@@ -103,6 +107,21 @@ export class ConversasService {
           })
         : [];
       const respostaDe = new Map(respostas.map((m) => [`${m.unidadeId}:${m.telefone}`, m]));
+      // A última mudança de estado de cada conversa: por que o bot parou (testes de 19/11).
+      const estados = sessoes.length
+        ? await tx.botSessaoEvento.findMany({
+            where: { sessaoId: { in: sessoes.map((s) => s.id) } },
+            orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+            distinct: ['sessaoId'],
+            select: {
+              sessaoId: true,
+              criadoEm: true,
+              origem: true,
+              autor: { select: { nome: true } },
+            },
+          })
+        : [];
+      const estadoDe = new Map(estados.map((e) => [e.sessaoId, e]));
       // O que cada cliente já tinha escolhido no bot antes de pedir atendente.
       const pedidos = sessoes.map((s) => lerSessao(s.sessao).pedido).filter((p) => !!p);
       const ids = [
@@ -175,6 +194,17 @@ export class ConversasService {
           anuncio: s.anuncioEm
             ? { desde: s.anuncioEm.toISOString(), titulo: s.anuncioTitulo }
             : null,
+          ultimoEstado: (() => {
+            const e = estadoDe.get(s.id);
+            return e
+              ? {
+                  em: e.criadoEm.toISOString(),
+                  origem: e.origem,
+                  origemTexto: rotuloOrigem(e.origem),
+                  quem: e.autor?.nome.trim().split(/\s+/)[0] ?? null,
+                }
+              : null;
+          })(),
         };
       });
       return {
@@ -227,6 +257,7 @@ export class ConversasService {
           'O WhatsApp desta unidade está desconectado. Reconecte na tela Bot para responder.',
         );
       const sessao = lerSessao(s.sessao);
+      await origemDaConversa(tx, 'painel_respondeu', Contexto.usuario().id);
       await tx.botSessao.update({
         where: { id },
         data: { sessao: json({ ...sessao, comAtendente: true, erros: 0 }), atendenteDesde: null },
@@ -243,6 +274,7 @@ export class ConversasService {
     await this.banco.daConta(async (tx) => {
       const s = await this.sessao(tx, id);
       const sessao = lerSessao(s.sessao);
+      await origemDaConversa(tx, 'painel_assumiu', Contexto.usuario().id);
       await tx.botSessao.update({
         where: { id },
         data: {
@@ -260,33 +292,74 @@ export class ConversasService {
     return { ok: true };
   }
 
-  /** Terminou: o bot volta a responder, com a mensagem de encerramento. */
-  async devolver(id: string): Promise<{ ok: true }> {
+  /**
+   * Terminou: o bot volta a responder, com a mensagem de encerramento. Devolve o estado que ficou
+   * gravado, para a tela mostrar o que vale de fato (testes de 19/11/2026). A trava contra loop
+   * passa a contar a partir de agora (botDesde), e o eco do encerramento não pausa o bot: ele é
+   * reconhecido como mensagem do sistema (mesmo texto, gravado aqui).
+   */
+  async devolver(id: string): Promise<{ ok: true; situacao: SituacaoConversa }> {
     const r = await this.banco.daConta(async (tx) => {
       const s = await this.sessao(tx, id);
       const sessao = lerSessao(s.sessao);
-      await tx.botSessao.update({
+      await origemDaConversa(tx, 'painel_devolveu', Contexto.usuario().id);
+      const gravada = await tx.botSessao.update({
         where: { id },
         data: {
-          sessao: json({ ...sessao, comAtendente: false, caminho: [], erros: 0 }),
+          sessao: json({
+            ...sessao,
+            comAtendente: false,
+            caminho: [],
+            erros: 0,
+            botDesde: new Date().toISOString(),
+          }),
           atendenteDesde: null,
         },
       });
+      const situacao = situacaoDaConversa(
+        gravada.atendenteDesde,
+        lerSessao(gravada.sessao).comAtendente,
+      );
       const conexao = s.unidade.botConexao;
       // Sem conexão, devolve em silêncio: o encerramento não teria como sair.
-      if (conexao?.status !== 'conectado') return null;
+      if (conexao?.status !== 'conectado') return { situacao, envio: null };
       const conta = await tx.conta.findFirst({ select: { nome: true } });
       const texto = preencher((await mensagensDoBot(tx, s.unidadeId)).encerramento, {
         cliente: s.cliente?.nome.split(/\s+/)[0] ?? null,
         barbearia: conta?.nome ?? s.unidade.nome,
         unidade: s.unidade.nome,
       });
-      if (!texto.trim()) return null;
+      if (!texto.trim()) return { situacao, envio: null };
       const m = await this.gravarSaida(tx, s, texto);
-      return { contaId: s.contaId, instancia: conexao.instancia, mensagemId: m };
+      return {
+        situacao,
+        envio: { contaId: s.contaId, instancia: conexao.instancia, mensagemId: m },
+      };
     });
-    if (r) await this.enfileirar(r.contaId, r.instancia, [r.mensagemId]);
-    return { ok: true };
+    if (r.envio) await this.enfileirar(r.envio.contaId, r.envio.instancia, [r.envio.mensagemId]);
+    return { ok: true, situacao: r.situacao };
+  }
+
+  /** Histórico do estado da conversa: cada mudança com horário, de, para, origem e quem. */
+  async estados(id: string): Promise<EstadoConversaRegistro[]> {
+    return this.banco.daConta(async (tx) => {
+      await this.sessao(tx, id);
+      const eventos = await tx.botSessaoEvento.findMany({
+        where: { sessaoId: id },
+        orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }],
+        take: 100,
+        include: { autor: { select: { nome: true } } },
+      });
+      return eventos.reverse().map((e) => ({
+        id: e.id,
+        em: e.criadoEm.toISOString(),
+        de: (e.de as SituacaoConversa | null) ?? null,
+        para: e.para as SituacaoConversa,
+        origem: e.origem,
+        origemTexto: rotuloOrigem(e.origem),
+        quem: e.autor?.nome.trim().split(/\s+/)[0] ?? null,
+      }));
+    });
   }
 
   /**
@@ -351,6 +424,7 @@ export class ConversasService {
         comAtendente: true,
         erros: 0,
       };
+      await origemDaConversa(tx, 'painel_enviou', Contexto.usuario().id);
       const s = await tx.botSessao.upsert({
         where: { unidadeId_telefone: chave },
         create: { ...chave, clienteId, sessao: json(sessao), atendenteDesde: null },

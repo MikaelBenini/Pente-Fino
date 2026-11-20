@@ -129,6 +129,21 @@ describe('webhook do Asaas', () => {
       { event: 'PAYMENT_CREATED', payment: await pagamento({}) },
       'x'.repeat(28),
     ).expect(401);
+    // Token com espaço ou quebra de linha sobrando (colado do .env ou do painel): vale.
+    await webhook(
+      { event: 'PAYMENT_CREATED', payment: { ...(await pagamento({})), customer: 'cus_x' } },
+      `${TOKEN} `,
+    ).expect(200);
+    // Aviso da chave de API (o "Webhook para chaves de API" do Asaas), com o token: aceito.
+    expect(
+      (
+        await webhook(
+          { event: 'ACCESS_TOKEN_DELETED', accessToken: { id: 'x', name: 'Pentefino' } },
+          TOKEN,
+          false,
+        ).expect(200)
+      ).body,
+    ).toMatchObject({ ok: true, resultado: 'chave_api' });
     const r = await webhook({
       event: 'PAYMENT_CREATED',
       payment: { ...(await pagamento({})), customer: 'cus_de_ninguem' },

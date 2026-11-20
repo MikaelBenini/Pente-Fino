@@ -1,6 +1,7 @@
 // Esquemas de entrada dos cadastros (Etapa 6). Mesma validação na API e nos formulários.
 import { z } from 'zod';
 import { PAPEIS } from './papeis.js';
+import { linkDeMapaValido, UFS } from './endereco-unidade.js';
 
 const uuid = (rotulo: string) => z.uuid({ error: `${rotulo} inválido.` });
 const dataIso = z
@@ -32,6 +33,37 @@ export type ContaEntrada = z.infer<typeof contaSchema>;
 export const unidadeSchema = z.object({
   nome: z.string().trim().min(2, { error: 'Informe o nome da unidade.' }).max(80),
   endereco: textoOpcional(200),
+  /** Cidade e UF: o link do mapa leva o endereço completo (testes de 19/11/2026). */
+  cidade: textoOpcional(80),
+  uf: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .transform((t) => (t === '' ? null : t))
+    .pipe(
+      z
+        .string()
+        .regex(/^[A-Z]{2}$/, { error: 'UF com 2 letras (ex.: PR).' })
+        .refine((u) => (UFS as readonly string[]).includes(u), { error: 'UF inexistente.' })
+        .nullable(),
+    )
+    .optional(),
+  /** Link de localização (Google Maps) escolhido pela barbearia; vale no lugar da busca. */
+  linkMapa: z
+    .string()
+    .trim()
+    .max(500)
+    .transform((t) => (t === '' ? null : t))
+    .pipe(
+      z
+        .string()
+        .refine(linkDeMapaValido, {
+          error:
+            'Cole o link do Google Maps (https://maps.app.goo.gl/... ou https://www.google.com/maps/...).',
+        })
+        .nullable(),
+    )
+    .optional(),
   telefone: z
     .string()
     .transform((t) => t.replace(/\D/g, ''))
@@ -82,6 +114,9 @@ export interface UnidadeDetalhe {
   id: string;
   nome: string;
   endereco: string | null;
+  cidade: string | null;
+  uf: string | null;
+  linkMapa: string | null;
   telefone: string | null;
   diasTrabalho: number[];
   capacidade: number;

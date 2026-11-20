@@ -119,7 +119,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
       'Em Configurações → Link de agendamento, ligue o link da unidade e copie.',
       'Cole na bio do Instagram, no status do WhatsApp e no perfil do Google.',
       'O cliente escolhe serviço, barbeiro e horário. O horário entra na agenda com a comanda pronta.',
-      'Em Configurações → Agendamento, ajuste antecedência mínima, até quantos dias à frente e os intervalos.',
+      'Em Configurações → Link e agendamento, ajuste antecedência mínima, até quantos dias à frente e os intervalos.',
     ],
   },
   {

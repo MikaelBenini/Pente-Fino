@@ -32,6 +32,16 @@ nunca sai do servidor). Os arquivos vêm de `infra/` no repositório.
 - Webhook no Asaas (Integrações → Webhooks): `https://api.seudominio/webhooks/asaas`, com o token
   `ASAAS_WEBHOOK_TOKEN`, eventos de cobrança **e de nota fiscal** (`INVOICE_*`). O mesmo webhook
   atende a assinatura do sistema, as mensalidades do clube online e a situação das notas.
+- **Webhook recusado (401) com a chave certa** (20/11/2026): o `asaas-access-token` é o token do
+  **webhook**, não a `ASAAS_API_KEY`. Todo webhook cadastrado para essa URL precisa do mesmo token,
+  inclusive o **"Webhook para chaves de API"** (eventos `ACCESS_TOKEN_*`), que o Asaas cria à parte:
+  sem token ele é recusado, o Asaas penaliza a fila e parece problema da chave. Corrija o token nele
+  ou apague esse webhook (o sistema não precisa dele). A Saúde do sistema → "Webhooks recusados"
+  mostra o motivo (sem token, token diferente, servidor sem token) e o evento de cada recusa.
+  Depois, em Integrações → Webhooks, reative a fila e reenvie os eventos pausados.
+- Aviso `ACCESS_TOKEN_DELETED`/`_DISABLED` da chave usada no servidor: a API do Asaas para de
+  responder. Gere outra chave, ponha no `.env` (`ASAAS_API_KEY='$aact_...'`, com aspas simples) e
+  `docker compose up -d api worker`.
 - A taxa do clube online fica em `/admin` → Configurações → "Clube online".
 - Nota fiscal das mensalidades (NFS-e): primeiro, no painel do Asaas, Notas fiscais →
   Configurações (inscrição municipal, regime, certificado ou senha da prefeitura). Depois, em

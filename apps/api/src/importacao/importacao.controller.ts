@@ -8,6 +8,7 @@ import {
   type LinhaConvertida,
   type RelatorioImportacao,
   type TipoImportacao,
+  variantesTelefone,
 } from '@pente-fino/shared';
 import { z } from 'zod';
 // Sem @Auditada(): a simulação não grava nada; a importação audita ao gravar.
@@ -71,7 +72,9 @@ export class ImportacaoController {
           if (
             x.telefone &&
             (vistos.has(x.telefone) ||
-              (await tx.cliente.findFirst({ where: { telefone: x.telefone } })))
+              (await tx.cliente.findFirst({
+                where: { telefone: { in: variantesTelefone(x.telefone) } },
+              })))
           ) {
             erro('Telefone já cadastrado (ou repetido na planilha).');
             continue;

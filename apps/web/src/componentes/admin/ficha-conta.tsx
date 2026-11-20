@@ -22,6 +22,8 @@ import {
   notaInternaSchema,
   proximaCobrancaDaConta,
   whatsappDoDono,
+  formatarTelefone,
+  mascararTelefone,
   type NotaInterna,
   type AcaoConta,
   type FichaContaPlataforma,
@@ -49,6 +51,7 @@ const NOME_ACAO: Record<string, string> = {
   cobrar: 'Marcou o início da cobrança',
   marcar_interna: 'Marcou como conta interna',
   desmarcar_interna: 'Desmarcou conta interna',
+  mudar_whatsapp_dono: 'Trocou o WhatsApp do dono',
   registrar_pagamento: 'Registrou pagamento',
   nota_interna: 'Escreveu uma nota interna',
 };
@@ -317,6 +320,9 @@ function Conteudo({
   const [dataSituacao, setDataSituacao] = useState(() => somarDias(hoje, 14));
   const [motivoSituacao, setMotivoSituacao] = useState('');
   const [motivoInterna, setMotivoInterna] = useState('');
+  const [donoZap, setDonoZap] = useState(f.donos[0]?.email ?? '');
+  const [novoZap, setNovoZap] = useState('');
+  const [motivoZap, setMotivoZap] = useState('');
   // Ação que leva data: cortesia, início da cobrança e reativar.
   const pedeData = acao === 'cortesia' || acao === 'cobrar' || acao === 'reativar';
   const rotuloData =
@@ -674,6 +680,48 @@ function Conteudo({
               Bloqueada ou cancelada, a barbearia continua lendo tudo e exportando os dados; só não
               grava.
             </p>
+          </Acao>
+        )}
+
+        {admin && f.donos.length > 0 && (
+          <Acao
+            titulo="WhatsApp do dono"
+            textoBotao="Trocar WhatsApp"
+            tom="acao"
+            podeEnviar={motivoOk(motivoZap) && novoZap.replace(/\D/g, '').length >= 10}
+            enviar={async () => {
+              await adminApi(`${base}/whatsapp-dono`, {
+                metodo: 'PUT',
+                corpo: { email: donoZap, telefone: novoZap, motivo: motivoZap },
+              });
+              setNovoZap('');
+              setMotivoZap('');
+              await atualizar();
+            }}
+          >
+            {f.donos.length > 1 && (
+              <Selecao
+                id="zap-dono"
+                rotulo="Dono"
+                value={donoZap}
+                onChange={(e) => setDonoZap(e.target.value)}
+                opcoes={f.donos.map((d) => ({ valor: d.email, rotulo: `${d.nome} · ${d.email}` }))}
+              />
+            )}
+            <Campo
+              id="zap-novo"
+              rotulo="Novo WhatsApp"
+              inputMode="tel"
+              placeholder="(44) 99999-0000"
+              dica={`Hoje: ${
+                f.donos.find((d) => d.email === donoZap)?.telefone
+                  ? formatarTelefone(f.donos.find((d) => d.email === donoZap)!.telefone!)
+                  : 'sem número'
+              }. É o número dos avisos da conta e do "Chamar no WhatsApp".`}
+              value={novoZap}
+              onChange={(e) => setNovoZap(mascararTelefone(e.target.value))}
+            />
+            <CampoMotivo id="motivo-zap" valor={motivoZap} onMudar={setMotivoZap} />
           </Acao>
         )}
 

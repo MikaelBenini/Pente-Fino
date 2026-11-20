@@ -1,5 +1,6 @@
 // Importação da planilha (CSV): leitura, modelos e conversão linha a linha.
 import { z } from 'zod';
+import { telefoneCanonico } from './whatsapp.js';
 import { lerMoeda } from './formatacao.js';
 
 export const TIPOS_IMPORTACAO = ['clientes', 'servicos', 'precos', 'profissionais'] as const;
@@ -121,7 +122,7 @@ export function lerData(texto: string): string | null {
 const telefone = (t: string) => {
   const d = t.replace(/\D/g, '');
   if (!d) return null;
-  const c = d.length === 10 || d.length === 11 ? `55${d}` : d;
+  const c = telefoneCanonico(d);
   return /^\d{12,13}$/.test(c) ? c : undefined;
 };
 

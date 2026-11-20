@@ -21,6 +21,7 @@ import {
   mascararTelefone,
   NOME_PLANO,
   PLANOS,
+  TEXTO_MOTIVO_RECUSA,
 } from '@pente-fino/shared';
 import { Abas, Botao, Campo, CampoTexto, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -611,6 +612,10 @@ function SaudeWhatsappERotinas({ d }: { d: SaudeDoSistema }) {
               <li key={i} className="flex justify-between gap-3 border-b border-borda py-1">
                 <span>
                   {w.rota === 'asaas' ? 'Asaas' : 'WhatsApp'} · {w.ip ?? 'IP desconhecido'}
+                  {w.evento && ` · ${w.evento}`}
+                  {w.motivo && (
+                    <span className="block text-tinta-suave">{TEXTO_MOTIVO_RECUSA[w.motivo]}</span>
+                  )}
                 </span>
                 <span className="tabular-nums text-tinta-suave">{formatarDataHora(w.quando)}</span>
               </li>

@@ -1,5 +1,6 @@
 // Administração do sistema (Etapa 15.1): quem opera o Pente Fino, fora das contas.
 import { PASSOS_INICIAIS } from './ajuda.js';
+import { telefoneCanonico } from './whatsapp.js';
 import { documentoValido } from './assinatura.js';
 import { z } from 'zod';
 import type { EtapaFunil } from './funil.js';
@@ -163,6 +164,17 @@ export type MudarTesteContaEntrada = z.infer<typeof mudarTesteContaSchema>;
 /** Marcar a conta como interna (ou desmarcar), com motivo na auditoria (admin R5). */
 export const contaInternaSchema = z.object({ interna: z.boolean(), motivo });
 export type ContaInternaEntrada = z.infer<typeof contaInternaSchema>;
+
+/** Trocar o WhatsApp do dono pela administração (pedido do dono em 20/11/2026). */
+export const whatsappDonoSchema = z.object({
+  email: z.email({ error: 'Escolha o dono.' }),
+  telefone: z
+    .string()
+    .transform((t) => telefoneCanonico(t))
+    .pipe(z.string().regex(/^\d{12,13}$/, { error: 'Informe o WhatsApp com DDD.' })),
+  motivo,
+});
+export type WhatsappDonoEntrada = z.infer<typeof whatsappDonoSchema>;
 
 export const FORMAS_PAGAMENTO_MANUAL = [
   'pix',

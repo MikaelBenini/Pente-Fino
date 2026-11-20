@@ -1,5 +1,6 @@
 // Esquemas de entrada da operação (Etapa 6B): clientes, agenda, comanda e caixa.
 import { z } from 'zod';
+import { telefoneCanonico } from './whatsapp.js';
 import type { StatusComanda } from './comanda.js';
 
 const uuid = (rotulo: string) => z.uuid({ error: `${rotulo} inválido.` });
@@ -10,7 +11,7 @@ const centavos = z.number({ error: 'Informe o valor.' }).int().min(0).max(100_00
 const telefone = z
   .string()
   .transform((t) => t.replace(/\D/g, ''))
-  .transform((d) => (d === '' ? null : d.length === 10 || d.length === 11 ? `55${d}` : d))
+  .transform((d) => (d === '' ? null : telefoneCanonico(d)))
   .pipe(
     z
       .string()

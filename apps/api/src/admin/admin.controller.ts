@@ -20,6 +20,7 @@ import {
   mudarPlanoContaSchema,
   acaoContaSchema,
   contaInternaSchema,
+  whatsappDonoSchema,
   mudarTesteContaSchema,
   registrarPagamentoSchema,
   notaInternaSchema,
@@ -37,6 +38,7 @@ import {
   type MudarPlanoContaEntrada,
   type AcaoContaEntrada,
   type ContaInternaEntrada,
+  type WhatsappDonoEntrada,
   type MudarTesteContaEntrada,
   type RegistrarPagamentoEntrada,
   metricasDaPlataforma,
@@ -360,6 +362,19 @@ export class AdminController {
     @IpDaRequisicao() ip: string | null,
   ): Promise<void> {
     return this.contasServico.marcarInterna(id, d, a, ip);
+  }
+
+  @Put('contas/:id/whatsapp-dono')
+  @PapeisPlataforma('admin')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Trocar o WhatsApp do dono da conta (motivo obrigatório)' })
+  mudarWhatsappDono(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(whatsappDonoSchema) d: WhatsappDonoEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ): Promise<void> {
+    return this.contasServico.mudarWhatsappDono(id, d, a, ip);
   }
 
   @Post('contas/:id/pagamentos')

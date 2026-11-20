@@ -20,11 +20,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const site = await sitePublico(slug);
   if (!site) return { title: 'Página não encontrada', robots: { index: false, follow: false } };
   const banner = site.site.paginas.inicio.find((b) => b.tipo === 'banner' && b.visivel);
+  // Prévia do link escolhida pela barbearia (20/11/2026); sem ela, o nome e o texto do banner.
   const titulo =
-    site.unidade.toLowerCase() !== site.barbearia.toLowerCase()
+    site.previa?.titulo ??
+    (site.unidade.toLowerCase() !== site.barbearia.toLowerCase()
       ? `${site.barbearia} · ${site.unidade}`
-      : site.barbearia;
-  const descricao = (banner?.texto || site.site.slogan || site.barbearia).slice(0, 155);
+      : site.barbearia);
+  const descricao =
+    site.previa?.descricao ?? (banner?.texto || site.site.slogan || site.barbearia).slice(0, 155);
   return {
     title: { absolute: titulo },
     description: descricao,

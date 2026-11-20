@@ -25,6 +25,13 @@ import {
   type LinkSite,
   type RodapeSite,
   caminhoDoAgendamento,
+  urlDaFoto,
+  DISPOSICOES_FOTO,
+  ESTILOS_GALERIA,
+  PALETAS_PRONTAS,
+  problemasDeContraste,
+  type DisposicaoFoto,
+  type EstiloGaleria,
   caminhoDoSite,
   enderecoSiteSchema,
   CORES_SITE,
@@ -57,6 +64,7 @@ import { useSearchParams } from 'next/navigation';
 import { createContext, useContext, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { renovarSite } from '@/app/(app)/pagina/acoes';
 import { api, ErroApi } from '@/lib/api';
+import { useConta } from '@/lib/consultas';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado } from '../pagina';
@@ -76,7 +84,7 @@ const EXPLICACAO: Partial<Record<TipoBloco, string>> = {
   tabela: 'Lista os serviços com preço desta unidade, por categoria. O preço vem de Serviços.',
   barbeiros: 'Cada barbeiro ativo da unidade, com a especialidade e a apresentação abaixo.',
   contato:
-    'Endereço e telefone vêm de Configurações, em Unidades; o horário, do expediente da equipe; o Instagram, da aba Tema.',
+    'Endereço e telefone vêm de Configurações, em Unidades; o horário, do expediente da equipe; o Instagram e as redes, de Cabeçalho e rodapé.',
 };
 
 type Secao = 'site' | 'agendamento' | 'enderecos';
@@ -364,7 +372,7 @@ function Editor({
             lugar de &ldquo;Agendar horário&rdquo; aparece &ldquo;Falar no WhatsApp&rdquo;. Para o
             cliente marcar pelo site, ligue o link em{' '}
             <Link href="/configuracoes?aba=link" className="font-semibold underline">
-              Configurações, Link de agendamento
+              Configurações, Link e agendamento
             </Link>
             .
           </Aviso>
@@ -552,6 +560,78 @@ function Editor({
   );
 }
 
+/**
+ * Recorte da foto (pedido do dono em 20/11/2026): o ponto que fica sempre à vista, no computador
+ * e no celular. Tocar na miniatura escolhe o ponto; os controles deslizantes servem ao teclado.
+ */
+function RecorteDaFoto({
+  id,
+  foto,
+  foco,
+  onMudar,
+}: {
+  id: string;
+  foto: string;
+  foco: { x: number; y: number };
+  onMudar: (f: { x: number; y: number }) => void;
+}) {
+  const escolher = (e: MouseEvent<HTMLButtonElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    onMudar({
+      x: Math.round(Math.min(100, Math.max(0, ((e.clientX - r.left) / r.width) * 100))),
+      y: Math.round(Math.min(100, Math.max(0, ((e.clientY - r.top) / r.height) * 100))),
+    });
+  };
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-sm font-medium">Recorte da foto</legend>
+      <p className="text-sm text-tinta-suave">
+        Toque no ponto da foto que deve ficar sempre à vista (o rosto, o corte, a fachada).
+      </p>
+      <button
+        type="button"
+        onClick={escolher}
+        aria-label="Escolher o ponto da foto"
+        className="relative w-full max-w-xs overflow-hidden rounded-md border border-borda"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={urlDaFoto(foto, 640)} alt="" className="block w-full" />
+        <span
+          aria-hidden
+          className="absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-black/40 shadow"
+          style={{ left: `${foco.x}%`, top: `${foco.y}%` }}
+        />
+      </button>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-x`}>
+          Para os lados: {foco.x}%
+          <input
+            id={`${id}-x`}
+            type="range"
+            min={0}
+            max={100}
+            value={foco.x}
+            onChange={(e) => onMudar({ ...foco, x: Number(e.target.value) })}
+            className="accent-[var(--color-acao)]"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm" htmlFor={`${id}-y`}>
+          Para cima e para baixo: {foco.y}%
+          <input
+            id={`${id}-y`}
+            type="range"
+            min={0}
+            max={100}
+            value={foco.y}
+            onChange={(e) => onMudar({ ...foco, y: Number(e.target.value) })}
+            className="accent-[var(--color-acao)]"
+          />
+        </label>
+      </div>
+    </fieldset>
+  );
+}
+
 function ListaDeBlocos({
   site,
   pagina,
@@ -661,8 +741,10 @@ function ItemBloco({
     titulo?: boolean;
     texto?: boolean;
     foto?: boolean;
-    itens?: { titulo: string; texto: string; foto?: boolean };
+    itens?: { titulo: string; texto: string; foto?: boolean; botao?: boolean };
+    maxItens?: number;
   };
+  const maxItens = def.maxItens ?? 12;
   const idPainel = `bloco-${bloco.id}`;
   const itens = bloco.itens ?? [];
   const icone =
@@ -738,6 +820,40 @@ function ItemBloco({
               onMudar={comFoto((foto) => onEditar({ foto }))}
             />
           )}
+          {/* Posição e recorte da foto do banner (pedido do dono em 20/11/2026). */}
+          {bloco.tipo === 'banner' && bloco.foto && (
+            <>
+              <Selecao
+                id={`${idPainel}-disposicao`}
+                rotulo="Onde fica a foto"
+                dica="No celular, a foto ao lado vai para cima do texto."
+                value={bloco.disposicao ?? 'fundo'}
+                onChange={(e) => onEditar({ disposicao: e.target.value as DisposicaoFoto })}
+                opcoes={(Object.keys(DISPOSICOES_FOTO) as DisposicaoFoto[]).map((d) => ({
+                  valor: d,
+                  rotulo: DISPOSICOES_FOTO[d],
+                }))}
+              />
+              <RecorteDaFoto
+                id={`${idPainel}-foco`}
+                foto={bloco.foto}
+                foco={bloco.foco ?? { x: 50, y: 50 }}
+                onMudar={(foco) => onEditar({ foco })}
+              />
+            </>
+          )}
+          {bloco.tipo === 'galeria' && (
+            <Selecao
+              id={`${idPainel}-estilo`}
+              rotulo="Como mostrar as fotos"
+              value={bloco.estilo ?? 'grade'}
+              onChange={(e) => onEditar({ estilo: e.target.value as EstiloGaleria })}
+              opcoes={(Object.keys(ESTILOS_GALERIA) as EstiloGaleria[]).map((e) => ({
+                valor: e,
+                rotulo: ESTILOS_GALERIA[e],
+              }))}
+            />
+          )}
           {def.titulo && (
             <Campo
               id={`${idPainel}-titulo`}
@@ -801,6 +917,39 @@ function ItemBloco({
                       }
                     />
                   )}
+                  {def.itens!.botao && (
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
+                      <Campo
+                        id={`${idPainel}-item-${i}-botao`}
+                        rotulo="Texto do botão (opcional)"
+                        placeholder="Agendar"
+                        value={it.botao ?? ''}
+                        maxLength={30}
+                        onChange={(e) =>
+                          onEditar({
+                            itens: itens.map((x, j) =>
+                              j === i ? { ...x, botao: e.target.value } : x,
+                            ),
+                          })
+                        }
+                      />
+                      <Campo
+                        id={`${idPainel}-item-${i}-link`}
+                        rotulo="Endereço do botão"
+                        placeholder="https://..."
+                        inputMode="url"
+                        value={it.link ?? ''}
+                        maxLength={500}
+                        onChange={(e) =>
+                          onEditar({
+                            itens: itens.map((x, j) =>
+                              j === i ? { ...x, link: e.target.value } : x,
+                            ),
+                          })
+                        }
+                      />
+                    </div>
+                  )}
                   <Botao
                     variante="fantasma"
                     className="self-start"
@@ -810,7 +959,7 @@ function ItemBloco({
                   </Botao>
                 </div>
               ))}
-              {itens.length < 12 && (
+              {itens.length < maxItens && (
                 <Botao
                   variante="secundario"
                   className="self-start"
@@ -871,6 +1020,101 @@ function ItemBloco({
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * Cores próprias e paletas prontas (pedido do dono em 20/11/2026: "para chegar à paleta exata
+ * da referência, precisei usar CSS"). A combinação só vale se tudo continua legível.
+ */
+function CoresProprias({
+  site,
+  onMudar,
+}: {
+  site: SiteBarbearia;
+  onMudar: (s: SiteBarbearia) => void;
+}) {
+  const cores = site.coresProprias ?? {};
+  const problemas = site.coresProprias
+    ? problemasDeContraste(site.tema, site.coresProprias, CORES_SITE[site.cor].hex)
+    : [];
+  const mudar = (campo: 'destaque' | 'escuro' | 'papel', valor: string | undefined) => {
+    const novo = { ...cores, [campo]: valor?.toUpperCase() };
+    if (!valor) delete novo[campo];
+    onMudar({ ...site, coresProprias: Object.keys(novo).length ? novo : undefined });
+  };
+  const CAMPOS = [
+    ['destaque', 'Destaque (botões)', CORES_SITE[site.cor].hex],
+    ['escuro', 'Escura (cabeçalho e faixas)', PALETAS_SITE[site.tema].escuro],
+    ['papel', 'Fundo da página', PALETAS_SITE[site.tema].papel],
+  ] as const;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-borda p-3">
+      <legend className="px-1 text-sm font-medium">Paleta própria (sem CSS)</legend>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Paletas prontas">
+        {PALETAS_PRONTAS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onMudar({ ...site, coresProprias: { ...p.cores } })}
+            aria-pressed={
+              cores.destaque === p.cores.destaque &&
+              cores.escuro === p.cores.escuro &&
+              cores.papel === p.cores.papel
+            }
+            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-borda px-3 text-sm hover:bg-superficie-2 aria-pressed:border-tinta"
+          >
+            <span
+              aria-hidden
+              className="flex h-5 w-9 overflow-hidden rounded-sm border border-borda"
+            >
+              <span className="w-1/3" style={{ background: p.cores.escuro }} />
+              <span className="w-1/3" style={{ background: p.cores.papel }} />
+              <span className="w-1/3" style={{ background: p.cores.destaque }} />
+            </span>
+            {p.nome}
+          </button>
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {CAMPOS.map(([campo, rotulo, padrao]) => (
+          <label key={campo} className="flex flex-col gap-1 text-sm" htmlFor={`cor-${campo}`}>
+            {rotulo}
+            <span className="flex items-center gap-2">
+              <input
+                id={`cor-${campo}`}
+                type="color"
+                value={(cores[campo] ?? padrao).toLowerCase()}
+                onChange={(e) => mudar(campo, e.target.value)}
+                className="h-11 w-14 cursor-pointer rounded-md border border-borda bg-superficie p-1"
+              />
+              <span className="font-denso tabular-nums text-tinta-suave">
+                {cores[campo] ?? 'do tema'}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+      {problemas.length > 0 && (
+        <Aviso tom="aviso">
+          <p className="font-semibold">Essa combinação não vai ser salva:</p>
+          <ul className="list-disc pl-5">
+            {problemas.map((m) => (
+              <li key={m}>{m}</li>
+            ))}
+          </ul>
+        </Aviso>
+      )}
+      {site.coresProprias && (
+        <Botao
+          variante="fantasma"
+          className="self-start"
+          onClick={() => onMudar({ ...site, coresProprias: undefined })}
+        >
+          Voltar às cores do tema
+        </Botao>
+      )}
+    </fieldset>
   );
 }
 
@@ -944,6 +1188,7 @@ function Tema({ site, onMudar }: { site: SiteBarbearia; onMudar: (s: SiteBarbear
           ))}
         </div>
       </fieldset>
+      <CoresProprias site={site} onMudar={onMudar} />
       <Selecao
         id="tema-fonte"
         rotulo="Fonte dos títulos"
@@ -970,14 +1215,6 @@ function Tema({ site, onMudar }: { site: SiteBarbearia; onMudar: (s: SiteBarbear
         value={site.slogan}
         maxLength={160}
         onChange={(e) => onMudar({ ...site, slogan: e.target.value })}
-      />
-      <Campo
-        id="tema-instagram"
-        rotulo="Instagram"
-        dica="Só o usuário, com ou sem @. Aparece no Contato e no rodapé."
-        value={site.instagram}
-        maxLength={31}
-        onChange={(e) => onMudar({ ...site, instagram: e.target.value.replace(/^@/, '') })}
       />
       <details className="rounded-md border border-borda p-3">
         <summary className="min-h-11 cursor-pointer content-center font-medium">
@@ -1111,7 +1348,7 @@ function Enderecos({
             <p className="text-sm text-tinta-suave">
               É para onde vão os botões &ldquo;Agendar&rdquo; do site. Para trocar, vá em{' '}
               <Link href="/configuracoes?aba=link" className="font-semibold underline">
-                Configurações, Link de agendamento
+                Configurações, Link e agendamento
               </Link>
               ; o site não muda.
             </p>
@@ -1127,7 +1364,7 @@ function Enderecos({
           <p className="text-sm text-tinta-suave">
             Ainda sem link. Crie em{' '}
             <Link href="/configuracoes?aba=link" className="font-semibold underline">
-              Configurações, Link de agendamento
+              Configurações, Link e agendamento
             </Link>
             .
           </p>
@@ -1531,6 +1768,17 @@ function CabecalhoERodape({
           maxLength={400}
           onChange={(e) => mudarR({ texto: e.target.value })}
         />
+        {/* Instagram junto das outras redes (pedido do dono em 20/11/2026: "aonde insiro o
+            Instagram?" — ficava escondido na aba Tema). */}
+        <Campo
+          id="rod-instagram"
+          rotulo="Instagram da barbearia"
+          dica="Só o usuário, com ou sem @. Aparece no Contato e no rodapé."
+          placeholder="@suabarbearia"
+          value={site.instagram}
+          maxLength={31}
+          onChange={(e) => onMudar({ ...site, instagram: e.target.value.replace(/^@/, '') })}
+        />
         <Campo
           id="rod-facebook"
           rotulo="Facebook (endereço)"
@@ -1582,6 +1830,114 @@ function CabecalhoERodape({
  * Lote 7l: a página de agendamento (/b/<link>) com a cara da barbearia. Separada do site: salva e
  * já vale, sem "Publicar".
  */
+/**
+ * Prévia do link (pedido do dono em 20/11/2026): o cliente monta como o link aparece quando é
+ * enviado no WhatsApp, no Instagram e no Facebook, com o logotipo e o nome dele. A simulação ao
+ * lado mostra o cartão do WhatsApp; a imagem de verdade é gerada no servidor com os mesmos dados.
+ */
+function PreviaDoLinkEditor({
+  v,
+  slug,
+  onMudar,
+}: {
+  v: VisualAgendamento;
+  slug: string | null;
+  onMudar: (m: Partial<VisualAgendamento>) => void;
+}) {
+  const nomeConta = useConta().data?.nome ?? 'Sua barbearia';
+  const p = v.previa ?? { titulo: '', descricao: '', fundo: 'cor' as const };
+  const mudarP = (m: Partial<typeof p>) => onMudar({ previa: { ...p, ...m } });
+  const titulo = p.titulo.trim() || nomeConta;
+  const descricao =
+    p.descricao.trim() || 'Escolha o serviço, o barbeiro e o horário. Agende online.';
+  const cor = CORES_SITE[v.cor].hex;
+  const fundo = p.fundo === 'capa' && v.capa ? urlDaFoto(v.capa, 640) : null;
+  return (
+    <fieldset className="flex flex-col gap-3 rounded-md border border-borda p-3">
+      <legend className="px-1 text-sm font-medium">Prévia do link nas redes</legend>
+      <p className="text-sm text-tinta-suave">
+        Como o link aparece quando é enviado no WhatsApp, no Instagram e no Facebook. Vale para o
+        link de agendamento e para o site. Os aplicativos guardam a prévia por alguns dias: depois
+        de mudar, um link enviado antes pode demorar para atualizar.
+      </p>
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="flex min-w-0 flex-[1_1_16rem] flex-col gap-3">
+          <Campo
+            id="previa-titulo"
+            rotulo="Título"
+            placeholder={nomeConta}
+            value={p.titulo}
+            maxLength={70}
+            onChange={(e) => mudarP({ titulo: e.target.value })}
+          />
+          <CampoTexto
+            id="previa-descricao"
+            rotulo="Texto"
+            placeholder="Corte e barba com hora marcada. Agende online."
+            rows={2}
+            value={p.descricao}
+            maxLength={160}
+            onChange={(e) => mudarP({ descricao: e.target.value })}
+          />
+          <Selecao
+            id="previa-fundo"
+            rotulo="Fundo da imagem"
+            value={p.fundo === 'capa' && v.capa ? 'capa' : 'cor'}
+            onChange={(e) => mudarP({ fundo: e.target.value as 'cor' | 'capa' })}
+            opcoes={[
+              { valor: 'cor', rotulo: 'Escuro, com a cor da barbearia' },
+              ...(v.capa ? [{ valor: 'capa', rotulo: 'A foto de capa' }] : []),
+            ]}
+          />
+          {!v.logo && (
+            <p className="text-sm text-tinta-suave">
+              Sem logotipo, a prévia mostra só o nome. Envie o logotipo acima.
+            </p>
+          )}
+        </div>
+        <figure
+          aria-label="Simulação da prévia no WhatsApp"
+          className="w-full max-w-xs overflow-hidden rounded-lg border border-borda bg-[#1f2c33] text-[#e9edef]"
+        >
+          <div
+            className="relative flex aspect-[1200/630] items-center gap-3 overflow-hidden bg-[#0b0b0b] p-4"
+            style={{ borderLeft: `6px solid ${cor}` }}
+          >
+            {fundo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={fundo}
+                alt=""
+                className="absolute inset-0 size-full object-cover opacity-45"
+              />
+            )}
+            {v.logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={urlDaFoto(v.logo, 640)}
+                alt=""
+                className="relative size-14 shrink-0 rounded-md bg-white object-contain"
+              />
+            )}
+            <span className="relative line-clamp-2 text-lg leading-tight font-extrabold">
+              {titulo}
+            </span>
+          </div>
+          <figcaption className="flex flex-col gap-0.5 p-3 text-sm">
+            <span className="line-clamp-1 font-semibold">{titulo}</span>
+            <span className="line-clamp-2 text-[#aebac1]">{descricao}</span>
+            <span className="text-xs text-[#8696a0]">
+              {slug && typeof window !== 'undefined'
+                ? `${window.location.host}${caminhoDoAgendamento(slug)}`
+                : 'seu link'}
+            </span>
+          </figcaption>
+        </figure>
+      </div>
+    </fieldset>
+  );
+}
+
 function VisualDoAgendamento({ unidadeId, slug }: { unidadeId: string; slug: string | null }) {
   const consulta = useQuery({
     queryKey: ['unidades', unidadeId, 'agendamento-visual'],
@@ -1721,12 +2077,6 @@ function FormVisual({
             </div>
           </fieldset>
           <CampoFoto
-            rotulo="Logotipo"
-            unidadeId={unidadeId}
-            valor={v.logo}
-            onMudar={(f) => mudar({ logo: f?.id })}
-          />
-          <CampoFoto
             rotulo="Foto de capa"
             unidadeId={unidadeId}
             valor={v.capa}
@@ -1785,6 +2135,15 @@ function FormVisual({
           />
         </>
       )}
+      {/* O logotipo vale para a página e para a prévia do link, mesmo com o visual desligado. */}
+      <CampoFoto
+        rotulo="Logotipo"
+        unidadeId={unidadeId}
+        valor={v.logo}
+        dica="Aparece na página de agendamento (com o visual ligado) e na prévia do link."
+        onMudar={(f) => mudar({ logo: f?.id })}
+      />
+      <PreviaDoLinkEditor v={v} slug={slug} onMudar={mudar} />
       {erro && <Aviso tom="erro">{erro}</Aviso>}
       <div className="flex flex-wrap items-center gap-2">
         <Botao onClick={salvar} carregando={estado === 'salvando'} disabled={estado === 'salvo'}>

@@ -61,9 +61,16 @@ export class WebhookAsaasController {
     @Ip() ip: string | undefined,
   ): Promise<{ ok: true; resultado: string }> {
     await this.recusas.conferirIp(ip);
-    const esperado = this.config.cobranca.webhookToken;
-    if (!esperado || !token || !iguais(token, esperado)) {
-      await this.recusas.registrar('asaas', ip);
+    // Espaço ou quebra de linha sobrando no .env ou no painel do Asaas não conta.
+    const esperado = this.config.cobranca.webhookToken?.trim() ?? '';
+    const recebido = token?.trim() ?? '';
+    if (!esperado || !recebido || !iguais(recebido, esperado)) {
+      // O motivo e o evento vão para a Saúde do sistema (20/11/2026): o "Webhook para chaves de
+      // API" do Asaas, sem token, era recusado e parecia problema da chave.
+      await this.recusas.registrar('asaas', ip, {
+        motivo: !esperado ? 'sem_configuracao' : !recebido ? 'sem_token' : 'token_diferente',
+        evento: typeof corpo?.event === 'string' ? corpo.event : null,
+      });
       throw Erros.naoAutenticado('Token do webhook inválido.');
     }
     const r = await this.aplicar(corpo);
@@ -89,6 +96,15 @@ export class WebhookAsaasController {
         this.log.error(`Falhou ao aplicar ${corpo.event} (${notaId}): ${(e as Error).message}`);
         return { ok: true, resultado: 'erro' };
       }
+    }
+    // Avisos da chave de API (ACCESS_TOKEN_CREATED, _DELETED, _DISABLED, _EXPIRED...): não mexem em
+    // cobrança. Ficam no log e no "último aviso" da Saúde; chave apagada ou desativada para a API.
+    if (corpo?.event?.startsWith('ACCESS_TOKEN_')) {
+      if (/DELETED|DISABLED|EXPIRED|EXPIRING/.test(corpo.event))
+        this.log.warn(
+          `Asaas avisou ${corpo.event}: confira se a ASAAS_API_KEY do servidor ainda vale.`,
+        );
+      return { ok: true, resultado: 'chave_api' };
     }
     const pagamentoId = typeof corpo?.payment?.id === 'string' ? corpo.payment.id : null;
     if (!corpo?.event || !pagamentoId) return { ok: true, resultado: 'ignorado' };

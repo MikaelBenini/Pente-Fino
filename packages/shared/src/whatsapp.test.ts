@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   INTERVALO_MINIMO_ENVIO_MS,
+  linkWaMe,
+  telefoneCanonico,
+  numeroWhatsappDaUnidade,
   LIMITE_ENVIOS_POR_MINUTO,
   proximoEnvio,
   telefoneDoJid,
@@ -72,5 +75,37 @@ describe('proximoEnvio', () => {
   it('aleatório fora de 0..1 é contido', () => {
     expect(proximoEnvio(null, agora, 7)).toBe(agora + VARIACAO_ENVIO_MS);
     expect(proximoEnvio(null, agora, -1)).toBe(agora);
+  });
+});
+
+describe('WhatsApp da unidade (testes de 19/11/2026)', () => {
+  it('bot conectado vale; sem ele, o telefone da unidade', () => {
+    const telefone = '44999764653';
+    expect(
+      numeroWhatsappDaUnidade({
+        conexao: { status: 'conectado', numero: '5545913202650' },
+        telefone,
+      }),
+    ).toBe('5545913202650');
+    expect(
+      numeroWhatsappDaUnidade({
+        conexao: { status: 'desconectado', numero: '5545913202650' },
+        telefone,
+      }),
+    ).toBe('5544999764653');
+    expect(numeroWhatsappDaUnidade({ conexao: null, telefone: null })).toBeNull();
+  });
+  it('link com a mensagem', () => {
+    expect(linkWaMe('5544999764653', 'Olá!')).toBe('https://wa.me/5544999764653?text=Ol%C3%A1!');
+    expect(linkWaMe(null)).toBeNull();
+  });
+});
+
+describe('telefone do cliente com ou sem o nono dígito (20/11/2026)', () => {
+  it('celular vira a forma com o 9; fixo fica como está', () => {
+    expect(telefoneCanonico('(44) 9976-4653')).toBe('5544999764653');
+    expect(telefoneCanonico('(44) 99976-4653')).toBe('5544999764653');
+    expect(telefoneCanonico('554499764653')).toBe('5544999764653');
+    expect(telefoneCanonico('(44) 3222-1111')).toBe('554432221111');
   });
 });

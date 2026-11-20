@@ -7,6 +7,31 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (testes de 19/11 no WhatsApp)
+
+- **O bot volta a atender de verdade depois de "Devolver ao bot":** o cliente manda AGENDAR, escolhe o serviço e o horário até o fim, mesmo que mande logo depois da devolução ou depois de a mensagem de encerramento chegar. A causa era a trava contra loop, que contava as respostas de antes da devolução e, num teste longo, pausava a conversa sem avisar. Agora ela só pega loop de verdade (muitas mensagens dos dois lados em 2 minutos) e conta a partir da devolução.
+- **Os botões de WhatsApp levam todos ao mesmo número:** "Prefere marcar pelo WhatsApp?", "Confirmar pelo WhatsApp" depois de reservar, "Falar com a barbearia" na gestão da reserva (inclusive depois de cancelar) e o WhatsApp do site usam o número conectado ao bot da unidade da reserva; sem bot conectado, o telefone da unidade.
+- **Conversas diz por que o bot parou:** "Aguardando atendente · bot pausado", "Em atendimento humano · bot pausado" ou "Bot respondendo", com o motivo ("O cliente pediu atendente", "Assumiu pelo painel", "A equipe respondeu pelo WhatsApp do celular", "Trava contra loop"...). "Histórico do estado" mostra cada mudança com horário, de onde para onde, a origem e quem fez. Depois de "Devolver ao bot", a tela mostra o estado que ficou gravado.
+- **O cliente sabe que o bot pausou:** ao pedir atendente, recebe o aviso de que as respostas automáticas ficam pausadas e de que pode mandar MENU para voltar antes de alguém responder. Já em atendimento com a equipe, MENU não tira a conversa dela.
+- **Mapa na cidade certa:** a unidade ganhou Cidade, UF e "Link do Google Maps". O link que o bot, a página de agendamento e o site mandam leva o endereço completo (ou o link escolhido), e o cadastro avisa quando faltam dados.
+- **Nada automático de madrugada:** lembretes, pesquisa, avisos e o "ninguém respondeu" não saem entre 22h e 7h. O lembrete que cairia de madrugada sai às 21h59 da véspera; a pesquisa de quem fechou à noite vai às 9h; o que perderia o sentido até a manhã é descartado. Resposta a quem acabou de escrever sai na hora.
+
+### Corrigido (cadastro, Asaas e backup)
+
+- **Um telefone, um cliente:** o mesmo celular com ou sem o nono dígito não vira mais dois cadastros (balcão, site, bot, lista de espera, clube e planilha). Os cadastros que já existiam passam para a forma com o 9; os pares repetidos que já existem ficam para a recepção juntar.
+- **Webhook do Asaas:** a Saúde do sistema mostra por que cada aviso foi recusado (sem token, token diferente, servidor sem token) e qual evento era. Os avisos da chave de API (o "Webhook para chaves de API" do Asaas) são aceitos quando chegam com o token.
+- **Backup diário mais garantido:** o agendamento é reposto em todo deploy, mesmo quando a atualização falha, e o vigia de 5 minutos roda o backup se não houver um das últimas 26 horas. Novo `infra/diagnostico-backup.sh` mostra na VPS o que impede o backup automático.
+
+### Adicionado (painel e Minha página)
+
+- **Procurar acha opções e ajuda:** além de telas, clientes e comandas, a busca (Ctrl+K) acha opções dentro das telas (Instagram, cidade da unidade, feriados, lembretes, domínio, QR Code...) e artigos da Ajuda.
+- **"Link e agendamento" numa aba só** em Configurações: o link de cada unidade, como a página aparece e as regras do agendamento.
+- **Instagram junto das outras redes,** em Minha página → Cabeçalho e rodapé.
+- **Prévia do link nas redes:** em Minha página → Página de agendamento, a barbearia escolhe o título, o texto e o fundo (cor ou foto de capa) do cartão que aparece quando o link é enviado no WhatsApp, no Instagram e no Facebook, com o logotipo dela. Vale para o link de agendamento e para o site, com simulação na tela.
+- **Administração troca o WhatsApp do dono** na ficha da conta, com motivo e auditoria.
+- **Minha página sem CSS:** banner com a foto atrás, à direita ou à esquerda do texto, e o recorte (o ponto que fica sempre à vista); galeria em cartões numerados rolando para o lado; bloco "Colunas" (foto, título, texto e botão, até 4); paleta própria (destaque, cor escura e fundo) com 6 paletas prontas, salva só se tudo continuar legível.
+- **Caixas de marcação com o visual do sistema** em todas as telas.
+
 ### Corrigido (respostas que o bot dava e não devia)
 
 - **Reação (👍), mensagem apagada ou editada** não são mais tratadas como mensagem do cliente: o bot não responde nada (antes, "Não entendi" com as opções).
@@ -21,7 +46,7 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - **A frase pronta vem vazia** (antes, "Olá! Quero saber mais.", que é também a frase do botão do WhatsApp no Instagram e no Facebook) e, quando usada, só vale para número que nunca escreveu para a barbearia, com a frase inteira (3 palavras ou mais). Frase curta salva antes sai sozinha; o resto da configuração continua.
 - **Uma vez por número:** quem passou pelo fluxo do anúncio não recebe de novo por 30 dias.
 - **O bot não responde número conectado ao sistema:** se o número de uma unidade (sua ou de outra barbearia que usa o sistema) escreve para outra, a mensagem fica em Conversas e o bot não responde, para os dois bots não ficarem se respondendo. Nada automático (lembrete, automação) sai para esses números; a resposta escrita pela equipe continua saindo.
-- **Trava contra conversa em loop:** com 30 respostas do bot para o mesmo número em 10 minutos (sinal de outro robô do outro lado), o bot para e a conversa vai para a fila da equipe em Conversas.
+- **Trava contra conversa em loop:** muitas mensagens dos dois lados em poucos minutos (sinal de outro robô do outro lado) param o bot, e a conversa vai para a fila da equipe em Conversas (refeita nos testes de 19/11, acima).
 
 ### Corrigido (aviso na unidade certa e reserva com o serviço escolhido)
 

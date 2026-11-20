@@ -93,9 +93,16 @@ test('recepção assume uma conversa do bot e devolve; avisos ligam e desligam n
   await page.getByRole('region', { name: 'Recentes' }).getByRole('button').first().click();
   const conversa = page.getByRole('region', { name: /^Conversa com / });
   await conversa.getByRole('button', { name: 'Assumir conversa' }).click();
-  await expect(conversa.getByText('Com a equipe')).toBeVisible();
+  // Estado claro, com o motivo e o histórico (testes de 19/11/2026).
+  await expect(conversa.getByText('Em atendimento humano · bot pausado')).toBeVisible();
+  await expect(
+    conversa.getByText(/Por que o bot está pausado:.*Assumiu pelo painel/),
+  ).toBeVisible();
   await conversa.getByRole('button', { name: 'Devolver ao bot' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Devolver ao bot' }).click();
+  await expect(conversa.getByText('Estado gravado agora: Bot respondendo.')).toBeVisible();
+  await conversa.getByText(/^Histórico do estado/).click();
+  await expect(conversa.getByText('Devolveu ao bot pelo painel').first()).toBeVisible();
   // A demonstração não tem WhatsApp conectado: o selo diz a verdade (painel A6).
   await expect(conversa.getByText('Bot parado: WhatsApp desconectado')).toBeVisible();
 });

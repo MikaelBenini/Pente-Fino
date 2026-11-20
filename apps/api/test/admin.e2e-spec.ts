@@ -444,6 +444,45 @@ describe('ações da administração numa conta', () => {
     }
   });
 
+  // Pedido do dono em 20/11/2026: trocar o WhatsApp do dono pela administração.
+  it('troca o WhatsApp do dono, com motivo e auditoria; e-mail que não é dono: 404', async () => {
+    const c = await criarCenario();
+    try {
+      const adm = comoAdmin();
+      const url = `/admin/contas/${c.contaId}`;
+      await adm
+        .put(`${url}/whatsapp-dono`, {
+          email: c.emails.dono,
+          telefone: '(44) 9976-4653',
+          motivo: 'ok',
+        })
+        .expect(400);
+      await adm
+        .put(`${url}/whatsapp-dono`, {
+          email: c.emails.dono,
+          telefone: '(44) 9976-4653',
+          motivo: 'Dono trocou de celular',
+        })
+        .expect(204);
+      const ficha = (await adm.get(url).expect(200)).body as FichaContaPlataforma;
+      // Sem o nono dígito na digitação: grava com ele.
+      expect(ficha.donos.find((d) => d.email === c.emails.dono)?.telefone).toBe('5544999764653');
+      expect(ficha.historico[0]).toMatchObject({
+        acao: 'mudar_whatsapp_dono',
+        motivo: 'Dono trocou de celular',
+      });
+      await adm
+        .put(`${url}/whatsapp-dono`, {
+          email: c.emails.recepcao,
+          telefone: '(44) 99976-4653',
+          motivo: 'Tentativa com a recepção',
+        })
+        .expect(404);
+    } finally {
+      await c.remover();
+    }
+  });
+
   it('conta que não existe: 404; sem sessão: 401', async () => {
     await comoAdmin().get(`/admin/contas/${randomUUID()}`).expect(404);
     await http().put(`/admin/contas/${a.contaId}/plano`).send({}).expect(401);

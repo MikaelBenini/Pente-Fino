@@ -1,6 +1,7 @@
 // Lembretes do horário pelo WhatsApp (Etapa 11): quando mandar e o que dizer.
 import { formatarHora } from './formatacao.js';
 import { textoTolerancia } from './atraso.js';
+import { antecipadoParaForaDoSilencio } from './estado-conversa.js';
 
 /**
  * Primeiro lembrete ("24h", o mais longe do horário: confirma, remarca ou cancela) e segundo
@@ -13,6 +14,8 @@ export type TipoLembrete = (typeof TIPOS_LEMBRETE)[number];
  * Quando cada lembrete deve sair. Só manda o que faz sentido: o de 24 h, se o horário foi
  * marcado com mais de um dia de antecedência; o de 2 h, se foi marcado com mais de 2 h
  * (quem marcou para daqui a pouco não precisa ser lembrado). Momentos já passados ficam de fora.
+ * Lembrete que cairia na madrugada (22h às 7h) sai antes, às 21h59 da véspera (pedido do dono em
+ * 20/11/2026); sem esse tempo, fica de fora.
  */
 export function momentosDosLembretes(
   inicio: Date,
@@ -24,9 +27,10 @@ export function momentosDosLembretes(
   return ordenadas.flatMap((h, i) => {
     const tipo = TIPOS_LEMBRETE[i]!;
     const antes = h * 3_600_000;
-    const quando = new Date(inicio.getTime() - antes);
+    const ideal = new Date(inicio.getTime() - antes);
     const marcadoComFolga = inicio.getTime() - marcadoEm.getTime() > antes;
-    return marcadoComFolga && quando > agora ? [{ tipo, quando }] : [];
+    const quando = antecipadoParaForaDoSilencio(ideal, marcadoEm);
+    return marcadoComFolga && quando && quando > agora ? [{ tipo, quando }] : [];
   });
 }
 

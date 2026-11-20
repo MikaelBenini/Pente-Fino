@@ -22,7 +22,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const u = await unidadePublica(slug);
   if (!u) return { title: 'Agendar horário', robots: { index: false, follow: false } };
-  const { titulo, descricao } = metadadosDaPagina(u);
+  const padrao = metadadosDaPagina(u);
+  // Prévia do link escolhida pela barbearia (20/11/2026); sem ela, o título e o texto de sempre.
+  const titulo = u.previa?.titulo ?? padrao.titulo;
+  const descricao = u.previa?.descricao ?? padrao.descricao;
   const url = linkDeAgendamento(URL_SITE, slug);
   return {
     title: { absolute: titulo },

@@ -1,9 +1,10 @@
 // Esquemas das rotas sem login: cadastro de conta e agendamento pelo link público.
 import { z } from 'zod';
+import { telefoneCanonico } from './whatsapp.js';
 import { origemCadastroSchema } from './origem-cadastro.js';
 import { emailSchema, senhaSchema } from './auth.js';
 import { CICLOS, PLANOS } from './planos.js';
-import type { VisualAgendamentoPublico } from './site-barbearia.js';
+import type { PreviaDoLink, VisualAgendamentoPublico } from './site-barbearia.js';
 
 export const cadastroContaSchema = z.object({
   barbearia: z.string().trim().min(2, { error: 'Informe o nome da barbearia.' }).max(120),
@@ -22,7 +23,7 @@ export const cadastroContaSchema = z.object({
     .string()
     .nullish()
     .transform((t) => (t ?? '').replace(/\D/g, ''))
-    .transform((d) => (d === '' ? null : d.length === 10 || d.length === 11 ? `55${d}` : d))
+    .transform((d) => (d === '' ? null : telefoneCanonico(d)))
     .pipe(
       z
         .string()
@@ -56,7 +57,7 @@ export const agendamentoPublicoSchema = z.object({
   telefone: z
     .string()
     .transform((t) => t.replace(/\D/g, ''))
-    .transform((d) => (d.length === 10 || d.length === 11 ? `55${d}` : d))
+    .transform(telefoneCanonico)
     .pipe(z.string().regex(/^\d{12,13}$/, { error: 'Informe o WhatsApp com DDD.' })),
   servicoIds: z.array(z.uuid()).min(1, { error: 'Escolha um serviço.' }).max(5),
   profissionalId: z.uuid(),
@@ -75,7 +76,13 @@ export interface UnidadePublica {
   nome: string;
   barbearia: string;
   endereco: string | null;
+  /** Link do mapa (o escolhido pela barbearia ou a busca com cidade e UF). */
+  mapa: string | null;
+  /** Prévia do link nas redes: logo, nome e texto escolhidos (20/11/2026). */
+  previa: PreviaDoLink;
   telefone: string | null;
+  /** WhatsApp da unidade para o cliente (o do bot conectado, senão o telefone): só dígitos. */
+  whatsapp: string | null;
   /** Painel P4: a página pode aparecer no Google (JSON-LD e index). */
   aparecerNoGoogle: boolean;
   servicos: {
@@ -206,7 +213,7 @@ export const esperaPublicaSchema = z.object({
   telefone: z
     .string()
     .transform((t) => t.replace(/\D/g, ''))
-    .transform((d) => (d.length === 10 || d.length === 11 ? `55${d}` : d))
+    .transform(telefoneCanonico)
     .pipe(z.string().regex(/^\d{12,13}$/, { error: 'Informe o WhatsApp com DDD.' })),
   servicoIds: z.array(z.uuid()).min(1, { error: 'Escolha um serviço.' }).max(5),
   profissionalId: z.uuid().nullable(),

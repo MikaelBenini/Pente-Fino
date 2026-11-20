@@ -332,6 +332,7 @@ model Conta {
   botMenus             BotMenu[]
   modelosMensagem      ModeloMensagem[]
   botSessoes           BotSessao[]
+  botSessaoEventos     BotSessaoEvento[]
   mensagens            Mensagem[]
   tokenAcessos         TokenAcesso[]
   avaliacoes           Avaliacao[]
@@ -363,6 +364,11 @@ model Unidade {
   contaId              String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
   nome                 String
   endereco             String?
+  /// Cidade e UF (testes de 19/11/2026): o link do mapa leva o endereço completo.
+  cidade               String?
+  uf                   String?
+  /// Link de localização escolhido pela barbearia (Google Maps); vale no lugar da busca.
+  linkMapa             String?   @map("link_mapa")
   telefone             String?
   /// Dias da semana com expediente: 0 = domingo … 6 = sábado.
   diasTrabalho         Int[]     @default([1, 2, 3, 4, 5, 6]) @map("dias_trabalho")
@@ -421,6 +427,7 @@ model Unidade {
   botMenus          BotMenu[]
   modelosMensagem   ModeloMensagem[]
   botSessoes        BotSessao[]
+  botSessaoEventos  BotSessaoEvento[]
   mensagens         Mensagem[]
   avaliacoes        Avaliacao[]
   assistentes       AssistenteEquipe[]
@@ -495,6 +502,7 @@ model Usuario {
   mensalidadesRecebidas PagamentoClube[]
   avisos                Aviso[]
   mensagensEscritas     Mensagem[]          @relation("MensagemAutor")
+  eventosDeConversa     BotSessaoEvento[]   @relation("BotSessaoEventoAutor")
 
   @@index([contaId])
   @@map("usuario")
@@ -1169,14 +1177,38 @@ model BotSessao {
   anuncioTitulo  String?   @map("anuncio_titulo")
   atualizadoEm   DateTime  @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  unidade Unidade  @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
-  cliente Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  conta   Conta             @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade           @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  cliente Cliente?          @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  eventos BotSessaoEvento[]
 
   @@unique([unidadeId, telefone])
   @@index([contaId])
   @@index([unidadeId, atualizadoEm])
   @@map("bot_sessao")
+}
+
+/// Histórico do estado da conversa (testes de 19/11/2026): gravado pelo gatilho bot_sessao_estado
+/// a cada mudança entre bot, aguardando e atendimento, com a origem (app.origem_conversa).
+model BotSessaoEvento {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId   String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId String   @map("unidade_id") @db.Uuid
+  sessaoId  String   @map("sessao_id") @db.Uuid
+  de        String?
+  para      String
+  origem    String
+  autorId   String?  @map("autor_id") @db.Uuid
+  criadoEm  DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta   Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade Unidade   @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  sessao  BotSessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  autor   Usuario?  @relation("BotSessaoEventoAutor", fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([sessaoId, criadoEm])
+  @@index([contaId])
+  @@map("bot_sessao_evento")
 }
 
 /// Mensagens do WhatsApp, recebidas e enviadas. Histórico no perfil do cliente.

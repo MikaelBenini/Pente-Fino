@@ -2,6 +2,7 @@
 // Asaas e a mensalidade cai na conta da barbearia (subconta do Asaas com split automático).
 // O Pente Fino fica com uma taxa ajustável na administração.
 import { z } from 'zod';
+import { telefoneCanonico } from './whatsapp.js';
 import { formatarMoeda } from './formatacao.js';
 
 /** Taxa da plataforma sobre cada mensalidade paga pelo link, em pontos-base (100 = 1%). */
@@ -137,7 +138,7 @@ export const assinarClubeSchema = z.object({
   telefone: z
     .string()
     .transform(digitos)
-    .transform((d) => (d.length === 10 || d.length === 11 ? `55${d}` : d))
+    .transform(telefoneCanonico)
     .pipe(z.string().regex(/^\d{12,13}$/, { error: 'Informe o WhatsApp com DDD.' })),
   cpf: z
     .string()

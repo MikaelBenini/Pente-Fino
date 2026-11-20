@@ -7,6 +7,7 @@ import {
   diasRestantesTeste,
   formatarData,
   formatarTelefone,
+  mapaPodeErrar,
   NOME_PLANO,
   NOMES_DIAS,
   NOMES_DIAS_CURTOS,
@@ -31,6 +32,7 @@ import { useState } from 'react';
 import { AcessoSuporte } from './acesso-suporte';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { chaves, useAcao, useCalendario, useConta, useUnidadesDetalhe } from '@/lib/consultas';
@@ -47,16 +49,15 @@ import { CopiarConfiguracoes } from '../copiar-configuracoes';
 
 export function TelaConfiguracoes() {
   const { papeis } = useApp();
-  // Avisos do painel abrem direto na aba (?aba=assinatura, ?aba=link, ?aba=suporte).
+  // Avisos do painel e a busca abrem direto na aba (?aba=assinatura, ?aba=link, ?aba=unidades...).
+  // "agendamento" (as regras) agora fica junto do link, numa aba só (pedido do dono em 20/11/2026).
   const abaDoLink = useSearchParams().get('aba');
   const ehDono = papeis.includes('dono');
-  const [aba, setAba] = useState(
-    (abaDoLink === 'assinatura' || abaDoLink === 'suporte' || abaDoLink === 'indique') && ehDono
-      ? abaDoLink
-      : abaDoLink === 'link'
-        ? 'link'
-        : 'barbearia',
-  );
+  const [aba, setAba] = useState(() => {
+    const pedida = abaDoLink === 'agendamento' ? 'link' : abaDoLink;
+    if (pedida && ABAS_DO_DONO.includes(pedida)) return ehDono ? pedida : 'barbearia';
+    return pedida && ABAS_DE_TODOS.includes(pedida) ? pedida : 'barbearia';
+  });
   return (
     <div className="flex flex-col gap-8">
       <CabecalhoPagina titulo="Configurações" pergunta="Como a barbearia funciona?" />
@@ -68,8 +69,7 @@ export function TelaConfiguracoes() {
           { id: 'barbearia', rotulo: 'Barbearia', conteudo: <Barbearia /> },
           { id: 'unidades', rotulo: 'Unidades', conteudo: <Unidades /> },
           { id: 'calendario', rotulo: 'Folgas e feriados', conteudo: <Calendario /> },
-          { id: 'link', rotulo: 'Link de agendamento', conteudo: <LinkAgendamento /> },
-          { id: 'agendamento', rotulo: 'Agendamento', conteudo: <RegrasDeAgendamento /> },
+          { id: 'link', rotulo: 'Link e agendamento', conteudo: <LinkEAgendamento /> },
           ...(ehDono
             ? [
                 { id: 'importar', rotulo: 'Importar planilha', conteudo: <ImportarPlanilha /> },
@@ -80,6 +80,51 @@ export function TelaConfiguracoes() {
             : []),
         ]}
       />
+    </div>
+  );
+}
+
+const ABAS_DE_TODOS = ['barbearia', 'unidades', 'calendario', 'link'];
+const ABAS_DO_DONO = ['importar', 'assinatura', 'indique', 'suporte'];
+
+/**
+ * Tudo do agendamento pelo cliente num lugar só (pedido do dono em 20/11/2026: o link ficava
+ * "desfalcado" numa aba, as regras em outra e a aparência da página na Minha página): o link de
+ * cada unidade, como a página aparece e as regras.
+ */
+function LinkEAgendamento() {
+  return (
+    <div className="flex flex-col gap-10">
+      <section aria-labelledby="titulo-link" className="flex flex-col gap-3">
+        <h2 id="titulo-link" className="text-xl font-semibold">
+          Link de agendamento
+        </h2>
+        <LinkAgendamento />
+      </section>
+      <section
+        aria-labelledby="titulo-aparencia"
+        className="flex max-w-3xl flex-col gap-2 rounded-lg border border-borda bg-superficie p-4"
+      >
+        <h2 id="titulo-aparencia" className="text-lg font-semibold">
+          Como a página aparece
+        </h2>
+        <p className="text-tinta-suave">
+          Cor, logotipo, capa e mensagem de boas-vindas da página de agendamento, e a prévia que
+          aparece quando o link é enviado no WhatsApp e nas redes.
+        </p>
+        <Link
+          href="/pagina?secao=agendamento"
+          className="inline-flex min-h-11 items-center gap-2 self-start font-semibold text-modulo-texto underline-offset-4 hover:underline"
+        >
+          Personalizar a página de agendamento
+        </Link>
+      </section>
+      <section aria-labelledby="titulo-regras" className="flex flex-col gap-3">
+        <h2 id="titulo-regras" className="text-xl font-semibold">
+          Regras do agendamento
+        </h2>
+        <RegrasDeAgendamento />
+      </section>
     </div>
   );
 }
@@ -302,6 +347,9 @@ function Unidades() {
 
 const formUnidade = unidadeSchema.extend({
   telefone: z.string().optional(),
+  // UF e link do mapa: a API confere (o erro volta no campo).
+  uf: z.string().optional(),
+  linkMapa: z.string().optional(),
   ativa: z.boolean().optional(),
 });
 type FormUnidade = z.input<typeof formUnidade>;
@@ -328,11 +376,17 @@ function FormularioUnidade({
       ? {
           ...atual,
           endereco: atual.endereco ?? '',
+          cidade: atual.cidade ?? '',
+          uf: atual.uf ?? '',
+          linkMapa: atual.linkMapa ?? '',
           telefone: atual.telefone ? formatarTelefone(atual.telefone) : '',
         }
       : {
           nome: '',
           endereco: '',
+          cidade: '',
+          uf: '',
+          linkMapa: '',
           telefone: '',
           diasTrabalho: [1, 2, 3, 4, 5, 6],
           capacidade: 2,
@@ -340,6 +394,11 @@ function FormularioUnidade({
         },
   });
   const dias = useWatch({ control, name: 'diasTrabalho' }) ?? [];
+  const [endereco, cidade, uf, linkMapa] = useWatch({
+    control,
+    name: ['endereco', 'cidade', 'uf', 'linkMapa'],
+  });
+  const podeErrar = mapaPodeErrar({ endereco: endereco ?? null, cidade, uf, linkMapa });
 
   const enviar = handleSubmit(async (d) => {
     setErroGeral(null);
@@ -369,9 +428,42 @@ function FormularioUnidade({
         <Campo
           id="unidade-endereco"
           rotulo="Endereço"
+          dica="Rua, número e bairro"
           erro={formState.errors.endereco?.message}
           {...register('endereco')}
         />
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+          <Campo
+            id="unidade-cidade"
+            rotulo="Cidade"
+            autoComplete="address-level2"
+            erro={formState.errors.cidade?.message}
+            {...register('cidade')}
+          />
+          <Campo
+            id="unidade-uf"
+            rotulo="UF"
+            maxLength={2}
+            autoComplete="address-level1"
+            className="uppercase"
+            erro={formState.errors.uf?.message}
+            {...register('uf')}
+          />
+        </div>
+        <Campo
+          id="unidade-link-mapa"
+          rotulo="Link do Google Maps (opcional)"
+          dica="No Google Maps, abra a barbearia, toque em Compartilhar e cole aqui. Vale no lugar da busca pelo endereço."
+          inputMode="url"
+          erro={formState.errors.linkMapa?.message}
+          {...register('linkMapa')}
+        />
+        {podeErrar && (
+          <Aviso tom="aviso">
+            Sem cidade e UF, o link do mapa que o bot e o site mandam pode abrir uma rua com o mesmo
+            nome em outra cidade. Preencha a cidade e a UF, ou cole o link do Google Maps.
+          </Aviso>
+        )}
         <Campo
           id="unidade-telefone"
           rotulo="Telefone"

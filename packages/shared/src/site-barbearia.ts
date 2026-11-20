@@ -77,7 +77,9 @@ interface DefinicaoBloco {
    * Lista de itens (depoimentos, perguntas, galeria): o que cada campo do item quer dizer. Texto
    * vazio = o item não tem esse campo; `foto` = cada item leva uma foto.
    */
-  itens?: { titulo: string; texto: string; foto?: boolean };
+  itens?: { titulo: string; texto: string; foto?: boolean; botao?: boolean };
+  /** Até quantos itens (padrão 12). */
+  maxItens?: number;
 }
 
 export const BLOCOS_SITE = {
@@ -121,6 +123,17 @@ export const BLOCOS_SITE = {
     titulo: true,
     texto: true,
   },
+  /**
+   * Colunas livres (pedido do dono em 20/11/2026): de 1 a 4 colunas, cada uma com foto, título,
+   * texto e um botão com link. Para montar a página sem depender de bloco pronto.
+   */
+  colunas: {
+    rotulo: 'Colunas: foto, texto e botão',
+    paginas: ['inicio', 'servicos', 'equipe', 'contato', 'galeria', 'clube'],
+    titulo: true,
+    itens: { titulo: 'Título', texto: 'Texto', foto: true, botao: true },
+    maxItens: 4,
+  },
   /** Lote 7m: botões próprios com link (cardápio, loja, Instagram...). */
   botoes: {
     rotulo: 'Botões com link',
@@ -145,7 +158,25 @@ export const itemBlocoSchema = z.object({
   titulo: textoCurto(160),
   texto: textoCurto(600).default(''),
   foto: fotoIdSchema.optional(),
+  /** Bloco de colunas: o texto e o endereço do botão (vazio = sem botão). */
+  botao: textoCurto(30).optional(),
+  link: textoCurto(500).optional(),
 });
+
+/** Onde fica a foto do banner e do "Sobre" (pedido do dono em 20/11/2026). */
+export const DISPOSICOES_FOTO = {
+  fundo: 'Atrás do texto (foto inteira, com véu escuro)',
+  direita: 'À direita do texto',
+  esquerda: 'À esquerda do texto',
+} as const;
+export type DisposicaoFoto = keyof typeof DISPOSICOES_FOTO;
+
+/** Como a galeria mostra as fotos (pedido do dono em 20/11/2026). */
+export const ESTILOS_GALERIA = {
+  grade: 'Grade de fotos quadradas',
+  carrossel: 'Cartões numerados, rolando para o lado',
+} as const;
+export type EstiloGaleria = keyof typeof ESTILOS_GALERIA;
 
 export const blocoSiteSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{1,40}$/),
@@ -155,6 +186,14 @@ export const blocoSiteSchema = z.object({
   texto: textoCurto(600).optional(),
   itens: z.array(itemBlocoSchema).max(12, { error: 'No máximo 12 itens.' }).optional(),
   foto: fotoIdSchema.optional(),
+  /** Banner e Sobre: onde a foto fica; no celular, a foto vem antes do texto. */
+  disposicao: z.enum(['fundo', 'direita', 'esquerda']).optional(),
+  /** Recorte da foto: o ponto que fica sempre à vista (0 a 100, do canto esquerdo e do topo). */
+  foco: z
+    .object({ x: z.number().int().min(0).max(100), y: z.number().int().min(0).max(100) })
+    .optional(),
+  /** Galeria: grade ou cartões numerados com rolagem para o lado. */
+  estilo: z.enum(['grade', 'carrossel']).optional(),
 });
 export type BlocoSite = z.infer<typeof blocoSiteSchema>;
 
@@ -178,6 +217,16 @@ const paginaSchema = (pagina: PaginaSite) =>
                 code: 'custom',
                 message: `O botão "${i.titulo || 'sem texto'}" tem um endereço inválido: comece com https://`,
               });
+        if (b.tipo === 'colunas') {
+          if ((b.itens?.length ?? 0) > 4)
+            ctx.addIssue({ code: 'custom', message: 'No máximo 4 colunas.' });
+          for (const i of b.itens ?? [])
+            if (i.link && !urlDeLinkValida(i.link))
+              ctx.addIssue({
+                code: 'custom',
+                message: `O botão da coluna "${i.titulo || 'sem título'}" tem um endereço inválido: comece com https://`,
+              });
+        }
         ids.add(b.id);
       }
     });
@@ -252,47 +301,72 @@ export const rodapeSiteSchema = z.object({
 });
 export type RodapeSite = z.infer<typeof rodapeSiteSchema>;
 
+export const corHexSchema = z
+  .string()
+  .trim()
+  .regex(/^#[0-9a-fA-F]{6}$/, { error: 'Cor no formato #RRGGBB.' })
+  .transform((c) => c.toUpperCase());
+
+export const coresPropriasSchema = z.object({
+  destaque: corHexSchema.optional(),
+  escuro: corHexSchema.optional(),
+  papel: corHexSchema.optional(),
+});
+export type CoresProprias = z.infer<typeof coresPropriasSchema>;
+
 export const LIMITE_CSS_SITE = 8000;
 
-export const siteBarbeariaSchema = z.object({
-  versao: z.literal(1),
-  /** Logotipo no cabeçalho (lote 7c); sem ele, o monograma com a inicial. */
-  logo: fotoIdSchema.optional(),
-  tema: z.enum(TEMAS_SITE),
-  cor: z.enum(IDS_CORES),
-  fonte: z.enum(IDS_FONTES),
-  botoes: z.enum(IDS_BOTOES),
-  /** Frase curta do rodapé, embaixo do nome. */
-  slogan: textoCurto(160),
-  /** Usuário do Instagram, sem o @. Vazio = não mostra. */
-  instagram: z
-    .string()
-    .trim()
-    .transform((t) => t.replace(/^@/, ''))
-    .pipe(z.string().regex(/^[A-Za-z0-9._]{0,30}$/, { error: 'Usuário do Instagram inválido.' })),
-  paginas: z.object({
-    inicio: paginaSchema('inicio'),
-    servicos: paginaSchema('servicos'),
-    equipe: paginaSchema('equipe'),
-    contato: paginaSchema('contato'),
-    galeria: paginaSchema('galeria').optional(),
-    clube: paginaSchema('clube').optional(),
-  }),
-  cabecalho: cabecalhoSiteSchema.optional(),
-  rodape: rodapeSiteSchema.optional(),
-  /** CSS do dono para ir além do tema (limpo por limparCssSite antes de entrar na página). */
-  css: z
-    .string()
-    .max(LIMITE_CSS_SITE, { error: `CSS grande demais (até ${LIMITE_CSS_SITE} letras).` })
-    .optional(),
-  /** O que aparece de cada barbeiro (por id do profissional): especialidade e apresentação. */
-  equipe: z
-    .record(
-      z.uuid(),
-      z.object({ foco: textoCurto(80), sobre: textoCurto(600), foto: fotoIdSchema.optional() }),
-    )
-    .refine((r) => Object.keys(r).length <= 100, { error: 'Equipe grande demais.' }),
-});
+export const siteBarbeariaSchema = z
+  .object({
+    versao: z.literal(1),
+    /** Logotipo no cabeçalho (lote 7c); sem ele, o monograma com a inicial. */
+    logo: fotoIdSchema.optional(),
+    tema: z.enum(TEMAS_SITE),
+    cor: z.enum(IDS_CORES),
+    fonte: z.enum(IDS_FONTES),
+    botoes: z.enum(IDS_BOTOES),
+    /** Frase curta do rodapé, embaixo do nome. */
+    slogan: textoCurto(160),
+    /** Usuário do Instagram, sem o @. Vazio = não mostra. */
+    instagram: z
+      .string()
+      .trim()
+      .transform((t) => t.replace(/^@/, ''))
+      .pipe(z.string().regex(/^[A-Za-z0-9._]{0,30}$/, { error: 'Usuário do Instagram inválido.' })),
+    paginas: z.object({
+      inicio: paginaSchema('inicio'),
+      servicos: paginaSchema('servicos'),
+      equipe: paginaSchema('equipe'),
+      contato: paginaSchema('contato'),
+      galeria: paginaSchema('galeria').optional(),
+      clube: paginaSchema('clube').optional(),
+    }),
+    cabecalho: cabecalhoSiteSchema.optional(),
+    rodape: rodapeSiteSchema.optional(),
+    /** Cores próprias por cima do tema (pedido do dono em 20/11/2026), sem precisar de CSS. */
+    coresProprias: coresPropriasSchema.optional(),
+    /** CSS do dono para ir além do tema (limpo por limparCssSite antes de entrar na página). */
+    css: z
+      .string()
+      .max(LIMITE_CSS_SITE, { error: `CSS grande demais (até ${LIMITE_CSS_SITE} letras).` })
+      .optional(),
+    /** O que aparece de cada barbeiro (por id do profissional): especialidade e apresentação. */
+    equipe: z
+      .record(
+        z.uuid(),
+        z.object({ foco: textoCurto(80), sobre: textoCurto(600), foto: fotoIdSchema.optional() }),
+      )
+      .refine((r) => Object.keys(r).length <= 100, { error: 'Equipe grande demais.' }),
+  })
+  .superRefine((site, ctx) => {
+    if (!site.coresProprias) return;
+    for (const message of problemasDeContraste(
+      site.tema,
+      site.coresProprias,
+      CORES_SITE[site.cor].hex,
+    ))
+      ctx.addIssue({ code: 'custom', path: ['coresProprias'], message });
+  });
 export type SiteBarbearia = z.infer<typeof siteBarbeariaSchema>;
 
 /**
@@ -588,6 +662,10 @@ export interface SitePublico {
   unidade: string;
   site: SiteBarbearia;
   endereco: string | null;
+  /** Link do mapa (o escolhido pela barbearia ou a busca com cidade e UF). */
+  mapa: string | null;
+  /** Prévia do link nas redes (20/11/2026). */
+  previa: PreviaDoLink;
   telefone: string | null;
   whatsapp: string | null;
   aparecerNoGoogle: boolean;
@@ -941,8 +1019,47 @@ export const visualAgendamentoSchema = z.object({
   tema: z.enum(TEMAS_SITE).optional(),
   /** Pedido do dono em 15/11: a barbearia pode tirar o "Agendamento pelo Pente Fino". */
   marcaPenteFino: z.boolean().optional(),
+  /**
+   * Prévia do link (pedido do dono em 20/11/2026): como o link aparece quando é enviado no
+   * WhatsApp, no Instagram e no Facebook. Vale para o link de agendamento e para o site, mesmo
+   * com o visual desligado. Vazio = o nome da barbearia e o texto de sempre.
+   */
+  previa: z
+    .object({
+      titulo: textoCurto(70),
+      descricao: textoCurto(160),
+      /** Fundo da imagem: a cor da barbearia ou a foto de capa. */
+      fundo: z.enum(['cor', 'capa']),
+    })
+    .optional(),
 });
 export type VisualAgendamento = z.infer<typeof visualAgendamentoSchema>;
+
+/** O que a imagem e os textos da prévia do link usam (já resolvido para a página pública). */
+export interface PreviaDoLink {
+  /** Título escolhido pela barbearia; null = o nome da barbearia (e da unidade). */
+  titulo: string | null;
+  descricao: string | null;
+  logo: string | null;
+  /** Foto de fundo da imagem; null = fundo na cor da barbearia. */
+  capa: string | null;
+  /** Cor de destaque (hex). */
+  cor: string;
+}
+
+export function previaDoLink(
+  visual: VisualAgendamento | null,
+  site: SiteBarbearia | null,
+): PreviaDoLink {
+  const p = visual?.previa;
+  return {
+    titulo: p?.titulo.trim() || null,
+    descricao: p?.descricao.trim() || null,
+    logo: visual?.logo ?? site?.logo ?? null,
+    capa: p?.fundo === 'capa' ? (visual?.capa ?? null) : null,
+    cor: CORES_SITE[visual?.cor ?? site?.cor ?? 'latao'].hex,
+  };
+}
 
 /** Ponto de partida: o que o site já tem (cor e logotipo), desligado. */
 export function visualAgendamentoInicial(site?: SiteBarbearia | null): VisualAgendamento {
@@ -1123,3 +1240,154 @@ export function estiloDoAgendamento(
     botoes: doSite ? site.botoes : 'arredondados',
   };
 }
+
+// ─── Cores próprias e paletas prontas (pedido do dono em 20/11/2026) ────────
+
+/**
+ * "Para chegar à paleta exata da referência, precisei usar CSS." Agora o dono escolhe a cor de
+ * destaque, a cor escura (cabeçalho e faixas) e o fundo da página sem CSS. A leitura continua
+ * garantida: a combinação só é aceita se todos os pares de texto e fundo passam de 4,5:1.
+ */
+
+function canais(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function emHex(c: [number, number, number]): string {
+  return `#${c
+    .map((v) =>
+      Math.round(Math.min(255, Math.max(0, v)))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`.toUpperCase();
+}
+
+/** Mistura `b` em `a` na proporção `p` (0 = só a, 1 = só b). */
+export function misturarCor(a: string, b: string, p: number): string {
+  const x = canais(a);
+  const y = canais(b);
+  return emHex([0, 1, 2].map((i) => x[i]! + (y[i]! - x[i]!) * p) as [number, number, number]);
+}
+
+/** Contraste WCAG entre duas cores #RRGGBB. */
+export function contrasteCores(a: string, b: string): number {
+  const lum = (hex: string) => {
+    const [r, g, bl] = canais(hex).map((v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    }) as [number, number, number];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m) as [number, number];
+  return (x + 0.05) / (y + 0.05);
+}
+
+const TEXTO_NO_CLARO = {
+  tinta: '#1A1A1A',
+  tintaMedia: '#33342F',
+  tintaSuave: '#4A4B45',
+  link: '#1A1A1A',
+  realce: '#6E5520',
+};
+const TEXTO_NO_ESCURO = {
+  tinta: '#F2EBE3',
+  tintaMedia: '#E3D7CA',
+  tintaSuave: '#CDBFB0',
+  link: '#E3C48F',
+  realce: '#E3C48F',
+};
+
+/** A paleta que a página usa: a do tema com as cores próprias por cima (e os tons derivados). */
+export function paletaDoSite(
+  tema: TemaSite,
+  cores?: CoresProprias | null,
+): PaletaSite & { destaque: string | null } {
+  const base = PALETAS_SITE[tema] ?? PALETAS_SITE.tradicional;
+  const p: PaletaSite = { ...base };
+  if (cores?.escuro) {
+    p.escuro = cores.escuro;
+    p.escuro2 = misturarCor(cores.escuro, base.claro, 0.08);
+    p.escuroBorda = misturarCor(cores.escuro, base.claro, 0.3);
+    p.rodape = misturarCor(cores.escuro, '#000000', 0.25);
+    p.rodapeLinha = misturarCor(p.rodape, base.claro, 0.12);
+  }
+  if (cores?.papel) {
+    // O texto acompanha o fundo escolhido: escuro no fundo claro, claro no fundo escuro.
+    const claroNoFundo =
+      contrasteCores(cores.papel, '#000000') >= contrasteCores(cores.papel, '#FFFFFF');
+    const texto = claroNoFundo ? TEXTO_NO_CLARO : TEXTO_NO_ESCURO;
+    p.papel = cores.papel;
+    p.cartao = claroNoFundo
+      ? misturarCor(cores.papel, '#FFFFFF', 0.6)
+      : misturarCor(cores.papel, '#FFFFFF', 0.06);
+    p.tinta = texto.tinta;
+    p.tintaMedia = texto.tintaMedia;
+    p.tintaSuave = texto.tintaSuave;
+    p.realce = texto.realce;
+    p.link = claroNoFundo && contrasteCores(p.escuro, cores.papel) >= 4.5 ? p.escuro : texto.link;
+    p.linha = misturarCor(cores.papel, texto.tinta, 0.14);
+  }
+  return { ...p, destaque: cores?.destaque ?? null };
+}
+
+/** Pares que ficariam ilegíveis com as cores próprias (vazio = pode usar). */
+export function problemasDeContraste(
+  tema: TemaSite,
+  cores: CoresProprias | null | undefined,
+  destaquePadrao: string,
+): string[] {
+  const p = paletaDoSite(tema, cores);
+  const destaque = p.destaque ?? destaquePadrao;
+  const pares: [string, string, string][] = [
+    ['o texto da página no fundo escolhido', p.tinta, p.papel],
+    ['o texto mais claro no fundo escolhido', p.tintaSuave, p.papel],
+    ['os links no fundo escolhido', p.link, p.papel],
+    ['o texto do cabeçalho na cor escura', p.claro, p.escuro],
+    ['o texto mais claro do cabeçalho na cor escura', p.claroSuave, p.escuro2],
+    ['o texto do rodapé', p.rodapeSuave, p.rodape],
+    ['o texto dos botões na cor de destaque', p.escuro, destaque],
+  ];
+  return pares
+    .filter(([, a, b]) => contrasteCores(a, b) < 4.5)
+    .map(([nome]) => `Fica difícil de ler ${nome}.`);
+}
+
+/** Combinações prontas, que passam no contraste em qualquer tema (um clique, sem CSS). */
+export const PALETAS_PRONTAS: readonly {
+  id: string;
+  nome: string;
+  cores: Required<CoresProprias>;
+}[] = [
+  {
+    id: 'preto-dourado',
+    nome: 'Preto e dourado',
+    cores: { destaque: '#D4A94F', escuro: '#111111', papel: '#F7F4EE' },
+  },
+  {
+    id: 'marinho-creme',
+    nome: 'Azul-marinho e creme',
+    cores: { destaque: '#E8B04B', escuro: '#0F1E33', papel: '#F6F1E7' },
+  },
+  {
+    id: 'grafite-laranja',
+    nome: 'Grafite e laranja',
+    cores: { destaque: '#F28C38', escuro: '#1E1F22', papel: '#F4F4F2' },
+  },
+  {
+    id: 'vinho-areia',
+    nome: 'Vinho e areia',
+    cores: { destaque: '#E7B98A', escuro: '#3A0F17', papel: '#F8F2EA' },
+  },
+  {
+    id: 'verde-latao',
+    nome: 'Verde-garrafa e latão',
+    cores: { destaque: '#C8A55C', escuro: '#14271C', papel: '#F5F4F0' },
+  },
+  {
+    id: 'preto-branco',
+    nome: 'Preto e branco',
+    cores: { destaque: '#F2F2F2', escuro: '#0A0A0A', papel: '#FFFFFF' },
+  },
+];

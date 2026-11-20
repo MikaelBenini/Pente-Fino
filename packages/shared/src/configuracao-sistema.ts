@@ -196,7 +196,18 @@ export interface SaudeDoSistema {
   /** W3: chamadas aos webhooks recusadas (segredo errado) nos últimos 7 dias. */
   webhooksRecusados: {
     total7Dias: number;
-    ultimos: { rota: string; ip: string | null; quando: string }[];
+    ultimos: {
+      rota: string;
+      ip: string | null;
+      quando: string;
+      /**
+       * Por que recusou (20/11/2026): sem o token no cabeçalho (ex.: o "Webhook para chaves de
+       * API" do Asaas cadastrado sem token), token diferente ou servidor sem token configurado.
+       */
+      motivo?: MotivoRecusaWebhook;
+      /** Evento que veio no corpo (ex.: ACCESS_TOKEN_DELETED), para achar qual webhook é. */
+      evento?: string | null;
+    }[];
   };
   /** W4: segredos de webhook com menos de 32 caracteres (nome da variável). */
   segredosCurtos: string[];
@@ -334,3 +345,11 @@ export function lerContatoSite(json: unknown): ContatoSite {
   const r = contatoSiteSchema.safeParse(json);
   return r.success ? r.data : { whatsapp: WHATSAPP_COMERCIAL_PADRAO };
 }
+
+export type MotivoRecusaWebhook = 'sem_token' | 'token_diferente' | 'sem_configuracao';
+
+export const TEXTO_MOTIVO_RECUSA: Record<MotivoRecusaWebhook, string> = {
+  sem_token: 'chegou sem token: cadastre o token no webhook do Asaas',
+  token_diferente: 'token diferente do ASAAS_WEBHOOK_TOKEN do servidor',
+  sem_configuracao: 'o servidor está sem ASAAS_WEBHOOK_TOKEN',
+};

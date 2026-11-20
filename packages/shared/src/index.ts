@@ -29,6 +29,8 @@ export * from './resumo-dia.js';
 export * from './bot.js';
 export * from './esquemas-bot.js';
 export * from './whatsapp.js';
+export * from './estado-conversa.js';
+export * from './endereco-unidade.js';
 export * from './equipe.js';
 export * from './avaliacao.js';
 export * from './automacoes.js';

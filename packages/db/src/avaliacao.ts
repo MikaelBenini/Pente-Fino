@@ -2,7 +2,9 @@
 // hora depois e respondida pela conversa do bot (packages/shared/src/bot.ts).
 import { temNaConta } from './assinatura.js';
 import {
+  HORA_PESQUISA_DE_MANHA,
   PESQUISA_ATRASO_MIN,
+  proximoHorarioDeEnvio,
   PESQUISA_INTERVALO_DIAS,
   PESQUISA_VALIDADE_HORAS,
   preencher,
@@ -50,7 +52,11 @@ export async function agendarPesquisa(
     select: { telefone: true },
   });
   if (!conversa) return null;
-  const enviarEm = new Date(agora.getTime() + PESQUISA_ATRASO_MIN * 60_000);
+  // Fechou à noite: a pesquisa espera as 9h, nunca sai de madrugada (pedido do dono em 20/11).
+  const enviarEm = proximoHorarioDeEnvio(
+    new Date(agora.getTime() + PESQUISA_ATRASO_MIN * 60_000),
+    HORA_PESQUISA_DE_MANHA,
+  );
   const a = await tx.avaliacao.create({
     data: {
       unidadeId: c.unidadeId,

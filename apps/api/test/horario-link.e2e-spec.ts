@@ -411,3 +411,60 @@ describe('lista de espera pelo site', () => {
     expect(pedido.cliente.consentimentoMsg).toBe(true);
   });
 });
+
+// Testes de 19/11/2026, item 2: "Prefere marcar pelo WhatsApp?" abria o número do bot e a
+// confirmação e a gestão da reserva abriam o telefone do cadastro. Agora as três seguem a mesma
+// regra: o número conectado ao bot da unidade da reserva; sem ele, o telefone da unidade.
+describe('os botões de WhatsApp levam ao mesmo número', () => {
+  it('unidade com bot: agendar, confirmar e gerenciar abrem o número do bot', async () => {
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.unidade.update({
+        where: { id: a.unidadeA },
+        data: { regrasAgendamento: { pelaConversa: true } },
+      }),
+    );
+    const pagina = (await http().get(`/publico/agendamento/${slug}`).expect(200)).body;
+    expect(pagina.whatsapp).toBe('5511900004444');
+    expect(pagina.linkWhatsappAgendar).toMatch(/^https:\/\/wa\.me\/5511900004444\?/);
+    const livres = (
+      await http()
+        .get(`/publico/agendamento/${slug}/horarios?data=${dia(20)}&servicoIds=${corte}`)
+        .expect(200)
+    ).body[0].inicios as string[];
+    const r = await http()
+      .post(`/publico/agendamento/${slug}`)
+      .send({
+        nome: 'Cliente Botões',
+        telefone: '(11) 97700-7070',
+        servicoIds: [corte],
+        profissionalId: prof,
+        inicio: livres[0],
+      })
+      .expect(201);
+    expect(r.body.linkWhatsapp).toMatch(/^https:\/\/wa\.me\/5511900004444\?text=/);
+    const token = (r.body.linkGerenciar as string).split('=')[1]!;
+    const h = (await http().get(`/publico/horario/${token}`).expect(200)).body as HorarioDoLink;
+    expect(h.linkWhatsapp).toBe('https://wa.me/5511900004444');
+    // Depois de cancelar, o "Falar com a barbearia" continua no mesmo número.
+    await http().post(`/publico/horario/${token}/cancelar`).send({}).expect(200);
+    const depois = (await http().get(`/publico/horario/${token}`).expect(200))
+      .body as HorarioDoLink;
+    expect(depois.linkWhatsapp).toBe('https://wa.me/5511900004444');
+  });
+
+  it('outra unidade, sem bot, com outro telefone: o telefone dela, não o da primeira', async () => {
+    const slugB = `e2e-b-${randomUUID().slice(0, 8)}`;
+    await dono
+      .patch(`/unidades/${a.unidadeB}`, {
+        telefone: '(45) 99132-0265',
+        slug: slugB,
+      })
+      .expect(200);
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.unidade.update({ where: { id: a.unidadeB }, data: { agendamentoPublico: true } }),
+    );
+    const pagina = (await http().get(`/publico/agendamento/${slugB}`).expect(200)).body;
+    expect(pagina.whatsapp).toBe('5545991320265');
+    expect(pagina.linkWhatsappAgendar).toBeNull();
+  });
+});
