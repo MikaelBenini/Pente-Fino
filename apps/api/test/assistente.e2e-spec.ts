@@ -129,7 +129,13 @@ describe('notificações no celular (push)', () => {
     expect((await barbeiro.post('/me/push', inscricao).expect(200)).body.aparelhos).toBe(1);
     // Cada um vê só os próprios aparelhos.
     expect((await dono.get('/me/push').expect(200)).body.aparelhos).toBe(0);
-    await barbeiro.post('/me/push/teste', {}).expect(202);
+    expect((await barbeiro.post('/me/push/teste', {}).expect(202)).body).toEqual({
+      ok: true,
+      aparelhos: 1,
+    });
+    // Sem aparelho ligado, o teste diz o motivo em vez de "enviado" (20/11/2026).
+    const semAparelho = await dono.post('/me/push/teste', {}).expect(409);
+    expect(semAparelho.body.erro.mensagem).toMatch(/Nenhum aparelho ligado/);
     expect(
       (await barbeiro.post('/me/push/remover', { endpoint: inscricao.endpoint }).expect(200)).body
         .aparelhos,
