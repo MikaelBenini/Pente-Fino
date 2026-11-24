@@ -175,18 +175,22 @@ describe('atenderMensagem', () => {
   });
 });
 
+// Horário fixo de dia: de madrugada (22h às 7h) a automática fica segurada e o teste mudaria
+// conforme a hora em que o CI roda (falhou às 6h38 em 23/11/2026).
+const MEIO_DIA = new Date('2026-11-24T15:00:00Z');
+
 describe('envio', () => {
   it('prepara a resposta pendente e marca enviada', async () => {
     const r = await atenderMensagem(prisma, evento('oi', '5511988880009'), { appUrl: APP, agora });
     if (r.tipo !== 'respondida') throw new Error(r.tipo);
     const id = r.saidas[0]!;
-    expect(await prepararEnvio(prisma, conta, id)).toMatchObject({
+    expect(await prepararEnvio(prisma, conta, id, MEIO_DIA)).toMatchObject({
       tipo: 'enviar',
       instancia,
       telefone: '5511988880009',
     });
     await registrarEnvio(prisma, conta, id, { ok: true, idExterno: 'W1' });
-    expect(await prepararEnvio(prisma, conta, id)).toEqual({ tipo: 'pular' });
+    expect(await prepararEnvio(prisma, conta, id, MEIO_DIA)).toEqual({ tipo: 'pular' });
     const m = await naMinhaConta((tx) => tx.mensagem.findUnique({ where: { id } }));
     expect(m).toMatchObject({ status: 'enviada', idExterno: 'W1' });
     expect(m?.enviadaEm).toBeInstanceOf(Date);

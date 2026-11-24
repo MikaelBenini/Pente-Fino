@@ -344,6 +344,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     regraProduto: number;
     usuarioId: string;
     entrada: DataISO;
+    nome: string;
   }[] = [];
   for (const membro of EQUIPE) {
     const email = `${membro.nome.split(' ')[0]!.toLowerCase()}@demo.pentefino.dev`;
@@ -390,6 +391,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
       regraProduto: 1000,
       usuarioId: usuario.id,
       entrada,
+      nome: membro.nome,
     });
   }
 
@@ -453,6 +455,16 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
 
         const inicio = instante(data, minuto);
         const fim = adicionarMinutos(inicio, DURACAO_SLOT);
+        // Hoje, o Diego (Centro) fica livre de meia hora antes até uma hora depois de agora: a
+        // recepção sempre tem com quem encaixar na demonstração, e o teste "agendar, atender,
+        // receber" não depende do sorteio (24/11/2026: falhou ao meio-dia, os três ocupados).
+        if (
+          data === hoje &&
+          barbeiro.nome === 'Diego Prado' &&
+          inicio.getTime() < agora.getTime() + 60 * 60_000 &&
+          fim.getTime() > agora.getTime() - 30 * 60_000
+        )
+          continue;
         const passado = fim <= agora;
         const emAndamento = inicio <= agora && agora < fim;
         // Cliente é fiel: 80% das vezes vem um dos clientes "do" barbeiro.

@@ -19,6 +19,8 @@ mostra o comando para testar no ambiente mínimo do cron. Como rede de seguranç
 5 minutos) roda o backup quando não há arquivo das últimas 26 h (passadas as 4h); o `backup.sh` não
 roda em dobro (`flock`).
 
+**Rode os scripts de backup como `deploy`, sem `sudo`.** Com `sudo`, a pasta `rclone` ficava do root, e o backup das 3h (do `deploy`) não lia a configuração da cópia externa (`permission denied` no `backup.log`). Desde 24/11 os scripts rodados com `sudo` usam o dono da pasta sozinhos. Para consertar uma pasta antiga: `sudo chown -R deploy:deploy /opt/barbearia/rclone`.
+
 > **Guarde a `BACKUP_SENHA` fora do servidor** (gerenciador de senhas). Se a VPS se perder, sem
 > ela o backup não abre. Ver: `grep BACKUP_SENHA /opt/barbearia/.env`.
 

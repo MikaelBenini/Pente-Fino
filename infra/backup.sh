@@ -12,8 +12,17 @@
 # arquivos novos vão também para o armazenamento externo.
 # Com BACKUP_AVISO_URL (monitor "push" do Uptime Kuma), avisa a cada backup que deu certo: se o
 # aviso não chegar no dia, o monitoramento alerta.
-set -euo pipefail
+# -E: o aviso de erro (trap ERR) vale também dentro das funções (rclone, pg); sem ele, a falha na
+# cópia externa parava o backup sem gravar nada na Saúde do sistema (20/11/2026).
+set -Eeuo pipefail
 cd "$(dirname "$0")"
+# Rodado com sudo: roda como o dono da pasta (o usuário do cron). Como root, a configuração do
+# rclone ficava só do root, e o backup das 3h (usuário deploy) não conseguia ler (20/11/2026: a
+# cópia externa falhou todo dia de 13/11 a 24/11).
+if [[ $EUID -eq 0 ]]; then
+  dono="$(stat -c %U .)"
+  if [[ "$dono" != root ]]; then exec sudo -u "$dono" -- "./$(basename "$0")" "$@"; fi
+fi
 umask 077
 # Um backup por vez (o cron e o vigia podem chamar no mesmo minuto, 20/11/2026).
 exec 8>/tmp/pente-fino-backup.lock
@@ -71,6 +80,13 @@ manter "$PASTA/diario" 30
 manter "$PASTA/mensal" 12
 
 if [[ -n "$DESTINO" ]]; then
+  # A configuração do rclone precisa ser legível por quem roda o backup (o cron é do deploy).
+  if [[ ! -r rclone/rclone.conf ]]; then
+    estado "{\"quando\":\"$(date -Is)\",\"ok\":false,\"erro\":\"Cópia externa: sem acesso a rclone/rclone.conf. Rode: sudo chown -R $(id -un):$(id -gn) /opt/barbearia/rclone\"}"
+    echo "$(date '+%F %T') ERRO: sem acesso a rclone/rclone.conf (sudo chown -R $(id -un):$(id -gn) /opt/barbearia/rclone). O backup local ficou em $ARQ." >&2
+    trap - ERR
+    exit 1
+  fi
   # copy (não sync): um servidor novo com a pasta vazia nunca apaga o que está lá fora. A
   # retenção do armazenamento externo é por idade, um pouco maior que a local.
   rclone copy "$PASTA" "$DESTINO" --quiet

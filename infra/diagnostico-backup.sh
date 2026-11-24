@@ -29,6 +29,10 @@ grep -q '^BACKUP_SENHA=.\+' .env && ok "BACKUP_SENHA definida" || ruim "BACKUP_S
 id -nG | grep -qw docker && ok "$(whoami) está no grupo docker" || ruim "$(whoami) fora do grupo docker: sudo usermod -aG docker $(whoami)"
 for b in docker openssl tar flock curl; do command -v "$b" >/dev/null && ok "$b em $(command -v "$b")" || ruim "falta $b"; done
 docker ps --format '{{.Names}}' | grep -q '^pente-fino-postgres-1$' && ok "contêiner do banco no ar" || ruim "contêiner pente-fino-postgres-1 não encontrado"
+if grep -q '^BACKUP_DESTINO=.\+' .env; then
+  if [[ -r rclone/rclone.conf ]]; then ok "cópia externa: configuração do rclone legível"
+  else ruim "cópia externa: $(whoami) não lê rclone/rclone.conf (dono: $(stat -c %U rclone 2>/dev/null)). Rode: sudo chown -R $(whoami):$(id -gn) /opt/barbearia/rclone"; fi
+else info "sem cópia externa (BACKUP_DESTINO vazio)"; fi
 
 echo "6. Arquivos de backup"
 PASTA=/opt/barbearia/backups
