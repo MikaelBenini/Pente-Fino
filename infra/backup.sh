@@ -89,7 +89,8 @@ if [[ -n "$DESTINO" ]]; then
   fi
   # copy (não sync): um servidor novo com a pasta vazia nunca apaga o que está lá fora. A
   # retenção do armazenamento externo é por idade, um pouco maior que a local.
-  rclone copy "$PASTA" "$DESTINO" --quiet
+  # A pasta "baixados" é do restaurar.sh (arquivos trazidos de lá fora): não volta para fora.
+  rclone copy "$PASTA" "$DESTINO" --exclude "baixados/**" --quiet
   rclone delete "$DESTINO/diario" --min-age 35d --quiet || true
   rclone delete "$DESTINO/mensal" --min-age 400d --quiet || true
 fi

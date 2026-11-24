@@ -7,6 +7,12 @@
 #   externo (BACKUP_DESTINO), como num servidor novo: ./restaurar.sh --teste --externo
 set -euo pipefail
 cd "$(dirname "$0")"
+# Rodado com sudo: roda como o dono da pasta. Como root, a pasta backups/baixados ficava do root e
+# o backup das 3h (usuário deploy) não conseguia copiar para fora (24/11/2026).
+if [[ $EUID -eq 0 ]]; then
+  dono="$(stat -c %U .)"
+  if [[ "$dono" != root ]]; then exec sudo -u "$dono" -- "./$(basename "$0")" "$@"; fi
+fi
 umask 077
 ler() { sed -n "s/^$1=//p" .env | tail -1 | sed "s/^['\"]//; s/['\"]$//"; }
 export BACKUP_SENHA="${BACKUP_SENHA:-$(ler BACKUP_SENHA)}"
