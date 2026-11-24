@@ -8,6 +8,13 @@
 #   ./backup-externo.sh --conferir   só lista o que está no armazenamento externo
 set -euo pipefail
 cd "$(dirname "$0")"
+# Rodado com sudo: roda como o dono da pasta (o usuário do cron). Como root, a configuração do
+# rclone ficava só do root, e o backup das 3h (usuário deploy) não conseguia ler (20/11/2026: a
+# cópia externa falhou todo dia de 13/11 a 24/11).
+if [[ $EUID -eq 0 ]]; then
+  dono="$(stat -c %U .)"
+  if [[ "$dono" != root ]]; then exec sudo -u "$dono" -- "./$(basename "$0")" "$@"; fi
+fi
 umask 077
 [[ -f .env ]] || { echo "Falta o .env: rode ./instalar.sh primeiro." >&2; exit 1; }
 ler() { sed -n "s/^$1=//p" .env | tail -1 | sed "s/^['\"]//; s/['\"]$//"; }
