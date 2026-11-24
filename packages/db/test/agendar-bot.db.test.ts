@@ -901,7 +901,7 @@ describe('faltas e atendente', () => {
     if (r.tipo !== 'respondida') throw new Error(r.tipo);
     expect(r.esperaAtendente).toBe(pedido.toISOString());
     const job = { contaId: conta, unidadeId, telefone: tel, desde: r.esperaAtendente! };
-    const volta = await encerrarEsperaDoAtendente(prisma, job);
+    const volta = await encerrarEsperaDoAtendente(prisma, job, new Date('2026-12-01T15:00:00Z'));
     const texto = await naMinhaConta((tx) =>
       tx.mensagem.findUniqueOrThrow({ where: { id: volta!.mensagemIds[0]! } }),
     );
@@ -910,7 +910,9 @@ describe('faltas e atendente', () => {
       tx.botSessao.findFirstOrThrow({ where: { telefone: tel } }),
     );
     expect(sessao.atendenteDesde).toBeNull();
-    expect(await encerrarEsperaDoAtendente(prisma, job)).toBeNull();
+    expect(
+      await encerrarEsperaDoAtendente(prisma, job, new Date('2026-12-01T15:00:00Z')),
+    ).toBeNull();
   });
 });
 
@@ -1033,6 +1035,25 @@ describe('notificações no celular (push)', () => {
     );
     expect(r).toEqual({ entregues: 1, aparelhos: 2, removidos: 1 });
     expect(enviados).toHaveLength(2);
+    const restantes = await naMinhaConta((tx) =>
+      tx.inscricaoPush.findMany({ where: { usuarioId } }),
+    );
+    expect(restantes.map((x) => x.endpoint)).toEqual(['https://push.teste/um']);
+  });
+
+  it('duas notificações juntas com o mesmo aparelho morto: nenhuma falha (VPS, 24/11/2026)', async () => {
+    await naMinhaConta((tx) =>
+      tx.inscricaoPush.create({
+        data: { usuarioId, endpoint: 'https://push.teste/morto', p256dh: 'p', auth: 'a' },
+      }),
+    );
+    const enviar = async (i: { endpoint: string }) => (i.endpoint.endsWith('morto') ? 410 : 201);
+    const n = { contaId: conta, usuarioId, titulo: 'Teste', corpo: 'Oi', url: '/agenda' };
+    const [a, b] = await Promise.all([
+      enviarNotificacao(prisma, n, enviar),
+      enviarNotificacao(prisma, n, enviar),
+    ]);
+    expect(a.entregues + b.entregues).toBe(2);
     const restantes = await naMinhaConta((tx) =>
       tx.inscricaoPush.findMany({ where: { usuarioId } }),
     );
