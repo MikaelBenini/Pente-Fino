@@ -101,8 +101,12 @@ export async function enviarNotificacao(
       { endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
       carga,
     ).catch((e: { statusCode?: number }) => e.statusCode ?? 0);
+    // deleteMany: duas notificações juntas para a mesma pessoa apagavam o mesmo aparelho, e a
+    // segunda falhava (P2025) sem entregar aos outros aparelhos (visto na VPS em 24/11/2026).
     if (status === 404 || status === 410) {
-      await naConta(prisma, n.contaId, (tx) => tx.inscricaoPush.delete({ where: { id: a.id } }));
+      await naConta(prisma, n.contaId, (tx) =>
+        tx.inscricaoPush.deleteMany({ where: { id: a.id } }),
+      );
       removidos++;
     } else if (status >= 200 && status < 300) entregues++;
   }
@@ -133,8 +137,10 @@ export async function enviarPushEquipe(
       { endpoint: a.endpoint, keys: { p256dh: a.p256dh, auth: a.auth } },
       carga,
     ).catch((e: { statusCode?: number }) => e.statusCode ?? 0);
+    // deleteMany: duas notificações juntas para a mesma pessoa apagavam o mesmo aparelho, e a
+    // segunda falhava (P2025) sem entregar aos outros aparelhos (visto na VPS em 24/11/2026).
     if (status === 404 || status === 410) {
-      await prisma.inscricaoPushPlataforma.delete({ where: { id: a.id } });
+      await prisma.inscricaoPushPlataforma.deleteMany({ where: { id: a.id } });
       removidos++;
     } else if (status >= 200 && status < 300) entregues++;
   }

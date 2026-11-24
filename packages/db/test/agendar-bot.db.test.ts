@@ -1038,6 +1038,25 @@ describe('notificações no celular (push)', () => {
     );
     expect(restantes.map((x) => x.endpoint)).toEqual(['https://push.teste/um']);
   });
+
+  it('duas notificações juntas com o mesmo aparelho morto: nenhuma falha (VPS, 24/11/2026)', async () => {
+    await naMinhaConta((tx) =>
+      tx.inscricaoPush.create({
+        data: { usuarioId, endpoint: 'https://push.teste/morto', p256dh: 'p', auth: 'a' },
+      }),
+    );
+    const enviar = async (i: { endpoint: string }) => (i.endpoint.endsWith('morto') ? 410 : 201);
+    const n = { contaId: conta, usuarioId, titulo: 'Teste', corpo: 'Oi', url: '/agenda' };
+    const [a, b] = await Promise.all([
+      enviarNotificacao(prisma, n, enviar),
+      enviarNotificacao(prisma, n, enviar),
+    ]);
+    expect(a.entregues + b.entregues).toBe(2);
+    const restantes = await naMinhaConta((tx) =>
+      tx.inscricaoPush.findMany({ where: { usuarioId } }),
+    );
+    expect(restantes.map((x) => x.endpoint)).toEqual(['https://push.teste/um']);
+  });
 });
 
 describe('automações: retorno e aniversário', () => {
