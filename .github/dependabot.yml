@@ -45,6 +45,10 @@ updates:
     ignore:
       - dependency-name: louislam/uptime-kuma
         update-types: ['version-update:semver-major']
+      # PostgreSQL de versão maior não abre os arquivos da anterior: o banco de produção não subiria.
+      # A troca é feita à mão, com backup e pg_upgrade (PR #249 recusado em 24/11/2026).
+      - dependency-name: postgres
+        update-types: ['version-update:semver-major']
     schedule:
       interval: weekly
       day: monday

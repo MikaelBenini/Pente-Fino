@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Corrigido (cópia externa do backup)
+
+- **A cópia externa do backup voltou a ser conferida todo dia:** de 13/11 a 24/11 o backup local rodou às 3h, mas a cópia para o armazenamento externo falhou todos os dias. A configuração do rclone tinha sido criada com `sudo` e o backup automático, que roda como `deploy`, não conseguia ler. A falha ainda passava em silêncio: a Saúde do sistema continuava mostrando o último sucesso. Agora o erro aparece na Saúde com o comando para corrigir, `backup-externo.sh` e `backup.sh` rodados com `sudo` usam o dono da pasta, e o `diagnostico-backup.sh` aponta esse caso.
+
 ### Corrigido (ligar as notificações no aparelho)
 
 - **"Ligar notificações" diz o que deu errado:** antes, qualquer falha virava "Não foi possível ligar neste aparelho". Agora aparece o motivo e o que fazer: notificações bloqueadas no cadeado, o Brave com o push do Google desligado, aba anônima, iPhone fora do app instalado, ou o app ainda instalando. Vale no Perfil, em Avisos e na administração.
