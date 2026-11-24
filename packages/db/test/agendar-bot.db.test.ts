@@ -901,7 +901,7 @@ describe('faltas e atendente', () => {
     if (r.tipo !== 'respondida') throw new Error(r.tipo);
     expect(r.esperaAtendente).toBe(pedido.toISOString());
     const job = { contaId: conta, unidadeId, telefone: tel, desde: r.esperaAtendente! };
-    const volta = await encerrarEsperaDoAtendente(prisma, job);
+    const volta = await encerrarEsperaDoAtendente(prisma, job, new Date('2026-12-01T15:00:00Z'));
     const texto = await naMinhaConta((tx) =>
       tx.mensagem.findUniqueOrThrow({ where: { id: volta!.mensagemIds[0]! } }),
     );
@@ -910,7 +910,9 @@ describe('faltas e atendente', () => {
       tx.botSessao.findFirstOrThrow({ where: { telefone: tel } }),
     );
     expect(sessao.atendenteDesde).toBeNull();
-    expect(await encerrarEsperaDoAtendente(prisma, job)).toBeNull();
+    expect(
+      await encerrarEsperaDoAtendente(prisma, job, new Date('2026-12-01T15:00:00Z')),
+    ).toBeNull();
   });
 });
 

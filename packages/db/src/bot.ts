@@ -1093,6 +1093,7 @@ export async function registrarEnvio(
 export async function encerrarEsperaDoAtendente(
   prisma: PrismaClient,
   job: Omit<FimDaEsperaDoAtendente, 'tipo'>,
+  agora: Date = new Date(),
 ): Promise<{ contaId: string; instancia: string; mensagemIds: string[] } | null> {
   return naConta(prisma, job.contaId, async (tx) => {
     const s = await tx.botSessao.findUnique({
@@ -1101,7 +1102,6 @@ export async function encerrarEsperaDoAtendente(
     });
     if (!s?.atendenteDesde || s.atendenteDesde.toISOString() !== job.desde) return null;
     const sessao = s.sessao as unknown as SessaoBot;
-    const agora = new Date();
     await origemDaConversa(tx, 'espera_venceu');
     await tx.botSessao.update({
       where: { id: s.id },
