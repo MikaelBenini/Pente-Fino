@@ -10,6 +10,7 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 ### Corrigido (cópia externa do backup)
 
 - **A cópia externa do backup voltou a ser conferida todo dia:** de 13/11 a 24/11 o backup local rodou às 3h, mas a cópia para o armazenamento externo falhou todos os dias. A configuração do rclone tinha sido criada com `sudo` e o backup automático, que roda como `deploy`, não conseguia ler. A falha ainda passava em silêncio: a Saúde do sistema continuava mostrando o último sucesso. Agora o erro aparece na Saúde com o comando para corrigir, `backup-externo.sh` e `backup.sh` rodados com `sudo` usam o dono da pasta, e o `diagnostico-backup.sh` aponta esse caso.
+- **Backup rodado como root não trava mais a cópia externa:** a pasta `backups/baixados`, criada pelo `restaurar.sh` como root, fazia o rclone falhar (`permission denied`). Ela deixou de ser enviada para fora, e o `restaurar.sh` com `sudo` também passa a rodar como o dono da pasta.
 
 ### Corrigido (ligar as notificações no aparelho)
 
