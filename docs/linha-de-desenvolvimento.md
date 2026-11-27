@@ -763,7 +763,7 @@ temos bot de WhatsApp, lucro real, comanda única e preço menor). Ordem de cons
     - teste em `e2e/web-moderna.spec.ts`.
   - [x] **Minha página organizada e agendamento com tema (pedido do dono em 15/11):** `minha-pagina.tsx` em abas (`secao`: site, agendamento, enderecos; `?secao=` abre direto); `visualAgendamentoSchema` com `tema` (opcional: sem valor, o do site) e `marcaPenteFino`; `estiloDoAgendamento` no shared (com teste) monta tema, paleta, fonte e botões; `agendar.tsx` troca as variáveis do app pela paleta (`estiloDoVisual`, `--font-barlow-condensed` porque os tokens do Tailwind são inline, `--radius-md/lg`) e um fundo fixo cobre a tela; aba Clube: `planosDoClube` sem exigir o recebimento online, `link` só com `situacao === 'aprovada'`, botão "Assinar pelo WhatsApp" no site e Clube fora do menu sem planos; testes em `site-barbearia.e2e-spec.ts`, `visual-agendamento.spec.ts` e `minha-pagina.spec.ts`.
   - [x] **Passkey (pedido do dono em 15/11, skill modern-web-guidance):** tabela `passkey` (migração `20261117090000_passkey`, isolada por conta, política `login_por_passkey` pela `app.passkey_credencial`); `@simplewebauthn/server` 14.0.3 só na API; `auth/passkeys.ts` (`POST /auth/passkey/opcoes` e `/entrar`, sem e-mail, desafio de uso único no Redis por 5 min, 404 para credencial desconhecida; `GET/POST/PATCH/DELETE /me/passkeys`, desafio amarrado a quem pediu, bloqueado no modo suporte); `PASSKEY_ORIGENS` para origens a mais em teste; no navegador, só as funções nativas (`lib/passkey.ts`: `parse...FromJSON`, sugestão no campo com `mediation: 'conditional'`, `signalUnknownCredential`); login com `autocomplete="username webauthn"` e o botão "Usar passkey"; Perfil → "Entrar sem senha" (`componentes/minhas-passkeys.tsx`); testes em `passkey.e2e-spec.ts`, `passkey.test.ts` e `e2e/passkey.spec.ts` (autenticador virtual do Chrome).
-  - [x] **Verificação final (seção 9, 15/11):** `docs/verificacao-final.md` preenchido item por item (números conferidos na API contra o banco de desenvolvimento, segurança e monitoramento em produção) e as correções C1 a C6:
+  - [x] **Verificação final (seção 9, 15/11):** `docs/historico/verificacao-final-2026-11-15.md` preenchido item por item (números conferidos na API contra o banco de desenvolvimento, segurança e monitoramento em produção) e as correções C1 a C6:
     - C1: fila `whatsapp-rotinas` (`FILA_WHATSAPP_ROTINAS`) com worker próprio, o mesmo `processar` das duas filas, e `removeJobScheduler` dos agendamentos antigos na fila de entrada;
     - C2: `alertas` em `ROTINAS_WORKER`, registrado pelo `AlertasProcessor`; a Saúde lê as filas de rotinas, alertas e limpeza;
     - C3: `FalhasPorConta` no resultado das três rotinas (com teste);
@@ -793,7 +793,7 @@ temos bot de WhatsApp, lucro real, comanda única e preço menor). Ordem de cons
 
 ## Etapa 23.2 · Site que vende (briefing de 2026-11-10)
 
-Fonte: [pente-fino-melhorias.md](pente-fino-melhorias.md), parte 3 (auditoria do site em 10/11/2026,
+Fonte: [melhorias de 10/11](historico/melhorias-2026-11-10.md)(historico/melhorias-2026-11-10.md), parte 3 (auditoria do site em 10/11/2026,
 com comparação com AppBarber, Trinks, Booksy, ZapCorte e EiBarber). Itens [DECISÃO DO DONO] usam a
 opção padrão do briefing, numa constante fácil de trocar.
 
@@ -866,7 +866,7 @@ opção padrão do briefing, numa constante fácil de trocar.
 
 ## Etapa 23.3 · Painel sem furos (briefing de 2026-11-10)
 
-Fonte: [pente-fino-melhorias.md](pente-fino-melhorias.md), parte 1 (auditoria com um
+Fonte: [melhorias de 10/11](historico/melhorias-2026-11-10.md)(historico/melhorias-2026-11-10.md), parte 1 (auditoria com um
 agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 
 **Grupo A — dinheiro e dados**
@@ -903,7 +903,7 @@ agendamento de teste real). Cada item crítico tem teste que reproduz o erro.
 
 ## Etapa 23.4 · Administração sem furos (briefing de 2026-11-10)
 
-Fonte: [pente-fino-melhorias.md](pente-fino-melhorias.md), parte 2 (auditoria do `/admin` em
+Fonte: [melhorias de 10/11](historico/melhorias-2026-11-10.md)(historico/melhorias-2026-11-10.md), parte 2 (auditoria do `/admin` em
 10/11/2026, só leitura). O admin continua sem ver dados das barbearias; toda ação sensível pede
 motivo e vai para a auditoria.
 
@@ -1015,8 +1015,8 @@ motivo e vai para a auditoria.
 
 ## Etapa 23.5 · Webhooks seguros e worker vigiado (pedido em 2026-11-11)
 
-Fonte: [a-fazer.md](a-fazer.md), seção 2, e os achados V2 a V4 da
-[verificação final](verificacao-final.md).
+Fonte: [lista de 11/11](historico/a-fazer-2026-11.md), seção 2, e os achados V2 a V4 da
+[verificação final](historico/verificacao-final-2026-11-15.md).
 
 - [x] **W1** webhook do Asaas não acredita no corpo (feito em 2026-11-11: do corpo só o evento e o id; `ProvedorCobranca.pagamento()` e `nota()` buscam no Asaas (`GET /payments/{id}` e `GET /invoices/{id}`, 404 = ignorado); a situação da nota vem do status atual (`SYNCHRONIZED` passou a ser "enviada"); a mensalidade do clube exige também o status pago no Asaas (`STATUS_PAGO`). Testes com o token certo e corpo inventado em `cobranca`, `clube-online` e `nota-fiscal.e2e-spec.ts`; nos testes, `noAsaas()` registra no provedor falso o que o teste manda)
 - [x] **W2** `/webhooks/whatsapp` fechado no Caddy (404 em `api.{$DOMINIO}`); a Evolution chama por dentro
@@ -1029,7 +1029,7 @@ Fonte: [a-fazer.md](a-fazer.md), seção 2, e os achados V2 a V4 da
 
 ## Etapa 23.6 · Escolhas da planilha (respostas do dono em 2026-11-11)
 
-Fonte: [a-fazer.md](a-fazer.md), seção 3 (comparação com a planilha da barbearia).
+Fonte: [lista de 11/11](historico/a-fazer-2026-11.md), seção 3 (comparação com a planilha da barbearia).
 
 - [x] **Preço livre na comanda** (feito em 2026-11-12: `servico.preco_livre`, `preco_minimo` e `preco_maximo` (faixa conferida no banco e na API) e `conta.preco_livre_barbeiro`; regra em `packages/shared/src/preco-livre.ts` (`conferirPrecoLivre`, `podeDigitarPrecoLivre`, com teste); a comanda lança com o preço da tabela ou o valor digitado (`valor` no lançamento, `precoUnitario` na edição), recusa fora da faixa e serviço de preço fixo (`preco_fixo`), e audita `preco_livre` quando sai da tabela; a comissão sai do valor digitado. Telas: Serviços (marcar preço livre e a faixa, etiqueta no catálogo e "o barbeiro também digita", só o dono) e a comanda ("Valor" no item, com a faixa). Testes em `apps/api/test/preco-livre.e2e-spec.ts` e `apps/web/e2e/cadastros.spec.ts`)
 - [x] **Despesas fixas no mês seguinte** (feito em 2026-11-12: `despesa.repetir` e `despesa.origem_id` (única: uma cópia por despesa); "Copiar fixas do mês anterior" no Financeiro com prévia editável (`GET /despesas/fixas-para-copiar`, `POST /despesas/copiar-fixas`; a que já tem igual lançada à mão vem desmarcada; já copiada = 409); "Repetir todo mês" no formulário, com a rotina diária das 6 h no worker (`repetirDespesasDoMes`, na fila da limpeza, registrada na Saúde do sistema). Testes em `despesas-fixas.db.test.ts`, `apps/api/test/despesas-fixas.e2e-spec.ts` e `apps/web/e2e/resultados.spec.ts`)
@@ -1057,6 +1057,18 @@ Fonte: [a-fazer.md](a-fazer.md), seção 3 (comparação com a planilha da barbe
 - [x] **Anúncios completos** (sugestões aprovadas em 2026-11-16; feito: `cliente.origem_lead = 'anuncio'` (`ORIGEM_ANUNCIO`) para quem chega por anúncio; `GET /anuncios` com `resumirAnuncios` em `packages/shared` (conversas de `bot_sessao.anuncio_em`, novos clientes, comandas fechadas dos clientes de anúncio) e o bloco "Clientes de anúncio" em Resultados → Canais; `ConversaResumo.pedidoDados` e `/agenda?agendar=…&servicos=…&profissional=…&dia=…&inicio=…` abrindo o novo agendamento preenchido, com origem `bot`; `unidade.fluxo_anuncio` com `fluxoAnuncioDaUnidade` (a da unidade, senão a da conta), `GET/PUT/DELETE /bot/anuncio?unidadeId=`. Testes em `anuncio-bot.test.ts` e `apps/api/test/bot-unidade.e2e-spec.ts`)
 - [x] **Checklist de SEO (IndexNow)** (pedido do dono em 2026-11-16, vídeo de SEO; feito: sitemap, robots, canonical, OpenGraph e cartão do Twitter já estavam no ar; `INDEXNOW_CHAVE` e `pedidoIndexNow` em `packages/shared/src/indexnow.ts`, arquivo `apps/web/public/<chave>.txt`, `scripts/indexnow.mjs` no fim do job Implantar na VPS e `avisarBuscadores` na API ao ligar "Aparecer no Google" e ao publicar o site; Search Console e Bing ficam com o dono, passo a passo em `docs/producao.md`. Teste em `indexnow.test.ts`)
 - [x] **Sites no sitemap, Search Console na Saúde e quem respondeu** (sugestões aprovadas em 2026-11-16; feito: função `sites_de_barbearia_no_google()` e `GET /publico/sites` no sitemap; `SaudeDoSistema.buscadores` com o TXT `google-site-verification` do domínio (`temVerificacaoGoogle`, 3 s de tempo-limite) e o cartão na Saúde; `mensagem.autor_id` e `mensagem.pelo_celular`, gravados pela resposta do painel e pela mensagem do celular, e `ConversaResumo.equipe` com quem e quando. Testes em `indexnow.test.ts`, `mensagem-propria.db.test.ts` e `apps/api/test/conversas.e2e-spec.ts`)
+
+## Etapa 26 · Multissegmento (pedido do dono em 2026-11-27)
+
+Plano completo, esforço, riscos e perguntas em [plano-multissegmento.md](plano-multissegmento.md).
+Cada fase só começa com a aprovação do dono.
+
+- [x] **Fase 0 · Documentação para IA e automação** (feito em 2026-11-27: `CLAUDE.md` (importa `docs/CLAUDE.md`) e `AGENTS.md` na raiz; mapa em `docs/README.md`; `arquitetura.md` com diagrama Mermaid, `regras-de-negocio.md` com exemplos conferidos por `packages/shared/src/exemplos-das-regras.test.ts`, `fluxos.md`, `papeis-e-permissoes.md`, `glossario.md` e 13 decisões em `docs/decisoes/`; `scripts/docs/gerar-docs.mjs` (`pnpm docs:gerar`, conferido no CI) gera em `docs/gerado/` o modelo de dados (66 entidades, 29 enums), as 330 rotas da API, as 74 páginas, planos e menu por papel; documentação do produto reescrita (planos Agenda e Automações, recursos por plano, ticket médio corrigido) e a original, a lista de 11/11, os briefings de 10/11 e a verificação de 15/11 movidos para `docs/historico/`)
+- [ ] Fase 1 · Multissegmento (segmento e vocabulário, papel profissional, configuração por segmento, academia, estética)
+- [ ] Fase 2 · Interface mais simples (bolinhas por papel, lançamento rápido, caixa, custos parcelados, fluxo de caixa, cartões de métrica)
+- [ ] Fase 3 · Mentoria financeira (custo da hora, custo real e preço sugerido, simuladores de clube e "e se", alertas)
+- [ ] Fase 4 · IA opcional (packages/ia, modos de cobrança, bot com ferramentas limitadas, assistente do painel)
+- [ ] Fase 5 · Landing page por segmento e marca
 
 ## Etapa 24 · Premium completo
 

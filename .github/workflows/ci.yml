@@ -49,6 +49,8 @@ jobs:
       - name: Cobertura mínima de 80% nas regras de cálculo
         run: pnpm --filter @pente-fino/shared test:cobertura
       - run: pnpm build
+      - name: Documentação gerada bate com o código (pnpm docs:gerar)
+        run: node scripts/docs/gerar-docs.mjs && pnpm exec prettier --write docs/gerado --log-level warn && git diff --exit-code -- docs/gerado
       # Os testes não carregam todo arquivo; aqui cada módulo da API e do worker é aberto como em
       # produção. Pega dependência que mudou o jeito de exportar (web-push 4, 16/11/2026).
       - name: API e worker carregam todos os módulos
