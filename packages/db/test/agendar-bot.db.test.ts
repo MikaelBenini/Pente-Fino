@@ -1134,15 +1134,35 @@ describe('automações: retorno e aniversário', () => {
       });
     });
     expect(await contasComAutomacoes(prisma)).toContain(conta);
+    // Hora do cliente (27/11/2026): B costuma escrever às 19 h; o parabéns espera até lá.
+    await naMinhaConta((tx) =>
+      tx.mensagem.createMany({
+        data: ['2026-11-20', '2026-11-22', '2026-11-25'].map((dia) => ({
+          unidadeId,
+          telefone: tel.b,
+          direcao: 'entrada' as const,
+          texto: 'oi',
+          status: 'recebida' as const,
+          criadoEm: new Date(`${dia}T19:10:00-03:00`),
+        })),
+      }),
+    );
 
-    const envios = await rodarAutomacoes(prisma, conta, rotina, 'http://app.teste');
-    expect(envios.flatMap((e) => e.mensagemIds).length).toBeGreaterThanOrEqual(2);
+    const envios = await rodarAutomacoes(prisma, conta, rotina, 'http://app.teste', () => 0);
+    expect(
+      envios.flatMap((e) => [...e.mensagemIds, ...e.maisTarde.map((t) => t.mensagemId)]).length,
+    ).toBeGreaterThanOrEqual(2);
     const [ma] = await textosPara(tel.a);
     expect(ma).toMatchObject({ automacao: 'retorno', status: 'pendente' });
     expect(ma!.texto).toContain('Faz um tempinho que você não passa na Barbearia Navalha');
     const mb = await textosPara(tel.b);
     expect(mb.map((m) => m.automacao)).toEqual(['aniversario']);
     expect(mb[0]!.texto).toMatch(/^Feliz aniversário, Cliente!/);
+    expect(envios.flatMap((e) => e.maisTarde)).toContainEqual({
+      mensagemId: mb[0]!.id,
+      quando: new Date('2026-12-01T19:00:00-03:00').toISOString(),
+    });
+    expect(envios.flatMap((e) => e.mensagemIds)).toContain(ma!.id);
     expect(await textosPara(tel.c)).toEqual([]);
     expect(await textosPara(tel.d)).toEqual([]);
 

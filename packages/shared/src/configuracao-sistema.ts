@@ -188,6 +188,8 @@ export interface SaudeDoSistema {
     falhas24h: number;
     proativas24h: number;
   }[];
+  /** As últimas semanas somando as contas: automáticas, SAIR e pausas (só contagens). */
+  riscoSemanal?: { semana: string; proativas: number; saidas: number; pausas: number }[];
   /** Trabalhos que falharam nas últimas 24 h (sem o conteúdo, só o motivo). */
   errosRecentes: { fila: string; tipo: string; motivo: string; quando: string }[];
   /** Últimas execuções da limpeza de dados (a mais recente primeiro). */

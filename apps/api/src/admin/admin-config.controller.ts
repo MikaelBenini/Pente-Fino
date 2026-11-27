@@ -20,6 +20,7 @@ import {
   cifrar,
   conexoesCaidasPlataforma,
   numerosEmRiscoPlataforma,
+  riscoSemanalPlataforma,
   notasFiscaisPlataforma,
   ultimaNotaEmitidaPlataforma,
   contasDaPlataforma,
@@ -273,6 +274,7 @@ export class SaudeService implements OnModuleDestroy {
     }
     const caidas = await conexoesCaidasPlataforma(this.banco.prisma);
     const emRisco = await numerosEmRiscoPlataforma(this.banco.prisma);
+    const semanal = await riscoSemanalPlataforma(this.banco.prisma);
     const limpeza = await this.banco.prisma.execucaoLimpeza.findMany({
       orderBy: { iniciadaEm: 'desc' },
       take: 7,
@@ -308,6 +310,12 @@ export class SaudeService implements OnModuleDestroy {
         saidas24h: Number(x.saidas_24h),
         falhas24h: Number(x.falhas_24h),
         proativas24h: Number(x.proativas_24h),
+      })),
+      riscoSemanal: semanal.map((x) => ({
+        semana: x.semana.toISOString().slice(0, 10),
+        proativas: Number(x.proativas),
+        saidas: Number(x.saidas),
+        pausas: Number(x.pausas),
       })),
       errosRecentes: errosRecentes.sort((a, b) => b.quando.localeCompare(a.quando)).slice(0, 50),
       limpeza: limpeza.map((e) => ({

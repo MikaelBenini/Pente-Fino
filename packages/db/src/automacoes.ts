@@ -20,6 +20,9 @@ import {
   variantesTelefone,
   type Automacao,
   type NumerosAutomacao,
+  formatarHora,
+  horaDoCliente,
+  horarioDoEnvio,
 } from '@pente-fino/shared';
 import { mensagensDoBot, situacaoDaUnidade } from './bot.js';
 import type { Prisma, PrismaClient } from './generated/prisma/client.js';
@@ -49,7 +52,10 @@ export async function contasComAutomacoes(prisma: PrismaClient): Promise<string[
 export interface EnvioDaRotina {
   contaId: string;
   instancia: string;
+  /** As que saem agora (na fila, no ritmo do número). */
   mensagemIds: string[];
+  /** As que esperam a hora do cliente: id → quando sai (ISO). */
+  maisTarde: { mensagemId: string; quando: string }[];
 }
 
 /**
@@ -62,6 +68,7 @@ export async function rodarAutomacoes(
   contaId: string,
   agora = new Date(),
   appUrl = '',
+  aleatorio: () => number = Math.random,
 ): Promise<EnvioDaRotina[]> {
   return naConta(prisma, contaId, async (tx) => {
     const conta = await tx.conta.findUniqueOrThrow({ where: { id: contaId } });
@@ -97,7 +104,14 @@ export async function rodarAutomacoes(
 
     const unidades = new Map<
       string,
-      { instancia: string; nome: string; link: string | null; enviadas: number; ids: string[] }
+      {
+        instancia: string;
+        nome: string;
+        link: string | null;
+        enviadas: number;
+        ids: string[];
+        maisTarde: { mensagemId: string; quando: string }[];
+      }
     >();
     const unidadeDoEnvio = async (unidadeId: string) => {
       if (unidades.has(unidadeId)) return unidades.get(unidadeId)!;
@@ -120,6 +134,7 @@ export async function rodarAutomacoes(
         link: s.link,
         enviadas,
         ids: [] as string[],
+        maisTarde: [] as { mensagemId: string; quando: string }[],
       };
       unidades.set(unidadeId, dados);
       return dados;
@@ -147,6 +162,23 @@ export async function rodarAutomacoes(
         link: u.link,
         ...valores,
       });
+      // Hora do cliente: a hora em que ele costuma escrever (as últimas 30 mensagens dele).
+      const dele = await tx.mensagem.findMany({
+        where: {
+          unidadeId,
+          telefone: { in: variantesTelefone(cliente.telefone) },
+          direcao: 'entrada',
+        },
+        orderBy: { criadoEm: 'desc' },
+        take: 30,
+        select: { criadoEm: true },
+      });
+      const quando = horarioDoEnvio(
+        hoje,
+        horaDoCliente(dele.map((d) => Number(formatarHora(d.criadoEm).slice(0, 2)))),
+        agora,
+        aleatorio(),
+      );
       for (const t of [texto, ...depois]) {
         const m = await tx.mensagem.create({
           data: {
@@ -160,7 +192,8 @@ export async function rodarAutomacoes(
           },
           select: { id: true },
         });
-        u.ids.push(m.id);
+        if (quando) u.maisTarde.push({ mensagemId: m.id, quando: quando.toISOString() });
+        else u.ids.push(m.id);
       }
       u.enviadas++;
       return true;
@@ -261,8 +294,13 @@ export async function rodarAutomacoes(
       }
     }
     return [...unidades.values()]
-      .filter((u) => u.ids.length > 0)
-      .map((u) => ({ contaId, instancia: u.instancia, mensagemIds: u.ids }));
+      .filter((u) => u.ids.length > 0 || u.maisTarde.length > 0)
+      .map((u) => ({
+        contaId,
+        instancia: u.instancia,
+        mensagemIds: u.ids,
+        maisTarde: u.maisTarde,
+      }));
   });
 }
 
