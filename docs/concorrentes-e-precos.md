@@ -133,11 +133,49 @@ Estética, Licença Tatuagem e Licença Fitness.
 
 ### Licença Atendimento (só o bot)
 
-Para o negócio que não quer o sistema inteiro, só o atendimento no WhatsApp: o bot de menus e
-palavras-chave (sem IA), a central de conversas com atendente e ações que resolvem o atendimento
-sozinhas (marcar, remarcar, mandar preço e endereço) ou por integração com o sistema que ele já
-usa. Vale para qualquer segmento (o vocabulário continua vindo do segmento da conta). O que entra e
-o preço ainda serão definidos.
+Para o negócio que não quer o sistema inteiro, só o atendimento no WhatsApp. Vale para qualquer
+segmento (o vocabulário vem do segmento da conta). **Sem webhook nem integração por enquanto**
+(dono, 27/11): um bot de mensagens profissional, simples de entender e que resolve sozinho.
+
+**O que entra:** bot de menus e palavras-chave (sem IA), pedido em frase e preço direto, agenda
+simples para o bot marcar, remarcar e cancelar, lembretes, lista de espera, pesquisa depois do
+atendimento, aniversário e retorno, central de conversas com atendente que assume e devolve ao bot.
+**O que não entra:** comanda, caixa, comissão, financeiro, resultados, clube.
+
+**Já existe quase tudo:** hoje é o plano Agenda (R$ 10) com as Automações (R$ 10), ou seja, R$ 20
+por mês, bem abaixo do mercado.
+
+**O que o mercado cobra por mês (bot com agendamento):**
+
+| Concorrente | Preço | Conexão |
+| --- | --- | --- |
+| WpAsis | a partir de R$ 49,90 | QR code |
+| RobotiZap | R$ 89,90 (plano único) | API oficial ou QR code |
+| AgendaCare | a partir de R$ 79,90 | API oficial |
+| Fixei | a partir de R$ 149 | API oficial |
+| Chat Fácil | R$ 149 (Essencial) | não informado |
+| Combinei | R$ 199,99 (1 profissional), R$ 449,99 (até 5), R$ 799,99 | QR code |
+| BotConversa (bot genérico) | R$ 189 a R$ 297 | + créditos por mensagem na API oficial |
+| Umbler Talk (atendimento) | R$ 99,90 por atendente (mínimo 2) | API oficial |
+
+**Proposta (a aprovar):** Licença Atendimento a **R$ 49,90/mês** (anual R$ 41,90) por número de
+WhatsApp, até 3 profissionais na agenda; número extra R$ 29,90. É o preço de entrada do mercado
+com mais coisa pronta. O plano Agenda volta a ser só agenda, link, site e lembretes (R$ 10), e quem
+já tem Agenda com Automações continua no preço que contratou.
+
+**Onde ganha das demais, sem ficar complicado:**
+
+- funciona no cadastro: menu, mensagens e agenda já vêm prontos (nos bots genéricos, o dono monta
+  o fluxo do zero);
+- nenhum custo por mensagem;
+- entende "quero cortar amanhã às 10" e "quanto é a escova" sem IA;
+- o cliente remarca e cancela sozinho, e o horário que vaga vai para a lista de espera;
+- nada automático de madrugada, limite diário por número e só para quem já conversou;
+- simulador no painel para testar antes de publicar;
+- caminho natural para a licença completa do segmento, sem migrar nada.
+
+**Cuidado:** conexão por QR code não é a API oficial da Meta e o número pode ser bloqueado se
+abusar. As travas acima já reduzem esse risco; a orientação de usar um chip só para o bot continua.
 
 ## Fontes
 
@@ -161,3 +199,12 @@ o preço ainda serão definidos.
 - [Welltrainer: apps para personal](https://welltrainer.com.br/melhor-app-para-personal-trainer/)
 - [TreinoAI: apps para personal 2026](https://www.treinoai.com.br/academy/blog/melhor-app-para-personal-trainer-2026)
 - [Tecnofit: preços](https://www.tecnofit.com.br/precos/)
+- [BotConversa: planos](https://www.botconversa.chat/planos-e-precos.html)
+- [ZapFunil: Umbler Talk](https://zapfunil.com/avaliacoes/umbler-talk)
+- [Certu: plataformas de atendimento no WhatsApp](https://certu.com.br/melhores-plataformas-atendimento-whatsapp)
+- [Fixei: preços](https://fixei.com.br/pricing)
+- [RobotiZap](https://www.robotizap.com/)
+- [Combinei](https://combinei.com/)
+- [WpAsis: agendamento no WhatsApp](https://wpasis.com/blog/spa-massagem-whatsapp-agendamento-sistema-pt)
+- [Chat Fácil](https://chatfacil.net.br/)
+- [AgendaCare](https://agendacare.com.br/)
