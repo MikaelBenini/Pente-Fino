@@ -1,4 +1,4 @@
-// Site N2: páginas de comparação. Regras (docs/pente-fino-melhorias.md, N2): só fatos conferidos
+// Site N2: páginas de comparação. Regras (docs/historico/melhorias-2026-11-10.md, N2): só fatos conferidos
 // na página oficial de cada sistema, com a data e o link; tom justo, dizendo onde o outro é
 // melhor (só nos dados: a página não faz propaganda do concorrente, pedido do dono em 15/11); sem logos. Ao mudar um preço aqui, atualizar CONFERIDO_EM e conferir a fonte de novo.
 

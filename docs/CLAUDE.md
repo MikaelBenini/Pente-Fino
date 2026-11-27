@@ -5,7 +5,7 @@
 SaaS multiempresa para barbearias: painel web, app do barbeiro (PWA) e bot de WhatsApp **sem IA** (respostas programadas pelo operador).
 Proposta de valor: **"Saiba quanto sobra, não só quanto entrou."** Lucro real por serviço, por barbeiro e por unidade, a partir de uma comanda lançada uma vez só.
 
-Documentação completa (PRD, TRD, fluxos, UI/UX, esquema, plano, preços e linha de desenvolvimento) em `docs/`. Leia `docs/` antes de decisões de produto.
+Mapa da documentação em `docs/README.md`: produto, arquitetura (diagrama), regras de negócio com exemplos, fluxos, papéis e permissões, glossário, decisões (`docs/decisoes/`) e o que é gerado do código (`docs/gerado/`: modelo de dados, rotas da API, telas, planos e menu). Leia antes de decisões de produto. O que está aberto: `docs/a-fazer.md`.
 
 ## Stack
 
@@ -73,6 +73,7 @@ dono, gestor, recepcao, barbeiro. Ver a matriz de permissões em `docs/`.
 
 - Código e nomes de domínio em português (`comanda`, `item_comanda`, `unidade`); textos da interface em pt-BR.
 - Conventional Commits (`feat:`, `fix:`, `chore:`), uma branch por tarefa, PR com CI verde.
+- **Documentação acompanha o código:** mudou schema, rota, tela, plano ou menu, rode `pnpm docs:gerar` e commite `docs/gerado/` (o CI confere com `pnpm docs:conferir`). Mudou regra de cálculo, atualize `docs/regras-de-negocio.md` e o exemplo em `packages/shared/src/exemplos-das-regras.test.ts`. Decisão nova de produto ou arquitetura vira um arquivo em `docs/decisoes/`.
 - Toda mudança que quem usa ou opera percebe entra no `CHANGELOG.md` (seção "Não publicado"), e a etapa correspondente da linha de desenvolvimento é marcada com o que foi feito.
 - Validação com zod compartilhado entre API e front.
 - Toda regra de cálculo nova vai para `packages/shared` com teste unitário antes da tela.

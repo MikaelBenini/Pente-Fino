@@ -98,7 +98,7 @@ for (const rota of [
   });
 }
 
-// ─── Briefing do site (docs/pente-fino-melhorias.md, parte 3) ─────
+// ─── Briefing do site (docs/historico/melhorias-2026-11-10.md, parte 3) ─────
 
 test('B1: endereço que não existe responde 404; tela do sistema ainda pede login', async ({
   page,

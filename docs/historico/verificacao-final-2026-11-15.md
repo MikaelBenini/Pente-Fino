@@ -1,8 +1,10 @@
 # Verificação final do ecossistema (criado em 11/11/2026)
 
+> **Histórico (arquivado em 27/11/2026).** Rodada de trabalho concluída, guardada só para consulta. O que falta fazer está em [`docs/a-fazer.md`](../a-fazer.md); o que foi feito, na [linha de desenvolvimento](../linha-de-desenvolvimento.md).
+
 Conferência de ponta a ponta do sistema inteiro: o que roda sozinho, as integrações, o dia a dia
 do barbeiro e se os números batem entre as telas. **Fica para o final**: só começa quando as
-etapas do [a-fazer.md](a-fazer.md) estiverem concluídas, para que nada desenvolvido depois fique
+etapas do [a-fazer.md](a-fazer-2026-11.md) estiverem concluídas, para que nada desenvolvido depois fique
 de fora. Documento temporário, como o a-fazer: no fim, o dono decide se fica ou é apagado.
 
 Meta do dono: tudo rodando 100%, pensando no tempo do barbeiro.

@@ -1,29 +1,20 @@
-# Retomada do trabalho (atualizado em 11/11/2026)
+# Retomada do trabalho (atualizado em 27/11/2026)
 
 Leia este arquivo primeiro ao abrir uma conversa nova. O que falta fazer, e onde parou, está em
 [a-fazer.md](a-fazer.md): o primeiro item sem `[x]` é o próximo passo.
 
 ## Mapa da documentação
 
-| Documento | Para que serve |
-| --- | --- |
-| [retomada.md](retomada.md) | Porta de entrada: como trabalhar e onde está cada coisa |
-| [a-fazer.md](a-fazer.md) | Lista de trabalho temporária: checklist do que falta, marcado ao concluir |
-| [verificacao-final.md](verificacao-final.md) | Conferência de ponta a ponta do ecossistema, feita por último (temporária) |
-| [CLAUDE.md](CLAUDE.md) | Stack, comandos, regras de negócio que não podem quebrar e convenções |
-| [documentacao-do-produto.md](documentacao-do-produto.md) | PRD, TRD, fluxos, UI/UX, esquema, preços: como o produto funciona |
-| [linha-de-desenvolvimento.md](linha-de-desenvolvimento.md) | Histórico definitivo, etapa por etapa, com o que foi feito em cada item |
-| [pente-fino-melhorias.md](pente-fino-melhorias.md) | Briefings de 10/11 (painel, admin, site): detalhe de cada ID e tabela de status |
-| [producao.md](producao.md) | Operação da VPS, deploy e DNS |
-| [restaurar.md](restaurar.md) | Restaurar o backup |
-| [../CHANGELOG.md](../CHANGELOG.md) | O que muda para quem usa e opera ("Não publicado" até ir para produção) |
+O mapa completo (produto, arquitetura, regras, fluxos, modelo de dados, decisões e o que é
+gerado do código) está em [README.md](README.md). O que falta fazer: [a-fazer.md](a-fazer.md); o
+plano em andamento: [plano-multissegmento.md](plano-multissegmento.md).
 
 ## Como trabalhar com o dono
 
 - Responder sempre em português (pt-BR), inclusive nos avisos curtos entre etapas.
 - Um PR por lote. Antes de abrir o PR, rodar tudo em sequência, nunca em paralelo:
   `pnpm lint`, `pnpm typecheck`, `pnpm test --concurrency=1`, `pnpm test:db`, `pnpm test:e2e`,
-  `pnpm build` e, no navegador, **só os arquivos de teste ligados ao lote**:
+  `pnpm build`, `pnpm docs:conferir` e, no navegador, **só os arquivos de teste ligados ao lote**:
   `E2E_PORTA_WEB=3100 E2E_PORTA_API=3101 pnpm --filter @pente-fino/web test:e2e e2e/x.spec.ts ...`.
   A suíte inteira de navegador fica com o CI, que roda num banco limpo; o PR só vai para o merge
   com o CI verde (decisão do dono em 12/11/2026, para encurtar o lote em ~15 min).

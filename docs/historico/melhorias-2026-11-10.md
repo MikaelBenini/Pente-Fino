@@ -1,9 +1,11 @@
 # Pente Fino — melhorias do painel, da administração e do site
 
+> **Histórico (arquivado em 27/11/2026).** Rodada de trabalho concluída, guardada só para consulta. O que falta fazer está em [`docs/a-fazer.md`](../a-fazer.md); o que foi feito, na [linha de desenvolvimento](../linha-de-desenvolvimento.md).
+
 > **Documento único** que junta os três briefings de 10/11/2026 (painel da barbearia, administração
 > `/admin` e site público). Origem: auditorias feitas em 10/11/2026 no navegador, desktop e
 > celular 375 px, com um agendamento de teste real no painel. A situação abaixo foi conferida em
-> 11/11/2026 contra os PRs mesclados (#148 e #150) e a [linha de desenvolvimento](linha-de-desenvolvimento.md)
+> 11/11/2026 contra os PRs mesclados (#148 e #150) e a [linha de desenvolvimento](../linha-de-desenvolvimento.md)
 > (etapas 23.2, 23.3 e 23.4).
 
 ## Regras para executar
