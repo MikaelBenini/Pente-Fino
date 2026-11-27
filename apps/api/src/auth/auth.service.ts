@@ -50,25 +50,98 @@ export class AuthService {
 
   // ─── Sessão ────────────────────────────────────────────────────────────
 
-  async login({ email, senha }: LoginEntrada): Promise<Sessao> {
+  async login({ email, senha, contaId }: LoginEntrada): Promise<Sessao> {
     await this.bloqueio.conferir('app', email);
-    const usuario = await this.banco.semConta({ loginEmail: email }, (tx) =>
-      tx.usuario.findUnique({ where: { email } }),
+    // Duas contas, um login (ADR 0015): o mesmo e-mail pode ter um usuário em cada negócio.
+    const usuarios = await this.banco.semConta({ loginEmail: email }, (tx) =>
+      tx.usuario.findMany({
+        where: { email, ativo: true },
+        include: { conta: { select: { status: true } } },
+        orderBy: { criadoEm: 'asc' },
+      }),
     );
-    const senhaConfere = await conferirSenha(usuario?.ativo ? usuario.senhaHash : null, senha);
-    if (!usuario || !usuario.ativo || !senhaConfere) {
+    // Primeiro o negócio usado por último neste aparelho; depois os que não estão suspensos.
+    const suspensa = (u: (typeof usuarios)[number]) =>
+      u.conta.status === 'suspensa' || u.conta.status === 'cancelada';
+    const ordem = [...usuarios].sort(
+      (x, y) =>
+        Number(y.contaId === contaId) - Number(x.contaId === contaId) ||
+        Number(suspensa(x)) - Number(suspensa(y)),
+    );
+    let usuario: (typeof usuarios)[number] | null = null;
+    for (const u of ordem)
+      if (await conferirSenha(u.senhaHash, senha)) {
+        usuario = u;
+        break;
+      }
+    // Sem usuário, confere contra nada (mesmo tempo de resposta: não revela se o e-mail existe).
+    if (!usuarios.length) await conferirSenha(null, senha);
+    if (!usuario) {
       await this.bloqueio.falhou('app', email);
       throw credenciaisInvalidas();
     }
     await this.bloqueio.acertou('app', email);
+    if (suspensa(usuario))
+      throw Erros.semPermissao('Esta conta está suspensa. Fale com o suporte do Pente Fino.');
+    const escolhido = usuario;
+    return this.banco.naConta(escolhido.contaId, (tx) => this.montarSessao(tx, escolhido.id));
+  }
 
-    return this.banco.naConta(usuario.contaId, async (tx) => {
-      const conta = await tx.conta.findUniqueOrThrow({ where: { id: usuario.contaId } });
-      if (conta.status === 'suspensa' || conta.status === 'cancelada') {
-        throw Erros.semPermissao('Esta conta está suspensa. Fale com o suporte do Pente Fino.');
-      }
-      return this.montarSessao(tx, usuario.id);
+  /**
+   * Trocar de negócio (duas contas, um login): quem está logado passa para a outra conta com o
+   * mesmo e-mail, sem digitar a senha de novo. Só contas ativas em que esse e-mail tem acesso.
+   */
+  async trocarConta(contaId: string): Promise<Sessao> {
+    const { id, contaId: atual, suporte } = Contexto.usuario();
+    if (suporte) throw Erros.semPermissao('A sessão de suporte não troca de negócio.');
+    if (contaId === atual) throw Erros.conflito('Você já está neste negócio.');
+    const { email } = await this.banco.daConta((tx) =>
+      tx.usuario.findUniqueOrThrow({ where: { id }, select: { email: true } }),
+    );
+    const alvo = await this.banco.semConta({ loginEmail: email }, (tx) =>
+      tx.usuario.findFirst({
+        where: { email, contaId, ativo: true },
+        include: { conta: { select: { status: true } } },
+      }),
+    );
+    if (!alvo) throw Erros.naoEncontrado('Você não tem acesso a esse negócio.');
+    if (alvo.conta.status === 'suspensa' || alvo.conta.status === 'cancelada')
+      throw Erros.semPermissao('Esse negócio está suspenso. Fale com o suporte do Pente Fino.');
+    return this.banco.naConta(contaId, async (tx) => {
+      await auditar(
+        tx,
+        {
+          entidade: 'usuario',
+          entidadeId: alvo.id,
+          acao: 'trocar_de_negocio',
+          depois: { de: atual },
+        },
+        alvo.id,
+      );
+      return this.montarSessao(tx, alvo.id);
     });
+  }
+
+  /**
+   * Mesma senha em todos os negócios do e-mail (um login só). `revogar`: encerra as sessões
+   * abertas nos outros negócios (troca e redefinição de senha).
+   */
+  private async sincronizarSenha(
+    usuario: { id: string; email: string },
+    senhaHash: string,
+    revogar: boolean,
+  ): Promise<void> {
+    const outros = await this.banco.semConta({ loginEmail: usuario.email }, (tx) =>
+      tx.usuario.findMany({
+        where: { email: usuario.email, id: { not: usuario.id } },
+        select: { id: true, contaId: true },
+      }),
+    );
+    for (const o of outros)
+      await this.banco.naConta(o.contaId, async (tx) => {
+        await tx.usuario.update({ where: { id: o.id }, data: { senhaHash } });
+        if (revogar) await this.revogarSessoes(tx, o.id);
+      });
   }
 
   /** Troca o refreshToken por um novo (rotação). Reuso de token já trocado derruba a sessão. */
@@ -130,6 +203,7 @@ export class AuthService {
         id,
         segmento: conta.segmento,
         licenca: conta.licenca,
+        outrasContas: [],
         funcoes: funcoesDaConta(
           conta.segmento,
           Array.isArray(conta.funcoes) ? (conta.funcoes as string[]) : null,
@@ -150,7 +224,7 @@ export class AuthService {
   /** Envia o link de redefinição. A resposta não revela se o e-mail existe. */
   async esqueciSenha(email: string): Promise<void> {
     const usuario = await this.banco.semConta({ loginEmail: email }, (tx) =>
-      tx.usuario.findUnique({ where: { email } }),
+      tx.usuario.findFirst({ where: { email, ativo: true }, orderBy: { criadoEm: 'asc' } }),
     );
     if (!usuario?.ativo) return;
 
@@ -202,6 +276,7 @@ export class AuthService {
       return atualizado;
     });
     if (!usuario) throw linkInvalido();
+    await this.sincronizarSenha(usuario, senhaHash, true);
     await this.depoisDeAlterarSenha(usuario);
   }
 
@@ -227,6 +302,7 @@ export class AuthService {
       await auditar(tx, { entidade: 'usuario', entidadeId: id, acao: 'trocar_senha' });
       return this.montarSessao(tx, id);
     });
+    await this.sincronizarSenha(usuario, senhaHash, true);
     await this.depoisDeAlterarSenha(usuario);
     return sessao;
   }
@@ -258,6 +334,12 @@ export class AuthService {
       return this.montarSessao(tx, registro.usuarioId);
     });
     if (!sessao) throw linkInvalido();
+    // A senha criada vale também nos outros negócios do mesmo e-mail (um login só).
+    await this.sincronizarSenha(
+      { id: registro.usuarioId, email: sessao.usuario.email },
+      senhaHash,
+      false,
+    );
     return sessao;
   }
 
@@ -362,6 +444,26 @@ export class AuthService {
     return { ip: c?.ip ?? null, userAgent: c?.userAgent ?? null };
   }
 
+  /**
+   * Os outros negócios do mesmo login (duas contas, um login): o e-mail é declarado na transação
+   * só para esta leitura (políticas login_por_email em usuario e conta) e volta a vazio em seguida.
+   */
+  private async outrasContasDoLogin(tx: Transacao, usuarioId: string, email: string) {
+    await tx.$queryRaw`SELECT set_config('app.login_email', ${email}, true)`;
+    try {
+      const outros = await tx.usuario.findMany({
+        where: { email, ativo: true, id: { not: usuarioId } },
+        select: { conta: { select: { id: true, nome: true, licenca: true, status: true } } },
+        orderBy: { criadoEm: 'asc' },
+      });
+      return outros
+        .filter((o) => o.conta.status !== 'suspensa' && o.conta.status !== 'cancelada')
+        .map((o) => ({ contaId: o.conta.id, nome: o.conta.nome, licenca: o.conta.licenca }));
+    } finally {
+      await tx.$queryRaw`SELECT set_config('app.login_email', '', true)`;
+    }
+  }
+
   private async usuarioSessao(tx: Transacao, usuarioId: string): Promise<UsuarioSessao> {
     const u = await tx.usuario.findUniqueOrThrow({
       where: { id: usuarioId },
@@ -370,9 +472,11 @@ export class AuthService {
         conta: { select: { segmento: true, funcoes: true, licenca: true } },
       },
     });
+    const outrasContas = await this.outrasContasDoLogin(tx, u.id, u.email);
     return {
       segmento: u.conta.segmento,
       licenca: u.conta.licenca,
+      outrasContas,
       funcoes: funcoesDaConta(
         u.conta.segmento,
         Array.isArray(u.conta.funcoes) ? (u.conta.funcoes as string[]) : null,

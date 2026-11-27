@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (duas contas, um login)
+
+- **Abrir outro negócio com o mesmo login:** o dono cria mais um negócio pelo menu ("Abrir outro negócio"), de qualquer licença, com o mesmo e-mail e a mesma senha e 20% de desconto na mensalidade dele. Cada negócio tem a sua agenda, clientes, equipe e assinatura.
+- **Trocar de negócio pelo menu:** "Seus outros negócios" aparece no menu lateral e no "Mais" do celular; o login entra no negócio usado por último no aparelho.
+- **A senha vale em todos os negócios do e-mail:** trocar ou redefinir num vale no outro. Quem trabalha em dois lugares pode ser convidado pelos dois com o mesmo e-mail.
+
 ### Mudado (Licença Atendimento e plano Agenda)
 
 - **Licença Atendimento com o menu enxuto:** só o que o bot usa (Início, Agenda, Clientes, Equipe, Serviços, Bot, Conversas, Configurações e Ajuda). Comanda, caixa, resultados, financeiro, comissões, produtos, clube e site não aparecem, nem com cadeado.

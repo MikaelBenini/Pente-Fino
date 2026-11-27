@@ -35,6 +35,16 @@ Levantamento de preços dos concorrentes e o que falta para competir: `docs/conc
 - **Complementos de todas as licenças:** Automações (onde não vêm incluídas), unidade extra,
   segunda conta com 20% de desconto e, na Fase 4, créditos de IA.
 
+## Duas contas, um login (implementado em 27/11/2026)
+
+Cada negócio continua com o seu usuário e isolado pelo RLS; o e-mail passa a ser único dentro
+da conta (`usuario (conta_id, email)`). O login acha os usuários do e-mail (política
+`login_por_email`, agora também em `conta`, só leitura), entra no negócio usado por último no
+aparelho e lista os outros no menu; `POST /auth/trocar-conta` troca sem senha. Trocar ou redefinir
+a senha vale para todos os negócios do e-mail (e encerra as sessões abertas neles); aceitar um
+convite também. O dono abre outro negócio em `POST /conta/outro-negocio`: mesma pessoa, mesma
+senha, conta em teste e `descontoBp` de 20%.
+
 ## Consequências
 
 - Uma barbearia nunca vê preço nem recurso de clínica, e vice-versa; cada página de vendas leva

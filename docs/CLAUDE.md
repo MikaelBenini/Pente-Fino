@@ -38,6 +38,7 @@ Mapa da documentação em `docs/README.md`: produto, arquitetura (diagrama), reg
 ## Regras de negócio que não podem quebrar
 
 - **Multiempresa:** toda tabela de negócio tem `conta_id`; RLS no PostgreSQL via `app.conta_id`. Nunca confiar em `conta_id` vindo do cliente. Usuário do banco da aplicação não é superusuário. Consultas de negócio sempre dentro de `naConta()` (`@pente-fino/db`); o banco preenche `conta_id` sozinho. Tabela nova com `conta_id` chama `habilitar_isolamento_conta('tabela')` na migração.
+- **Duas contas, um login** (ADR 0015): o e-mail é único dentro da conta (`usuario (conta_id, email)`), não no sistema todo. Cada negócio tem o seu usuário; login, troca de negócio (`POST /auth/trocar-conta`) e senha valem para todos os usuários do mesmo e-mail. Busca de usuário por e-mail dentro da conta com `findFirst`; entre contas, só pelas políticas `login_por_email` (usuario e conta, só leitura).
 - **Dinheiro em centavos (inteiro)**, nunca float. Datas em UTC no banco, exibição em `America/Sao_Paulo`.
 - **Lançamento único:** agendamento cria comanda prevista → barbeiro lança extras e confirma → recepção fecha. Só comanda **fechada** entra em faturamento, comissão e indicadores.
 - Estados da comanda: prevista, em_atendimento, confirmada, pendente, fechada, cancelada, reaberta. Reabrir exige permissão (dono/gestor), motivo e auditoria.

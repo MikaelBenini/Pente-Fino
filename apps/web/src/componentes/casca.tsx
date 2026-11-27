@@ -30,6 +30,8 @@ import {
   Search,
   SunMedium,
   X,
+  ArrowLeftRight,
+  Plus,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -49,6 +51,7 @@ import {
   useUnidadeGuardada,
   useUnidades,
   useUsuario,
+  guardarNegocio,
 } from '@/lib/sessao';
 import { useTema } from '@/lib/tema';
 import { Contexto, nomeDaUnidade, useApp, type ContextoApp } from './contexto-app';
@@ -370,6 +373,7 @@ function MenuLateral() {
           </div>
         )}
       </nav>
+      <OutrosNegocios />
       <BlocoUsuario />
     </aside>
   );
@@ -409,6 +413,66 @@ function SeletorUnidade({ compacto = false }: { compacto?: boolean }) {
       {conteudo}
       <span className="sr-only"> (trocar unidade)</span>
     </Link>
+  );
+}
+
+/**
+ * Duas contas, um login (ADR 0015): os outros negócios do mesmo e-mail, para trocar sem digitar a
+ * senha, e "Abrir outro negócio" para o dono (20% de desconto na segunda conta).
+ */
+function OutrosNegocios({ aoTrocar }: { aoTrocar?: () => void }) {
+  const c = useApp();
+  const [trocando, setTrocando] = useState<string | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const dono = c.papeis.includes('dono');
+  const outras = c.usuario.outrasContas ?? [];
+  if (!outras.length && !dono) return null;
+  const trocar = async (contaId: string) => {
+    setErro(null);
+    setTrocando(contaId);
+    try {
+      await api('auth/trocar-conta', { corpo: { contaId } });
+      guardarNegocio(contaId, true);
+      aoTrocar?.();
+      // Recarga completa: nada do negócio anterior fica na memória da página.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign('/inicio');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível trocar agora.');
+      setTrocando(null);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-1 border-t border-borda py-2">
+      {outras.length > 0 && (
+        <p className="px-3 text-xs font-semibold text-tinta-suave">Seus outros negócios</p>
+      )}
+      {outras.map((o) => (
+        <Botao
+          key={o.contaId}
+          variante="fantasma"
+          className="min-h-11 justify-start gap-3 px-3 font-medium"
+          carregando={trocando === o.contaId}
+          onClick={() => trocar(o.contaId)}
+        >
+          {trocando !== o.contaId && (
+            <ArrowLeftRight aria-hidden className="size-5 text-tinta-suave" strokeWidth={1.75} />
+          )}
+          <span className="truncate">Trocar para {o.nome}</span>
+        </Botao>
+      ))}
+      {dono && (
+        <Link
+          href="/outro-negocio"
+          onClick={aoTrocar}
+          className="flex min-h-11 items-center gap-3 rounded-md px-3 font-medium text-tinta-suave hover:bg-superficie-2 hover:text-tinta focus-visible:outline-2 focus-visible:outline-foco"
+        >
+          <Plus aria-hidden className="size-5" strokeWidth={1.75} />
+          Abrir outro negócio
+        </Link>
+      )}
+      {erro && <p className="px-3 text-sm text-perigo-texto">{erro}</p>}
+    </div>
   );
 }
 
@@ -724,6 +788,7 @@ function FolhaMais({
               Meu perfil
             </Link>
           )}
+          <OutrosNegocios aoTrocar={onFechar} />
           <BotaoTema />
           <Botao
             variante="fantasma"

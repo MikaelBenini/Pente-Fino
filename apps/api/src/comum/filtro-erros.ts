@@ -26,7 +26,7 @@ const PADRAO_POR_STATUS: Record<number, [string, string]> = {
 /** Restrições do banco com mensagem própria. */
 const RESTRICOES: Record<string, string> = {
   agendamento_sem_sobreposicao: 'Este profissional já tem um agendamento nesse horário.',
-  usuario_email_key: 'Este e-mail já está cadastrado.',
+  usuario_conta_id_email_key: 'Este e-mail já está cadastrado nesta conta.',
   unidade_slug_key: 'Este endereço de agendamento já está em uso. Escolha outro.',
 };
 

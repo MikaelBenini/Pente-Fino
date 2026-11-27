@@ -77,6 +77,7 @@ const QUALQUER_PAPEL = new Set([
   'GET /conta/situacao',
   'GET /unidades',
   'POST /auth/reenviar-confirmacao',
+  'POST /auth/trocar-conta', // duas contas, um login: qualquer papel troca de negócio
   'POST /auth/trocar-senha',
 ]);
 

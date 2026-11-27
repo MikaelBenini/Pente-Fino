@@ -17,7 +17,7 @@ Detalhe, esforço, riscos e perguntas de cada fase em
   - [x] PR 1: licença na conta, preços e limites por licença, troca só pela administração, cadastro com `?licenca=`, venda presencial com licença
   - [x] PR 2: proteção dos números de WhatsApp (aquecimento, ritmo, "digitando...", repetida, pausa por risco)
   - [x] PR 3: Licença Atendimento com o menu enxuto e o plano Agenda sem Automações para quem assina a partir de agora
-  - [ ] PR 4: duas contas com um login só (seletor no menu do usuário) e 20% na segunda conta
+  - [x] PR 4: duas contas com um login só (menu "Seus outros negócios", "Abrir outro negócio") e 20% na segunda conta
   - [ ] A licença nas métricas e no funil da administração (`plataforma_contas()` ainda não traz; hoje todas as contas são Barbearia)
   - [ ] Páginas de vendas por licença (Fase 5), cada uma com o link de cadastro da licença
   - [ ] IA com créditos pré-pagos como complemento de todas as licenças, inclusive Atendimento (Fase 4)

@@ -2,7 +2,7 @@
 
 # Rotas da API
 
-333 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
+335 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
 
 ## admin
 
@@ -118,6 +118,7 @@
 | POST | `/auth/reenviar-confirmacao` | logado | Mandar de novo o link de confirmação do e-mail |
 | POST | `/auth/esqueci-senha` | público | Enviar link de redefinição de senha por e-mail |
 | POST | `/auth/redefinir-senha` | público | Criar nova senha com o link recebido por e-mail |
+| POST | `/auth/trocar-conta` | logado | Trocar de negócio com o mesmo login (outra conta com o mesmo e-mail) |
 | POST | `/auth/trocar-senha` | logado | Trocar a senha informando a atual (encerra as outras sessões) |
 | POST | `/auth/convite` | público | Aceitar convite criando a senha |
 
@@ -322,6 +323,7 @@
 | GET | `/conta` | logado | Conta, plano e uso dos limites |
 | GET | `/conta/suporte` | dono | Até quando o suporte do Pente Fino pode ver o painel (admin F5) |
 | PUT | `/conta/suporte` | dono | Liberar por 24 h (ou cancelar) o acesso de suporte, só leitura (admin F5) |
+| POST | `/conta/outro-negocio` | dono | Abrir outro negócio com o mesmo login (20% de desconto na segunda conta) |
 | PUT | `/conta/funcoes` | dono | Funções ligadas (pacotes, anamnese...); licença e segmento só a administração troca |
 | PATCH | `/conta` | dono | Alterar o nome da barbearia |
 

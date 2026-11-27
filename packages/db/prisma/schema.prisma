@@ -500,7 +500,8 @@ model Usuario {
   id                 String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
   contaId            String    @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
   nome               String
-  email              String    @unique
+  /// Único dentro da conta: o mesmo e-mail pode ter um usuário em cada negócio (um login só).
+  email              String
   telefone           String?
   senhaHash          String?   @map("senha_hash")
   /// Quais avisos vão para o celular e se o resumo do dia vai por e-mail (packages/shared/src/avisos.ts).
@@ -536,7 +537,9 @@ model Usuario {
   mensagensEscritas     Mensagem[]          @relation("MensagemAutor")
   eventosDeConversa     BotSessaoEvento[]   @relation("BotSessaoEventoAutor")
 
+  @@unique([contaId, email])
   @@index([contaId])
+  @@index([email])
   @@map("usuario")
 }
 
