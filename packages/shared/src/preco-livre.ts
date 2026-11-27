@@ -68,8 +68,8 @@ export function erroNaFaixaPrecoLivre(regra: RegraPrecoLivre): string | null {
 
 /** Quem pode digitar o valor: dono, gestor e recepção; o barbeiro só com a liberação do dono. */
 export function podeDigitarPrecoLivre(papeis: readonly Papel[], barbeiroDigita: boolean): boolean {
-  if (papeis.some((p) => p !== 'barbeiro')) return true;
-  return papeis.includes('barbeiro') && barbeiroDigita;
+  if (papeis.some((p) => p !== 'profissional')) return true;
+  return papeis.includes('profissional') && barbeiroDigita;
 }
 
 /** Liberação do barbeiro (Serviços → Catálogo, só o dono). */

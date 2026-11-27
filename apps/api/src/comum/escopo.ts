@@ -4,7 +4,7 @@ import { Contexto } from './contexto.js';
 import { Erros } from './erros.js';
 
 export const GESTAO: Papel[] = ['dono', 'gestor'];
-export const TODOS: Papel[] = ['dono', 'gestor', 'recepcao', 'barbeiro'];
+export const TODOS: Papel[] = ['dono', 'gestor', 'recepcao', 'profissional'];
 
 /** Filtro Prisma por unidade: {} quando alcança todas, { unidadeId: { in } } quando não. */
 export function filtroUnidade(

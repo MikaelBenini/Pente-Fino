@@ -62,9 +62,9 @@ describe('podeDigitarPrecoLivre', () => {
   it('dono, gestor e recepção digitam; barbeiro só com a liberação', () => {
     expect(podeDigitarPrecoLivre(['recepcao'], false)).toBe(true);
     expect(podeDigitarPrecoLivre(['dono'], false)).toBe(true);
-    expect(podeDigitarPrecoLivre(['barbeiro'], false)).toBe(false);
-    expect(podeDigitarPrecoLivre(['barbeiro'], true)).toBe(true);
-    expect(podeDigitarPrecoLivre(['barbeiro', 'gestor'], false)).toBe(true);
+    expect(podeDigitarPrecoLivre(['profissional'], false)).toBe(false);
+    expect(podeDigitarPrecoLivre(['profissional'], true)).toBe(true);
+    expect(podeDigitarPrecoLivre(['profissional', 'gestor'], false)).toBe(true);
     expect(podeDigitarPrecoLivre([], true)).toBe(false);
   });
 });

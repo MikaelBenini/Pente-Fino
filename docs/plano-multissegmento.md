@@ -36,7 +36,7 @@ melhor depois de saber quais funções cada segmento terá.
 | 1. Segmentos | estúdio = tatuagem, unhas e afins; também personal trainer | Segmentos: barbearia, salão de beleza, estética, unhas e sobrancelhas, tatuagem e piercing, academia e estúdio (pilates, funcional), personal trainer, outro. |
 | 2. Papel `barbeiro` | renomear | `barbeiro` vira `profissional` no banco e no código (S4), numa PR própria, antes do resto. |
 | 3. Mais de um segmento por conta | o dono deixou a decisão comigo | **Um segmento por conta**, com funções de outros segmentos ligáveis por conta (S5): ver a [ADR 0014](decisoes/0014-um-segmento-por-conta.md). |
-| 4. Comanda por baixo do contador | não ficou clara | Reformulada abaixo, em linguagem simples. |
+| 4. Comanda por baixo do contador | (A): o + cria a comanda por trás | O lançamento rápido (I3) cria comandas fechadas; comissão, clube e relatórios continuam iguais. |
 | 5. Academia ou estética | estética | 1d antes da 1c. |
 | 6. Modo da IA | a nossa IA primeiro (para testar e para faturar com o uso); chave própria depois, para quem quiser | IA2 começa pelo modo "nossa IA" com **créditos pré-pagos** e margem; a chave própria vem depois. Como pagamos o provedor antes, o saldo é sempre pré-pago e o limite é rígido: nunca consumo pós-pago. |
 | 7. Merge | pode mesclar com o CI verde | As PRs são mescladas quando o CI fica verde. |
@@ -48,7 +48,7 @@ para contar os serviços do dia, sem abrir comanda. A dúvida é: quando alguém
 sistema (A) cria a comanda sozinho, por trás, e tudo continua funcionando igual (comissão, clube,
 relatórios), só que mais rápido para quem lança; ou (B) deixa de ter comanda, e aí comissão por
 profissional, clube e histórico do cliente precisariam ser refeitos de outro jeito. **Recomendo a
-(A).**
+(A).** *Resposta do dono: (A).*
 
 ---
 

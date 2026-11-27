@@ -321,10 +321,10 @@ describe('isolamento: o dono de outra conta, rota por rota', () => {
 describe('permissões: cada papel tentando o que não pode', () => {
   const periodo = () => `de=${mes}-01&ate=${hoje}`;
   const matriz = (): Record<
-    'barbeiro' | 'recepcao' | 'gestor',
+    'profissional' | 'recepcao' | 'gestor',
     [string, () => string, object?][]
   > => ({
-    barbeiro: [
+    profissional: [
       ['get', () => '/usuarios'],
       ['get', () => '/bot'],
       ['post', () => '/bot/simular', { unidadeId: a.unidadeA, entrada: 'oi', sessao: null }],
@@ -441,7 +441,7 @@ describe('permissões: cada papel tentando o que não pode', () => {
       [
         'post',
         () => '/usuarios/convites',
-        { nome: 'X Y', email: 'y@x.dev', papel: 'barbeiro', unidadeId: a.unidadeA },
+        { nome: 'X Y', email: 'y@x.dev', papel: 'profissional', unidadeId: a.unidadeA },
       ],
     ],
     gestor: [
@@ -476,10 +476,10 @@ describe('permissões: cada papel tentando o que não pode', () => {
     ],
   });
 
-  it.each(['barbeiro', 'recepcao', 'gestor'] as const)(
+  it.each(['profissional', 'recepcao', 'gestor'] as const)(
     '%s recebe 403 em tudo o que não pode',
     async (papel) => {
-      const cliente = { barbeiro: barbeiroA, recepcao: recepcaoA, gestor: gestorA }[papel];
+      const cliente = { profissional: barbeiroA, recepcao: recepcaoA, gestor: gestorA }[papel];
       for (const [metodo, rota, corpo] of matriz()[papel]) {
         const r = await (
           cliente as unknown as Record<string, (u: string, c?: object) => request.Test>

@@ -53,7 +53,7 @@ enum Papel {
   dono
   gestor
   recepcao
-  barbeiro
+  profissional
 
   @@map("papel")
 }

@@ -25,8 +25,8 @@ export function barbeirosSemCadastro(
     u.ativo
       ? u.papeis
           .filter(
-            (p): p is { papel: 'barbeiro'; unidadeId: string } =>
-              p.papel === 'barbeiro' &&
+            (p): p is { papel: 'profissional'; unidadeId: string } =>
+              p.papel === 'profissional' &&
               p.unidadeId !== null &&
               !cadastrados.has(`${u.id}:${p.unidadeId}`),
           )

@@ -163,7 +163,7 @@ describe('convite', () => {
         nome: 'Novo Barbeiro',
         email,
         telefone: '(11) 98888-7777',
-        papel: 'barbeiro',
+        papel: 'profissional',
         unidadeId: cenario.unidadeA,
       })
       .expect(201);
@@ -179,7 +179,7 @@ describe('convite', () => {
       .send({ token, senha: 'minha-senha-nova' })
       .expect(200);
     expect(sessao.body.usuario.papeis).toEqual([
-      { papel: 'barbeiro', unidadeId: cenario.unidadeA },
+      { papel: 'profissional', unidadeId: cenario.unidadeA },
     ]);
     await entrar(app, email, 'minha-senha-nova');
 
@@ -197,8 +197,8 @@ describe('convite', () => {
       http().post('/usuarios/convites').set('authorization', `Bearer ${accessToken}`).send(corpo);
     const base = { nome: 'Fulano', email: `f-${randomUUID().slice(0, 8)}@e2e.pentefino.dev` };
 
-    await convidar({ ...base, papel: 'barbeiro', unidadeId: cenario.unidadeA }).expect(201);
-    await convidar({ ...base, papel: 'barbeiro', unidadeId: cenario.unidadeB }).expect(403);
+    await convidar({ ...base, papel: 'profissional', unidadeId: cenario.unidadeA }).expect(201);
+    await convidar({ ...base, papel: 'profissional', unidadeId: cenario.unidadeB }).expect(403);
     const dono = await convidar({ ...base, papel: 'dono' }).expect(403);
     expect(dono.body.erro.codigo).toBe('sem_permissao');
     await convidar({ ...base, papel: 'gestor', unidadeId: cenario.unidadeA }).expect(403);
@@ -209,7 +209,12 @@ describe('convite', () => {
     await http()
       .post('/usuarios/convites')
       .set('authorization', `Bearer ${accessToken}`)
-      .send({ nome: 'Xavier', email: 'x@x.dev', papel: 'barbeiro', unidadeId: cenario.unidadeA })
+      .send({
+        nome: 'Xavier',
+        email: 'x@x.dev',
+        papel: 'profissional',
+        unidadeId: cenario.unidadeA,
+      })
       .expect(403);
   });
 
@@ -220,14 +225,14 @@ describe('convite', () => {
     const naoEncontrada = await convidar({
       nome: 'Xavier',
       email: `x-${randomUUID()}@x.dev`,
-      papel: 'barbeiro',
+      papel: 'profissional',
       unidadeId: randomUUID(),
     }).expect(404);
     expect(naoEncontrada.body.erro.mensagem).toBe('Unidade não encontrada.');
     const jaTem = await convidar({
       nome: 'Xavier',
       email: cenario.emails.gestor,
-      papel: 'barbeiro',
+      papel: 'profissional',
       unidadeId: cenario.unidadeA,
     }).expect(409);
     expect(jaTem.body.erro.codigo).toBe('conflito');
@@ -235,7 +240,7 @@ describe('convite', () => {
     await convidar({
       nome: 'Xavier',
       email: 'dono@demo.pentefino.dev',
-      papel: 'barbeiro',
+      papel: 'profissional',
       unidadeId: cenario.unidadeA,
     }).expect(409);
   });

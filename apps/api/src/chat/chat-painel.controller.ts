@@ -25,14 +25,14 @@ export class ChatPainelController {
   ) {}
 
   @Get()
-  @Papeis('dono', 'gestor', 'recepcao', 'barbeiro')
+  @Papeis('dono', 'gestor', 'recepcao', 'profissional')
   @ApiOperation({ summary: 'Minha conversa com o suporte (Ajuda do painel); null = nenhuma' })
   async minha(): Promise<{ conversa: ChatDoVisitante | null }> {
     return { conversa: await this.chat.doPainelParaTela(Contexto.usuario().id) };
   }
 
   @Post('avaliacao')
-  @Papeis('dono', 'gestor', 'recepcao', 'barbeiro')
+  @Papeis('dono', 'gestor', 'recepcao', 'profissional')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Avaliar a última conversa encerrada com o suporte' })
   avaliar(@Corpo(avaliarChatSchema) d: AvaliarChatEntrada): Promise<void> {
@@ -40,7 +40,7 @@ export class ChatPainelController {
   }
 
   @Post('mensagens')
-  @Papeis('dono', 'gestor', 'recepcao', 'barbeiro')
+  @Papeis('dono', 'gestor', 'recepcao', 'profissional')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Mandar mensagem ao suporte (começa a conversa se não houver aberta)' })
   async escrever(@Corpo(mensagemChatSchema) d: MensagemChatEntrada): Promise<void> {

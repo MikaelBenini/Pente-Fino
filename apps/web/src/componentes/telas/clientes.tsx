@@ -39,7 +39,7 @@ const mensagemDe = (e: unknown) =>
 
 export function TelaClientes() {
   const { papeis } = useApp();
-  const balcao = papeis.some((p) => p !== 'barbeiro');
+  const balcao = papeis.some((p) => p !== 'profissional');
   const [aba, setAba] = useState('todos');
   // "Ver cliente" das Conversas abre a ficha direto (/clientes?id=).
   const idDoLink = useSearchParams().get('id');

@@ -55,7 +55,7 @@ export async function criarCenario(): Promise<Cenario> {
     const criar = async (
       nome: string,
       email: string,
-      papel: 'dono' | 'gestor' | 'barbeiro' | 'recepcao',
+      papel: 'dono' | 'gestor' | 'profissional' | 'recepcao',
       unidadeId: string | null,
     ) => {
       const u = await tx.usuario.create({ data: { nome, email, senhaHash } });
@@ -63,7 +63,7 @@ export async function criarCenario(): Promise<Cenario> {
     };
     await criar('Dona Teste', emails.dono, 'dono', null);
     await criar('Gestor Teste', emails.gestor, 'gestor', a.id);
-    await criar('Barbeiro Teste', emails.barbeiro, 'barbeiro', a.id);
+    await criar('Barbeiro Teste', emails.barbeiro, 'profissional', a.id);
     await criar('Recepção Teste', emails.recepcao, 'recepcao', a.id);
     // Como numa barbearia de verdade, o caixa de hoje está aberto: fechar comanda não o abre
     // sozinho (o dinheiro entra no caixa do dia em que é recebido).

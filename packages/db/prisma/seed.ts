@@ -351,7 +351,7 @@ async function popular(tx: Prisma.TransactionClient, { hoje, inicioHistorico, ag
     const usuario = await tx.usuario.create({ data: { nome: membro.nome, email } });
     const unidade = unidades[membro.unidade];
     await tx.papelUsuario.create({
-      data: { usuarioId: usuario.id, papel: 'barbeiro', unidadeId: unidade.id },
+      data: { usuarioId: usuario.id, papel: 'profissional', unidadeId: unidade.id },
     });
     const entrada = somarDias(hoje, -membro.entradaHaDias);
     const profissional = await tx.profissional.create({

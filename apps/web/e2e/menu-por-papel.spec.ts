@@ -14,7 +14,7 @@ const PAPEIS: { email: string; papel: Papel; inicial: string; proibida: string }
   },
   {
     email: 'rafael@demo.pentefino.dev',
-    papel: 'barbeiro',
+    papel: 'profissional',
     inicial: '/hoje',
     proibida: '/financeiro',
   },

@@ -28,7 +28,7 @@ describe('central de ajuda', () => {
   });
 
   it('o barbeiro não vê como montar o bot nem a assinatura', () => {
-    const doBarbeiro = artigosPara(['barbeiro']).map((a) => a.id);
+    const doBarbeiro = artigosPara(['profissional']).map((a) => a.id);
     expect(doBarbeiro).toContain('comanda');
     expect(doBarbeiro).not.toContain('menu-do-bot');
     expect(doBarbeiro).not.toContain('assinatura-e-fundador');
@@ -39,7 +39,7 @@ describe('central de ajuda', () => {
     expect(buscarAjuda('COMISSAO', ['dono']).map((a) => a.id)).toContain('comissoes');
     expect(buscarAjuda('caixa gaveta', ['dono']).map((a) => a.id)).toEqual(['caixa-do-dia']);
     expect(buscarAjuda('xyzinexistente', ['dono'])).toEqual([]);
-    expect(buscarAjuda('', ['barbeiro'])).toEqual(artigosPara(['barbeiro']));
+    expect(buscarAjuda('', ['profissional'])).toEqual(artigosPara(['profissional']));
   });
 
   it('progresso dos primeiros passos', () => {

@@ -12,7 +12,7 @@ import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { Erros } from '../comum/erros.js';
 
-const PAPEIS_DO_GESTOR = new Set(['recepcao', 'barbeiro']);
+const PAPEIS_DO_GESTOR = new Set(['recepcao', 'profissional']);
 
 @Injectable()
 export class UsuariosService {

@@ -159,7 +159,7 @@ function ConteudoAgenda() {
     setAbriuDoAtalho(true);
     setNovo(true);
   }
-  const balcao = papeis.some((p) => p !== 'barbeiro');
+  const balcao = papeis.some((p) => p !== 'profissional');
   const passo = visao === 'dia' ? 1 : visao === 'semana' ? 7 : 31;
   const titulo =
     visao === 'mes'

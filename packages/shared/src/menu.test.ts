@@ -60,7 +60,7 @@ describe('menu por papel', () => {
   });
 
   it('barbeiro', () => {
-    expect(rotulos(['barbeiro'])).toEqual([
+    expect(rotulos(['profissional'])).toEqual([
       'Hoje',
       'Comandas',
       'Clientes',
@@ -72,14 +72,14 @@ describe('menu por papel', () => {
   });
 
   it('dois papéis na mesma unidade somam os menus sem repetir', () => {
-    const menu = rotulos(['recepcao', 'barbeiro']);
+    const menu = rotulos(['recepcao', 'profissional']);
     expect(menu.filter((r) => r === 'Comandas')).toHaveLength(1);
     expect(menu).toContain('Caixa do dia');
     expect(menu).toContain('Hoje');
   });
 
   it('cada número do mês num lugar só: sem as páginas que repetiam os resultados', () => {
-    const rotas = menuPara(['dono', 'barbeiro']).map((i) => i.rota);
+    const rotas = menuPara(['dono', 'profissional']).map((i) => i.rota);
     for (const antiga of ['/metricas', '/relatorio', '/rede', '/metas'])
       expect(rotas).not.toContain(antiga);
     expect(rotas.filter((r) => r === '/resultados')).toHaveLength(1);

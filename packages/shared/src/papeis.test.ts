@@ -12,3 +12,11 @@ describe('papelSchema', () => {
     expect(papelSchema.safeParse('admin').success).toBe(false);
   });
 });
+
+describe('papel profissional (27/11/2026)', () => {
+  it('o nome antigo "barbeiro" ainda é aceito e vira "profissional"', () => {
+    expect(papelSchema.parse('barbeiro')).toBe('profissional');
+    expect(papelSchema.parse('profissional')).toBe('profissional');
+    expect(papelSchema.safeParse('cabeleireiro').success).toBe(false);
+  });
+});

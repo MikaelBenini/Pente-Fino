@@ -48,8 +48,8 @@ export function unidadesPermitidas(
 
 /** Papéis que cada papel pode convidar. Gestor não cria dono nem outro gestor. */
 export const PODE_CONVIDAR: Readonly<Record<Papel, readonly Papel[]>> = {
-  dono: ['dono', 'gestor', 'recepcao', 'barbeiro'],
-  gestor: ['recepcao', 'barbeiro'],
+  dono: ['dono', 'gestor', 'recepcao', 'profissional'],
+  gestor: ['recepcao', 'profissional'],
   recepcao: [],
-  barbeiro: [],
+  profissional: [],
 };

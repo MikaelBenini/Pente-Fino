@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { jwtVerify, SignJWT } from 'jose';
-import type { PapelAtribuido, Papel } from '@pente-fino/shared';
+import { papelAtual, type PapelAtribuido, type Papel } from '@pente-fino/shared';
 import type { UsuarioAutenticado } from '../comum/contexto.js';
 
 const EMISSOR = 'pente-fino';
@@ -79,7 +79,11 @@ export class TokensAcesso {
       });
       if (!payload.sub || typeof payload.conta !== 'string' || !Array.isArray(payload.papeis))
         return null;
-      const papeis: PapelAtribuido[] = payload.papeis.map((p) => ({ papel: p.p, unidadeId: p.u }));
+      // Token emitido antes de 27/11/2026 traz o papel antigo "barbeiro": vale como "profissional".
+      const papeis: PapelAtribuido[] = payload.papeis.map((p) => ({
+        papel: papelAtual(p.p) as Papel,
+        unidadeId: p.u,
+      }));
       const sup = payload.sup;
       return {
         id: payload.sub,

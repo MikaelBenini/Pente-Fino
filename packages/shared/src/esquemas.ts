@@ -1,6 +1,6 @@
 // Esquemas de entrada dos cadastros (Etapa 6). Mesma validação na API e nos formulários.
 import { z } from 'zod';
-import { PAPEIS } from './papeis.js';
+import { PAPEIS, papelSchema } from './papeis.js';
 import { linkDeMapaValido, UFS } from './endereco-unidade.js';
 
 const uuid = (rotulo: string) => z.uuid({ error: `${rotulo} inválido.` });
@@ -148,7 +148,7 @@ export const NOMES_DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sá
 
 export const papeisUsuarioSchema = z.object({
   papeis: z
-    .array(z.object({ papel: z.enum(PAPEIS), unidadeId: uuid('Unidade').nullable() }))
+    .array(z.object({ papel: papelSchema, unidadeId: uuid('Unidade').nullable() }))
     .min(1, { error: 'O usuário precisa de pelo menos um papel.' })
     .max(20),
 });

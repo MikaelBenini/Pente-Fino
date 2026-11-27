@@ -39,7 +39,7 @@ export class DesempenhoController {
   }
 
   @Get(':id/desempenho')
-  @Papeis('dono', 'gestor', 'barbeiro')
+  @Papeis('dono', 'gestor', 'profissional')
   @ApiOperation({
     summary: 'Ficha do profissional: dono e gestor da unidade, ou o próprio barbeiro (sem margem)',
   })

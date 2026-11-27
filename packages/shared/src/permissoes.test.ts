@@ -9,7 +9,7 @@ describe('permissões por unidade', () => {
   const dono = [{ papel: 'dono' as const, unidadeId: null }];
   const misto = [
     { papel: 'gestor' as const, unidadeId: centro },
-    { papel: 'barbeiro' as const, unidadeId: jardins },
+    { papel: 'profissional' as const, unidadeId: jardins },
   ];
 
   it('papel sem unidade vale em todas', () => {
@@ -23,13 +23,13 @@ describe('permissões por unidade', () => {
   });
 
   it('papéis diferentes em unidades diferentes não se misturam', () => {
-    expect(papeisNaUnidade(misto, jardins)).toEqual(['barbeiro']);
+    expect(papeisNaUnidade(misto, jardins)).toEqual(['profissional']);
     expect(podeNaUnidade(misto, jardins, ['gestor'])).toBe(false);
     expect(unidadesPermitidas(misto, ['gestor'])).toEqual([centro]);
   });
 
   it('temAlgumPapel ignora a unidade', () => {
-    expect(temAlgumPapel(misto, ['barbeiro'])).toBe(true);
+    expect(temAlgumPapel(misto, ['profissional'])).toBe(true);
     expect(temAlgumPapel(misto, ['dono'])).toBe(false);
   });
 });

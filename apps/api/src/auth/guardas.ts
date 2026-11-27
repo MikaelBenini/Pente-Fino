@@ -76,7 +76,7 @@ export class PermissaoGuard implements CanActivate {
       ctx.getClass(),
     ]);
     const unidadeId = unidadeDaRequisicao(ctx.switchToHttp().getRequest<Request>());
-    const papeis: readonly Papel[] = aceitos ?? ['dono', 'gestor', 'recepcao', 'barbeiro'];
+    const papeis: readonly Papel[] = aceitos ?? ['dono', 'gestor', 'recepcao', 'profissional'];
 
     const permitido = unidadeId
       ? podeNaUnidade(usuario.papeis, unidadeId, papeis)

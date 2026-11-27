@@ -4,7 +4,7 @@
 
 Fonte: `packages/shared/src/menu.ts` (`ITENS_MENU`, `menuPara`). A tela só aparece no menu de quem pode abri-la; o plano pode esconder telas (`RECURSO_DA_TELA`).
 
-| Tela | Rota | Grupo | dono | gestor | recepcao | barbeiro | Recurso do plano |
+| Tela | Rota | Grupo | dono | gestor | recepcao | profissional | Recurso do plano |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Início | `/inicio` | Dia a dia | sim | sim |  |  |  |
 | Resumo do dia | `/dia` | Dia a dia | sim | sim |  |  | operacao |

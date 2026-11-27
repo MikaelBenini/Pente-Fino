@@ -15,7 +15,7 @@ export const PALAVRAS_DA_TELA: Partial<Record<IdMenu, readonly string[]>> = {
   clientes: ['cliente', 'aniversario', 'telefone', 'contato'],
   resultados: ['faturamento', 'lucro', 'ticket medio', 'mes'],
   financeiro: ['despesa', 'conta a pagar', 'retirada', 'cartao'],
-  equipe: ['barbeiro', 'profissional', 'funcionario', 'convite', 'expediente'],
+  equipe: ['profissional', 'profissional', 'funcionario', 'convite', 'expediente'],
   desempenho: ['ranking', 'meta'],
   comissoes: ['comissao', 'pagar barbeiro', 'vale'],
   servicos: ['corte', 'barba', 'preco', 'combo'],
