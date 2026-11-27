@@ -145,11 +145,21 @@ export class ProvedorEvolution implements ProvedorWhatsApp {
     }
   }
 
-  async enviarTexto(instancia: string, telefone: string, texto: string) {
+  async enviarTexto(
+    instancia: string,
+    telefone: string,
+    texto: string,
+    opcoes?: { digitandoMs?: number },
+  ) {
+    // delay: a Evolution mostra "digitando..." por esse tempo antes de enviar.
     const r = await this.api<{ key?: { id?: string } }>(
       'POST',
       `/message/sendText/${encodeURIComponent(instancia)}`,
-      { number: telefone, text: texto },
+      {
+        number: telefone,
+        text: texto,
+        ...(opcoes?.digitandoMs ? { delay: Math.round(opcoes.digitandoMs) } : {}),
+      },
     );
     return { idExterno: r.key?.id ?? null };
   }

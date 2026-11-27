@@ -57,6 +57,7 @@ Mapa da documentação em `docs/README.md`: produto, arquitetura (diagrama), reg
 - **WhatsApp nos botões do cliente:** regra única `numeroWhatsappDaUnidade` (número conectado ao bot da unidade; sem ele, o telefone da unidade), via `whatsappDaUnidade`. Não montar `wa.me` com `unidade.telefone` direto.
 - **Estado da conversa** (bot, aguardando, atendimento): toda mudança fica em `bot_sessao_evento` pelo gatilho; antes de gravar a sessão por um caminho novo, chamar `origemDaConversa(tx, origem, autor)`.
 - **Nada automático de madrugada:** mensagem automática que não responde a quem acabou de escrever não sai entre 22h e 7h (`emHorarioDeSilencio`, conferido no `prepararEnvio`).
+- **Proteção dos números de WhatsApp** (`packages/shared/src/protecao-whatsapp.ts`): toda mensagem automática passa pelo `prepararEnvio` (proativa, aquecimento, repetida, pausa por risco) e sai pela fila de saída do worker (ritmo das proativas e "digitando..."). Envio novo de automática nunca chama o provedor direto.
 
 ## Papéis
 

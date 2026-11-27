@@ -50,6 +50,8 @@ import {
   NOTA_BAIXA_ESPERA_MIN,
   TENTATIVAS_REPETIVEIS,
   proximoEnvio,
+  INTERVALO_PROATIVA_MS,
+  VARIACAO_PROATIVA_MS,
   type TrabalhoNotificacao,
   type TrabalhoWhatsappEntrada,
   type TrabalhoWhatsappSaida,
@@ -65,6 +67,16 @@ import { CONFIGURACAO_WORKER, type ConfiguracaoWorker } from './config.js';
 export interface RelogioDeEnvio {
   ultimo(instancia: string): Promise<number | null>;
   marcar(instancia: string, quando: number): Promise<void>;
+  /**
+   * Reserva, de uma vez só (vários envios ao mesmo tempo), a próxima vaga das proativas do
+   * número: agora, se a última foi há mais de `livreMs`; senão, a última + `intervaloMs`.
+   */
+  reservarProativa(
+    instancia: string,
+    agoraMs: number,
+    intervaloMs: number,
+    livreMs: number,
+  ): Promise<number>;
 }
 
 export const TENTATIVAS_ENVIO = 3;
@@ -96,19 +108,52 @@ export async function agendarRespostas(
 }
 
 /** Uma mensagem da fila de saída: confere se pode sair, envia e registra. */
-export function processadorDeSaida(prisma: PrismaClient, provedor: ProvedorWhatsApp) {
+export function processadorDeSaida(
+  prisma: PrismaClient,
+  provedor: ProvedorWhatsApp,
+  deps: { relogio?: RelogioDeEnvio; agora?: () => number; aleatorio?: () => number } = {},
+) {
   return async (job: Job<TrabalhoWhatsappSaida>, token?: string): Promise<'enviada' | 'pulada'> => {
     const { contaId, mensagemId } = job.data;
     const preparo = await prepararEnvio(prisma, contaId, mensagemId);
     if (preparo.tipo === 'pular') return 'pulada';
-    // Automática de madrugada: volta para a fila e sai no horário de envio (20/11/2026).
+    // Automática de madrugada, pausa por risco ou limite do dia: volta para a fila e sai depois.
     if (preparo.tipo === 'adiar') {
       await job.moveToDelayed(Date.parse(preparo.ate), token);
       throw new DelayedError();
     }
+    // Proteção do número (27/11/2026): proativas do mesmo número saem com 25 a 45 s entre elas.
+    if (preparo.proativa && deps.relogio) {
+      const agora = deps.agora?.() ?? Date.now();
+      const vaga = job.data.vagaProativaMs;
+      if (!vaga || agora < vaga - 1_000) {
+        const intervalo =
+          INTERVALO_PROATIVA_MS +
+          Math.round((deps.aleatorio?.() ?? Math.random()) * VARIACAO_PROATIVA_MS);
+        const quando =
+          vaga ??
+          (await deps.relogio.reservarProativa(
+            `proativa:${preparo.instancia}`,
+            agora,
+            intervalo,
+            INTERVALO_PROATIVA_MS + VARIACAO_PROATIVA_MS,
+          ));
+        if (quando - agora > 1_000) {
+          await job.updateData({ ...job.data, vagaProativaMs: quando });
+          await job.moveToDelayed(quando, token);
+          throw new DelayedError();
+        }
+      }
+    }
     try {
-      const r = await provedor.enviarTexto(preparo.instancia, preparo.telefone, preparo.texto);
-      await registrarEnvio(prisma, contaId, mensagemId, { ok: true, idExterno: r.idExterno });
+      const r = await provedor.enviarTexto(preparo.instancia, preparo.telefone, preparo.texto, {
+        digitandoMs: preparo.digitandoMs,
+      });
+      await registrarEnvio(prisma, contaId, mensagemId, {
+        ok: true,
+        idExterno: r.idExterno,
+        proativa: preparo.proativa,
+      });
       return 'enviada';
     } catch (e) {
       const ultima = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
@@ -263,6 +308,23 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
       marcar: async (instancia, quando) => {
         await redis.set(chave(instancia), String(quando), 'PX', 300_000);
       },
+      // Lê e grava num passo só (script no Redis): dois envios nunca pegam a mesma vaga.
+      reservarProativa: async (instancia, agoraMs, intervaloMs, livreMs) =>
+        Number(
+          await redis.eval(
+            `local u = tonumber(redis.call('GET', KEYS[1]))
+             local agora = tonumber(ARGV[1])
+             local q = agora
+             if u and (agora - u) < tonumber(ARGV[3]) then q = math.max(agora, u + tonumber(ARGV[2])) end
+             redis.call('SET', KEYS[1], tostring(q), 'PX', 300000)
+             return q`,
+            1,
+            chave(instancia),
+            String(agoraMs),
+            String(intervaloMs),
+            String(livreMs),
+          ),
+        ),
     };
 
     const adicionar = (t: TrabalhoWhatsappSaida, atrasoMs: number) =>
@@ -570,7 +632,7 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
 
     this.saida = new Worker<TrabalhoWhatsappSaida>(
       FILA_WHATSAPP_SAIDA,
-      processadorDeSaida(this.banco.prisma, provedor),
+      processadorDeSaida(this.banco.prisma, provedor, { relogio }),
       { connection, concurrency: 3 },
     );
     this.saida.on('failed', (job, erro) =>

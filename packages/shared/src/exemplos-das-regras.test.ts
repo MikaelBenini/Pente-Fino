@@ -8,6 +8,7 @@ import { proximoHorarioDeEnvio } from './estado-conversa.js';
 import { calcularIndicadores, diasDeTrabalho, projetar } from './indicadores.js';
 import { restanteAposSinal } from './sinal.js';
 import { telefoneCanonico } from './whatsapp.js';
+import { ehProativa, limiteProativasDoDia } from './protecao-whatsapp.js';
 
 const item = (d: Partial<Parameters<typeof calcularIndicadores>[0][number]['itens'][number]>) => ({
   tipo: 'servico' as const,
@@ -148,5 +149,18 @@ describe('exemplos de docs/regras-de-negocio.md', () => {
     expect(proximoHorarioDeEnvio(new Date('2026-11-20T23:30:00-03:00'))).toEqual(
       new Date('2026-11-21T07:00:00-03:00'),
     );
+  });
+});
+
+describe('regras-de-negocio.md: proteção dos números de WhatsApp', () => {
+  it('número conectado ontem: 20 proativas por dia; quem escreveu há pouco não conta', () => {
+    const agora = new Date('2026-11-27T12:00:00-03:00');
+    const ontem = new Date('2026-11-26T12:00:00-03:00');
+    expect(limiteProativasDoDia(ontem, agora)).toBe(20);
+    expect(ehProativa(agora.getTime() - 5 * 60_000, agora.getTime())).toBe(false);
+    // O 21º lembrete criado às 12 h ficaria para amanhã às 9 h: 21 h depois, passa das 12 h e é
+    // descartado (a regra de segurar vale até 12 h).
+    const amanha9h = Date.parse('2026-11-28T09:00:00-03:00');
+    expect((amanha9h - agora.getTime()) / 3_600_000).toBe(21);
   });
 });

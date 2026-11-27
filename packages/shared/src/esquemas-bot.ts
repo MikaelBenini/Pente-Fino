@@ -170,6 +170,8 @@ export interface UnidadeDoBot {
     numero: string | null;
     /** Caiu sem ninguém pedir: o painel avisa até reconectar. */
     caiuEm: string | null;
+    /** Proteção do número contra restrição (só conectado). */
+    protecao?: ProtecaoDoNumero | null;
   } | null;
 }
 
@@ -185,6 +187,20 @@ export interface ConexaoBot {
   erro: string | null;
   /** WhatsApp de teste (sem celular): o QR é de mentira. */
   teste: boolean;
+  /** Proteção do número (protecao-whatsapp.ts): só com o número conectado. */
+  protecao?: ProtecaoDoNumero | null;
+}
+
+/** O que a tela do Bot mostra sobre a proteção do número contra restrição. */
+export interface ProtecaoDoNumero {
+  /** Mensagens automáticas (para quem não escreveu em 24 h) enviadas hoje e o limite de hoje. */
+  proativasHoje: number;
+  limiteHoje: number;
+  /** Número em aquecimento: o limite sobe até este dia (ISO); null = já aquecido. */
+  aquecendoAte: string | null;
+  /** Automáticas pausadas por sinal de risco até esta hora (ISO), e o porquê. */
+  pausadoAte: string | null;
+  pausaMotivo: string | null;
 }
 
 /** Uma mensagem do WhatsApp no histórico do cliente. */

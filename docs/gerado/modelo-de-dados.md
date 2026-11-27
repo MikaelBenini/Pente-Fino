@@ -35,10 +35,10 @@
 | [PagamentoComissao](#pagamentocomissao) | `pagamento_comissao` | 10 | sim |  |
 | [Meta](#meta) | `meta` | 9 | sim | O valor atual é calculado, não guardado. |
 | [Auditoria](#auditoria) | `auditoria` | 10 | sim | Imutável: um gatilho recusa UPDATE e DELETE (migração "restricoes"). |
-| [BotConexao](#botconexao) | `bot_conexao` | 10 | sim | Um número por unidade. "instancia" é o nome da instância na Evolution API. |
+| [BotConexao](#botconexao) | `bot_conexao` | 13 | sim | Um número por unidade. "instancia" é o nome da instância na Evolution API. |
 | [BotSessao](#botsessao) | `bot_sessao` | 10 | sim | Onde cada número está no menu do bot. Sem resposta por 30 minutos, recomeça. |
 | [BotSessaoEvento](#botsessaoevento) | `bot_sessao_evento` | 9 | sim | Histórico do estado da conversa (testes de 19/11/2026): gravado pelo gatilho bot_sessao_estado a cada mudança entre bot, aguardando e atendimento, com a origem (app.origem_conversa). |
-| [Mensagem](#mensagem) | `mensagem` | 15 | sim | Mensagens do WhatsApp, recebidas e enviadas. Histórico no perfil do cliente. |
+| [Mensagem](#mensagem) | `mensagem` | 16 | sim | Mensagens do WhatsApp, recebidas e enviadas. Histórico no perfil do cliente. |
 | [BotMenu](#botmenu) | `bot_menu` | 9 | sim | Versões do menu do bot (sem IA). Uma em rascunho e uma publicada por conta; as publicadas antes ficam arquivadas para "voltar à versão anterior". O menu é um documento (MenuBot de @pente-fino/shared), validado antes de publicar. |
 | [ModeloMensagem](#modelomensagem) | `modelo_mensagem` | 8 | sim | Texto com variáveis entre chaves: {cliente}, {data}, {hora}, {profissional}, {unidade}. Unidade vazia = modelo padrão da conta. |
 | [Avaliacao](#avaliacao) | `avaliacao` | 21 | sim | Pesquisa depois do atendimento: uma por comanda, notas de 1 a 5 e comentário. |
@@ -1046,6 +1046,9 @@ Tabela `bot_conexao`. Um número por unidade. "instancia" é o nome da instânci
 | numero | String | não |  |
 | status | StatusBotConexao | sim | enum StatusBotConexao; padrão desconectado |
 | caiuEm | DateTime | não | A conexão caiu sem o dono pedir: o painel avisa até reconectar.; coluna `caiu_em` |
+| conectadoEm | DateTime | não | Quando o número atual foi conectado: o aquecimento conta daqui (protecao-whatsapp.ts).; coluna `conectado_em` |
+| pausadoAte | DateTime | não | Automáticas pausadas por sinal de risco (falhas seguidas, muitos SAIR) até esta hora.; coluna `pausado_ate` |
+| pausaMotivo | String | não | coluna `pausa_motivo` |
 | criadoEm | DateTime | sim | padrão now(); coluna `criado_em` |
 | atualizadoEm | DateTime | sim | coluna `atualizado_em` |
 | conta | Conta | sim | relação com Conta |
@@ -1118,6 +1121,7 @@ Tabela `mensagem`. Mensagens do WhatsApp, recebidas e enviadas. Histórico no pe
 | automacao | String | não | Automação que gerou a mensagem (retorno, aniversario, pesquisa, lembrete), para os números. |
 | autorId | String | não | Quem da equipe respondeu pelo painel (sugestão aprovada em 16/11/2026).; coluna `autor_id` |
 | peloCelular | Boolean | sim | A equipe respondeu pelo WhatsApp do celular, fora do sistema.; padrão false; coluna `pelo_celular` |
+| proativa | Boolean | sim | Automática para quem não escreveu nas últimas 24 h: conta no limite diário do número.; padrão false |
 | criadoEm | DateTime | sim | padrão now(); coluna `criado_em` |
 | conta | Conta | sim | relação com Conta |
 | unidade | Unidade | sim | relação com Unidade |

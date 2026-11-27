@@ -11,6 +11,7 @@ import {
   menuPublicado,
   numerosDasAutomacoes,
   Prisma,
+  protecaoDoNumero,
   registrarEstadoConexao,
   servicosParaAgendar,
   situacaoDaUnidade,
@@ -140,7 +141,7 @@ export class BotService {
           aviso(
             'Sem link de agendamento: quando o bot não conseguir marcar, não há outro caminho para o cliente.',
           );
-        return { u, s };
+        return { u, s, protecao: await protecaoDoNumero(tx, u.id, agora) };
       });
       return {
         publicado: {
@@ -161,7 +162,7 @@ export class BotService {
         pesquisaAtiva:
           (await tx.conta.findFirst({ select: { pesquisaPosAtendimento: true } }))
             ?.pesquisaPosAtendimento ?? false,
-        unidades: situacoes.map(({ u, s }) => ({
+        unidades: situacoes.map(({ u, s, protecao }) => ({
           id: u.id,
           nome: u.nome,
           horario: s.horario,
@@ -175,6 +176,7 @@ export class BotService {
                 status: u.botConexao.status,
                 numero: u.botConexao.numero,
                 caiuEm: u.botConexao.caiuEm?.toISOString() ?? null,
+                protecao,
               }
             : null,
         })),
@@ -575,11 +577,17 @@ export class BotService {
     exigirUnidade(unidadeId, GESTAO);
     const linha = await this.linhaConexao(unidadeId);
     if (!linha) return this.resposta(unidadeId, null);
+    let r: ConexaoBot;
     try {
-      return await this.gravar(unidadeId, await this.provedor.estado(linha.instancia));
+      r = await this.gravar(unidadeId, await this.provedor.estado(linha.instancia));
     } catch (e) {
-      return this.falha(unidadeId, linha, e);
+      r = this.falha(unidadeId, linha, e);
     }
+    // Proteção do número contra restrição: o que já saiu hoje, o limite e a pausa (27/11/2026).
+    return {
+      ...r,
+      protecao: await this.banco.daConta((tx) => protecaoDoNumero(tx, unidadeId)),
+    };
   }
 
   /** Cria a instância da unidade (uma por unidade), aponta o webhook e devolve o QR. */

@@ -157,6 +157,7 @@ describe('preferências de avisos', () => {
       'cliente_esperando',
       'contato_anuncio',
       'nota_baixa',
+      'whatsapp_protegido',
     ]);
   });
 

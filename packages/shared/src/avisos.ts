@@ -18,6 +18,8 @@ export const TIPOS_AVISO = [
   'cliente_esperando',
   'contato_anuncio',
   'nota_baixa',
+  // Proteção dos números (27/11/2026): as automáticas pararam por sinal de risco.
+  'whatsapp_protegido',
 ] as const;
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 
@@ -29,6 +31,7 @@ export const NOME_TIPO_AVISO: Readonly<Record<TipoAviso, string>> = {
   resumo_dia: 'Resumo do dia da unidade',
   clube_online: 'Cliente que assinou o clube pelo link',
   whatsapp_caiu: 'WhatsApp da unidade desconectado (o bot parou)',
+  whatsapp_protegido: 'Mensagens automáticas pausadas para proteger o número',
   cliente_esperando: 'Cliente esperando resposta no WhatsApp',
   contato_anuncio: 'Contato novo que veio de anúncio',
   nota_baixa: 'Avaliação baixa (nota 1 ou 2)',
@@ -43,6 +46,7 @@ export const ASSUNTO_AVISO: Readonly<Record<TipoAviso, string>> = {
   resumo_dia: 'Resumo',
   clube_online: 'Clube',
   whatsapp_caiu: 'WhatsApp',
+  whatsapp_protegido: 'WhatsApp',
   cliente_esperando: 'WhatsApp',
   contato_anuncio: 'Anúncio',
   nota_baixa: 'Avaliação',
@@ -60,6 +64,7 @@ export const QUEM_RECEBE: Readonly<Record<TipoAviso, readonly (readonly Papel[])
   resumo_dia: [['dono', 'gestor']],
   clube_online: [['dono', 'gestor']],
   whatsapp_caiu: [['dono', 'gestor']],
+  whatsapp_protegido: [['dono', 'gestor']],
   // Quem responde as conversas: a recepção; sem ela, o gestor; sem ele, o dono.
   cliente_esperando: [['recepcao'], ['gestor'], ['dono']],
   contato_anuncio: [['recepcao', 'gestor', 'dono']],
