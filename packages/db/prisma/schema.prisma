@@ -49,6 +49,18 @@ enum StatusConta {
   @@map("status_conta")
 }
 
+/// Licença contratada (ADR 0015; packages/shared/src/licencas.ts): preço e o que o sistema traz.
+enum Licenca {
+  barbearia
+  beleza
+  estetica
+  tatuagem
+  fitness
+  atendimento
+
+  @@map("licenca")
+}
+
 /// Segmentos atendidos (packages/shared/src/vocabulario.ts).
 enum Segmento {
   barbearia
@@ -260,6 +272,8 @@ model Conta {
   nome                    String
   logoUrl                 String?       @map("logo_url")
   /// Segmento do negócio (ADR 0014): vocabulário, catálogo inicial e funções padrão.
+  /// Só a administração troca (plataforma_mudar_licenca).
+  licenca                 Licenca       @default(barbearia)
   segmento                Segmento      @default(barbearia)
   /// Funções ligadas pelo dono (pacotes, anamnese, check-in...); vazio = o padrão do segmento.
   funcoes                 Json?

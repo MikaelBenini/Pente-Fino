@@ -7,7 +7,11 @@ import {
   dataLocal,
   EVENTOS_RECUSA,
   faturaDaCobranca,
-  LIMITES_PLANO,
+  automacoesIncluidasNaLicenca,
+  limitesDaConta,
+  NOME_LICENCA,
+  PLANOS_DA_LICENCA,
+  type Licenca,
   NOME_PLANO,
   valorDaCobranca,
   automacoesAParte,
@@ -67,8 +71,15 @@ interface PagamentoParaAvisar {
 }
 
 /** Texto da assinatura no Asaas: "Pente Fino Agenda + Automações (mensal)". */
-const descricaoDaAssinatura = (plano: PlanoConta, ciclo: string, automacoes: boolean) =>
-  `Pente Fino ${NOME_PLANO[plano]}${automacoes ? ' + Automações' : ''} (${ciclo})`;
+const descricaoDaAssinatura = (
+  plano: PlanoConta,
+  ciclo: string,
+  automacoes: boolean,
+  licenca: Licenca = 'barbearia',
+) =>
+  licenca === 'atendimento'
+    ? `Pente Fino ${NOME_LICENCA.atendimento} (${ciclo})`
+    : `Pente Fino ${licenca === 'barbearia' ? '' : `${NOME_LICENCA[licenca]} `}${NOME_PLANO[plano]}${automacoes ? ' + Automações' : ''} (${ciclo})`;
 
 @Injectable()
 export class CobrancaService {
@@ -108,7 +119,12 @@ export class CobrancaService {
       throw Erros.conflito(
         'A conta já tem assinatura. Para trocar de plano, fale com o suporte do Pente Fino.',
       );
-    const limite = LIMITES_PLANO[d.plano];
+    if (!PLANOS_DA_LICENCA[conta.licenca].includes(d.plano))
+      throw Erros.requisicaoInvalida(
+        'limite_plano',
+        `A Licença ${NOME_LICENCA[conta.licenca]} não tem o plano ${NOME_PLANO[d.plano]}.`,
+      );
+    const limite = limitesDaConta(d.plano, conta.licenca, unidades);
     if (unidades > limite.unidades || profissionais > limite.profissionais)
       throw Erros.requisicaoInvalida(
         'limite_plano',
@@ -135,9 +151,10 @@ export class CobrancaService {
       }),
     );
     const tabelaHoje = await this.precos.vigente(dataLocal(new Date()));
-    const automacoes = d.automacoes && automacoesAParte(d.plano);
+    const incluidas = automacoesIncluidasNaLicenca(conta.licenca);
+    const automacoes = !incluidas && d.automacoes && automacoesAParte(d.plano);
     // Plano Agenda: o cupom só vale com as Automações juntas (decisão do dono em 13/11).
-    if (d.cupom?.trim() && d.plano === 'agenda' && !automacoes)
+    if (d.cupom?.trim() && d.plano === 'agenda' && !automacoes && !incluidas)
       throw Erros.validacao([
         { campo: 'cupom', mensagem: 'No plano Agenda, o cupom vale só com as Automações juntas.' },
       ]);
@@ -152,10 +169,11 @@ export class CobrancaService {
           tabelaHoje,
           desconto.descontoBp,
           automacoes,
+          conta.licenca,
         ),
         ciclo: d.ciclo,
         vencimento: dataLocal(new Date()),
-        descricao: descricaoDaAssinatura(d.plano, d.ciclo, automacoes),
+        descricao: descricaoDaAssinatura(d.plano, d.ciclo, automacoes, conta.licenca),
         referencia: conta.id,
       }),
     );
@@ -260,6 +278,7 @@ export class CobrancaService {
         descontoBp: conta.descontoBp,
         automacoes: conta.automacoesContratadas,
         automacoesNovo: automacoes ?? conta.automacoesContratadas,
+        licenca: conta.licenca,
       });
     });
   }
@@ -285,8 +304,16 @@ export class CobrancaService {
       const tabelaHoje = await this.precos.vigente(dataLocal(new Date()));
       await this.externo(() =>
         this.provedor.atualizarAssinatura(conta.asaasAssinaturaId!, {
-          valor: valorDaCobranca(para, ciclo, unidades, tabelaHoje, conta.descontoBp, automacoes),
-          descricao: descricaoDaAssinatura(para, ciclo, automacoes),
+          valor: valorDaCobranca(
+            para,
+            ciclo,
+            unidades,
+            tabelaHoje,
+            conta.descontoBp,
+            automacoes,
+            conta.licenca,
+          ),
+          descricao: descricaoDaAssinatura(para, ciclo, automacoes, conta.licenca),
         }),
       );
     }

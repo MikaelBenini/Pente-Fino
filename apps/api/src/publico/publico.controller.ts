@@ -80,6 +80,8 @@ import {
   enderecoCompleto,
   linkMapaDaUnidade,
   vocabulario,
+  automacoesIncluidasNaLicenca,
+  licencaDaContaNova,
 } from '@pente-fino/shared';
 import { IndicacaoService } from '../indicacao/indicacao.controller.js';
 import type { Request, Response } from 'express';
@@ -252,6 +254,10 @@ export class PublicoController {
     const { teste } = lerConfiguracaoPublica(await configuracaoDoSistema(this.banco.prisma));
     const desconto = await this.precosServico.cupomValido(d.cupom);
     // Indique e ganhe: quem chega pelo link de indicação ganha 30 dias de teste.
+    // Licença escolhida na página de vendas (ADR 0015).
+    const licencaNova = licencaDaContaNova(d);
+    if ('erro' in licencaNova)
+      throw Erros.validacao([{ campo: 'plano', mensagem: licencaNova.erro }]);
     const indicadoPor = await this.indicacao.codigoValido(d.indicacao);
     const dias = indicadoPor ? Math.max(teste.dias, DIAS_TESTE_INDICADA) : teste.dias;
     const testeAte = new Date(Date.now() + dias * 86_400_000);
@@ -264,8 +270,13 @@ export class PublicoController {
             id: contaId,
             nome: d.barbearia,
             plano: d.plano,
+            licenca: licencaNova.licenca,
+            segmento: licencaNova.segmento,
             ciclo: d.ciclo,
-            automacoesContratadas: d.automacoes && automacoesAParte(d.plano),
+            automacoesContratadas:
+              d.automacoes &&
+              automacoesAParte(d.plano) &&
+              !automacoesIncluidasNaLicenca(licencaNova.licenca),
             indicadoPor,
             status: 'teste',
             testeAte,

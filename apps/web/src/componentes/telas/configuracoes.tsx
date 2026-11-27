@@ -8,13 +8,12 @@ import {
   formatarData,
   formatarTelefone,
   mapaPodeErrar,
+  NOME_LICENCA,
   NOME_PLANO,
   NOMES_DIAS,
   NOMES_DIAS_CURTOS,
   podeNaUnidade,
-  SEGMENTOS,
   vocabulario,
-  type Segmento,
   unidadeSchema,
   type ContaEntrada,
   type UnidadeDetalhe,
@@ -40,7 +39,7 @@ import { z } from 'zod';
 import { api } from '@/lib/api';
 import { chaves, useAcao, useCalendario, useConta, useUnidadesDetalhe } from '@/lib/consultas';
 import { aplicarErroDaApi } from '@/lib/formularios';
-import { useVocabulario, vocabularioDaTela } from '@/lib/vocabulario';
+import { useVocabulario } from '@/lib/vocabulario';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
@@ -151,12 +150,20 @@ function Barbearia() {
             {ehDono ? (
               <div className="flex flex-col gap-8">
                 <NomeConta nome={c.nome} />
-                <TipoDeNegocio segmento={c.segmento} />
               </div>
             ) : (
               <p className="text-xl font-semibold">{c.nome}</p>
             )}
             <dl className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
+                  Licença
+                </dt>
+                <dd className="text-xl font-semibold">{NOME_LICENCA[c.licenca]}</dd>
+                <dd className="text-sm text-tinta-suave">
+                  {vocabulario(c.segmento).nomeSegmento}. Para trocar, fale com o suporte.
+                </dd>
+              </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
                   Plano
@@ -219,59 +226,6 @@ function AvisoTeste({ ate }: { ate: string }) {
  * Tipo de negócio (Fase 1a, ADR 0014): muda os nomes que o sistema mostra (barbeiro,
  * esteticista, instrutor...) e as funções que vêm ligadas. Os dados ficam como estão.
  */
-function TipoDeNegocio({ segmento }: { segmento: Segmento }) {
-  const [escolhido, setEscolhido] = useState<Segmento>(segmento);
-  const [ok, setOk] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const salvar = useAcao(
-    (s: Segmento) =>
-      api('conta/segmento', { metodo: 'PUT', corpo: { segmento: s, funcoes: null } }),
-    [chaves.conta, ['auth', 'eu']],
-  );
-  const novo = vocabularioDaTela(escolhido);
-  return (
-    <section aria-labelledby="titulo-tipo-negocio" className="flex flex-col gap-3">
-      <h2 id="titulo-tipo-negocio" className="text-lg font-semibold">
-        Tipo de negócio
-      </h2>
-      <Selecao
-        id="conta-segmento"
-        rotulo="Qual é o seu negócio?"
-        value={escolhido}
-        onChange={(e) => {
-          setEscolhido(e.target.value as Segmento);
-          setOk(false);
-        }}
-        opcoes={SEGMENTOS.map((s) => ({ valor: s, rotulo: vocabulario(s).nomeSegmento }))}
-      />
-      <p className="text-sm text-tinta-suave">
-        O sistema passa a chamar quem atende de {novo.profissional.um}, quem é atendido de{' '}
-        {novo.cliente.um} e cada visita de {novo.atendimento.um}. Seus dados, preços e agenda
-        continuam iguais.
-      </p>
-      {erro && <Aviso tom="erro">{erro}</Aviso>}
-      {ok && <Aviso tom="sucesso">Tipo de negócio salvo.</Aviso>}
-      <Botao
-        variante="secundario"
-        className="self-start"
-        disabled={escolhido === segmento}
-        carregando={salvar.isPending}
-        onClick={async () => {
-          setErro(null);
-          try {
-            await salvar.mutateAsync(escolhido);
-            setOk(true);
-          } catch (e) {
-            setErro(e instanceof Error ? e.message : 'Não foi possível salvar. Tente de novo.');
-          }
-        }}
-      >
-        Salvar tipo de negócio
-      </Botao>
-    </section>
-  );
-}
-
 function NomeConta({ nome }: { nome: string }) {
   const v = useVocabulario();
   const [ok, setOk] = useState(false);

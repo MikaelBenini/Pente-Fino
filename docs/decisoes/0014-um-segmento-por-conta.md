@@ -22,5 +22,6 @@ Rede com negócios realmente diferentes usa uma conta por negócio.
 
 - Vocabulário, relatórios e site ficam coerentes dentro da conta (nada de "barbeiro" numa unidade
   e "esteticista" em outra na mesma tela).
-- O dono pode trocar de segmento depois (só muda vocabulário e padrões; os dados ficam).
+- ~~O dono pode trocar de segmento depois.~~ Desde a [0015](0015-licencas.md), o segmento vem
+  da licença contratada e só a administração troca (os dados ficam).
 - Segmento por unidade fica descartado; se aparecer demanda real, vira uma decisão nova.

@@ -2,7 +2,15 @@
 
 import {
   NOME_PLANO,
-  PLANOS,
+  LICENCAS_A_VENDA,
+  NOME_LICENCA,
+  PLANOS_DA_LICENCA,
+  SEGMENTOS_DA_LICENCA,
+  segmentoPadraoDaLicenca,
+  vocabulario,
+  type Licenca,
+  type PlanoConta,
+  type Segmento,
   precoPorMes,
   type VendaCriada,
   type VendasDoVendedor,
@@ -47,7 +55,9 @@ export function NovaVenda({
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [plano, setPlano] = useState<(typeof PLANOS)[number]>('pro');
+  const [licenca, setLicenca] = useState<Licenca>('barbearia');
+  const [segmento, setSegmento] = useState<Segmento>('barbearia');
+  const [plano, setPlano] = useState<PlanoConta>('pro');
   const [ciclo, setCiclo] = useState<'mensal' | 'anual'>('mensal');
   const [dias, setDias] = useState('14');
   const [cupom, setCupom] = useState('');
@@ -79,6 +89,8 @@ export function NovaVenda({
     dono: { nome, email, telefone: telefone.trim() || null },
     plano,
     ciclo,
+    licenca,
+    segmento,
     diasTeste: dias === '' ? NaN : Number(dias),
     ...(cupom.trim() ? { cupom: cupom.trim() } : {}),
     ...(documento.trim() ? { documento } : {}),
@@ -90,7 +102,7 @@ export function NovaVenda({
       : undefined;
   const diasNum = Number(dias) || 0;
   const primeira = new Date(abertoEm + diasNum * 86_400_000).toISOString();
-  const precoMes = precoPorMes(plano, ciclo, 1, tabelaHoje);
+  const precoMes = precoPorMes(plano, ciclo, 1, tabelaHoje, false, licenca);
 
   return (
     <Dialogo
@@ -195,15 +207,39 @@ export function NovaVenda({
               onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
             />
           </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Selecao
+              id="venda-licenca"
+              rotulo="Licença"
+              value={licenca}
+              onChange={(e) => {
+                const nova = e.target.value as Licenca;
+                setLicenca(nova);
+                setSegmento(segmentoPadraoDaLicenca(nova));
+                if (!PLANOS_DA_LICENCA[nova].includes(plano)) setPlano(PLANOS_DA_LICENCA[nova][0]!);
+              }}
+              opcoes={LICENCAS_A_VENDA.map((l) => ({ valor: l, rotulo: NOME_LICENCA[l] }))}
+            />
+            <Selecao
+              id="venda-segmento"
+              rotulo="Tipo de negócio"
+              value={segmento}
+              onChange={(e) => setSegmento(e.target.value as Segmento)}
+              opcoes={SEGMENTOS_DA_LICENCA[licenca].map((s) => ({
+                valor: s,
+                rotulo: vocabulario(s).nomeSegmento,
+              }))}
+            />
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Selecao
               id="venda-plano"
               rotulo="Plano"
               value={plano}
               onChange={(e) => setPlano(e.target.value as typeof plano)}
-              opcoes={PLANOS.map((p) => ({
+              opcoes={PLANOS_DA_LICENCA[licenca].map((p) => ({
                 valor: p,
-                rotulo: `${NOME_PLANO[p]} · ${formatarMoeda(precoPorMes(p, ciclo, 1, tabelaHoje))}/mês`,
+                rotulo: `${NOME_PLANO[p]} · ${formatarMoeda(precoPorMes(p, ciclo, 1, tabelaHoje, false, licenca))}/mês`,
               }))}
             />
             <Selecao

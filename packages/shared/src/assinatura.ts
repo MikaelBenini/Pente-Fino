@@ -16,6 +16,7 @@ import {
   type TabelaPrecosPlanos,
 } from './planos.js';
 import type { DataISO } from './vigencia.js';
+import { automacoesIncluidasNaLicenca, type Licenca } from './licencas.js';
 
 /** Dias depois do vencimento em que a conta segue normal, só com aviso. */
 export const TOLERANCIA_ATRASO_DIAS = 5;
@@ -173,6 +174,8 @@ export interface FaturaDetalhe {
 export interface AssinaturaDetalhe {
   estado: EstadoAssinatura;
   plano: PlanoConta;
+  /** Licença contratada (ADR 0015): os planos e preços que ela vende. */
+  licenca: Licenca;
   ciclo: 'mensal' | 'anual';
   /** Automações contratadas à parte (Agenda e Básico). */
   automacoes: boolean;
@@ -255,11 +258,14 @@ export function valorDaCobranca(
   descontoBp = 0,
   /** Automações à parte (Agenda e Básico); no Agenda, o cupom só vale com elas. */
   automacoes = false,
+  /** Licença da conta (ADR 0015). */
+  licenca: Licenca = 'barbearia',
 ): number {
-  const comAutomacoes = automacoes && automacoesAParte(plano);
+  const incluidas = automacoesIncluidasNaLicenca(licenca);
+  const comAutomacoes = !incluidas && automacoes && automacoesAParte(plano);
   const porMes = aplicarDesconto(
-    precoPorMes(plano, ciclo, Math.max(1, unidades), tabela, comAutomacoes),
-    descontoQueVale(plano, comAutomacoes, descontoBp),
+    precoPorMes(plano, ciclo, Math.max(1, unidades), tabela, comAutomacoes, licenca),
+    descontoQueVale(plano, comAutomacoes || incluidas, descontoBp),
   );
   return ciclo === 'anual' ? porMes * 12 : porMes;
 }

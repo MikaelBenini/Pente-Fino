@@ -12,10 +12,12 @@ import {
   NOME_STATUS_FATURA,
   proximaCobrancaSemFatura,
   documentoValido,
-  PLANOS,
   PRECO_AUTOMACOES,
   automacoesAParte,
+  automacoesIncluidasNaLicenca,
+  PLANOS_DA_LICENCA,
   valorDaCobranca,
+  type Licenca,
   type FaturaDetalhe,
   type PlanoConta,
   type PreviaTrocaPlano,
@@ -191,11 +193,15 @@ export function Assinatura() {
                 tabela={d.tabelaPrecos}
                 descontoBp={d.descontoBp}
                 automacoesAtual={d.automacoes}
+                licenca={d.licenca}
               />
             )}
             {d.cobrancaAutomatica && pendente && <ConferirPagamento />}
 
-            <MudarPlano atual={d.plano} automacoesAtual={d.automacoes} />
+            {/* Licença Atendimento: um plano só, nada para trocar (ADR 0015). */}
+            {PLANOS_DA_LICENCA[d.licenca].length > 1 && (
+              <MudarPlano atual={d.plano} automacoesAtual={d.automacoes} licenca={d.licenca} />
+            )}
 
             <section aria-labelledby="titulo-faturas" className="flex flex-col gap-3">
               <h2 id="titulo-faturas" className="text-xl font-semibold">
@@ -342,6 +348,7 @@ function Assinar({
   tabela,
   descontoBp,
   automacoesAtual,
+  licenca,
 }: {
   planoAtual: FaturaDetalhe['plano'];
   cicloAtual: FaturaDetalhe['ciclo'];
@@ -349,10 +356,12 @@ function Assinar({
   tabela: TabelaPrecosPlanos;
   descontoBp: number;
   automacoesAtual: boolean;
+  licenca: Licenca;
 }) {
   const [plano, setPlano] = useState(planoAtual);
   const [comAutomacoes, setComAutomacoes] = useState(automacoesAtual);
-  const automacoes = comAutomacoes && automacoesAParte(plano);
+  const incluidas = automacoesIncluidasNaLicenca(licenca);
+  const automacoes = !incluidas && comAutomacoes && automacoesAParte(plano);
   const [ciclo, setCiclo] = useState(cicloAtual);
   const [documento, setDocumento] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -388,9 +397,17 @@ function Assinar({
     [chaveAssinatura],
   );
   const docOk = documentoValido(documento);
-  const valor = valorDaCobranca(plano, ciclo, unidades, tabela, descontoEfetivo, automacoes);
+  const valor = valorDaCobranca(
+    plano,
+    ciclo,
+    unidades,
+    tabela,
+    descontoEfetivo,
+    automacoes,
+    licenca,
+  );
   // Plano Agenda: o cupom só vale com as Automações juntas.
-  const cupomParado = plano === 'agenda' && !automacoes && descontoEfetivo > 0;
+  const cupomParado = plano === 'agenda' && !automacoes && !incluidas && descontoEfetivo > 0;
   return (
     <section
       aria-labelledby="titulo-assinar"
@@ -453,7 +470,7 @@ function Assinar({
             rotulo="Plano"
             value={plano}
             onChange={(e) => setPlano(e.target.value as typeof plano)}
-            opcoes={PLANOS.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] }))}
+            opcoes={PLANOS_DA_LICENCA[licenca].map((p) => ({ valor: p, rotulo: NOME_PLANO[p] }))}
           />
           <Selecao
             id="assinar-ciclo"
@@ -465,7 +482,7 @@ function Assinar({
               { valor: 'anual', rotulo: 'Anual (mais barato)' },
             ]}
           />
-          {automacoesAParte(plano) && (
+          {!incluidas && automacoesAParte(plano) && (
             <CaixaAutomacoes
               id="assinar-automacoes"
               marcada={comAutomacoes}
@@ -582,12 +599,23 @@ function ConferirPagamento() {
  * Mudar de plano (o dono, sem falar com o suporte): subir vale na hora; descer mostra antes o
  * que impede (limites) e o que deixa de usar, e pede confirmação.
  */
-function MudarPlano({ atual, automacoesAtual }: { atual: PlanoConta; automacoesAtual: boolean }) {
+function MudarPlano({
+  atual,
+  automacoesAtual,
+  licenca,
+}: {
+  atual: PlanoConta;
+  automacoesAtual: boolean;
+  licenca: Licenca;
+}) {
   // Agenda e Básico: o mesmo plano aparece para ligar ou desligar as Automações.
-  const opcoes = PLANOS.filter((p) => p !== atual || automacoesAParte(p));
+  const incluidas = automacoesIncluidasNaLicenca(licenca);
+  const opcoes = PLANOS_DA_LICENCA[licenca].filter(
+    (p) => p !== atual || (!incluidas && automacoesAParte(p)),
+  );
   const [para, setPara] = useState<PlanoConta>(opcoes.find((p) => p !== atual) ?? opcoes[0]!);
   const [comAutomacoes, setComAutomacoes] = useState(automacoesAtual);
-  const automacoes = comAutomacoes && automacoesAParte(para);
+  const automacoes = !incluidas && comAutomacoes && automacoesAParte(para);
   const igual = para === atual && automacoes === (automacoesAtual && automacoesAParte(atual));
   const [confirmar, setConfirmar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -655,7 +683,7 @@ function MudarPlano({ atual, automacoesAtual }: { atual: PlanoConta; automacoesA
           </button>
         ))}
       </div>
-      {automacoesAParte(para) && (
+      {!incluidas && automacoesAParte(para) && (
         <CaixaAutomacoes
           id="mudar-automacoes"
           marcada={comAutomacoes}

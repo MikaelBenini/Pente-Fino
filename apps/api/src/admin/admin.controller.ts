@@ -17,6 +17,7 @@ import { Erros } from '../comum/erros.js';
 import { contasDaPlataforma, faturasDaPlataforma, funilDasContas } from '@pente-fino/db';
 import {
   entrarAdminSchema,
+  mudarLicencaContaSchema,
   mudarPlanoContaSchema,
   acaoContaSchema,
   contaInternaSchema,
@@ -35,6 +36,7 @@ import {
   type VendasDoVendedor,
   type VenderContaEntrada,
   type FichaContaPlataforma,
+  type MudarLicencaContaEntrada,
   type MudarPlanoContaEntrada,
   type AcaoContaEntrada,
   type ContaInternaEntrada,
@@ -318,6 +320,20 @@ export class AdminController {
     @IpDaRequisicao() ip: string | null,
   ) {
     return this.contasServico.mudarPlano(id, d, a, ip);
+  }
+
+  @Put('contas/:id/licenca')
+  @PapeisPlataforma('admin')
+  @ApiOperation({
+    summary: 'Trocar a licença e o tipo de negócio (motivo obrigatório; o Asaas acompanha)',
+  })
+  mudarLicenca(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(mudarLicencaContaSchema) d: MudarLicencaContaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ) {
+    return this.contasServico.mudarLicenca(id, d, a, ip);
   }
 
   @Put('contas/:id/teste')

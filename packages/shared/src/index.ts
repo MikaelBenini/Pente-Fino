@@ -21,6 +21,7 @@ export * from './papeis.js';
 export * from './vocabulario.js';
 export * from './permissoes.js';
 export * from './planos.js';
+export * from './licencas.js';
 export * from './publico.js';
 export * from './link-horario.js';
 export * from './push.js';

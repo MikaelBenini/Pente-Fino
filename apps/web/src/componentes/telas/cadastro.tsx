@@ -9,7 +9,12 @@ import {
   formatarMoeda,
   LIMITES_PLANO,
   NOME_PLANO,
-  PLANOS,
+  LICENCAS_A_VENDA,
+  NOME_LICENCA,
+  PLANOS_DA_LICENCA,
+  SEGMENTOS_DA_LICENCA,
+  automacoesIncluidasNaLicenca,
+  segmentoPadraoDaLicenca,
   automacoesAParte,
   DIAS_TESTE_INDICADA,
   type PlanoConta,
@@ -35,6 +40,7 @@ import { lerOrigem } from '@/lib/origem';
 import { conversaDoChat } from '@/componentes/site/chat-site';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
+import { vocabularioDaTela } from '@/lib/vocabulario';
 import { Aviso } from '../aviso';
 import { CampoSenha } from '../campo-senha';
 import { eventoGoogle } from '../site/tag-google';
@@ -90,6 +96,15 @@ export function FormularioCadastro() {
   const comecou = useRef(false);
   const router = useRouter();
   const params = useSearchParams();
+  // Licença escolhida na página de vendas (?licenca=estetica&segmento=...): ADR 0015.
+  const licenca = daUrl(params.get('licenca'), LICENCAS_A_VENDA, 'barbearia');
+  const segmento = daUrl(
+    params.get('segmento'),
+    SEGMENTOS_DA_LICENCA[licenca],
+    segmentoPadraoDaLicenca(licenca),
+  );
+  const planosDaLicenca = PLANOS_DA_LICENCA[licenca];
+  const incluidas = automacoesIncluidasNaLicenca(licenca);
   const hidratado = useHidratado();
   const [erroGeral, setErroGeral] = useState<string | null>(null);
   // Proteção contra robôs: quando o formulário abriu e um campo isca que pessoas não veem.
@@ -103,7 +118,13 @@ export function FormularioCadastro() {
     // Erro ao sair do campo, nunca enquanto digita (guia forms/validate-input-after-interaction).
     mode: 'onTouched',
     defaultValues: {
-      plano: daUrl(params.get('plano'), PLANOS, 'pro'),
+      plano: daUrl(
+        params.get('plano'),
+        planosDaLicenca,
+        planosDaLicenca.includes('pro') ? 'pro' : planosDaLicenca[0]!,
+      ),
+      licenca,
+      segmento,
       ciclo: daUrl(params.get('ciclo'), CICLOS, 'mensal'),
       cupom: params.get('cupom')?.slice(0, 30) ?? '',
       whatsapp: '',
@@ -154,9 +175,10 @@ export function FormularioCadastro() {
   const automacoes = useWatch({ control, name: 'automacoes' }) === true;
   // Revisão de 16/11/2026: o cadastro mostra o mesmo valor que a assinatura vai cobrar (o cupom
   // no Agenda só vale com as Automações) e, no anual, o total do ano.
-  const descontoDe = (p: PlanoConta) => descontoQueVale(p, automacoes, cupomAtivo?.descontoBp);
+  const descontoDe = (p: PlanoConta) =>
+    descontoQueVale(p, automacoes || incluidas, cupomAtivo?.descontoBp);
   const porMesDe = (p: PlanoConta) =>
-    aplicarDesconto(precoPorMes(p, ciclo, 1, tabela), descontoDe(p));
+    aplicarDesconto(precoPorMes(p, ciclo, 1, tabela, automacoes, licenca), descontoDe(p));
 
   const enviar = (site: string) =>
     handleSubmit(async (dados) => {
@@ -220,7 +242,13 @@ export function FormularioCadastro() {
       )}
       <Campo
         id="cadastro-barbearia"
-        rotulo="Nome da barbearia"
+        rotulo={
+          licenca === 'barbearia'
+            ? 'Nome da barbearia'
+            : licenca === 'atendimento'
+              ? 'Nome do negócio'
+              : `Nome ${vocabularioDaTela(segmento).doEstabelecimento}`
+        }
         autoComplete="organization"
         required
         aria-required
@@ -296,9 +324,11 @@ export function FormularioCadastro() {
         <p className="mt-1.5 text-sm text-acao-texto">No anual, {textoEconomiaAnual(tabela)}.</p>
       </fieldset>
       <fieldset className="min-w-0">
-        <legend className="mb-1.5 text-sm font-medium">Plano</legend>
+        <legend className="mb-1.5 text-sm font-medium">
+          {licenca === 'barbearia' ? 'Plano' : `Licença ${NOME_LICENCA[licenca]} · plano`}
+        </legend>
         <div className="flex flex-col gap-2">
-          {PLANOS.map((p) => (
+          {planosDaLicenca.map((p) => (
             <label
               key={p}
               className={cn(
@@ -320,7 +350,7 @@ export function FormularioCadastro() {
                   {descontoDe(p) > 0 && (
                     <s className="font-denso font-normal text-tinta-suave tabular-nums">
                       <span className="sr-only">de </span>
-                      {formatarMoeda(precoPorMes(p, ciclo, 1, tabela))}
+                      {formatarMoeda(precoPorMes(p, ciclo, 1, tabela, automacoes, licenca))}
                     </s>
                   )}{' '}
                   <span className="font-denso tabular-nums">
@@ -339,7 +369,7 @@ export function FormularioCadastro() {
             </label>
           ))}
         </div>
-        {!!plano && automacoesAParte(plano) && (
+        {!!plano && !incluidas && automacoesAParte(plano) && (
           <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-md border border-borda p-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-foco">
             <input
               type="checkbox"
@@ -379,8 +409,8 @@ export function FormularioCadastro() {
         >
           <span className="font-semibold">Depois do teste grátis, se assinar: </span>
           {ciclo === 'anual'
-            ? `${formatarMoeda(valorDaCobranca(plano, ciclo, 1, tabela, cupomAtivo?.descontoBp, automacoes))} por ano (${formatarMoeda(valorDaCobranca(plano, ciclo, 1, tabela, cupomAtivo?.descontoBp, automacoes) / 12)}/mês)`
-            : `${formatarMoeda(valorDaCobranca(plano, ciclo, 1, tabela, cupomAtivo?.descontoBp, automacoes))} por mês`}
+            ? `${formatarMoeda(valorDaCobranca(plano, ciclo, 1, tabela, cupomAtivo?.descontoBp, automacoes, licenca))} por ano (${formatarMoeda(valorDaCobranca(plano, ciclo, 1, tabela, cupomAtivo?.descontoBp, automacoes, licenca) / 12)}/mês)`
+            : `${formatarMoeda(valorDaCobranca(plano, ciclo, 1, tabela, cupomAtivo?.descontoBp, automacoes, licenca))} por mês`}
           {automacoes && automacoesAParte(plano) ? ', com as Automações' : ''}
           {cupomAtivo && descontoDe(plano) > 0
             ? `. Cupom ${cupomAtivo.codigo} aplicado: ${formatarPercentualBp(cupomAtivo.descontoBp)} de desconto.`

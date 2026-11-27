@@ -2,6 +2,7 @@
 import { z } from 'zod';
 import { papelSchema } from './papeis.js';
 import type { Funcao, Segmento } from './vocabulario.js';
+import type { Licenca } from './licencas.js';
 
 export const emailSchema = z
   .string({ error: 'Informe o e-mail.' })
@@ -104,6 +105,8 @@ export interface UsuarioSessao {
   /** Segmento da conta (vocabulário da tela) e as funções ligadas (Fase 1a, 27/11/2026). */
   segmento: Segmento;
   funcoes: Funcao[];
+  /** Licença contratada (ADR 0015): o que o sistema traz e o menu. */
+  licenca: Licenca;
   /** E-mail confirmado (só o cadastro pelo site começa sem): até lá, não agenda nem convida. */
   emailConfirmado: boolean;
   /** Admin F5: sessão da equipe do Pente Fino com o consentimento do dono, só leitura. */

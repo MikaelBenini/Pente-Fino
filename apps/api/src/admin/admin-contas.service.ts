@@ -6,6 +6,7 @@ import {
   aplicarSituacaoDaConta,
   marcarContaInterna,
   mudarWhatsappDoDono,
+  mudarLicencaDaConta,
   mudarPlanoDaConta,
   mudarTesteDaConta,
   situacaoDaContaPlataforma,
@@ -17,7 +18,9 @@ import {
   fimDoPeriodo,
   formatarData,
   formatarMoeda,
+  NOME_LICENCA,
   NOME_PLANO,
+  PLANOS_DA_LICENCA,
   origemCadastroSchema,
   etapaAtualDoFunil,
   problemaFimDoTeste,
@@ -28,6 +31,7 @@ import {
   type ContaInternaEntrada,
   type WhatsappDonoEntrada,
   type FichaContaPlataforma,
+  type MudarLicencaContaEntrada,
   type MudarPlanoContaEntrada,
   type MudarTesteContaEntrada,
   type NotaInterna,
@@ -212,6 +216,15 @@ export class AdminContasService {
     a: AdminAutenticado,
     ip: string | null,
   ) {
+    const fichaAntes = (await fichaDaContaPlataforma(
+      this.banco.prisma,
+      contaId,
+    )) as FichaContaPlataforma | null;
+    const licenca = fichaAntes?.licenca ?? 'barbearia';
+    if (!PLANOS_DA_LICENCA[licenca].includes(d.plano))
+      throw Erros.conflito(
+        `A Licença ${NOME_LICENCA[licenca]} não tem o plano ${NOME_PLANO[d.plano]}. Troque a licença antes.`,
+      );
     const antes = await mudarPlanoDaConta(this.banco.prisma, contaId, d.plano, d.ciclo).catch(
       traduzir,
     );
@@ -225,10 +238,11 @@ export class AdminContasService {
             d.ciclo,
             Number(antes.unidades) || 1,
             await this.precos.vigente(dataLocal(new Date())),
-            Number((await fichaDaContaPlataforma(this.banco.prisma, contaId))?.descontoBp ?? 0),
+            Number(fichaAntes?.descontoBp ?? 0),
             antes.automacoes === true,
+            licenca,
           ),
-          descricao: `Pente Fino ${NOME_PLANO[d.plano]}${antes.automacoes === true ? ' + Automações' : ''} (${d.ciclo})`,
+          descricao: `Pente Fino ${NOME_LICENCA[licenca]} ${NOME_PLANO[d.plano]}${antes.automacoes === true ? ' + Automações' : ''} (${d.ciclo})`,
         });
         asaas = 'atualizado';
       } catch (e) {
@@ -242,6 +256,65 @@ export class AdminContasService {
       contaId,
       antes: { plano: antes.plano, ciclo: antes.ciclo },
       depois: { plano: d.plano, ciclo: d.ciclo, asaas },
+      motivo: d.motivo,
+      ip,
+    });
+    this.valeNaHora(contaId);
+    return { asaas };
+  }
+
+  /**
+   * Troca a licença e o segmento (ADR 0015). O plano atual precisa existir na licença nova; com
+   * cobrança automática, o Asaas passa a cobrar o preço da licença nova.
+   */
+  async mudarLicenca(
+    contaId: string,
+    d: MudarLicencaContaEntrada,
+    a: AdminAutenticado,
+    ip: string | null,
+  ) {
+    const ficha = (await fichaDaContaPlataforma(
+      this.banco.prisma,
+      contaId,
+    )) as FichaContaPlataforma | null;
+    if (!ficha) throw Erros.naoEncontrado('Conta não encontrada.');
+    if (!PLANOS_DA_LICENCA[d.licenca].includes(ficha.plano))
+      throw Erros.conflito(
+        `A Licença ${NOME_LICENCA[d.licenca]} não tem o plano ${NOME_PLANO[ficha.plano]}. Mude o plano para ${PLANOS_DA_LICENCA[d.licenca].map((p) => NOME_PLANO[p]).join(', ')} antes.`,
+      );
+    const antes = await mudarLicencaDaConta(
+      this.banco.prisma,
+      contaId,
+      d.licenca,
+      d.segmento,
+    ).catch(traduzir);
+    let asaas: 'atualizado' | 'falhou' | null = null;
+    if (antes.asaasAssinaturaId && antes.licenca !== d.licenca) {
+      try {
+        await this.provedor.atualizarAssinatura(antes.asaasAssinaturaId, {
+          valor: valorDaCobranca(
+            ficha.plano,
+            ficha.ciclo,
+            Math.max(1, Number(antes.unidades) || 1),
+            await this.precos.vigente(dataLocal(new Date())),
+            Number(ficha.descontoBp ?? 0),
+            antes.automacoes === true,
+            d.licenca,
+          ),
+          descricao: `Pente Fino ${NOME_LICENCA[d.licenca]} ${NOME_PLANO[ficha.plano]} (${ficha.ciclo})`,
+        });
+        asaas = 'atualizado';
+      } catch (e) {
+        asaas = 'falhou';
+        this.logger.error(`Asaas ao mudar a licença da conta ${contaId}: ${(e as Error).message}`);
+      }
+    }
+    await this.auth.auditar({
+      usuarioId: a.id,
+      acao: 'mudar_licenca',
+      contaId,
+      antes: { licenca: antes.licenca, segmento: antes.segmento },
+      depois: { licenca: d.licenca, segmento: d.segmento, asaas },
       motivo: d.motivo,
       ip,
     });

@@ -1,7 +1,7 @@
 // Esquemas de entrada dos cadastros (Etapa 6). Mesma validação na API e nos formulários.
 import { z } from 'zod';
 import { PAPEIS, papelSchema } from './papeis.js';
-import { FUNCOES, SEGMENTOS, type Funcao } from './vocabulario.js';
+import { FUNCOES, type Funcao } from './vocabulario.js';
 import { linkDeMapaValido, UFS } from './endereco-unidade.js';
 
 const uuid = (rotulo: string) => z.uuid({ error: `${rotulo} inválido.` });
@@ -32,17 +32,16 @@ export const contaSchema = z.object({
 export type ContaEntrada = z.infer<typeof contaSchema>;
 
 /**
- * Segmento e funções da conta (Fase 1a, ADR 0014). `funcoes` null = o padrão do segmento; uma
- * lista (mesmo vazia) = a escolha do dono.
+ * Funções ligadas pelo dono (ADR 0014). `funcoes` null = o padrão do segmento; uma lista (mesmo
+ * vazia) = a escolha do dono. O segmento e a licença só a administração troca (ADR 0015).
  */
-export const segmentoContaSchema = z.object({
-  segmento: z.enum(SEGMENTOS, { error: 'Escolha o tipo de negócio.' }),
+export const funcoesContaSchema = z.object({
   funcoes: z
     .array(z.enum(Object.keys(FUNCOES) as [Funcao, ...Funcao[]]))
     .nullable()
     .default(null),
 });
-export type SegmentoContaEntrada = z.infer<typeof segmentoContaSchema>;
+export type FuncoesContaEntrada = z.infer<typeof funcoesContaSchema>;
 
 export const unidadeSchema = z.object({
   nome: z.string().trim().min(2, { error: 'Informe o nome da unidade.' }).max(80),

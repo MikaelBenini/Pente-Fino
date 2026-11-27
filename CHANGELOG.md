@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (licenças)
+
+- **Pente Fino passa a vender licenças por tipo de negócio:** Barbearia, Beleza (salão, unhas e sobrancelhas), Estética, Tatuagem e Atendimento (só o bot de WhatsApp, R$ 49,90 por número, para qualquer negócio). Cada licença tem os seus planos e preços; o link de cadastro já traz a licença da página de vendas (`/cadastro?licenca=estetica`) e a venda presencial escolhe na administração. Quem já usa continua na Licença Barbearia, com os mesmos preços.
+- **Configurações mostra a licença e o tipo de negócio**, sem o seletor: para trocar, o suporte muda pela administração (Ficha da conta → Mudar licença), com motivo e o novo preço no Asaas.
+
 ### Adicionado (tipo de negócio)
 
 - **Configurações → Tipo de negócio** (só o dono): barbearia, salão de beleza, clínica de estética, unhas e sobrancelhas, tatuagem e piercing, academia e estúdio, personal trainer ou outro. O sistema passa a chamar quem atende pelo nome do negócio (barbeiro, esteticista, tatuador, instrutor...) em Configurações, Equipe, Perfil, Resultados e Resumo do dia; as demais telas vêm na sequência. Quem já usa continua como barbearia, sem nenhuma mudança.

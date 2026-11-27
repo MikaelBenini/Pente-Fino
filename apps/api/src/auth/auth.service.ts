@@ -123,12 +123,13 @@ export class AuthService {
       const conta = await this.banco.daConta((tx) =>
         tx.conta.findUniqueOrThrow({
           where: { id: contaId },
-          select: { segmento: true, funcoes: true },
+          select: { segmento: true, funcoes: true, licenca: true },
         }),
       );
       return {
         id,
         segmento: conta.segmento,
+        licenca: conta.licenca,
         funcoes: funcoesDaConta(
           conta.segmento,
           Array.isArray(conta.funcoes) ? (conta.funcoes as string[]) : null,
@@ -364,10 +365,14 @@ export class AuthService {
   private async usuarioSessao(tx: Transacao, usuarioId: string): Promise<UsuarioSessao> {
     const u = await tx.usuario.findUniqueOrThrow({
       where: { id: usuarioId },
-      include: { papeis: true, conta: { select: { segmento: true, funcoes: true } } },
+      include: {
+        papeis: true,
+        conta: { select: { segmento: true, funcoes: true, licenca: true } },
+      },
     });
     return {
       segmento: u.conta.segmento,
+      licenca: u.conta.licenca,
       funcoes: funcoesDaConta(
         u.conta.segmento,
         Array.isArray(u.conta.funcoes) ? (u.conta.funcoes as string[]) : null,

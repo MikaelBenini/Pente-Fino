@@ -848,6 +848,50 @@ describe('configurações e saúde do sistema', () => {
     expect(boasVindas?.texto).toContain('são 7 dias com tudo liberado');
   });
 
+  it('cadastro pelo site com licença: o segmento, o preço e o bot já vêm do negócio', async () => {
+    const email = `site-estetica-${sufixo}@e2e.pentefino.dev`;
+    await http()
+      .post('/publico/contas')
+      .send({
+        barbearia: 'Clínica Bela',
+        nome: 'Bia Bela',
+        email,
+        senha: 'senha-da-bia-123',
+        licenca: 'estetica',
+        plano: 'basico',
+        aceite: true,
+        abertoEm: Date.now() - 10_000,
+      })
+      .expect(201);
+    const bia = await como(app, email, 'senha-da-bia-123');
+    const eu = (await bia.get('/auth/eu').expect(200)).body;
+    contasCriadas.push(eu.contaId);
+    expect(eu).toMatchObject({ licenca: 'estetica', segmento: 'estetica' });
+    expect((await bia.get('/conta/assinatura').expect(200)).body).toMatchObject({
+      licenca: 'estetica',
+      precoPorMes: 8990,
+    });
+    // O menu pronto do bot nasce no vocabulário da clínica.
+    expect(JSON.stringify((await bia.get('/bot').expect(200)).body)).toContain('a esteticista');
+    // Licença fora da venda (Fitness, até a Fase 1c) e plano que a licença não tem: recusados.
+    for (const corpo of [
+      { licenca: 'fitness', plano: 'pro' },
+      { licenca: 'atendimento', plano: 'pro' },
+    ])
+      await http()
+        .post('/publico/contas')
+        .send({
+          barbearia: 'Outra',
+          nome: 'Outra Pessoa',
+          email: `site-recusa-${corpo.licenca}-${sufixo}@e2e.pentefino.dev`,
+          senha: 'senha-da-outra-123',
+          aceite: true,
+          abertoEm: Date.now() - 10_000,
+          ...corpo,
+        })
+        .expect(400);
+  });
+
   it('aviso geral aparece para as barbearias só enquanto vale', async () => {
     const dono = await como(app, a.emails.dono);
     expect((await dono.get('/sistema/aviso').expect(200)).body).toEqual({ aviso: null });
@@ -1395,8 +1439,47 @@ describe('pronto quando (etapa 15.1)', () => {
     ]);
     expect(ficha.historico[0]?.motivo).toBe('Pediu mais barbeiros');
 
+    // 4b. Licença (ADR 0015): só a administração troca, com motivo; o plano tem de existir nela.
+    await adm
+      .put(`/admin/contas/${contaId}/licenca`, {
+        licenca: 'atendimento',
+        segmento: 'barbearia',
+        motivo: 'Só quer o bot',
+      })
+      .expect(409);
+    await adm
+      .put(`/admin/contas/${contaId}/licenca`, {
+        licenca: 'estetica',
+        segmento: 'barbearia',
+        motivo: 'Combinação errada',
+      })
+      .expect(400);
+    await adm
+      .put(`/admin/contas/${contaId}/licenca`, {
+        licenca: 'estetica',
+        segmento: 'estetica',
+        motivo: 'Abriu a clínica',
+      })
+      .expect(200);
+    expect((await dono.get('/auth/eu').expect(200)).body).toMatchObject({
+      licenca: 'estetica',
+      segmento: 'estetica',
+    });
+    const assinatura = (await dono.get('/conta/assinatura').expect(200)).body;
+    expect(assinatura).toMatchObject({ licenca: 'estetica', plano: 'pro' });
+    expect(assinatura.precoPorMes).toBeLessThanOrEqual(16990);
+    // O dono não troca mais o tipo de negócio sozinho.
+    await dono.put('/conta/segmento', { segmento: 'barbearia' }).expect(404);
+    const fichaLicenca = (await adm.get(`/admin/contas/${contaId}`).expect(200))
+      .body as FichaContaPlataforma;
+    expect(fichaLicenca).toMatchObject({ licenca: 'estetica', segmento: 'estetica' });
+    expect(fichaLicenca.historico[0]).toMatchObject({
+      acao: 'mudar_licenca',
+      motivo: 'Abriu a clínica',
+    });
+
     // 5. Nenhuma resposta da administração traz dado de cliente da barbearia.
-    const respostas = JSON.stringify([metricas, lista, ficha]);
+    const respostas = JSON.stringify([metricas, lista, ficha, fichaLicenca]);
     expect(respostas).not.toContain(clienteSecreto);
     expect(respostas).not.toContain('11944443333');
   });

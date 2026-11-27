@@ -6,7 +6,8 @@ import {
   podeExperimentar,
   assinarSchema,
   contaSchema,
-  LIMITES_PLANO,
+  automacoesIncluidasNaLicenca,
+  limitesDaConta,
   aplicarDesconto,
   descontoQueVale,
   dataLocal,
@@ -25,8 +26,8 @@ import {
   type AcessoSuporteDaConta,
   type LiberarSuporteEntrada,
   funcoesDaConta,
-  segmentoContaSchema,
-  type SegmentoContaEntrada,
+  funcoesContaSchema,
+  type FuncoesContaEntrada,
 } from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { PlanoGuard } from '../assinatura/plano.guard.js';
@@ -111,6 +112,7 @@ export class ContaController {
       return {
         estado: await estadoAssinatura(tx),
         plano: conta.plano,
+        licenca: conta.licenca,
         ciclo: conta.ciclo,
         automacoes: conta.automacoesContratadas,
         testeAte: conta.testeAte?.toISOString() ?? null,
@@ -121,8 +123,13 @@ export class ContaController {
             Math.max(1, unidades),
             await this.precos.vigente(conta.precosDesde),
             conta.automacoesContratadas,
+            conta.licenca,
           ),
-          descontoQueVale(conta.plano, conta.automacoesContratadas, conta.descontoBp),
+          descontoQueVale(
+            conta.plano,
+            conta.automacoesContratadas || automacoesIncluidasNaLicenca(conta.licenca),
+            conta.descontoBp,
+          ),
         ),
         descontoBp: conta.descontoBp,
         cupom: conta.cupom,
@@ -253,11 +260,12 @@ export class ContaController {
         tx.unidade.count({ where: { ativa: true } }),
         tx.profissional.count({ where: { ativo: true } }),
       ]);
-      const limites = LIMITES_PLANO[conta.plano];
+      const limites = limitesDaConta(conta.plano, conta.licenca, unidades);
       return {
         id: conta.id,
         nome: conta.nome,
         plano: conta.plano,
+        licenca: conta.licenca,
         segmento: conta.segmento,
         funcoes: funcoesDaConta(
           conta.segmento,
@@ -312,27 +320,28 @@ export class ContaController {
     });
   }
 
-  @Put('segmento')
+  @Put('funcoes')
   @Papeis('dono')
   @Auditada()
-  @ApiOperation({ summary: 'Tipo de negócio (segmento) e funções ligadas' })
-  segmento(@Corpo(segmentoContaSchema) d: SegmentoContaEntrada) {
+  @ApiOperation({
+    summary: 'Funções ligadas (pacotes, anamnese...); licença e segmento só a administração troca',
+  })
+  funcoes(@Corpo(funcoesContaSchema) d: FuncoesContaEntrada) {
     return this.banco.daConta(async (tx) => {
       const id = Contexto.usuario().contaId;
       const antes = await tx.conta.findUniqueOrThrow({ where: { id } });
       const depois = await tx.conta.update({
         where: { id },
-        data: { segmento: d.segmento, funcoes: d.funcoes ?? Prisma.DbNull },
+        data: { funcoes: d.funcoes ?? Prisma.DbNull },
       });
       await auditar(tx, {
         entidade: 'conta',
         entidadeId: id,
-        acao: 'segmento',
-        antes: { segmento: antes.segmento, funcoes: antes.funcoes },
-        depois: { segmento: depois.segmento, funcoes: depois.funcoes },
+        acao: 'funcoes',
+        antes: { funcoes: antes.funcoes },
+        depois: { funcoes: depois.funcoes },
       });
       return {
-        segmento: depois.segmento,
         funcoes: funcoesDaConta(depois.segmento, d.funcoes),
       };
     });

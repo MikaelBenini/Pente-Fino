@@ -108,6 +108,8 @@ export class ProfissionaisService {
       conta.plano,
       'profissionais',
       await tx.profissional.count({ where: { ativo: true } }),
+      conta.licenca,
+      await tx.unidade.count({ where: { ativa: true } }),
     );
     if (limite) throw Erros.requisicaoInvalida('limite_plano', limite);
   }
