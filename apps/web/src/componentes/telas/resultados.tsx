@@ -35,6 +35,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useVocabulario } from '@/lib/vocabulario';
 import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
 import { SoNoPlano } from '../convite-plano';
@@ -97,6 +98,7 @@ type IdAba = (typeof ABAS)[number];
 const MES = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export function TelaResultados() {
+  const v = useVocabulario();
   const { unidadeAtiva, unidades } = useApp();
   const params = useSearchParams();
   const router = useRouter();
@@ -187,7 +189,7 @@ export function TelaResultados() {
           },
           {
             id: 'barbeiros',
-            rotulo: 'Barbeiros',
+            rotulo: v.Profissionais,
             conteudo: (
               <SoNoPlano recurso="fichaProfissional">
                 <Estado consulta={relatorio}>{() => <Barbeiros r={relatorio.data!} />}</Estado>
@@ -432,17 +434,18 @@ type OrdemBarbeiro = keyof typeof ORDENS_BARBEIRO;
 
 /** Cada barbeiro no mês: quanto custa, quanto rende, como atende e onde melhorar. */
 function Barbeiros({ r }: { r: RelatorioDoMes }) {
+  const v = useVocabulario();
   const [ordem, setOrdem] = useState<OrdemBarbeiro>('faturamento');
   const lista = r.barbeiros
     .filter((b) => b.clientes > 0 || b.faturamentoAnterior > 0)
     .sort((a, b) => ORDENS_BARBEIRO[ordem].valor(b) - ORDENS_BARBEIRO[ordem].valor(a));
   if (lista.length === 0)
-    return <p className="text-tinta-suave">Nenhum barbeiro atendeu neste mês.</p>;
+    return <p className="text-tinta-suave">Nenhum {v.profissional.um} atendeu neste mês.</p>;
   return (
     <section aria-labelledby="rel-barbeiros" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 id="rel-barbeiros" className="text-lg font-semibold">
-          Quanto cada barbeiro custa e quanto rende
+          Quanto cada {v.profissional.um} custa e quanto rende
         </h2>
         {lista.length > 1 && (
           <Selecao
@@ -557,8 +560,8 @@ function Barbeiros({ r }: { r: RelatorioDoMes }) {
       </ul>
       {!r.barbeiros.some((b) => b.custoFixo > 0) && (
         <p className="text-sm text-tinta-suave">
-          Algum barbeiro recebe salário ou ajuda de custo além da comissão? Cadastre em Equipe →
-          &ldquo;Mudar valor fixo&rdquo; para o custo dele aparecer completo.
+          Algum {v.profissional.um} recebe salário ou ajuda de custo além da comissão? Cadastre em
+          Equipe → &ldquo;Mudar valor fixo&rdquo; para o custo dele aparecer completo.
         </p>
       )}
     </section>

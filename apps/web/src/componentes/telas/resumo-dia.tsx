@@ -28,6 +28,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { useProfissionais, useResumoDia, useResumoMes } from '@/lib/consultas';
+import { useVocabulario } from '@/lib/vocabulario';
 import { nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
@@ -95,6 +96,7 @@ function Dia({
   barbeiro: string;
   onBarbeiro: (id: string) => void;
 }) {
+  const v = useVocabulario();
   const { unidadeAtiva } = useApp();
   const opcoes = useOpcoesBarbeiro();
   const [filtro, setFiltro] = useState<FiltroSituacao>('tudo');
@@ -134,7 +136,7 @@ function Dia({
         </div>
         <Selecao
           id="dia-barbeiro"
-          rotulo="Barbeiro"
+          rotulo={v.Profissional}
           value={barbeiro}
           onChange={(e) => onBarbeiro(e.target.value)}
           opcoes={opcoes}
@@ -165,13 +167,14 @@ function ConteudoDia({
   filtro: FiltroSituacao;
   passado: boolean;
 }) {
+  const v = useVocabulario();
   const t = r.totais;
   const atencao: { icone: typeof Clock; texto: string; tom: 'aviso' | 'neutro' | 'perigo' }[] = [];
   if (t.pendentes)
     atencao.push({
       icone: TriangleAlert,
       tom: 'aviso',
-      texto: `${t.pendentes} ${t.pendentes === 1 ? 'comanda esperando' : 'comandas esperando'} o barbeiro confirmar`,
+      texto: `${t.pendentes} ${t.pendentes === 1 ? 'comanda esperando' : 'comandas esperando'} ${v.oProfissional} confirmar`,
     });
   if (t.aguardandoFechamento - t.pendentes > 0)
     atencao.push({
@@ -378,6 +381,7 @@ const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
  * comissão de cada dia; o dia abre no Resumo do dia.
  */
 export function DiaADia({ mes }: { mes: string }) {
+  const v = useVocabulario();
   const { unidadeAtiva } = useApp();
   const opcoes = useOpcoesBarbeiro();
   const [barbeiro, setBarbeiro] = useState('');
@@ -393,7 +397,7 @@ export function DiaADia({ mes }: { mes: string }) {
         <div className="flex flex-wrap items-end gap-3">
           <Selecao
             id="mes-barbeiro"
-            rotulo="Barbeiro"
+            rotulo={v.Profissional}
             value={barbeiro}
             onChange={(e) => setBarbeiro(e.target.value)}
             opcoes={opcoes}
@@ -480,7 +484,7 @@ export function DiaADia({ mes }: { mes: string }) {
               </Tabela>
               <p className="flex items-center gap-2 text-sm text-tinta-suave">
                 <ClipboardList aria-hidden className="size-4" />
-                Toque no dia para ver a agenda e o que cada barbeiro fez.
+                Toque no dia para ver a agenda e o que cada {v.profissional.um} fez.
               </p>
             </>
           );

@@ -8,7 +8,7 @@ import type {
   TrocarSenhaEntrada,
   UsuarioSessao,
 } from '@pente-fino/shared';
-import { VALIDADE_CONFIRMAR_EMAIL_H } from '@pente-fino/shared';
+import { funcoesDaConta, VALIDADE_CONFIRMAR_EMAIL_H } from '@pente-fino/shared';
 import { randomUUID } from 'node:crypto';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
@@ -118,9 +118,21 @@ export class AuthService {
   async eu(): Promise<UsuarioSessao> {
     const { id, contaId, suporte } = Contexto.usuario();
     // Admin F5: a sessão de suporte não é um usuário da barbearia.
-    if (suporte)
+    if (suporte) {
+      // O suporte vê o painel com o vocabulário da conta que está ajudando.
+      const conta = await this.banco.daConta((tx) =>
+        tx.conta.findUniqueOrThrow({
+          where: { id: contaId },
+          select: { segmento: true, funcoes: true },
+        }),
+      );
       return {
         id,
+        segmento: conta.segmento,
+        funcoes: funcoesDaConta(
+          conta.segmento,
+          Array.isArray(conta.funcoes) ? (conta.funcoes as string[]) : null,
+        ),
         nome: `Suporte Pente Fino (${suporte.nome})`,
         email: '',
         contaId,
@@ -128,6 +140,7 @@ export class AuthService {
         emailConfirmado: true,
         modoSuporte: { nome: suporte.nome, ate: suporte.ate },
       };
+    }
     return this.banco.daConta(async (tx) => this.usuarioSessao(tx, id));
   }
 
@@ -351,9 +364,14 @@ export class AuthService {
   private async usuarioSessao(tx: Transacao, usuarioId: string): Promise<UsuarioSessao> {
     const u = await tx.usuario.findUniqueOrThrow({
       where: { id: usuarioId },
-      include: { papeis: true },
+      include: { papeis: true, conta: { select: { segmento: true, funcoes: true } } },
     });
     return {
+      segmento: u.conta.segmento,
+      funcoes: funcoesDaConta(
+        u.conta.segmento,
+        Array.isArray(u.conta.funcoes) ? (u.conta.funcoes as string[]) : null,
+      ),
       id: u.id,
       nome: u.nome,
       email: u.email,

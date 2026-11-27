@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (tipo de negócio)
+
+- **Configurações → Tipo de negócio** (só o dono): barbearia, salão de beleza, clínica de estética, unhas e sobrancelhas, tatuagem e piercing, academia e estúdio, personal trainer ou outro. O sistema passa a chamar quem atende pelo nome do negócio (barbeiro, esteticista, tatuador, instrutor...) em Configurações, Equipe, Perfil, Resultados e Resumo do dia; as demais telas vêm na sequência. Quem já usa continua como barbearia, sem nenhuma mudança.
+
 ### Mudado (por baixo, sem mudança na tela)
 
 - **Papel "barbeiro" passa a se chamar "profissional" no sistema**, primeiro passo para atender outros segmentos (salão, estética, tatuagem, academia). Na tela continua "Barbeiro". Quem estiver logado no deploy não é desconectado: o nome antigo ainda é aceito.

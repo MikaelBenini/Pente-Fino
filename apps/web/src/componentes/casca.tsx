@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
+import { useNomePapel } from '@/lib/vocabulario';
 import { useAvisos, useBot, useConversas, useSituacaoConta } from '@/lib/consultas';
 import { notificar, tocarAviso, usePreferenciasAvisos } from '@/lib/avisos';
 import { FaixaAvisoGeral } from './faixa-aviso-geral';
@@ -42,7 +43,6 @@ import { useFilaOffline } from '@/lib/fila';
 import {
   escolherUnidade,
   lerUnidade,
-  NOME_PAPEL,
   papeisAtivos,
   resolverUnidade,
   useUnidadeGuardada,
@@ -453,6 +453,7 @@ function BotaoTema() {
 }
 
 function BlocoUsuario() {
+  const nomePapel = useNomePapel();
   const c = useApp();
   const { sair, saindo } = useSair();
   const [tema, definirTema] = useTema();
@@ -464,7 +465,7 @@ function BlocoUsuario() {
       <div className="min-w-0 flex-1 pl-1">
         <p className="truncate font-semibold text-tinta">{c.usuario.nome}</p>
         <p className="truncate text-sm text-tinta-suave">
-          {c.papeis.map((p) => NOME_PAPEL[p]).join(' · ')}
+          {c.papeis.map((p) => nomePapel(p)).join(' · ')}
         </p>
       </div>
       <Link href="/perfil" aria-label="Meu perfil" title="Meu perfil" className={botaoIcone}>
@@ -649,6 +650,7 @@ function FolhaMais({
   esperando: number;
   onFechar: () => void;
 }) {
+  const nomePapel = useNomePapel();
   const c = useApp();
   const pathname = usePathname();
   const dialogo = useRef<HTMLDialogElement>(null);
@@ -677,7 +679,7 @@ function FolhaMais({
           <div className="min-w-0">
             <p className="truncate font-semibold">{c.usuario.nome}</p>
             <p className="text-sm text-tinta-suave">
-              {c.papeis.map((p) => NOME_PAPEL[p]).join(' · ')} · {nomeDaUnidade(c)}
+              {c.papeis.map((p) => nomePapel(p)).join(' · ')} · {nomeDaUnidade(c)}
             </p>
           </div>
           <Botao variante="fantasma" aria-label="Fechar" onClick={onFechar} className="px-3">

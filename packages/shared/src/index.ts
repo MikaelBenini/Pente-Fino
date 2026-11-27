@@ -18,6 +18,7 @@ export * from './importacao.js';
 export * from './indicadores.js';
 export * from './menu.js';
 export * from './papeis.js';
+export * from './vocabulario.js';
 export * from './permissoes.js';
 export * from './planos.js';
 export * from './publico.js';

@@ -49,6 +49,20 @@ enum StatusConta {
   @@map("status_conta")
 }
 
+/// Segmentos atendidos (packages/shared/src/vocabulario.ts).
+enum Segmento {
+  barbearia
+  salao
+  estetica
+  unhas
+  tatuagem
+  academia
+  personal
+  outro
+
+  @@map("segmento")
+}
+
 enum Papel {
   dono
   gestor
@@ -245,6 +259,10 @@ model Conta {
   id                      String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
   nome                    String
   logoUrl                 String?       @map("logo_url")
+  /// Segmento do negócio (ADR 0014): vocabulário, catálogo inicial e funções padrão.
+  segmento                Segmento      @default(barbearia)
+  /// Funções ligadas pelo dono (pacotes, anamnese, check-in...); vazio = o padrão do segmento.
+  funcoes                 Json?
   plano                   Plano         @default(basico)
   /// Automações contratadas à parte (Agenda e Básico): bot, lista de espera, pesquisa, retorno e
   /// aniversário. Do Pro em diante já vêm no plano.

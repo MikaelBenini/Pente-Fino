@@ -2,7 +2,7 @@
 
 # Rotas da API
 
-330 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
+331 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
 
 ## admin
 
@@ -320,6 +320,7 @@
 | GET | `/conta` | logado | Conta, plano e uso dos limites |
 | GET | `/conta/suporte` | dono | Até quando o suporte do Pente Fino pode ver o painel (admin F5) |
 | PUT | `/conta/suporte` | dono | Liberar por 24 h (ou cancelar) o acesso de suporte, só leitura (admin F5) |
+| PUT | `/conta/segmento` | dono | Tipo de negócio (segmento) e funções ligadas |
 | PATCH | `/conta` | dono | Alterar o nome da barbearia |
 
 `apps/api/src/conta/sistema.controller.ts`

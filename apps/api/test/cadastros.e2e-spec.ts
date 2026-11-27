@@ -45,6 +45,33 @@ describe('conta e unidades', () => {
     await gestor.patch('/conta', { nome: 'Invasão' }).expect(403);
   });
 
+  // Fase 1a (27/11/2026): tipo de negócio e funções; conta antiga é barbearia sem nada a mais.
+  it('tipo de negócio: barbearia por padrão; só o dono troca; a sessão acompanha', async () => {
+    const dono = await como(app, cenario.emails.dono);
+    expect((await dono.get('/conta').expect(200)).body).toMatchObject({
+      segmento: 'barbearia',
+      funcoes: [],
+    });
+    expect((await dono.get('/auth/eu').expect(200)).body).toMatchObject({
+      segmento: 'barbearia',
+    });
+    const gestor = await como(app, cenario.emails.gestor);
+    await gestor.put('/conta/segmento', { segmento: 'estetica' }).expect(403);
+    await dono.put('/conta/segmento', { segmento: 'padaria' }).expect(400);
+    // Estética liga as funções do segmento; a lista do dono (mesmo vazia) vale no lugar.
+    expect((await dono.put('/conta/segmento', { segmento: 'estetica' }).expect(200)).body).toEqual({
+      segmento: 'estetica',
+      funcoes: ['pacotes', 'anamnese', 'fotos', 'termo'],
+    });
+    expect((await dono.get('/auth/eu').expect(200)).body.segmento).toBe('estetica');
+    await dono.put('/conta/segmento', { segmento: 'barbearia', funcoes: ['pacotes'] }).expect(200);
+    expect((await dono.get('/conta').expect(200)).body).toMatchObject({
+      segmento: 'barbearia',
+      funcoes: ['pacotes'],
+    });
+    await dono.put('/conta/segmento', { segmento: 'barbearia' }).expect(200);
+  });
+
   it('plano básico barra a segunda unidade', async () => {
     const prisma = criarPrisma();
     await naConta(prisma, outra.contaId, (tx) =>

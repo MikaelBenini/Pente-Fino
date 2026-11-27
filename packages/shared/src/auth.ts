@@ -1,6 +1,7 @@
 // Esquemas de entrada da autenticação, usados pela API (validação) e pelo front (formulários).
 import { z } from 'zod';
 import { papelSchema } from './papeis.js';
+import type { Funcao, Segmento } from './vocabulario.js';
 
 export const emailSchema = z
   .string({ error: 'Informe o e-mail.' })
@@ -100,6 +101,9 @@ export interface UsuarioSessao {
   email: string;
   contaId: string;
   papeis: { papel: z.infer<typeof papelSchema>; unidadeId: string | null }[];
+  /** Segmento da conta (vocabulário da tela) e as funções ligadas (Fase 1a, 27/11/2026). */
+  segmento: Segmento;
+  funcoes: Funcao[];
   /** E-mail confirmado (só o cadastro pelo site começa sem): até lá, não agenda nem convida. */
   emailConfirmado: boolean;
   /** Admin F5: sessão da equipe do Pente Fino com o consentimento do dono, só leitura. */
