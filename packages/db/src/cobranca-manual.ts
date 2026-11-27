@@ -121,6 +121,7 @@ export async function rotinaAvisosDaAssinatura(
         ),
         descontoBp: conta.descontoBp,
         automacoes: conta.automacoesContratadas,
+        licenca: conta.licenca,
         cobrarAPartirDe: conta.cobrarAPartirDe ? dia(conta.cobrarAPartirDe) : null,
         cortesiaAte: conta.cortesiaAte ? dia(conta.cortesiaAte) : null,
       });

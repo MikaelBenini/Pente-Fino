@@ -1,37 +1,25 @@
 import { expect, test } from '@playwright/test';
 
-// Fase 1a (27/11/2026): o dono escolhe o tipo de negócio e o painel passa a usar o vocabulário
-// dele. Volta para barbearia no fim, para não mudar a demonstração dos outros testes.
-test('dono troca para clínica de estética e a equipe passa a dizer esteticista', async ({
-  page,
-}, info) => {
-  test.skip(
-    info.project.name === 'celular',
-    'muda a configuração da demonstração: um projeto basta',
-  );
+// ADR 0015 (27/11/2026): a licença é o produto contratado. O dono vê a licença em Configurações,
+// mas não troca (só a administração); o link de cadastro já traz a licença da página de vendas.
+test('Configurações mostra a licença, sem trocar o tipo de negócio', async ({ page }) => {
   await page.goto('/entrar');
   await page.getByLabel('E-mail').fill('dono@demo.pentefino.dev');
   await page.getByLabel('Senha').fill('pentefino123');
   await page.getByRole('button', { name: 'Entrar' }).click();
   await page.waitForURL(/inicio/);
 
-  const trocar = async (rotulo: string) => {
-    await page.goto('/configuracoes');
-    await page.getByLabel('Qual é o seu negócio?').selectOption({ label: rotulo });
-    await page.getByRole('button', { name: 'Salvar tipo de negócio' }).click();
-    await expect(page.getByText('Tipo de negócio salvo.')).toBeVisible();
-  };
-
   await page.goto('/configuracoes');
-  await expect(page.getByRole('tab', { name: 'Barbearia', exact: true })).toBeVisible();
-  await trocar('Clínica de estética');
-  await expect(page.getByRole('tab', { name: 'Clínica', exact: true })).toBeVisible();
+  await expect(page.getByText('Licença', { exact: true })).toBeVisible();
+  await expect(page.getByText('Barbearia. Para trocar, fale com o suporte.')).toBeVisible();
+  await expect(page.getByLabel('Qual é o seu negócio?')).toHaveCount(0);
+});
+
+test('cadastro pelo link da Licença Estética fala com a clínica e mostra o preço dela', async ({
+  page,
+}) => {
+  await page.goto('/cadastro?licenca=estetica&plano=basico');
   await expect(page.getByLabel('Nome da clínica')).toBeVisible();
-
-  await page.goto('/equipe');
-  await expect(page.getByRole('button', { name: 'Adicionar esteticista' })).toBeVisible();
-
-  await trocar('Barbearia');
-  await page.goto('/equipe');
-  await expect(page.getByRole('button', { name: 'Adicionar barbeiro' })).toBeVisible();
+  await expect(page.getByText('Licença Estética · plano')).toBeVisible();
+  await expect(page.getByText('R$ 89,90/mês').first()).toBeVisible();
 });

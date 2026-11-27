@@ -1,5 +1,6 @@
 // Situação da assinatura da conta atual (dentro de naConta): base do bloqueio só para consulta.
 import {
+  automacoesIncluidasNaLicenca,
   situacaoAssinatura,
   recursoDaConta,
   type EstadoDaConta,
@@ -18,6 +19,7 @@ export async function estadoAssinatura(
       cortesiaAte: true,
       plano: true,
       automacoesContratadas: true,
+      licenca: true,
       experimentaBasicoAte: true,
       criadoEm: true,
     },
@@ -36,7 +38,8 @@ export async function estadoAssinatura(
   return {
     ...situacao,
     plano: conta.plano,
-    automacoes: conta.automacoesContratadas,
+    // Licença Atendimento: o bot inteiro (as Automações) vem no preço (ADR 0015).
+    automacoes: conta.automacoesContratadas || automacoesIncluidasNaLicenca(conta.licenca),
     experimentaAte: conta.experimentaBasicoAte?.toISOString() ?? null,
     contaDesde: conta.criadoEm.toISOString(),
   };
@@ -45,14 +48,14 @@ export async function estadoAssinatura(
 /** A conta atual (dentro de naConta) tem o recurso, com as Automações contratadas à parte? */
 export async function temNaConta(tx: Prisma.TransactionClient, r: Recurso): Promise<boolean> {
   const conta = await tx.conta.findFirst({
-    select: { plano: true, automacoesContratadas: true, experimentaBasicoAte: true },
+    select: { plano: true, automacoesContratadas: true, experimentaBasicoAte: true, licenca: true },
   });
   return (
     !!conta &&
     recursoDaConta(
       {
         plano: conta.plano,
-        automacoes: conta.automacoesContratadas,
+        automacoes: conta.automacoesContratadas || automacoesIncluidasNaLicenca(conta.licenca),
         experimentaAte: conta.experimentaBasicoAte,
       },
       r,

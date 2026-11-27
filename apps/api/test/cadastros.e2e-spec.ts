@@ -45,31 +45,30 @@ describe('conta e unidades', () => {
     await gestor.patch('/conta', { nome: 'Invasão' }).expect(403);
   });
 
-  // Fase 1a (27/11/2026): tipo de negócio e funções; conta antiga é barbearia sem nada a mais.
-  it('tipo de negócio: barbearia por padrão; só o dono troca; a sessão acompanha', async () => {
+  // Fase 1a e ADR 0015 (27/11/2026): conta antiga é barbearia, sem nada a mais. O tipo de negócio
+  // e a licença só a administração troca; o dono liga e desliga funções.
+  it('licença e tipo de negócio: barbearia por padrão; o dono só mexe nas funções', async () => {
     const dono = await como(app, cenario.emails.dono);
     expect((await dono.get('/conta').expect(200)).body).toMatchObject({
+      licenca: 'barbearia',
       segmento: 'barbearia',
       funcoes: [],
     });
     expect((await dono.get('/auth/eu').expect(200)).body).toMatchObject({
+      licenca: 'barbearia',
       segmento: 'barbearia',
     });
+    await dono.put('/conta/segmento', { segmento: 'estetica' }).expect(404);
     const gestor = await como(app, cenario.emails.gestor);
-    await gestor.put('/conta/segmento', { segmento: 'estetica' }).expect(403);
-    await dono.put('/conta/segmento', { segmento: 'padaria' }).expect(400);
-    // Estética liga as funções do segmento; a lista do dono (mesmo vazia) vale no lugar.
-    expect((await dono.put('/conta/segmento', { segmento: 'estetica' }).expect(200)).body).toEqual({
-      segmento: 'estetica',
-      funcoes: ['pacotes', 'anamnese', 'fotos', 'termo'],
-    });
-    expect((await dono.get('/auth/eu').expect(200)).body.segmento).toBe('estetica');
-    await dono.put('/conta/segmento', { segmento: 'barbearia', funcoes: ['pacotes'] }).expect(200);
-    expect((await dono.get('/conta').expect(200)).body).toMatchObject({
-      segmento: 'barbearia',
+    await gestor.put('/conta/funcoes', { funcoes: ['pacotes'] }).expect(403);
+    await dono.put('/conta/funcoes', { funcoes: ['inexistente'] }).expect(400);
+    // Barbearia que vende pacotes liga a função sem trocar de segmento (ADR 0014).
+    expect((await dono.put('/conta/funcoes', { funcoes: ['pacotes'] }).expect(200)).body).toEqual({
       funcoes: ['pacotes'],
     });
-    await dono.put('/conta/segmento', { segmento: 'barbearia' }).expect(200);
+    expect((await dono.get('/conta').expect(200)).body).toMatchObject({ funcoes: ['pacotes'] });
+    await dono.put('/conta/funcoes', { funcoes: null }).expect(200);
+    expect((await dono.get('/conta').expect(200)).body).toMatchObject({ funcoes: [] });
   });
 
   it('plano básico barra a segunda unidade', async () => {

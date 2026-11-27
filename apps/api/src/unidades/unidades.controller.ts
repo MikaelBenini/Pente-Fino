@@ -596,6 +596,7 @@ export class UnidadesController {
         conta.plano,
         'unidades',
         await tx.unidade.count({ where: { ativa: true } }),
+        conta.licenca,
       );
       if (limite) throw Erros.requisicaoInvalida('limite_plano', limite);
       const unidade = await tx.unidade.create({ data: dados, select: SELECAO });
@@ -808,6 +809,7 @@ export class UnidadesController {
           conta.plano,
           'unidades',
           await tx.unidade.count({ where: { ativa: true } }),
+          conta.licenca,
         );
         if (limite) throw Erros.requisicaoInvalida('limite_plano', limite);
       }

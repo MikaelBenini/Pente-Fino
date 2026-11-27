@@ -2,6 +2,7 @@
 
 import type {
   Funcao,
+  Licenca,
   Segmento,
   CaixaDeAvisos,
   ConfigPrecoLivre,
@@ -61,6 +62,7 @@ import {
 } from '@pente-fino/shared';
 
 export interface ContaResumo {
+  licenca: Licenca;
   segmento: Segmento;
   funcoes: Funcao[];
   id: string;

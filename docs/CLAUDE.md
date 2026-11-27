@@ -62,7 +62,13 @@ Mapa da documentação em `docs/README.md`: produto, arquitetura (diagrama), reg
 
 dono, gestor, recepcao, profissional (até 27/11/2026, `barbeiro`; a API ainda aceita o nome antigo como sinônimo, `papelAtual`). Na tela, o profissional aparece com o nome do segmento (hoje, "Barbeiro"). Matriz em `docs/papeis-e-permissoes.md`.
 
-## Planos (limites aplicados pela API)
+## Licenças e planos (limites aplicados pela API)
+
+- **Licença** (ADR 0015, `packages/shared/src/licencas.ts`): o produto contratado. `conta.licenca` (barbearia, beleza, estetica, tatuagem, fitness, atendimento) define preço, planos e recursos; `conta.segmento` define o vocabulário e precisa combinar com a licença (`segmentoNaLicenca`). Só a administração troca (`PUT /admin/contas/:id/licenca`). Preço sempre com a licença: `precoPorMes(..., licenca)`, `valorDaCobranca(..., licenca)`, `limitesDaConta(plano, licenca, unidades)`. Tabela por licença em `docs/gerado/planos.md`.
+- Licença Atendimento: só o plano Agenda, Automações incluídas, R$ 49,90 por número de WhatsApp (3 profissionais por número). Fitness fora da venda até a Fase 1c.
+
+Planos da Licença Barbearia (e Beleza):
+
 
 - Agenda R$ 10,00/mês (anual R$ 8,25/mês): 1 unidade, até 2 profissionais; agenda, link, site e avisos no WhatsApp (revenda de entrada)
 - Básico R$ 79,90/mês (anual R$ 66,90/mês): 1 unidade, até 3 profissionais
@@ -72,7 +78,7 @@ dono, gestor, recepcao, profissional (até 27/11/2026, `barbeiro`; a API ainda a
 
 ## Convenções
 
-- **Vocabulário por segmento** (ADR 0014): a conta tem um segmento (`conta.segmento`: barbearia, salão, estética, unhas, tatuagem, academia, personal, outro) e o texto visível vem de `vocabulario()` (`packages/shared/src/vocabulario.ts`); no painel, `useVocabulario()` e `useNomePapel()` (`apps/web/src/lib/vocabulario.ts`). Texto novo não fixa "barbeiro" nem "barbearia". Funções por conta (pacotes, anamnese, check-in...) em `funcoesDaConta`.
+- **Vocabulário por segmento** (ADR 0014 e 0015): a conta tem um segmento (`conta.segmento`: barbearia, salão, estética, unhas, tatuagem, academia, personal, outro), que vem da licença, e o texto visível vem de `vocabulario()` (`packages/shared/src/vocabulario.ts`); no painel, `useVocabulario()` e `useNomePapel()` (`apps/web/src/lib/vocabulario.ts`). Texto novo não fixa "barbeiro" nem "barbearia". Funções por conta (pacotes, anamnese, check-in...) em `funcoesDaConta`.
 - Código e nomes de domínio em português (`comanda`, `item_comanda`, `unidade`); textos da interface em pt-BR.
 - Conventional Commits (`feat:`, `fix:`, `chore:`), uma branch por tarefa, PR com CI verde.
 - **Documentação acompanha o código:** mudou schema, rota, tela, plano ou menu, rode `pnpm docs:gerar` e commite `docs/gerado/` (o CI confere com `pnpm docs:conferir`). Mudou regra de cálculo, atualize `docs/regras-de-negocio.md` e o exemplo em `packages/shared/src/exemplos-das-regras.test.ts`. Decisão nova de produto ou arquitetura vira um arquivo em `docs/decisoes/`.

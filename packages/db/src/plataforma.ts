@@ -159,6 +159,26 @@ export async function mudarPlanoDaConta(
   return r!.antes;
 }
 
+/** Troca a licença e o segmento (ADR 0015); devolve o que era. */
+export async function mudarLicencaDaConta(
+  prisma: PrismaClient,
+  contaId: string,
+  licenca: string,
+  segmento: string,
+): Promise<{
+  licenca: string;
+  segmento: string;
+  plano: string;
+  ciclo: string;
+  asaasAssinaturaId: string | null;
+  automacoes: boolean;
+  unidades: number;
+}> {
+  const [r] = await prisma.$queryRaw<{ antes: never }[]>`
+    SELECT plataforma_mudar_licenca(${contaId}::uuid, ${licenca}::licenca, ${segmento}::segmento) AS antes`;
+  return r!.antes;
+}
+
 export async function mudarTesteDaConta(
   prisma: PrismaClient,
   contaId: string,

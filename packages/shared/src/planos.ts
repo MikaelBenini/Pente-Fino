@@ -1,5 +1,14 @@
 import { z } from 'zod';
 import { dataLocal } from './datas.js';
+import {
+  automacoesIncluidasNaLicenca,
+  NOME_LICENCA,
+  PLANOS_DA_LICENCA,
+  PRECO_NUMERO_EXTRA_ATENDIMENTO,
+  PRECOS_LICENCA,
+  PROFISSIONAIS_POR_NUMERO_ATENDIMENTO,
+  type Licenca,
+} from './licencas.js';
 
 // Limites dos planos (CLAUDE.md e docs/, seção 7). A API aplica; a tela explica.
 
@@ -27,14 +36,35 @@ export const NOME_PLANO: Readonly<Record<PlanoConta, string>> = {
   premium: 'Premium',
 };
 
+/**
+ * Limites da conta pela licença e pelo plano. Na Licença Atendimento cada número de WhatsApp
+ * (unidade) é pago à parte e traz até 3 profissionais na agenda.
+ */
+export function limitesDaConta(
+  plano: PlanoConta,
+  licenca: Licenca = 'barbearia',
+  unidades = 1,
+): LimitesPlano {
+  if (licenca === 'atendimento')
+    return {
+      unidades: Number.POSITIVE_INFINITY,
+      profissionais: PROFISSIONAIS_POR_NUMERO_ATENDIMENTO * Math.max(1, unidades),
+    };
+  return LIMITES_PLANO[plano];
+}
+
 /** Mensagem quando o limite foi alcançado, ou null se ainda cabe. */
 export function verificarLimite(
   plano: PlanoConta,
   recurso: keyof LimitesPlano,
   emUso: number,
+  licenca: Licenca = 'barbearia',
+  unidades = 1,
 ): string | null {
-  const limite = LIMITES_PLANO[plano][recurso];
+  const limite = limitesDaConta(plano, licenca, unidades)[recurso];
   if (emUso < limite) return null;
+  if (licenca === 'atendimento')
+    return `A Licença ${NOME_LICENCA.atendimento} traz ${PROFISSIONAIS_POR_NUMERO_ATENDIMENTO} profissionais por número de WhatsApp. Para mais, fale com o suporte para adicionar um número ou passar para a licença completa do seu negócio.`;
   const nome =
     recurso === 'unidades' ? (limite === 1 ? 'unidade' : 'unidades') : 'profissionais ativos';
   return `O plano ${NOME_PLANO[plano]} permite ${limite} ${nome}. ${conviteDoLimite(plano, recurso)}`;
@@ -209,8 +239,24 @@ export function precoPorMes(
   unidades = 1,
   tabela: TabelaPrecosPlanos = TABELA_PADRAO,
   automacoes = false,
+  /** Licença da conta (ADR 0015): Barbearia e Beleza usam a tabela; as demais, PRECOS_LICENCA. */
+  licenca: Licenca = 'barbearia',
 ): number {
   const chave = ciclo === 'mensal' ? 'mensal' : 'anualPorMes';
+  if (licenca !== 'barbearia' && licenca !== 'beleza') {
+    const base = PRECOS_LICENCA[licenca][plano] ?? tabela.planos[plano];
+    const extrasLicenca =
+      licenca === 'atendimento'
+        ? Math.max(0, unidades - 1) * PRECO_NUMERO_EXTRA_ATENDIMENTO[chave]
+        : plano === 'premium'
+          ? Math.max(0, unidades - 1) * tabela.unidadeExtra[chave]
+          : 0;
+    const aParte =
+      automacoes && automacoesAParte(plano) && !automacoesIncluidasNaLicenca(licenca)
+        ? tabela.automacoes[chave]
+        : 0;
+    return base[chave] + extrasLicenca + aParte;
+  }
   const extras = plano === 'premium' ? Math.max(0, unidades - 1) : 0;
   const adicional = automacoes && automacoesAParte(plano) ? tabela.automacoes[chave] : 0;
   return tabela.planos[plano][chave] + extras * tabela.unidadeExtra[chave] + adicional;
@@ -407,12 +453,20 @@ export function conferirTrocaDePlano(d: {
   /** Automações à parte: as de hoje e as do plano novo (do Pro em diante já vêm incluídas). */
   automacoes?: boolean;
   automacoesNovo?: boolean;
+  /** Licença da conta (ADR 0015): o preço e os planos que ela vende. */
+  licenca?: Licenca;
 }): PreviaTrocaPlano {
   const { de, para, uso } = d;
-  const autoDe = d.automacoes ?? false;
-  const autoPara = (d.automacoesNovo ?? autoDe) && automacoesAParte(para);
-  const limite = LIMITES_PLANO[para];
+  const licenca = d.licenca ?? 'barbearia';
+  const incluidas = automacoesIncluidasNaLicenca(licenca);
+  const autoDe = incluidas || (d.automacoes ?? false);
+  const autoPara = incluidas || ((d.automacoesNovo ?? autoDe) && automacoesAParte(para));
+  const limite = limitesDaConta(para, licenca, uso.unidades);
   const bloqueios: string[] = [];
+  if (!PLANOS_DA_LICENCA[licenca].includes(para))
+    bloqueios.push(
+      `A Licença ${NOME_LICENCA[licenca]} não tem o plano ${NOME_PLANO[para]}. Para mudar de licença, fale com o suporte.`,
+    );
   if (uso.unidades > limite.unidades)
     bloqueios.push(
       `O plano ${NOME_PLANO[para]} vai até ${plural(limite.unidades, 'unidade', 'unidades')}; a conta tem ${uso.unidades} ativas. Desative as que sobram em Configurações → Unidades.`,
@@ -438,11 +492,11 @@ export function conferirTrocaDePlano(d: {
     para,
     sobe: ORDEM[para] > ORDEM[de] || (para === de && autoPara && !autoDe),
     valorAtual: aplicarDesconto(
-      precoPorMes(de, d.ciclo, uso.unidades, d.tabelaAtual, autoDe),
+      precoPorMes(de, d.ciclo, uso.unidades, d.tabelaAtual, autoDe, licenca),
       descontoQueVale(de, autoDe, d.descontoBp),
     ),
     valorNovo: aplicarDesconto(
-      precoPorMes(para, d.ciclo, uso.unidades, d.tabelaNova, autoPara),
+      precoPorMes(para, d.ciclo, uso.unidades, d.tabelaNova, autoPara, licenca),
       descontoQueVale(para, autoPara, d.descontoBp),
     ),
     bloqueios,

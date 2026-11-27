@@ -5,7 +5,8 @@ import { origemCadastroSchema } from './origem-cadastro.js';
 import { emailSchema, senhaSchema } from './auth.js';
 import { CICLOS, PLANOS } from './planos.js';
 import type { PreviaDoLink, VisualAgendamentoPublico } from './site-barbearia.js';
-import type { Segmento } from './vocabulario.js';
+import { SEGMENTOS, type Segmento } from './vocabulario.js';
+import { LICENCAS } from './licencas.js';
 
 export const cadastroContaSchema = z.object({
   barbearia: z.string().trim().min(2, { error: 'Informe o nome do seu negócio.' }).max(120),
@@ -16,6 +17,9 @@ export const cadastroContaSchema = z.object({
   ciclo: z.enum(CICLOS).default('mensal'),
   /** Automações à parte (Agenda e Básico), escolhidas na página de planos. */
   automacoes: z.boolean().default(false),
+  /** Licença escolhida na página de vendas (ADR 0015) e o tipo de negócio dentro dela. */
+  licenca: z.enum(LICENCAS).default('barbearia'),
+  segmento: z.enum(SEGMENTOS).nullish(),
   /** Indique e ganhe: o código do link de quem indicou (vale 30 dias de teste). */
   indicacao: z.string().trim().max(20).optional(),
   aceite: z.literal(true, { error: 'É preciso aceitar os termos de uso.' }),

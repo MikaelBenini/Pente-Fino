@@ -13,6 +13,21 @@ Fonte: `packages/shared/src/planos.ts` (a API confere com `temRecurso` e `verifi
 
 Unidade extra (Premium): R$ 99,90 por mês (R$ 82,90 no anual). Automações à parte nos planos Agenda e Básico: R$ 10,00 por mês (R$ 8,25 no anual), destravam bot, listaEspera, avaliacoes, automacoes. Teste grátis: 14 dias.
 
+## Preço por licença (ADR 0015)
+
+Fonte: `packages/shared/src/licencas.ts`. Barbearia e Beleza usam a tabela acima (com vigência); as demais, a tabela da licença. Mensal / anual por mês.
+
+| Licença | Para quem | À venda | Agenda | Básico | Pro | Premium |
+| --- | --- | --- | --- | --- | --- | --- |
+| Barbearia | barbearias | sim | R$ 10,00 / R$ 8,25 | R$ 79,90 / R$ 66,90 | R$ 149,90 / R$ 124,90 | R$ 249,90 / R$ 207,90 |
+| Beleza | salões de beleza, unhas e sobrancelhas | sim | R$ 10,00 / R$ 8,25 | R$ 79,90 / R$ 66,90 | R$ 149,90 / R$ 124,90 | R$ 249,90 / R$ 207,90 |
+| Estética | clínicas de estética | sim | R$ 14,90 / R$ 12,40 | R$ 89,90 / R$ 74,90 | R$ 169,90 / R$ 141,90 | R$ 279,90 / R$ 232,90 |
+| Tatuagem | estúdios de tatuagem e piercing | sim | R$ 10,00 / R$ 8,25 | R$ 69,90 / R$ 57,90 | R$ 129,90 / R$ 107,90 | R$ 219,90 / R$ 182,90 |
+| Fitness | academias, estúdios e personal trainers | não | — | R$ 149,90 / R$ 124,90 | R$ 249,90 / R$ 207,90 | R$ 349,90 / R$ 290,90 |
+| Atendimento | qualquer negócio que só quer o atendimento no WhatsApp | sim | R$ 49,90 / R$ 41,90 | — | — | — |
+
+Licença Atendimento: as Automações vêm no preço, 3 profissionais por número de WhatsApp e número extra a R$ 29,90 por mês (R$ 24,90 no anual).
+
 ## Recursos conferidos pela API
 
 | Recurso | O que é | A partir de |

@@ -6,6 +6,8 @@ import { z } from 'zod';
 import type { EtapaFunil } from './funil.js';
 import type { SaudeConta } from './saude-conta.js';
 import { PLANOS, type Ciclo, type PlanoConta } from './planos.js';
+import { LICENCAS, NOME_LICENCA, segmentoNaLicenca, type Licenca } from './licencas.js';
+import { SEGMENTOS, type Segmento } from './vocabulario.js';
 
 export const PAPEIS_PLATAFORMA = ['admin', 'vendedor', 'suporte', 'financeiro'] as const;
 export type PapelPlataforma = (typeof PAPEIS_PLATAFORMA)[number];
@@ -155,6 +157,16 @@ export const mudarPlanoContaSchema = z.object({
 });
 export type MudarPlanoContaEntrada = z.infer<typeof mudarPlanoContaSchema>;
 
+/** Trocar a licença (e o segmento junto) de uma conta: só a administração (ADR 0015). */
+export const mudarLicencaContaSchema = z
+  .object({ licenca: z.enum(LICENCAS), segmento: z.enum(SEGMENTOS), motivo })
+  .refine((d) => segmentoNaLicenca(d.licenca, d.segmento), {
+    error: (i) =>
+      `Esse tipo de negócio não combina com a Licença ${NOME_LICENCA[(i.input as { licenca: Licenca }).licenca] ?? ''}.`,
+    path: ['segmento'],
+  });
+export type MudarLicencaContaEntrada = z.infer<typeof mudarLicencaContaSchema>;
+
 /** Estender o teste: o último dia do teste (no máximo LIMITE_TESTE_DIAS a partir de hoje). */
 export const mudarTesteContaSchema = z.object({ ate: diaISO, motivo });
 export type MudarTesteContaEntrada = z.infer<typeof mudarTesteContaSchema>;
@@ -244,6 +256,8 @@ export interface FichaContaPlataforma {
   id: string;
   nome: string;
   plano: PlanoConta;
+  licenca: Licenca;
+  segmento: Segmento;
   ciclo: Ciclo;
   status: ContaNaPlataforma['status'];
   criadaEm: string;
@@ -304,6 +318,9 @@ export const venderContaSchema = z.object({
   }),
   plano: z.enum(PLANOS),
   ciclo: z.enum(['mensal', 'anual']),
+  /** Licença vendida (ADR 0015) e o tipo de negócio dentro dela. */
+  licenca: z.enum(LICENCAS).default('barbearia'),
+  segmento: z.enum(SEGMENTOS).nullish(),
   /** Dias de uso antes de pagar (0 = paga hoje; o vendedor registra o pagamento em seguida). */
   diasTeste: z.number().int().min(0).max(60).default(14),
   /** Cupom de desconto (opcional). */

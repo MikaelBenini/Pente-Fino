@@ -253,7 +253,19 @@ async function gerarPlanosEMenu() {
   }
   p += `\nUnidade extra (Premium): ${reais(sh.PRECO_UNIDADE_EXTRA.mensal)} por mês (${reais(sh.PRECO_UNIDADE_EXTRA.anualPorMes)} no anual). `;
   p += `Automações à parte nos planos ${sh.PLANOS_COM_AUTOMACOES_A_PARTE.map((x) => sh.NOME_PLANO[x]).join(' e ')}: ${reais(sh.PRECO_AUTOMACOES.mensal)} por mês (${reais(sh.PRECO_AUTOMACOES.anualPorMes)} no anual), destravam ${sh.RECURSOS_DAS_AUTOMACOES.join(', ')}. `;
-  p += `Teste grátis: ${sh.DIAS_TESTE} dias.\n\n## Recursos conferidos pela API\n\n| Recurso | O que é | A partir de |\n| --- | --- | --- |\n`;
+  p += `Teste grátis: ${sh.DIAS_TESTE} dias.\n\n`;
+  p += `## Preço por licença (ADR 0015)\n\nFonte: \`packages/shared/src/licencas.ts\`. Barbearia e Beleza usam a tabela acima (com vigência); as demais, a tabela da licença. Mensal / anual por mês.\n\n`;
+  p += `| Licença | Para quem | À venda | ${sh.PLANOS.map((x) => sh.NOME_PLANO[x]).join(' | ')} |\n| --- | --- | --- | ${sh.PLANOS.map(() => '---').join(' | ')} |\n`;
+  for (const lic of sh.LICENCAS) {
+    const celulas = sh.PLANOS.map((pl) => {
+      if (!sh.PLANOS_DA_LICENCA[lic].includes(pl)) return '—';
+      const preco = sh.PRECOS_LICENCA[lic]?.[pl] ?? sh.PRECOS_PLANO[pl];
+      return `${reais(preco.mensal)} / ${reais(preco.anualPorMes)}`;
+    });
+    p += `| ${sh.NOME_LICENCA[lic]} | ${celula(sh.PARA_QUEM_LICENCA[lic])} | ${sh.LICENCAS_A_VENDA.includes(lic) ? 'sim' : 'não'} | ${celulas.join(' | ')} |\n`;
+  }
+  p += `\nLicença Atendimento: as Automações vêm no preço, ${sh.PROFISSIONAIS_POR_NUMERO_ATENDIMENTO} profissionais por número de WhatsApp e número extra a ${reais(sh.PRECO_NUMERO_EXTRA_ATENDIMENTO.mensal)} por mês (${reais(sh.PRECO_NUMERO_EXTRA_ATENDIMENTO.anualPorMes)} no anual).\n\n`;
+  p += `## Recursos conferidos pela API\n\n| Recurso | O que é | A partir de |\n| --- | --- | --- |\n`;
   for (const [id, r] of Object.entries(sh.RECURSOS)) p += `| \`${id}\` | ${celula(r.nome)} | ${sh.NOME_PLANO[r.desde]} |\n`;
 
   let m = `${AVISO}# Menu por papel\n\nFonte: \`packages/shared/src/menu.ts\` (\`ITENS_MENU\`, \`menuPara\`). A tela só aparece no menu de quem pode abri-la; o plano pode esconder telas (\`RECURSO_DA_TELA\`).\n\n`;

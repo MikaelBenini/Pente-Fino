@@ -1,6 +1,7 @@
 // Cobrança manual (venda presencial, Etapa 15.1): sem Asaas, a conta também vence. Sete dias
 // antes do fim do período pago nasce a próxima cobrança em aberto e o dono é avisado; vencida,
 // a conta segue o mesmo bloqueio suave da cobrança automática (situacaoAssinatura).
+import type { Licenca } from './licencas.js';
 import { valorDaCobranca } from './assinatura.js';
 import type { Ciclo, PlanoConta, TabelaPrecosPlanos } from './planos.js';
 import { fimDoPeriodo } from './plataforma.js';
@@ -40,6 +41,8 @@ export function proximaCobrancaManual(d: {
   descontoBp?: number;
   /** Automações contratadas à parte (Agenda e Básico). */
   automacoes?: boolean;
+  /** Licença da conta (ADR 0015). */
+  licenca?: Licenca;
   /** A administração mandou começar a cobrar nesta data. */
   cobrarAPartirDe?: string | null;
   /** Sem cobrança até esta data (inclusive). */
@@ -71,6 +74,7 @@ export function proximaCobrancaManual(d: {
       d.tabela,
       d.descontoBp,
       d.automacoes ?? false,
+      d.licenca,
     ),
   };
 }

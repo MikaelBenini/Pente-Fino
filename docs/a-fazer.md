@@ -12,11 +12,15 @@ Detalhe, esforço, riscos e perguntas de cada fase em
 [plano-multissegmento.md](plano-multissegmento.md). Cada fase só começa com a aprovação do dono.
 
 - [x] **Fase 0 · Documentação para IA e automação** (27/11/2026)
-- [ ] **Decisão do dono: marca e licenças** (levantamento de 27/11 em `concorrentes-e-precos.md`)
-  - [x] Nome das licenças: **pelo segmento** (Licença Barbearia, Beleza, Estética, Tatuagem, Fitness), escolhido pelo dono em 27/11
-  - [ ] Licença **Atendimento** (só o bot, sem webhook por enquanto): aprovar R$ 49,90 por número e o plano Agenda voltar a ser só lembretes
-  - [ ] Aprovar os preços por licença (conferir no site dos concorrentes antes de anunciar)
-  - [ ] Depois de aprovado: decisão em `decisoes/` (o segmento passa a ser a licença contratada; sai o seletor de Configurações; só a administração troca), preços em `planos.ts`, duas contas com um login só e 20% na segunda conta
+- [ ] **Licenças** (aprovadas pelo dono em 27/11; ADR 0015, levantamento em `concorrentes-e-precos.md`)
+  - [x] Nome pelo segmento; preços por licença; Atendimento a R$ 49,90 por número
+  - [x] PR 1: licença na conta, preços e limites por licença, troca só pela administração, cadastro com `?licenca=`, venda presencial com licença
+  - [ ] PR 2: proteção dos números de WhatsApp (verificações para não restringir o número)
+  - [ ] PR 3: Licença Atendimento com o menu enxuto (sem comanda, caixa, financeiro) e o plano Agenda só com lembretes para quem assina a partir de agora
+  - [ ] PR 4: duas contas com um login só (seletor no menu do usuário) e 20% na segunda conta
+  - [ ] A licença nas métricas e no funil da administração (`plataforma_contas()` ainda não traz; hoje todas as contas são Barbearia)
+  - [ ] Páginas de vendas por licença (Fase 5), cada uma com o link de cadastro da licença
+  - [ ] IA com créditos pré-pagos como complemento de todas as licenças, inclusive Atendimento (Fase 4)
 - [ ] **Fase 1 · Multissegmento** (aprovada em 27/11; ordem 1a → 1b → 1d estética)
   - [x] 1a, PR 1: papel `barbeiro` → `profissional` no banco e no código (S4)
   - [x] 1a, PR 2: segmento na conta, vocabulário por segmento, funções por conta, escolha em Configurações e o primeiro lote de telas (Configurações, Equipe, Perfil, menu do usuário, Resultados, Resumo do dia)

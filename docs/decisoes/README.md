@@ -17,4 +17,5 @@ As decisões que moldam o Pente Fino, uma por arquivo (formato ADR: contexto, de
 | 0011 | [Catálogo por unidade](0011-catalogo-por-unidade.md) | Aceita | 2026-11-12 |
 | 0012 | [Cobrança e clube online pelo Asaas, com split](0012-asaas-cobranca-e-split.md) | Aceita | 2026-11-08 |
 | 0013 | [Documentação para IA e parte gerada do código](0013-documentacao-gerada.md) | Aceita | 2026-11-27 |
-| 0014 | [Um segmento por conta](0014-um-segmento-por-conta.md) | Aceita | 2026-11-27 |
+| 0014 | [Um segmento por conta](0014-um-segmento-por-conta.md) | Aceita (a troca pelo dono saiu na 0015) | 2026-11-27 |
+| 0015 | [Licenças: o tipo de negócio é o produto contratado](0015-licencas.md) | Aceita | 2026-11-27 |

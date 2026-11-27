@@ -15,6 +15,7 @@ import {
   type VenderContaEntrada,
   vendasPorVendedor,
   veTodasAsContas,
+  licencaDaContaNova,
 } from '@pente-fino/shared';
 import { auditar } from '../auditoria/auditoria.js';
 import { gerarTokenOpaco, hashToken } from '../auth/tokens.js';
@@ -53,6 +54,9 @@ export class AdminVendasService {
     );
     if (existente)
       throw Erros.conflito('Este e-mail já tem conta no Pente Fino. Use outro e-mail para o dono.');
+    const licencaNova = licencaDaContaNova(d);
+    if ('erro' in licencaNova)
+      throw Erros.validacao([{ campo: 'plano', mensagem: licencaNova.erro }]);
     const desconto = await this.precos.cupomValido(d.cupom);
     const contaId = randomUUID();
     const token = gerarTokenOpaco();
@@ -66,6 +70,8 @@ export class AdminVendasService {
             nome: d.barbearia,
             documento: d.documento ?? null,
             plano: d.plano,
+            licenca: licencaNova.licenca,
+            segmento: licencaNova.segmento,
             ciclo: d.ciclo,
             status: 'teste',
             testeAte: new Date(agora.getTime() + d.diasTeste * 86_400_000),
