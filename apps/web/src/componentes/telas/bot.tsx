@@ -1630,6 +1630,10 @@ function ConexaoUnidade({ u }: { u: UnidadeDoBot }) {
             <p className="text-sm text-tinta-suave">
               O QR Code muda sozinho a cada poucos segundos. Esta tela avisa quando conectar.
             </p>
+            <p className="text-sm text-tinta-suave">
+              Use um chip só para o bot. Número novo começa com poucas mensagens automáticas por dia
+              e vai subindo em duas semanas: é assim que o WhatsApp confia no número.
+            </p>
             {c.teste && (
               <Ficha tom="aviso">WhatsApp de teste: este QR Code não conecta de verdade</Ficha>
             )}
@@ -1638,7 +1642,15 @@ function ConexaoUnidade({ u }: { u: UnidadeDoBot }) {
       )}
 
       {conectado && conectar.isSuccess && (
-        <Aviso tom="sucesso">Conectado! O bot já responde as mensagens deste número.</Aviso>
+        <Aviso tom="sucesso">
+          <p className="font-semibold">Conectado! O bot já responde as mensagens deste número.</p>
+          <p className="mt-1">
+            Número novo começa devagar: nas primeiras duas semanas, as mensagens automáticas
+            (lembretes, retorno, aniversário) têm um limite por dia que sobe aos poucos, para o
+            WhatsApp não restringir o número. O que passar fica para o dia seguinte; o lembrete do
+            horário marcado sempre tem prioridade.
+          </p>
+        </Aviso>
       )}
 
       {(c.erro || conectar.error || desconectar.error) && (

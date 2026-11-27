@@ -127,3 +127,24 @@ export function avisoNumeroProtegido(d: {
     chave: `protegido:${d.unidadeId}:${d.ate.toISOString()}`,
   };
 }
+
+/**
+ * Prioridade no limite do dia (sugestão aprovada em 27/11/2026): retorno, aniversário, aviso do
+ * clube e pesquisa usam só parte do limite; o resto fica guardado para o que tem hora marcada
+ * (lembrete do horário, vaga da lista de espera, horário mudado), que nunca fica para depois por
+ * causa de mensagem que podia esperar.
+ */
+export const AUTOMACOES_QUE_PODEM_ESPERAR: readonly string[] = [
+  'retorno',
+  'aniversario',
+  'clube',
+  'pesquisa',
+];
+export const FRACAO_PARA_O_QUE_PODE_ESPERAR = 0.7;
+
+/** Quantas proativas do dia esta mensagem pode encontrar já enviadas e ainda sair. */
+export function limiteDaMensagem(limiteDoDia: number, automacao: string | null): number {
+  return automacao && AUTOMACOES_QUE_PODEM_ESPERAR.includes(automacao)
+    ? Math.floor(limiteDoDia * FRACAO_PARA_O_QUE_PODE_ESPERAR)
+    : limiteDoDia;
+}

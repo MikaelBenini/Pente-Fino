@@ -964,6 +964,46 @@ describe('configurações e saúde do sistema', () => {
     expect(Array.isArray(s.conexoesCaidas)).toBe(true);
     expect(Array.isArray(s.errosRecentes)).toBe(true);
   });
+
+  it('saúde: número com as automáticas pausadas aparece em risco, sem nada das conversas', async () => {
+    const prisma = criarPrisma();
+    const ate = new Date(Date.now() + 3 * 3_600_000);
+    await naConta(prisma, a.contaId, async (tx) => {
+      await tx.botConexao.upsert({
+        where: { unidadeId: a.unidadeA },
+        create: {
+          unidadeId: a.unidadeA,
+          instancia: `pf-risco-${a.unidadeA}`,
+          status: 'conectado',
+          numero: '5511900009999',
+          pausadoAte: ate,
+          pausaMotivo: 'saidas',
+        },
+        update: { status: 'conectado', pausadoAte: ate, pausaMotivo: 'saidas' },
+      });
+      await tx.mensagem.create({
+        data: {
+          unidadeId: a.unidadeA,
+          telefone: '5511955554444',
+          direcao: 'entrada',
+          texto: 'SAIR',
+          status: 'recebida',
+        },
+      });
+    });
+    const s = (await adm().get('/admin/saude').expect(200)).body as SaudeDoSistema;
+    const linha = s.numerosEmRisco?.find((n) => n.contaId === a.contaId);
+    expect(linha).toMatchObject({ pausaMotivo: 'saidas', saidas24h: 1 });
+    expect(linha?.pausadoAte).toBe(ate.toISOString());
+    expect(JSON.stringify(s.numerosEmRisco)).not.toContain('5511955554444');
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.botConexao.update({
+        where: { unidadeId: a.unidadeA },
+        data: { pausadoAte: null, pausaMotivo: null },
+      }),
+    );
+    await prisma.$disconnect();
+  });
 });
 
 describe('SMTP configurável', () => {

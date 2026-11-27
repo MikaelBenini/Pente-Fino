@@ -19,6 +19,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   cifrar,
   conexoesCaidasPlataforma,
+  numerosEmRiscoPlataforma,
   notasFiscaisPlataforma,
   ultimaNotaEmitidaPlataforma,
   contasDaPlataforma,
@@ -271,6 +272,7 @@ export class SaudeService implements OnModuleDestroy {
           });
     }
     const caidas = await conexoesCaidasPlataforma(this.banco.prisma);
+    const emRisco = await numerosEmRiscoPlataforma(this.banco.prisma);
     const limpeza = await this.banco.prisma.execucaoLimpeza.findMany({
       orderBy: { iniciadaEm: 'desc' },
       take: 7,
@@ -294,6 +296,18 @@ export class SaudeService implements OnModuleDestroy {
         unidade: x.unidade,
         numero: x.numero,
         caiuEm: x.caiu_em.toISOString(),
+      })),
+      numerosEmRisco: emRisco.map((x) => ({
+        contaId: x.conta_id,
+        conta: x.conta,
+        unidade: x.unidade,
+        numero: x.numero,
+        conectadoEm: x.conectado_em?.toISOString() ?? null,
+        pausadoAte: x.pausado_ate?.toISOString() ?? null,
+        pausaMotivo: x.pausa_motivo,
+        saidas24h: Number(x.saidas_24h),
+        falhas24h: Number(x.falhas_24h),
+        proativas24h: Number(x.proativas_24h),
       })),
       errosRecentes: errosRecentes.sort((a, b) => b.quando.localeCompare(a.quando)).slice(0, 50),
       limpeza: limpeza.map((e) => ({

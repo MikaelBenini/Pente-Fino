@@ -362,6 +362,12 @@ function problemasDaSaude(d: SaudeDoSistema): { texto: string; aba: AbaSaude }[]
     p.push({ texto: 'Acessos à administração com IP interno', aba: 'servidor' });
   if (d.conexoesCaidas.length)
     p.push({ texto: `${d.conexoesCaidas.length} WhatsApp desconectado(s)`, aba: 'whatsapp' });
+  const pausados = (d.numerosEmRisco ?? []).filter((n) => n.pausadoAte).length;
+  if (pausados)
+    p.push({
+      texto: `${pausados} número(s) com as automáticas pausadas por risco`,
+      aba: 'whatsapp',
+    });
   const atrasadas = d.rotinas.filter((r) => r.atrasada).length;
   if (atrasadas) p.push({ texto: `${atrasadas} rotina(s) atrasada(s)`, aba: 'whatsapp' });
   if (d.errosRecentes.length)
@@ -544,6 +550,39 @@ function SaudeWhatsappERotinas({ d }: { d: SaudeDoSistema }) {
                 </span>
                 <span className="tabular-nums text-tinta-suave">
                   desde {formatarDataHora(c.caiuEm)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section aria-labelledby="titulo-risco" className="flex flex-col gap-2">
+        <h2 id="titulo-risco" className="text-lg font-semibold">
+          Números em risco
+        </h2>
+        <p className="text-sm text-tinta-suave">
+          Automáticas pausadas pela proteção, ou 3 ou mais SAIR ou falhas de envio nas últimas 24 h.
+          Fale com a conta antes que o WhatsApp restrinja o número (chip só para o bot, menos
+          mensagens automáticas, texto mais pessoal).
+        </p>
+        {(d.numerosEmRisco ?? []).length === 0 ? (
+          <p className="text-sm text-tinta-suave">Nenhum número em risco.</p>
+        ) : (
+          <ul className="flex flex-col gap-1 text-sm" aria-label="Números em risco">
+            {d.numerosEmRisco!.map((n) => (
+              <li
+                key={`${n.contaId}-${n.unidade}`}
+                className="flex flex-wrap justify-between gap-x-3 border-b border-borda py-1"
+              >
+                <span className="flex items-center gap-2">
+                  {n.conta} · {n.unidade}
+                  {n.numero ? ` · ${n.numero}` : ''}
+                  {n.pausadoAte && (
+                    <Ficha tom="perigo">Pausado até {formatarDataHora(n.pausadoAte)}</Ficha>
+                  )}
+                </span>
+                <span className="tabular-nums text-tinta-suave">
+                  {n.saidas24h} SAIR · {n.falhas24h} falhas · {n.proativas24h} automáticas em 24 h
                 </span>
               </li>
             ))}

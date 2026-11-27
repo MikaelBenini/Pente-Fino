@@ -52,6 +52,7 @@ import {
   ehProativa,
   JANELA_FALHAS_MIN,
   JANELA_REPETIDA_MIN,
+  limiteDaMensagem,
   limiteProativasDoDia,
   fimDoAquecimento,
   type ProtecaoDoNumero,
@@ -1175,7 +1176,10 @@ export async function prepararEnvio(
           enviadaEm: { gte: new Date(`${hoje}T00:00:00-03:00`) },
         },
       });
-      if (enviadasHoje >= limiteProativasDoDia(conexao.conectadoEm, agora))
+      if (
+        enviadasHoje >=
+        limiteDaMensagem(limiteProativasDoDia(conexao.conectadoEm, agora), m.automacao)
+      )
         return segurar(
           new Date(Date.parse(`${hoje}T09:00:00-03:00`) + 86_400_000),
           'Limite diário de mensagens automáticas do número (protege contra restrição).',
