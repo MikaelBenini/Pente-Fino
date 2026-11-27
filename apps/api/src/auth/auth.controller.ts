@@ -6,7 +6,9 @@ import {
   loginSchema,
   redefinirSenhaSchema,
   renovarSessaoSchema,
+  trocarContaSchema,
   trocarSenhaSchema,
+  type TrocarContaEntrada,
   type AceitarConviteEntrada,
   type EsqueciSenhaEntrada,
   type LoginEntrada,
@@ -90,6 +92,17 @@ export class AuthController {
   @ApiOperation({ summary: 'Criar nova senha com o link recebido por e-mail' })
   redefinirSenha(@Corpo(redefinirSenhaSchema) dados: RedefinirSenhaEntrada): Promise<void> {
     return this.auth.redefinirSenha(dados);
+  }
+
+  @Post('trocar-conta')
+  @LivreSemAssinatura()
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Trocar de negócio com o mesmo login (outra conta com o mesmo e-mail)',
+  })
+  trocarConta(@Corpo(trocarContaSchema) dados: TrocarContaEntrada): Promise<Sessao> {
+    return this.auth.trocarConta(dados.contaId);
   }
 
   @Post('trocar-senha')

@@ -49,6 +49,19 @@ export const cadastroContaSchema = z.object({
 });
 export type CadastroContaEntrada = z.infer<typeof cadastroContaSchema>;
 
+/**
+ * Abrir outro negócio com o mesmo login (duas contas, um login; ADR 0015): o dono cria mais uma
+ * conta, com o mesmo e-mail e a mesma senha, e 20% de desconto na mensalidade dela.
+ */
+export const outroNegocioSchema = z.object({
+  nome: z.string().trim().min(2, { error: 'Informe o nome do negócio.' }).max(120),
+  licenca: z.enum(LICENCAS),
+  segmento: z.enum(SEGMENTOS).nullish(),
+  plano: z.enum(PLANOS).default('basico'),
+  ciclo: z.enum(CICLOS).default('mensal'),
+});
+export type OutroNegocioEntrada = z.infer<typeof outroNegocioSchema>;
+
 export const slugSchema = z
   .string()
   .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, {

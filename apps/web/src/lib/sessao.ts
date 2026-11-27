@@ -90,3 +90,26 @@ export function papeisAtivos(usuario: UsuarioSessao, unidade: UnidadeAtiva): Pap
     return [...new Set(usuario.papeis.filter((p) => p.unidadeId === null).map((p) => p.papel))];
   return papeisNaUnidade(usuario.papeis, unidade);
 }
+
+// ─── Negócio usado por último (duas contas, um login; ADR 0015) ──────────────
+
+const CHAVE_NEGOCIO = 'pf-conta';
+
+/** O negócio usado por último neste aparelho: o login entra direto nele. */
+export function lerNegocio(): string | undefined {
+  try {
+    return localStorage.getItem(CHAVE_NEGOCIO) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Guarda o negócio atual; trocar de negócio esquece a unidade escolhida no outro. */
+export function guardarNegocio(contaId: string, trocou = false) {
+  try {
+    localStorage.setItem(CHAVE_NEGOCIO, contaId);
+    if (trocou) localStorage.removeItem(CHAVE);
+  } catch {
+    // Sem armazenamento (aba anônima restrita): vale a escolha do servidor.
+  }
+}

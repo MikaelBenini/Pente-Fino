@@ -59,7 +59,7 @@ describe('passkey', () => {
   it('entrar acha a passkey sem saber a conta e recusa assinatura que não confere', async () => {
     const credencialId = `cred-${randomUUID()}`;
     await naConta(prisma, a.contaId, async (tx) => {
-      const usuario = await tx.usuario.findUniqueOrThrow({ where: { email: a.emails.barbeiro } });
+      const usuario = await tx.usuario.findFirstOrThrow({ where: { email: a.emails.barbeiro } });
       await tx.passkey.create({
         data: {
           usuarioId: usuario.id,

@@ -236,13 +236,14 @@ describe('convite', () => {
       unidadeId: cenario.unidadeA,
     }).expect(409);
     expect(jaTem.body.erro.codigo).toBe('conflito');
-    // E-mail de outra barbearia (demonstração ou outro teste): único no sistema.
+    // E-mail que já tem conta em outro negócio: pode (duas contas, um login, ADR 0015). Quem
+    // trabalha em dois lugares entra nos dois com o mesmo e-mail; cada conta tem o seu usuário.
     await convidar({
       nome: 'Xavier',
       email: 'dono@demo.pentefino.dev',
       papel: 'profissional',
       unidadeId: cenario.unidadeA,
-    }).expect(409);
+    }).expect(201);
   });
 });
 

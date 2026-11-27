@@ -65,7 +65,7 @@ export class ConvitesService {
         const conta = await tx.conta.findUniqueOrThrow({ where: { id: quem.contaId } });
         const autor = await tx.usuario.findUniqueOrThrow({ where: { id: quem.id } });
 
-        let usuario = await tx.usuario.findUnique({ where: { email: dados.email } });
+        let usuario = await tx.usuario.findFirst({ where: { email: dados.email } });
         if (usuario?.senhaHash)
           throw Erros.conflito('Esta pessoa já tem acesso. Ajuste os papéis dela na equipe.');
         if (usuario) {

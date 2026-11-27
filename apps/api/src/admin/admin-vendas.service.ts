@@ -50,7 +50,7 @@ export class AdminVendasService {
     ip: string | null,
   ): Promise<VendaCriada> {
     const existente = await this.app.semConta({ loginEmail: d.dono.email }, (tx) =>
-      tx.usuario.findUnique({ where: { email: d.dono.email } }),
+      tx.usuario.findFirst({ where: { email: d.dono.email } }),
     );
     if (existente)
       throw Erros.conflito('Este e-mail já tem conta no Pente Fino. Use outro e-mail para o dono.');

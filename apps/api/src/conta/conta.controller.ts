@@ -1,6 +1,16 @@
-import { Controller, Get, HttpCode, HttpStatus, Inject, Patch, Post, Put } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Patch,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { estadoAssinatura, Prisma } from '@pente-fino/db';
+import { configuracaoDoSistema, estadoAssinatura, Prisma } from '@pente-fino/db';
 import {
   DIAS_EXPERIMENTAR,
   podeExperimentar,
@@ -28,8 +38,18 @@ import {
   funcoesDaConta,
   funcoesContaSchema,
   type FuncoesContaEntrada,
+  DESCONTO_SEGUNDA_CONTA_BP,
+  lerConfiguracaoPublica,
+  licencaDaContaNova,
+  outroNegocioSchema,
+  type OutroNegocioEntrada,
+  type Sessao,
 } from '@pente-fino/shared';
+import { randomUUID } from 'node:crypto';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
+import { AuthService } from '../auth/auth.service.js';
+import { EmailConfirmadoGuard } from '../auth/email-confirmado.guard.js';
+import { criarContaComDono } from './criar-conta.js';
 import { PlanoGuard } from '../assinatura/plano.guard.js';
 import { Erros } from '../comum/erros.js';
 import { LivreSemAssinatura, Papeis } from '../auth/decoradores.js';
@@ -49,6 +69,7 @@ export class ContaController {
     @Inject(CobrancaService) private readonly cobranca: CobrancaService,
     @Inject(PrecosService) private readonly precos: PrecosService,
     @Inject(PlanoGuard) private readonly planos: PlanoGuard,
+    @Inject(AuthService) private readonly auth: AuthService,
   ) {}
 
   @Get('situacao')
@@ -317,6 +338,56 @@ export class ContaController {
         depois: { liberadoAte: ate?.toISOString() ?? null },
       });
       return { liberadoAte: ate?.toISOString() ?? null };
+    });
+  }
+
+  /**
+   * Abrir outro negócio com o mesmo login (duas contas, um login; ADR 0015): o dono cria mais uma
+   * conta com o mesmo e-mail e a mesma senha, em teste e com 20% de desconto na mensalidade, e já
+   * entra nela (a sessão volta para o painel trocar de negócio).
+   */
+  @Post('outro-negocio')
+  @Papeis('dono')
+  @UseGuards(EmailConfirmadoGuard)
+  @LivreSemAssinatura()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Abrir outro negócio com o mesmo login (20% de desconto na segunda conta)',
+  })
+  async outroNegocio(@Corpo(outroNegocioSchema) d: OutroNegocioEntrada): Promise<Sessao> {
+    const quem = Contexto.usuario();
+    if (quem.suporte) throw Erros.semPermissao('A sessão de suporte não abre negócio.');
+    const licencaNova = licencaDaContaNova(d);
+    if ('erro' in licencaNova)
+      throw Erros.validacao([{ campo: 'plano', mensagem: licencaNova.erro }]);
+    const dono = await this.banco.daConta((tx) =>
+      tx.usuario.findUniqueOrThrow({ where: { id: quem.id } }),
+    );
+    const { teste } = lerConfiguracaoPublica(await configuracaoDoSistema(this.banco.prisma));
+    const contaId = randomUUID();
+    return this.banco.naConta(contaId, async (tx) => {
+      const { donoId } = await criarContaComDono(tx, {
+        contaId,
+        nome: d.nome,
+        plano: d.plano,
+        ciclo: d.ciclo,
+        licenca: licencaNova.licenca,
+        segmento: licencaNova.segmento,
+        automacoesContratadas: false,
+        testeAte: new Date(Date.now() + teste.dias * 86_400_000),
+        cupom: null,
+        descontoBp: DESCONTO_SEGUNDA_CONTA_BP,
+        aceiteTermos: teste.versaoTermos,
+        dono: {
+          nome: dono.nome,
+          email: dono.email,
+          senhaHash: dono.senhaHash,
+          emailConfirmadoEm: dono.emailConfirmadoEm,
+          telefone: dono.telefone,
+        },
+        auditoria: { segundaContaDe: quem.contaId },
+      });
+      return this.auth.montarSessao(tx, donoId);
     });
   }
 

@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
-  aplicarModelosIniciais,
   configuracaoDoSistema,
   clienteDoToken,
   criarLinkDoHorario,
@@ -46,7 +45,6 @@ import {
   dataLocal,
   formatarDiaPorExtenso,
   formatarHora,
-  gerarSlug,
   slugSchema,
   TEXTO_AGENDAR_POR_AQUI,
   TEXTO_ATIVAR_LEMBRETES,
@@ -85,9 +83,9 @@ import {
 } from '@pente-fino/shared';
 import { IndicacaoService } from '../indicacao/indicacao.controller.js';
 import type { Request, Response } from 'express';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { auditar } from '../auditoria/auditoria.js';
+import { criarContaComDono } from '../conta/criar-conta.js';
 import { AgendaService } from '../agenda/agenda.service.js';
 import { AuthService } from '../auth/auth.service.js';
 import { LimiteAutenticacao, Publico } from '../auth/decoradores.js';
@@ -244,10 +242,12 @@ export class PublicoController {
       ]);
     await this.limiteCadastro.conferir(req.ip);
     const existente = await this.banco.semConta({ loginEmail: d.email }, (tx) =>
-      tx.usuario.findUnique({ where: { email: d.email } }),
+      tx.usuario.findFirst({ where: { email: d.email } }),
     );
     if (existente)
-      throw Erros.conflito('Este e-mail já tem conta. Entre com ele ou use "Esqueci minha senha".');
+      throw Erros.conflito(
+        'Este e-mail já tem conta. Entre com ele e, no menu, use "Abrir outro negócio" para criar mais um (ou "Esqueci minha senha").',
+      );
     const senhaHash = await gerarHashSenha(d.senha);
     const contaId = randomUUID();
     // Dias de teste e versão dos termos vêm da administração (com padrão do sistema).
@@ -265,38 +265,26 @@ export class PublicoController {
     let linkConfirmacao: string | undefined;
     try {
       sessao = await this.banco.naConta(contaId, async (tx) => {
-        await tx.conta.create({
-          data: {
-            id: contaId,
-            nome: d.barbearia,
-            plano: d.plano,
-            licenca: licencaNova.licenca,
-            segmento: licencaNova.segmento,
-            ciclo: d.ciclo,
-            automacoesContratadas:
-              d.automacoes &&
-              podeContratarAutomacoes(d.plano) &&
-              !automacoesIncluidasNaLicenca(licencaNova.licenca),
-            indicadoPor,
-            status: 'teste',
-            testeAte,
-            precosDesde: new Date(`${dataLocal(new Date())}T00:00:00Z`),
-            cupom: desconto.cupom,
-            descontoBp: desconto.descontoBp,
-            // De onde veio (anúncio, campanha, site): site T2 e admin F2.
-            ...(d.origem && Object.keys(d.origem).length ? { origem: d.origem } : {}),
-          },
-        });
-        const unidade = await tx.unidade.create({
-          data: {
-            nome: 'Unidade principal',
-            capacidade: 2,
-            slug: `${gerarSlug(d.barbearia).slice(0, 50) || 'agenda'}-${randomBytes(2).toString('hex')}`,
-          },
-        });
-        // Começa sem e-mail confirmado: o link vai no e-mail de boas-vindas.
-        const dono = await tx.usuario.create({
-          data: {
+        const { donoId } = await criarContaComDono(tx, {
+          contaId,
+          nome: d.barbearia,
+          plano: d.plano,
+          ciclo: d.ciclo,
+          licenca: licencaNova.licenca,
+          segmento: licencaNova.segmento,
+          automacoesContratadas:
+            d.automacoes &&
+            podeContratarAutomacoes(d.plano) &&
+            !automacoesIncluidasNaLicenca(licencaNova.licenca),
+          testeAte,
+          cupom: desconto.cupom,
+          descontoBp: desconto.descontoBp,
+          indicadoPor,
+          // De onde veio (anúncio, campanha, site): site T2 e admin F2.
+          ...(d.origem && Object.keys(d.origem).length ? { origem: d.origem } : {}),
+          aceiteTermos: teste.versaoTermos,
+          // Começa sem e-mail confirmado: o link vai no e-mail de boas-vindas.
+          dono: {
             nome: d.nome,
             email: d.email,
             senhaHash,
@@ -304,32 +292,8 @@ export class PublicoController {
             telefone: d.whatsapp ?? null,
           },
         });
-        linkConfirmacao = (await this.auth.criarLinkDeConfirmacao(tx, dono.id)).link;
-        await tx.papelUsuario.create({
-          data: { usuarioId: dono.id, papel: 'dono', unidadeId: null },
-        });
-        // Categorias de despesa, mensagens e menu do bot; os serviços vêm da configuração guiada.
-        await aplicarModelosIniciais(tx, {
-          unidadeIds: [unidade.id],
-          vigenciaInicio: dataLocal(new Date()),
-          incluirServicos: false,
-        });
-        await auditar(
-          tx,
-          {
-            entidade: 'conta',
-            entidadeId: contaId,
-            acao: 'criar',
-            depois: {
-              nome: d.barbearia,
-              plano: d.plano,
-              ciclo: d.ciclo,
-              aceiteTermos: teste.versaoTermos,
-            },
-          },
-          dono.id,
-        );
-        return this.auth.montarSessao(tx, dono.id);
+        linkConfirmacao = (await this.auth.criarLinkDeConfirmacao(tx, donoId)).link;
+        return this.auth.montarSessao(tx, donoId);
       });
     } catch (e) {
       // Dois cadastros com o mesmo e-mail ao mesmo tempo.

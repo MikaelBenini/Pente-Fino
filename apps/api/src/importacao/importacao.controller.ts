@@ -101,7 +101,7 @@ export class ImportacaoController {
             erro(`Unidade "${x.unidade}" não encontrada.`);
             continue;
           }
-          if (vistos.has(x.email) || (await tx.usuario.findUnique({ where: { email: x.email } }))) {
+          if (vistos.has(x.email) || (await tx.usuario.findFirst({ where: { email: x.email } }))) {
             erro(`O e-mail ${x.email} já está na equipe.`);
             continue;
           }

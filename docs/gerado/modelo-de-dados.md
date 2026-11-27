@@ -418,7 +418,7 @@ Tabela `usuario`. E-mail único no sistema todo: o login acha a conta pelo e-mai
 | id | String | sim | chave; padrão dbgenerated("uuidv7( |
 | contaId | String | sim | padrão dbgenerated("conta_atual(; coluna `conta_id` |
 | nome | String | sim |  |
-| email | String | sim | único |
+| email | String | sim | Único dentro da conta: o mesmo e-mail pode ter um usuário em cada negócio (um login só). |
 | telefone | String | não |  |
 | senhaHash | String | não | coluna `senha_hash` |
 | preferenciasAvisos | Json | sim | Quais avisos vão para o celular e se o resumo do dia vai por e-mail (packages/shared/src/avisos.ts).; padrão "{}"; coluna `preferencias_avisos` |
@@ -450,7 +450,7 @@ Tabela `usuario`. E-mail único no sistema todo: o login acha a conta pelo e-mai
 | mensagensEscritas | Mensagem[] | não | lista de Mensagem |
 | eventosDeConversa | BotSessaoEvento[] | não | lista de BotSessaoEvento |
 
-Restrições: índice (contaId).
+Restrições: único (contaId, email) · índice (contaId) · índice (email).
 
 ### PapelUsuario
 

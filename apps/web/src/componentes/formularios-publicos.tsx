@@ -15,6 +15,7 @@ import { KeyRound } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { api } from '@/lib/api';
+import { guardarNegocio, lerNegocio } from '@/lib/sessao';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
 import { entrarComPasskey, temPasskey, temSugestaoNoCampo } from '@/lib/passkey';
@@ -37,7 +38,11 @@ export function FormularioEntrar() {
   const enviar = handleSubmit(async (dados) => {
     setErroGeral(null);
     try {
-      await api('auth/login', { corpo: dados });
+      // Duas contas, um login: entra no negócio usado por último neste aparelho.
+      const r = await api<{ usuario: { contaId: string } }>('auth/login', {
+        corpo: { ...dados, contaId: lerNegocio() },
+      });
+      guardarNegocio(r.usuario.contaId);
       router.replace(destinoSeguro(params.get('voltar')));
     } catch (e) {
       setErroGeral(aplicarErroDaApi(e, setError));

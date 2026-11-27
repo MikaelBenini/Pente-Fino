@@ -26,6 +26,8 @@ const tokenSchema = z
 export const loginSchema = z.object({
   email: emailSchema,
   senha: z.string({ error: 'Informe a senha.' }).min(1, { error: 'Informe a senha.' }).max(128),
+  /** Negócio usado por último neste aparelho (duas contas, um login): entra direto nele. */
+  contaId: z.uuid().optional(),
 });
 export type LoginEntrada = z.infer<typeof loginSchema>;
 
@@ -107,6 +109,8 @@ export interface UsuarioSessao {
   funcoes: Funcao[];
   /** Licença contratada (ADR 0015): o que o sistema traz e o menu. */
   licenca: Licenca;
+  /** Os outros negócios com o mesmo login (mesmo e-mail e senha), para trocar pelo menu. */
+  outrasContas: { contaId: string; nome: string; licenca: Licenca }[];
   /** E-mail confirmado (só o cadastro pelo site começa sem): até lá, não agenda nem convida. */
   emailConfirmado: boolean;
   /** Admin F5: sessão da equipe do Pente Fino com o consentimento do dono, só leitura. */
@@ -119,3 +123,7 @@ export interface UnidadeResumo {
   nome: string;
   ativa: boolean;
 }
+
+/** Trocar de negócio (duas contas, um login): a sessão passa para a outra conta. */
+export const trocarContaSchema = z.object({ contaId: z.uuid({ error: 'Negócio inválido.' }) });
+export type TrocarContaEntrada = z.infer<typeof trocarContaSchema>;

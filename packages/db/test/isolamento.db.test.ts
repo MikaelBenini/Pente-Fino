@@ -144,8 +144,25 @@ describe('leituras antes de saber a conta (login e tokens)', () => {
       tx.usuario.updateMany({ where: { email }, data: { nome: 'invadido' } }),
     );
     expect(alterados.count).toBe(0);
-    // Nada além do usuário: nem a conta dele.
+    // Nada além do usuário e da conta dele (o nome, para trocar de negócio): nem clientes.
     expect(await comChave('app.login_email', email, (tx) => tx.cliente.count())).toBe(0);
+    const contas = await comChave('app.login_email', email, (tx) => tx.conta.findMany());
+    expect(contas.map((c) => c.id)).toEqual([contaB]);
+    const contasAlteradas = await comChave('app.login_email', email, (tx) =>
+      tx.conta.updateMany({ data: { nome: 'invadido' } }),
+    );
+    expect(contasAlteradas.count).toBe(0);
+  });
+
+  it('duas contas, um login: o mesmo e-mail em cada conta, nunca repetido na mesma', async () => {
+    const email = `${randomUUID()}@teste.dev`;
+    await naConta(prisma, contaA, (tx) => tx.usuario.create({ data: { nome: 'Ana A', email } }));
+    await naConta(prisma, contaB, (tx) => tx.usuario.create({ data: { nome: 'Ana B', email } }));
+    await expect(
+      naConta(prisma, contaB, (tx) => tx.usuario.create({ data: { nome: 'Ana de novo', email } })),
+    ).rejects.toThrow();
+    const contas = await comChave('app.login_email', email, (tx) => tx.conta.findMany());
+    expect(contas.map((c) => c.id).sort()).toEqual([contaA, contaB].sort());
   });
 
   it('o hash declarado libera só aquele token', async () => {
