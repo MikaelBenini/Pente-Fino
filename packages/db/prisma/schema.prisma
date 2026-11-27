@@ -1188,6 +1188,8 @@ model BotConexao {
   /// Automáticas pausadas por sinal de risco (falhas seguidas, muitos SAIR) até esta hora.
   pausadoAte   DateTime?        @map("pausado_ate") @db.Timestamptz(3)
   pausaMotivo  String?          @map("pausa_motivo")
+  /// O dono retomou as automáticas: os sinais de risco contam só a partir daqui.
+  retomadoEm   DateTime?        @map("retomado_em") @db.Timestamptz(3)
   criadoEm     DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime         @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 

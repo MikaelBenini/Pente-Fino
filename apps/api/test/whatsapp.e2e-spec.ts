@@ -109,6 +109,37 @@ describe('conexão pelo painel', () => {
       pausadoAte: null,
     });
   });
+
+  it('retomar as automáticas pausadas: com motivo, só gestão, e a pausa sai', async () => {
+    const prisma = criarPrisma();
+    const ate = new Date(Date.now() + 6 * 3_600_000);
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.botConexao.update({
+        where: { unidadeId: a.unidadeA },
+        data: { pausadoAte: ate, pausaMotivo: 'falhas' },
+      }),
+    );
+    const antes = (await dono.get(`/bot/conexao/${a.unidadeA}`).expect(200)).body as ConexaoBot;
+    expect(antes.protecao?.pausadoAte).toBe(ate.toISOString());
+    await barbeiro
+      .post(`/bot/conexao/${a.unidadeA}/retomar`, { motivo: 'troquei o chip' })
+      .expect(403);
+    await dono.post(`/bot/conexao/${a.unidadeA}/retomar`, { motivo: 'ok' }).expect(400);
+    const r = (
+      await dono
+        .post(`/bot/conexao/${a.unidadeA}/retomar`, { motivo: 'O celular estava sem internet' })
+        .expect(200)
+    ).body as ConexaoBot;
+    expect(r.protecao?.pausadoAte).toBeNull();
+    await dono
+      .post(`/bot/conexao/${a.unidadeA}/retomar`, { motivo: 'De novo, sem pausa' })
+      .expect(409);
+    const c = await naConta(prisma, a.contaId, (tx) =>
+      tx.botConexao.findUniqueOrThrow({ where: { unidadeId: a.unidadeA } }),
+    );
+    expect(c.retomadoEm).not.toBeNull();
+    await prisma.$disconnect();
+  });
 });
 
 describe('webhook', () => {

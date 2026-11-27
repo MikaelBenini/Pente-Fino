@@ -123,7 +123,7 @@ export function avisoNumeroProtegido(d: {
     tipo: 'whatsapp_protegido',
     titulo: `Mensagens automáticas pausadas · ${d.unidade}`,
     texto: `Para o WhatsApp não restringir o número, as mensagens automáticas (lembretes, retorno, aniversário) param até ${hora}: ${TEXTO_MOTIVO_PAUSA[d.motivo]}. O bot continua respondendo quem escreve.`,
-    link: '/bot',
+    link: '/bot?aba=conexao',
     chave: `protegido:${d.unidadeId}:${d.ate.toISOString()}`,
   };
 }
@@ -147,4 +147,77 @@ export function limiteDaMensagem(limiteDoDia: number, automacao: string | null):
   return automacao && AUTOMACOES_QUE_PODEM_ESPERAR.includes(automacao)
     ? Math.floor(limiteDoDia * FRACAO_PARA_O_QUE_PODE_ESPERAR)
     : limiteDoDia;
+}
+
+/**
+ * Abertura variada (sugestão aprovada em 27/11/2026): automáticas idênticas em massa são um dos
+ * sinais que o WhatsApp observa. "Oi, Ana!" no começo vira, conforme a mensagem, "Olá, Ana!" ou
+ * "Oi, Ana, tudo bem?". O resto do texto fica igual; sem a saudação no começo, nada muda.
+ * `semente` escolhe a forma (o id da mensagem: a mesma mensagem sempre sai igual).
+ */
+export function variarAbertura(texto: string, semente: string): string {
+  const m = /^(Oi|Olá|Ola),\s+([^!?,.\n]{1,40})!\s*/.exec(texto);
+  if (!m) return texto;
+  const nome = m[2]!.trim();
+  const formas = [`Oi, ${nome}! `, `Olá, ${nome}! `, `Oi, ${nome}, tudo bem? `];
+  let h = 0;
+  for (const c of semente) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return formas[h % formas.length]! + texto.slice(m[0].length);
+}
+
+/** Números da semana do número de WhatsApp de uma unidade (e-mail semanal ao dono). */
+export interface SemanaDoNumero {
+  unidade: string;
+  /** Primeiro e último dia da semana (AAAA-MM-DD). */
+  de: string;
+  ate: string;
+  proativas: number;
+  saidas: number;
+  pausas: number;
+  limiteHoje: number;
+  aquecendo: boolean;
+}
+
+const ddmmDe = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+
+/** O e-mail da semana sai na segunda, na rotina das 9 h (janela de 15 minutos). */
+export const DIA_EMAIL_SEMANA = 1;
+export const MINUTO_EMAIL_SEMANA = 9 * 60;
+export const ehHoraDoEmailDaSemana = (diaSemana: number, minutoLocal: number) =>
+  diaSemana === DIA_EMAIL_SEMANA &&
+  minutoLocal >= MINUTO_EMAIL_SEMANA &&
+  minutoLocal < MINUTO_EMAIL_SEMANA + 15;
+
+/** E-mail semanal da saúde do número (segunda de manhã, para o dono; desliga no Perfil). */
+export function emailSemanaDoNumero(d: { nome: string; semana: SemanaDoNumero; link: string }): {
+  assunto: string;
+  texto: string;
+} {
+  const s = d.semana;
+  const primeiroNome = d.nome.trim().split(/\s+/)[0] ?? d.nome;
+  const conselho =
+    s.pausas > 0
+      ? 'As automáticas pausaram nesta semana para proteger o número. Confira se o celular do bot ficou sem internet e deixe os textos de retorno e aniversário mais pessoais.'
+      : s.saidas >= 3
+        ? 'Vários clientes pediram para parar. Vale deixar os textos de retorno e aniversário mais curtos e pessoais, e mandar menos.'
+        : s.aquecendo
+          ? 'Número novo em aquecimento: o limite por dia sobe sozinho até completar duas semanas.'
+          : 'Tudo certo: o número está saudável.';
+  return {
+    assunto: `WhatsApp da ${s.unidade}: a semana do número`,
+    texto: [
+      `Oi, ${primeiroNome}.`,
+      '',
+      `De ${ddmmDe(s.de)} a ${ddmmDe(s.ate)}, no WhatsApp da ${s.unidade}:`,
+      `- Mensagens automáticas enviadas: ${s.proativas} (limite de hoje: ${s.limiteHoje} por dia)`,
+      `- Clientes que responderam SAIR: ${s.saidas}`,
+      `- Pausas para proteger o número: ${s.pausas}`,
+      '',
+      conselho,
+      '',
+      `Ver no painel: ${d.link}`,
+      '',
+      'Para parar de receber, desligue em Perfil → Avisos.',
+    ].join('\n'),
+  };
 }

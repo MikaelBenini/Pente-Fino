@@ -614,6 +614,32 @@ export class BotService {
     }
   }
 
+  /**
+   * Retoma as automáticas pausadas pela proteção do número: o dono resolveu a causa (chip novo,
+   * celular com internet). Fica na auditoria com o motivo e a pausa que havia.
+   */
+  async retomarAutomaticas(unidadeId: string, motivo: string): Promise<ConexaoBot> {
+    exigirUnidade(unidadeId, GESTAO);
+    const linha = await this.linhaConexao(unidadeId);
+    if (!linha) throw Erros.naoEncontrado('Esta unidade ainda não conectou o WhatsApp.');
+    if (!linha.pausadoAte || linha.pausadoAte <= new Date())
+      throw Erros.conflito('As mensagens automáticas deste número não estão pausadas.');
+    await this.banco.daConta(async (tx) => {
+      await tx.botConexao.update({
+        where: { unidadeId },
+        data: { pausadoAte: null, pausaMotivo: null, retomadoEm: new Date() },
+      });
+      await auditar(tx, {
+        entidade: 'bot_conexao',
+        entidadeId: linha.id,
+        acao: 'retomar_automaticas',
+        antes: { pausadoAte: linha.pausadoAte, pausaMotivo: linha.pausaMotivo },
+        depois: { pausadoAte: null, motivo },
+      });
+    });
+    return this.conexao(unidadeId);
+  }
+
   /** Desliga o número. Gravado antes, para o aviso de "caiu" não aparecer. */
   async desconectar(unidadeId: string): Promise<ConexaoBot> {
     exigirUnidade(unidadeId, GESTAO);

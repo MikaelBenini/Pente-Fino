@@ -1514,7 +1514,7 @@ const MOTIVO_PAUSA: Record<string, string> = {
  * Proteção do número (27/11/2026): quanto de mensagem automática já saiu hoje, o limite (que sobe
  * aos poucos num número novo) e a pausa por sinal de risco. O bot continua respondendo quem escreve.
  */
-function ProtecaoDoNumeroBloco({ p }: { p: ProtecaoDoNumero }) {
+function ProtecaoDoNumeroBloco({ p, unidadeId }: { p: ProtecaoDoNumero; unidadeId: string }) {
   if (p.pausadoAte)
     return (
       <Aviso tom="aviso">
@@ -1526,6 +1526,7 @@ function ProtecaoDoNumeroBloco({ p }: { p: ProtecaoDoNumero }) {
           {MOTIVO_PAUSA[p.pausaMotivo ?? ''] ?? 'sinal de risco'}. Lembretes, retorno e aniversário
           voltam sozinhos depois; o bot continua respondendo quem escreve.
         </p>
+        <RetomarAutomaticas unidadeId={unidadeId} />
       </Aviso>
     );
   return (
@@ -1539,6 +1540,47 @@ function ProtecaoDoNumeroBloco({ p }: { p: ProtecaoDoNumero }) {
         ? `Número novo: o limite sobe aos poucos até ${formatarData(p.aquecendoAte)}, para o WhatsApp não restringir.`
         : 'O que passar do limite sai no dia seguinte, para proteger o número.'}
     </p>
+  );
+}
+
+/** "Retomar agora": o dono resolveu a causa (chip novo, celular com internet) e conta o que foi. */
+function RetomarAutomaticas({ unidadeId }: { unidadeId: string }) {
+  const [aberto, setAberto] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const retomar = useAcao(
+    () => api(`bot/conexao/${unidadeId}/retomar`, { metodo: 'POST', corpo: { motivo } }),
+    [chaveBot],
+  );
+  if (!aberto)
+    return (
+      <Botao variante="secundario" className="mt-3" onClick={() => setAberto(true)}>
+        Retomar agora
+      </Botao>
+    );
+  return (
+    <div className="mt-3 flex flex-col gap-2">
+      <Campo
+        id={`retomar-${unidadeId}`}
+        rotulo="O que foi resolvido?"
+        placeholder="Ex.: troquei o chip, o celular estava sem internet"
+        maxLength={300}
+        value={motivo}
+        onChange={(ev) => setMotivo(ev.target.value)}
+      />
+      {retomar.error && <p className="text-sm text-perigo-texto">{mensagemDe(retomar.error)}</p>}
+      <div className="flex flex-wrap gap-2">
+        <Botao
+          carregando={retomar.isPending}
+          disabled={motivo.trim().length < 5}
+          onClick={() => retomar.mutate(undefined)}
+        >
+          Retomar as automáticas
+        </Botao>
+        <Botao variante="secundario" onClick={() => setAberto(false)}>
+          Cancelar
+        </Botao>
+      </div>
+    </div>
   );
 }
 
@@ -1609,7 +1651,7 @@ function ConexaoUnidade({ u }: { u: UnidadeDoBot }) {
         </Aviso>
       )}
 
-      {conectado && c.protecao && <ProtecaoDoNumeroBloco p={c.protecao} />}
+      {conectado && c.protecao && <ProtecaoDoNumeroBloco p={c.protecao} unidadeId={u.id} />}
 
       {c.status === 'aguardando_qr' && aberta && (
         <div className="flex flex-col items-start gap-4 sm:flex-row">

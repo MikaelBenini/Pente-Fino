@@ -35,7 +35,7 @@
 | [PagamentoComissao](#pagamentocomissao) | `pagamento_comissao` | 10 | sim |  |
 | [Meta](#meta) | `meta` | 9 | sim | O valor atual é calculado, não guardado. |
 | [Auditoria](#auditoria) | `auditoria` | 10 | sim | Imutável: um gatilho recusa UPDATE e DELETE (migração "restricoes"). |
-| [BotConexao](#botconexao) | `bot_conexao` | 13 | sim | Um número por unidade. "instancia" é o nome da instância na Evolution API. |
+| [BotConexao](#botconexao) | `bot_conexao` | 14 | sim | Um número por unidade. "instancia" é o nome da instância na Evolution API. |
 | [BotSessao](#botsessao) | `bot_sessao` | 10 | sim | Onde cada número está no menu do bot. Sem resposta por 30 minutos, recomeça. |
 | [BotSessaoEvento](#botsessaoevento) | `bot_sessao_evento` | 9 | sim | Histórico do estado da conversa (testes de 19/11/2026): gravado pelo gatilho bot_sessao_estado a cada mudança entre bot, aguardando e atendimento, com a origem (app.origem_conversa). |
 | [Mensagem](#mensagem) | `mensagem` | 16 | sim | Mensagens do WhatsApp, recebidas e enviadas. Histórico no perfil do cliente. |
@@ -1049,6 +1049,7 @@ Tabela `bot_conexao`. Um número por unidade. "instancia" é o nome da instânci
 | conectadoEm | DateTime | não | Quando o número atual foi conectado: o aquecimento conta daqui (protecao-whatsapp.ts).; coluna `conectado_em` |
 | pausadoAte | DateTime | não | Automáticas pausadas por sinal de risco (falhas seguidas, muitos SAIR) até esta hora.; coluna `pausado_ate` |
 | pausaMotivo | String | não | coluna `pausa_motivo` |
+| retomadoEm | DateTime | não | O dono retomou as automáticas: os sinais de risco contam só a partir daqui.; coluna `retomado_em` |
 | criadoEm | DateTime | sim | padrão now(); coluna `criado_em` |
 | atualizadoEm | DateTime | sim | coluna `atualizado_em` |
 | conta | Conta | sim | relação com Conta |

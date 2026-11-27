@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   ehProativa,
+  emailSemanaDoNumero,
   limiteDaMensagem,
+  variarAbertura,
   limiteProativasDoDia,
   pausaPorRisco,
   proximaProativa,
@@ -61,5 +63,37 @@ describe('prioridade no limite do dia', () => {
     expect(limiteDaMensagem(20, null)).toBe(20);
     expect(limiteDaMensagem(20, 'retorno')).toBe(14);
     expect(limiteDaMensagem(200, 'aniversario')).toBe(140);
+  });
+});
+
+describe('abertura variada e e-mail da semana', () => {
+  it('varia só a saudação do começo, sempre igual para a mesma mensagem', () => {
+    const t = 'Oi, Ana! Lembrete do seu horário amanhã às 15h.';
+    const formas = new Set(['a', 'b', 'c', 'd', 'e', 'f'].map((s) => variarAbertura(t, s)));
+    expect(formas.size).toBeGreaterThan(1);
+    for (const f of formas) expect(f.endsWith('Lembrete do seu horário amanhã às 15h.')).toBe(true);
+    expect(variarAbertura(t, 'x')).toBe(variarAbertura(t, 'x'));
+    expect(variarAbertura('Seu horário mudou.', 'x')).toBe('Seu horário mudou.');
+  });
+
+  it('e-mail da semana com os números e o conselho certo', () => {
+    const semana = {
+      unidade: 'Centro',
+      de: '2026-11-23',
+      ate: '2026-11-29',
+      proativas: 80,
+      saidas: 4,
+      pausas: 0,
+      limiteHoje: 200,
+      aquecendo: false,
+    };
+    const e = emailSemanaDoNumero({ nome: 'Carlos Lima', semana, link: 'https://x/bot' });
+    expect(e.assunto).toBe('WhatsApp da Centro: a semana do número');
+    expect(e.texto).toContain('De 23/11 a 29/11');
+    expect(e.texto).toContain('Clientes que responderam SAIR: 4');
+    expect(e.texto).toContain('Vários clientes pediram para parar');
+    expect(
+      emailSemanaDoNumero({ nome: 'C', semana: { ...semana, saidas: 0 }, link: '' }).texto,
+    ).toContain('o número está saudável');
   });
 });

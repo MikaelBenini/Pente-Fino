@@ -2,7 +2,7 @@
 
 # Rotas da API
 
-332 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
+333 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
 
 ## admin
 
@@ -157,6 +157,7 @@
 | POST | `/bot/simular` | GESTAO | Conversa de teste com o rascunho ou o menu publicado (não envia nada) |
 | GET | `/bot/conexao/:unidadeId` | GESTAO | Estado do WhatsApp da unidade e o QR Code enquanto aguarda a leitura |
 | POST | `/bot/conexao/:unidadeId` | GESTAO | Conectar (ou reconectar) o WhatsApp da unidade: devolve o QR Code |
+| POST | `/bot/conexao/:unidadeId/retomar` | GESTAO | Retomar as mensagens automáticas pausadas pela proteção do número (com motivo) |
 | DELETE | `/bot/conexao/:unidadeId` | GESTAO | Desconectar o WhatsApp da unidade |
 
 ## caixa
