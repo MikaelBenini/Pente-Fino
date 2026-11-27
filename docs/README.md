@@ -15,6 +15,7 @@ comece pelo [CLAUDE.md](CLAUDE.md).
 | [papeis-e-permissoes.md](papeis-e-permissoes.md) | Quem pode o quê, na barbearia e na administração |
 | [glossario.md](glossario.md) | Os termos do produto e o nome de cada um no código |
 | [decisoes/](decisoes/README.md) | Por que o sistema é como é (registro de decisões) |
+| [concorrentes-e-precos.md](concorrentes-e-precos.md) | Quanto o mercado cobra em cada segmento, a proposta de preço por licença e o que falta para competir |
 
 ## Gerado do código
 
