@@ -201,16 +201,6 @@ export const retomarAutomaticasSchema = z.object({
 });
 export type RetomarAutomaticasEntrada = z.infer<typeof retomarAutomaticasSchema>;
 
-/** "Testar meu número": a mensagem de teste e como ela está (a tela consulta até chegar). */
-export interface TesteDoNumero {
-  mensagemId: string;
-  /** pendente → enviada (saiu do número) ou falhou/descartada. */
-  status: 'pendente' | 'enviada' | 'falhou' | 'descartada' | 'recebida';
-  erro: string | null;
-  /** Para onde foi (o WhatsApp de quem testou, mascarado). */
-  para: string;
-}
-
 /** O que a tela do Bot mostra sobre a proteção do número contra restrição. */
 export interface ProtecaoDoNumero {
   /** Mensagens automáticas (para quem não escreveu em 24 h) enviadas hoje e o limite de hoje. */

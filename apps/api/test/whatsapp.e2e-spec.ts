@@ -142,47 +142,6 @@ describe('conexão pelo painel', () => {
   });
 });
 
-describe('testar meu número', () => {
-  it('pede WhatsApp no Perfil e um "oi" antes; depois manda e a tela acompanha', async () => {
-    const prisma = criarPrisma();
-    const donoId = (await dono.get('/auth/eu').expect(200)).body.id as string;
-    await naConta(prisma, a.contaId, (tx) =>
-      tx.usuario.update({ where: { id: donoId }, data: { telefone: null } }),
-    );
-    expect(
-      (await dono.post(`/bot/conexao/${a.unidadeA}/testar`).expect(400)).body.erro.mensagem,
-    ).toContain('Perfil');
-    await naConta(prisma, a.contaId, (tx) =>
-      tx.usuario.update({ where: { id: donoId }, data: { telefone: '5511966665555' } }),
-    );
-    expect(
-      (await dono.post(`/bot/conexao/${a.unidadeA}/testar`).expect(409)).body.erro.mensagem,
-    ).toContain('Mande um "oi"');
-    await naConta(prisma, a.contaId, (tx) =>
-      tx.mensagem.create({
-        data: {
-          unidadeId: a.unidadeA,
-          telefone: '5511966665555',
-          direcao: 'entrada',
-          texto: 'oi',
-          status: 'recebida',
-        },
-      }),
-    );
-    await barbeiro.post(`/bot/conexao/${a.unidadeA}/testar`).expect(403);
-    const t = (await dono.post(`/bot/conexao/${a.unidadeA}/testar`).expect(200)).body;
-    expect(t).toMatchObject({ status: 'pendente', erro: null });
-    const s1 = (await dono.get(`/bot/conexao/${a.unidadeA}/testar/${t.mensagemId}`).expect(200))
-      .body;
-    expect(s1.mensagemId).toBe(t.mensagemId);
-    const m = await naConta(prisma, a.contaId, (tx) =>
-      tx.mensagem.findUniqueOrThrow({ where: { id: t.mensagemId } }),
-    );
-    expect(m).toMatchObject({ autorId: donoId, direcao: 'saida', telefone: '5511966665555' });
-    await prisma.$disconnect();
-  });
-});
-
 describe('webhook', () => {
   it('sem assinatura ou com a assinatura de outra instância: 401', async () => {
     await webhook(mensagem('W0'), null).expect(401);

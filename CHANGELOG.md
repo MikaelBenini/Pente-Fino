@@ -17,7 +17,6 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - **"Retomar agora"** em Bot → Conexão: depois de resolver a causa (chip novo, celular com internet), dono ou gestor encerram a pausa contando o que foi resolvido.
 - **A semana do número por e-mail**, às segundas de manhã, para dono e gestor: automáticas enviadas, SAIR, pausas e um conselho. Desliga em Perfil → Avisos.
 - **Retorno, aniversário e aviso do clube na hora do cliente:** saem perto da hora em que cada cliente costuma escrever no WhatsApp (entre 10 h e 20 h), em vez de todos às 10 h.
-- **"Testar meu número"** em Bot → Conexão: manda uma mensagem do número da unidade para o seu WhatsApp e mostra se saiu. Se não sair, a tela explica o que conferir.
 - **Administração → Saúde do sistema → WhatsApp: "SAIR por semana"**, somando todas as contas: automáticas, SAIR, a parte que virou pedido de parar e as pausas das últimas 8 semanas.
 - **Administração → Saúde do sistema → WhatsApp:** "Números em risco" lista as contas com as automáticas pausadas ou com muitos SAIR ou falhas nas últimas 24 horas, para o suporte agir antes de o WhatsApp restringir o número.
 
