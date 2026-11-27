@@ -18,6 +18,7 @@ Detalhe, esforço, riscos e perguntas de cada fase em
   - [x] PR 2: proteção dos números de WhatsApp (aquecimento, ritmo, "digitando...", repetida, pausa por risco)
   - [x] PR 3: Licença Atendimento com o menu enxuto e o plano Agenda sem Automações para quem assina a partir de agora
   - [x] PR 4: duas contas com um login só (menu "Seus outros negócios", "Abrir outro negócio") e 20% na segunda conta
+  - [ ] Uma fatura só para quem tem dois negócios (as duas mensalidades numa cobrança do Asaas, com os 20%): desenhar com o dono antes (muda cobrança, webhooks e bloqueio de cada conta)
   - [ ] A licença nas métricas e no funil da administração (`plataforma_contas()` ainda não traz; hoje todas as contas são Barbearia)
   - [ ] Páginas de vendas por licença (Fase 5), cada uma com o link de cadastro da licença
   - [ ] IA com créditos pré-pagos como complemento de todas as licenças, inclusive Atendimento (Fase 4)

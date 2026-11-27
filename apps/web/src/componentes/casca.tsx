@@ -51,7 +51,7 @@ import {
   useUnidadeGuardada,
   useUnidades,
   useUsuario,
-  guardarNegocio,
+  trocarDeNegocio,
 } from '@/lib/sessao';
 import { useTema } from '@/lib/tema';
 import { Contexto, nomeDaUnidade, useApp, type ContextoApp } from './contexto-app';
@@ -77,6 +77,19 @@ function FaixaSuporte({ nome, ate }: { nome: string; ate: string }) {
     >
       Modo suporte: {nome}, do Pente Fino, está vendo o painel com a permissão do dono. Só leitura,
       até {hora}. Telefones de clientes e conversas do bot ficam escondidos.
+    </div>
+  );
+}
+
+/**
+ * Quem tem mais de um negócio no mesmo login (sugestão aprovada em 27/11/2026): o nome do negócio
+ * atual sempre à vista, para ninguém lançar uma comanda no negócio errado.
+ */
+function FaixaNegocio({ nome }: { nome: string }) {
+  return (
+    <div className="border-b border-borda bg-superficie-2 px-4 py-1.5 text-sm text-tinta-suave">
+      Você está em <span className="font-semibold text-tinta">{nome}</span>. Para trocar de negócio,
+      use o menu.
     </div>
   );
 }
@@ -192,6 +205,7 @@ export function Casca({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-col">
           <BarraTopo />
           {usuario.data?.modoSuporte && <FaixaSuporte {...usuario.data.modoSuporte} />}
+          {!!usuario.data?.outrasContas?.length && <FaixaNegocio nome={usuario.data.nomeConta} />}
           <AvisoConexao />
           <AvisoGeral />
           <AvisoConfirmarEmail />
@@ -431,12 +445,8 @@ function OutrosNegocios({ aoTrocar }: { aoTrocar?: () => void }) {
     setErro(null);
     setTrocando(contaId);
     try {
-      await api('auth/trocar-conta', { corpo: { contaId } });
-      guardarNegocio(contaId, true);
       aoTrocar?.();
-      // Recarga completa: nada do negócio anterior fica na memória da página.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.assign('/inicio');
+      await trocarDeNegocio(contaId);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível trocar agora.');
       setTrocando(null);

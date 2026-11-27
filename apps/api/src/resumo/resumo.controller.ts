@@ -1,6 +1,12 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import type { ResumoDaAgenda, ResumoDoDia, ResumoDoMes, SaudeDaConta } from '@pente-fino/shared';
+import type {
+  NegocioNoResumo,
+  ResumoDaAgenda,
+  ResumoDoDia,
+  ResumoDoMes,
+  SaudeDaConta,
+} from '@pente-fino/shared';
 import { z } from 'zod';
 import { Papeis } from '../auth/decoradores.js';
 import { GESTAO } from '../comum/escopo.js';
@@ -48,6 +54,15 @@ export class ResumoController {
   @ApiOperation({ summary: 'O mês dia a dia: agenda, faltas, clientes e faturamento' })
   mes(@Consulta(mesSchema) c: z.infer<typeof mesSchema>): Promise<ResumoDoMes> {
     return this.servico.mes(c.mes, c.unidadeId, c.profissionalId);
+  }
+
+  @Get('negocios')
+  @Papeis('dono')
+  @ApiOperation({
+    summary: 'Os negócios do mesmo login lado a lado (faturamento do mês e horários de hoje)',
+  })
+  negocios(): Promise<NegocioNoResumo[]> {
+    return this.servico.negocios();
   }
 
   @Get('agenda')

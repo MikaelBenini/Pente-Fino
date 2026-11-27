@@ -1,6 +1,7 @@
 // Resumo do dia e do mês, dia a dia, para dono e gestor: o que tem para hoje, o que já
 // foi feito e por quem. Regras puras; a API junta agenda, comandas e calendário.
 import type { StatusComanda } from './comanda.js';
+import type { Licenca } from './licencas.js';
 import type { Ocupacao } from './desempenho.js';
 import { calcularIndicadores, type ComandaFechada } from './indicadores.js';
 import type { DataISO } from './vigencia.js';
@@ -226,4 +227,20 @@ export interface ResumoDoMes {
   mes: string;
   dias: DiaDoMes[];
   totais: Omit<DiaDoMes, 'data' | 'trabalha'> & { diasTrabalhados: number };
+}
+
+/**
+ * Os negócios lado a lado no Início (duas contas, um login; sugestão aprovada em 27/11/2026): para
+ * quem é dono em mais de um negócio com o mesmo e-mail, o mês e o dia de cada um, sem trocar.
+ */
+export interface NegocioNoResumo {
+  contaId: string;
+  nome: string;
+  licenca: Licenca;
+  /** O negócio em que a sessão está. */
+  atual: boolean;
+  /** Faturamento do mês até agora (centavos), igual ao do Início; null na Licença Atendimento. */
+  faturamentoMes: number | null;
+  /** Horários marcados para hoje (agendados ou confirmados). */
+  agendamentosHoje: number;
 }

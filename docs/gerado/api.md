@@ -2,7 +2,7 @@
 
 # Rotas da API
 
-335 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
+336 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
 
 ## admin
 
@@ -540,6 +540,7 @@
 | GET | `/resumo/dia` | GESTAO | O que tem para o dia e o que já foi feito, por profissional |
 | GET | `/resumo/saude` | GESTAO | Saúde da conta no Início: caixa de dia anterior aberto e comandas paradas |
 | GET | `/resumo/mes` | GESTAO | O mês dia a dia: agenda, faltas, clientes e faturamento |
+| GET | `/resumo/negocios` | dono | Os negócios do mesmo login lado a lado (faturamento do mês e horários de hoje) |
 | GET | `/resumo/agenda` | GESTAO | Plano Agenda: os números da agenda do mês para o Início |
 
 ## saude

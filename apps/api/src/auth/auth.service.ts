@@ -196,13 +196,14 @@ export class AuthService {
       const conta = await this.banco.daConta((tx) =>
         tx.conta.findUniqueOrThrow({
           where: { id: contaId },
-          select: { segmento: true, funcoes: true, licenca: true },
+          select: { segmento: true, funcoes: true, licenca: true, nome: true },
         }),
       );
       return {
         id,
         segmento: conta.segmento,
         licenca: conta.licenca,
+        nomeConta: conta.nome,
         outrasContas: [],
         funcoes: funcoesDaConta(
           conta.segmento,
@@ -469,13 +470,14 @@ export class AuthService {
       where: { id: usuarioId },
       include: {
         papeis: true,
-        conta: { select: { segmento: true, funcoes: true, licenca: true } },
+        conta: { select: { segmento: true, funcoes: true, licenca: true, nome: true } },
       },
     });
     const outrasContas = await this.outrasContasDoLogin(tx, u.id, u.email);
     return {
       segmento: u.conta.segmento,
       licenca: u.conta.licenca,
+      nomeConta: u.conta.nome,
       outrasContas,
       funcoes: funcoesDaConta(
         u.conta.segmento,

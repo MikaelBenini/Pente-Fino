@@ -109,6 +109,8 @@ export interface UsuarioSessao {
   funcoes: Funcao[];
   /** Licença contratada (ADR 0015): o que o sistema traz e o menu. */
   licenca: Licenca;
+  /** Nome do negócio da sessão (a faixa "Você está em" quando há mais de um). */
+  nomeConta: string;
   /** Os outros negócios com o mesmo login (mesmo e-mail e senha), para trocar pelo menu. */
   outrasContas: { contaId: string; nome: string; licenca: Licenca }[];
   /** E-mail confirmado (só o cadastro pelo site começa sem): até lá, não agenda nem convida. */

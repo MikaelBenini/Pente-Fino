@@ -11,6 +11,8 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 - **Abrir outro negócio com o mesmo login:** o dono cria mais um negócio pelo menu ("Abrir outro negócio"), de qualquer licença, com o mesmo e-mail e a mesma senha e 20% de desconto na mensalidade dele. Cada negócio tem a sua agenda, clientes, equipe e assinatura.
 - **Trocar de negócio pelo menu:** "Seus outros negócios" aparece no menu lateral e no "Mais" do celular; o login entra no negócio usado por último no aparelho.
+- **"Seus negócios" no Início:** para quem é dono em mais de um, o faturamento do mês e os horários de hoje de cada negócio lado a lado, com "Ir para" para trocar.
+- **Faixa "Você está em":** quem tem mais de um negócio vê no topo o nome do negócio atual, para não lançar nada no negócio errado.
 - **A senha vale em todos os negócios do e-mail:** trocar ou redefinir num vale no outro. Quem trabalha em dois lugares pode ser convidado pelos dois com o mesmo e-mail.
 
 ### Mudado (Licença Atendimento e plano Agenda)
