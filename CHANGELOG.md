@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Mudado (Licença Atendimento e plano Agenda)
+
+- **Licença Atendimento com o menu enxuto:** só o que o bot usa (Início, Agenda, Clientes, Equipe, Serviços, Bot, Conversas, Configurações e Ajuda). Comanda, caixa, resultados, financeiro, comissões, produtos, clube e site não aparecem, nem com cadeado.
+- **Plano Agenda volta a ser só agenda, link, site e lembretes:** as Automações deixaram de ser vendidas nele. Quem quer o bot sem o sistema completo assina a Licença Atendimento (R$ 49,90). Quem já tem Agenda com Automações continua igual. O cupom não vale no Agenda. O site de vendas foi ajustado.
+
 ### Adicionado (proteção dos números de WhatsApp)
 
 - **O sistema protege o número contra restrição do WhatsApp:** número recém-conectado manda poucas mensagens automáticas por dia e o limite sobe aos poucos (20, 50, 100 e 200); entre duas automáticas do mesmo número há de 25 a 45 segundos; toda automática mostra "digitando..." antes; o mesmo texto para o mesmo número em menos de 10 minutos não sai de novo.

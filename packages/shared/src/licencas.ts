@@ -119,6 +119,31 @@ export const PRECO_NUMERO_EXTRA_ATENDIMENTO: PrecoPlano = { mensal: 2990, anualP
 /** Profissionais na agenda por número de WhatsApp, na Licença Atendimento. */
 export const PROFISSIONAIS_POR_NUMERO_ATENDIMENTO = 3;
 
+/**
+ * Telas que a licença não traz: saem do menu e não aparecem com cadeado (dentro da licença não há
+ * plano que as libere). Atendimento é o bot com a agenda simples.
+ */
+export const TELAS_FORA_DA_LICENCA: Partial<Record<Licenca, readonly string[]>> = {
+  atendimento: [
+    'dia',
+    'comandas',
+    'caixa',
+    'resultados',
+    'financeiro',
+    'comissoes',
+    'desempenho',
+    'produtos',
+    'clube',
+    'pagina',
+  ],
+};
+
+/** O menu sem as telas que a licença não traz. */
+export function menuDaLicenca<T extends { id: string }>(menu: readonly T[], licenca: Licenca): T[] {
+  const fora = TELAS_FORA_DA_LICENCA[licenca] ?? [];
+  return menu.filter((i) => !fora.includes(i.id));
+}
+
 /** Na Licença Atendimento as Automações (o bot inteiro) já vêm no preço. */
 export const automacoesIncluidasNaLicenca = (licenca: Licenca) => licenca === 'atendimento';
 

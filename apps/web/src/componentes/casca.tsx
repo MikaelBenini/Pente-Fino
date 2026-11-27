@@ -4,6 +4,7 @@ import {
   itemDaRota,
   menuDoPlano,
   menuEmGrupos,
+  menuDaLicenca,
   menuPara,
   planoDosRecursos,
   type AvisoGeral as AvisoGeralTipo,
@@ -109,7 +110,8 @@ export function Casca({ children }: { children: ReactNode }) {
     if (ativa === null) return null;
     const papeis = papeisAtivos(usuario.data, ativa);
     const naConta = usuario.data.papeis.some((p) => p.unidadeId === null);
-    const completo = menuPara(papeis);
+    // Licença (ADR 0015): o que ela não traz nem aparece com cadeado (Atendimento é o bot).
+    const completo = menuDaLicenca(menuPara(papeis), usuario.data.licenca);
     // Plano Agenda: o que vem do Básico sai do menu; dono e gestor veem com cadeado.
     const menu = situacao
       ? menuDoPlano(

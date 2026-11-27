@@ -4,12 +4,14 @@ import {
   LICENCAS,
   LICENCAS_A_VENDA,
   licencaDaContaNova,
+  menuDaLicenca,
   licencaDoSegmento,
   PLANOS_DA_LICENCA,
   segmentoNaLicenca,
   segmentoPadraoDaLicenca,
 } from './licencas.js';
-import { limitesDaConta, precoPorMes, verificarLimite } from './planos.js';
+import { limitesDaConta, podeContratarAutomacoes, precoPorMes, verificarLimite } from './planos.js';
+import { menuPara } from './menu.js';
 import { SEGMENTOS } from './vocabulario.js';
 
 describe('licenças (ADR 0015, 27/11/2026)', () => {
@@ -91,5 +93,22 @@ describe('conta nova com licença', () => {
       licenca: 'atendimento',
       segmento: 'barbearia',
     });
+  });
+});
+
+describe('Licença Atendimento: menu enxuto e Automações', () => {
+  it('sem comanda, caixa, resultados, financeiro, clube e site; agenda, bot e conversas ficam', () => {
+    const ids = menuDaLicenca(menuPara(['dono']), 'atendimento').map((i) => i.id);
+    for (const fora of ['comandas', 'caixa', 'resultados', 'financeiro', 'clube', 'pagina'])
+      expect(ids).not.toContain(fora);
+    for (const fica of ['inicio', 'agenda', 'clientes', 'bot', 'conversas', 'configuracoes'])
+      expect(ids).toContain(fica);
+    expect(menuDaLicenca(menuPara(['dono']), 'barbearia')).toEqual(menuPara(['dono']));
+  });
+  it('Automações deixam de ser vendidas no Agenda; quem já tem continua; Básico segue', () => {
+    expect(podeContratarAutomacoes('agenda')).toBe(false);
+    expect(podeContratarAutomacoes('agenda', true)).toBe(true);
+    expect(podeContratarAutomacoes('basico')).toBe(true);
+    expect(podeContratarAutomacoes('pro')).toBe(false);
   });
 });

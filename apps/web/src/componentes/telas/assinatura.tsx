@@ -14,6 +14,7 @@ import {
   documentoValido,
   PRECO_AUTOMACOES,
   automacoesAParte,
+  podeContratarAutomacoes,
   automacoesIncluidasNaLicenca,
   PLANOS_DA_LICENCA,
   valorDaCobranca,
@@ -361,7 +362,7 @@ function Assinar({
   const [plano, setPlano] = useState(planoAtual);
   const [comAutomacoes, setComAutomacoes] = useState(automacoesAtual);
   const incluidas = automacoesIncluidasNaLicenca(licenca);
-  const automacoes = !incluidas && comAutomacoes && automacoesAParte(plano);
+  const automacoes = !incluidas && comAutomacoes && podeContratarAutomacoes(plano, automacoesAtual);
   const [ciclo, setCiclo] = useState(cicloAtual);
   const [documento, setDocumento] = useState('');
   const [erro, setErro] = useState<string | null>(null);
@@ -482,7 +483,7 @@ function Assinar({
               { valor: 'anual', rotulo: 'Anual (mais barato)' },
             ]}
           />
-          {!incluidas && automacoesAParte(plano) && (
+          {!incluidas && podeContratarAutomacoes(plano, automacoesAtual) && (
             <CaixaAutomacoes
               id="assinar-automacoes"
               marcada={comAutomacoes}
@@ -547,7 +548,7 @@ function Assinar({
           )}
           {cupomParado && (
             <p className="text-sm text-tinta-suave sm:col-span-3">
-              No plano Agenda, o cupom vale só com as Automações juntas.
+              O cupom não vale no plano Agenda.
             </p>
           )}
           <p className="font-denso text-lg tabular-nums sm:col-span-2">
@@ -611,11 +612,11 @@ function MudarPlano({
   // Agenda e Básico: o mesmo plano aparece para ligar ou desligar as Automações.
   const incluidas = automacoesIncluidasNaLicenca(licenca);
   const opcoes = PLANOS_DA_LICENCA[licenca].filter(
-    (p) => p !== atual || (!incluidas && automacoesAParte(p)),
+    (p) => p !== atual || (!incluidas && podeContratarAutomacoes(p, automacoesAtual)),
   );
   const [para, setPara] = useState<PlanoConta>(opcoes.find((p) => p !== atual) ?? opcoes[0]!);
   const [comAutomacoes, setComAutomacoes] = useState(automacoesAtual);
-  const automacoes = !incluidas && comAutomacoes && automacoesAParte(para);
+  const automacoes = !incluidas && comAutomacoes && podeContratarAutomacoes(para, automacoesAtual);
   const igual = para === atual && automacoes === (automacoesAtual && automacoesAParte(atual));
   const [confirmar, setConfirmar] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -683,7 +684,7 @@ function MudarPlano({
           </button>
         ))}
       </div>
-      {!incluidas && automacoesAParte(para) && (
+      {!incluidas && podeContratarAutomacoes(para, automacoesAtual) && (
         <CaixaAutomacoes
           id="mudar-automacoes"
           marcada={comAutomacoes}

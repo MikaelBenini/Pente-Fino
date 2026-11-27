@@ -97,55 +97,29 @@ describe('recursos por plano', () => {
     bloqueado(await dono.post('/comandas', {}));
   });
 
-  it('Agenda: troca de plano com as Automações e a regra do cupom', async () => {
+  // ADR 0015 (27/11/2026): no Agenda as Automações deixaram de ser vendidas (quem quer só o bot
+  // assina a Licença Atendimento); quem já tinha continua com elas.
+  it('Agenda: Automações não são mais contratadas; quem já tinha continua', async () => {
     await mudarPlano('agenda');
     const previa = (await dono.get('/conta/plano/previa?plano=agenda&automacoes=true').expect(200))
       .body as { sobe: boolean; valorAtual: number; valorNovo: number };
-    expect(previa).toMatchObject({ sobe: true, valorAtual: 1000, valorNovo: 2000 });
-    // Com 2 unidades ativas, o Agenda (1 unidade) barra a troca.
-    expect(
-      (await dono.put('/conta/plano', { plano: 'agenda', automacoes: true }).expect(400)).body.erro
-        .codigo,
-    ).toBe('limite_plano');
-    // Cabendo no plano (1 unidade, até 2 barbeiros), liga.
-    const sobrando = await naConta(prisma, a.contaId, async (tx) => {
-      const unidades = await tx.unidade.findMany({
-        where: { ativa: true, id: { not: a.unidadeA } },
-        select: { id: true },
-      });
-      const profissionais = (
-        await tx.profissional.findMany({ where: { ativo: true }, select: { id: true } })
-      ).slice(2);
-      await tx.unidade.updateMany({
-        where: { id: { in: unidades.map((u) => u.id) } },
-        data: { ativa: false },
-      });
-      await tx.profissional.updateMany({
-        where: { id: { in: profissionais.map((x) => x.id) } },
-        data: { ativo: false },
-      });
-      return { unidades, profissionais };
-    });
-    await dono.put('/conta/plano', { plano: 'agenda', automacoes: true }).expect(200);
+    expect(previa).toMatchObject({ sobe: false, valorAtual: 1000, valorNovo: 1000 });
+    // Pedir as Automações no Agenda não muda nada: a conta já está nesse plano.
+    await dono.put('/conta/plano', { plano: 'agenda', automacoes: true }).expect(409);
+    expect(((await dono.get('/conta/situacao').expect(200)).body as EstadoDaConta).automacoes).toBe(
+      false,
+    );
+    // Quem já tinha Agenda com Automações continua com elas.
+    await naConta(prisma, a.contaId, (tx) =>
+      tx.conta.update({ where: { id: a.contaId }, data: { automacoesContratadas: true } }),
+    );
     expect(((await dono.get('/conta/situacao').expect(200)).body as EstadoDaConta).automacoes).toBe(
       true,
     );
-    // Mesmo plano, mesmas Automações: nada a mudar.
-    await dono.put('/conta/plano', { plano: 'agenda', automacoes: true }).expect(409);
-    // Do Pro em diante, as Automações vêm no plano: a parte contratada sai.
-    await dono.put('/conta/plano', { plano: 'pro' }).expect(200);
+    // Do Pro em diante (aqui, o Premium), as Automações vêm no plano: a parte contratada sai.
+    await dono.put('/conta/plano', { plano: 'premium' }).expect(200);
     const conta = await naConta(prisma, a.contaId, (tx) => tx.conta.findFirstOrThrow());
     expect(conta.automacoesContratadas).toBe(false);
-    await naConta(prisma, a.contaId, async (tx) => {
-      await tx.unidade.updateMany({
-        where: { id: { in: sobrando.unidades.map((u) => u.id) } },
-        data: { ativa: true },
-      });
-      await tx.profissional.updateMany({
-        where: { id: { in: sobrando.profissionais.map((x) => x.id) } },
-        data: { ativo: true },
-      });
-    });
   });
 
   it('Básico: os do Pro respondem 403 com o convite; ler o clube continua livre', async () => {

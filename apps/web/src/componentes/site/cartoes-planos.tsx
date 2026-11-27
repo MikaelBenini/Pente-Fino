@@ -31,7 +31,7 @@ const DESTAQUES: Record<PlanoConta, readonly string[]> = {
     'Agenda online e link de agendamento',
     'Site da barbearia',
     'Avisos no WhatsApp da barbearia',
-    'Automações por mais R$ 10 por mês',
+    'Só o bot? Licença Atendimento, R$ 49,90 por mês',
   ],
   basico: [
     'Agenda online, comanda e caixa',
@@ -83,7 +83,6 @@ function FaixaAgenda({
   compacto: boolean;
 }) {
   const preco = precoPorMes('agenda', ciclo, 1, tabela);
-  const automacoes = tabela.automacoes[ciclo === 'mensal' ? 'mensal' : 'anualPorMes'];
   return (
     <section
       aria-labelledby="titulo-plano-agenda"
@@ -100,7 +99,8 @@ function FaixaAgenda({
         <p className="text-tinta-suave">
           Plano {NOME_PLANO.agenda}: {limiteTexto('agenda')}.{' '}
           {DESTAQUES.agenda.slice(0, 3).join(', ')}.
-          {!compacto && ` Automações por mais ${formatarMoeda(automacoes)} por mês.`}
+          {!compacto &&
+            ' Quer o bot que responde e marca pela conversa, sem comanda nem caixa? A Licença Atendimento traz tudo isso por R$ 49,90 por mês.'}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-4">
@@ -316,13 +316,13 @@ function AvisosEAutomacoes({ preco }: { preco: number }) {
     },
     {
       titulo: 'Bot que marca pela conversa',
-      quem: 'Pro e Premium; no Agenda e no Básico, com as Automações',
+      quem: 'Pro e Premium; no Básico, com as Automações; ou só ele, na Licença Atendimento',
       texto:
         'O cliente escreve e o bot responde pelo menu que você monta (sem IA): vê preços e horários e marca o horário sozinho.',
     },
     {
       titulo: 'Automações',
-      quem: `Adicional de ${formatarMoeda(preco)} por mês no Agenda e no Básico; já vêm no Pro e no Premium`,
+      quem: `Adicional de ${formatarMoeda(preco)} por mês no Básico; já vêm no Pro, no Premium e na Licença Atendimento`,
       texto:
         'Liberam o bot, a lista de espera, a pesquisa depois do atendimento, o retorno de quem sumiu, o aniversário e o aviso do clube.',
     },

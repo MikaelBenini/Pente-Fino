@@ -74,7 +74,7 @@ import {
   type DominioPublico,
   type SitePublico,
   type TipoEndereco,
-  automacoesAParte,
+  podeContratarAutomacoes,
   DIAS_TESTE_INDICADA,
   linkWaMe,
   enderecoCompleto,
@@ -275,7 +275,7 @@ export class PublicoController {
             ciclo: d.ciclo,
             automacoesContratadas:
               d.automacoes &&
-              automacoesAParte(d.plano) &&
+              podeContratarAutomacoes(d.plano) &&
               !automacoesIncluidasNaLicenca(licencaNova.licenca),
             indicadoPor,
             status: 'teste',

@@ -16,6 +16,7 @@ import {
   automacoesIncluidasNaLicenca,
   segmentoPadraoDaLicenca,
   automacoesAParte,
+  podeContratarAutomacoes,
   DIAS_TESTE_INDICADA,
   type PlanoConta,
   aplicarDesconto,
@@ -369,7 +370,7 @@ export function FormularioCadastro() {
             </label>
           ))}
         </div>
-        {!!plano && !incluidas && automacoesAParte(plano) && (
+        {!!plano && !incluidas && podeContratarAutomacoes(plano) && (
           <label className="mt-2 flex cursor-pointer items-start gap-3 rounded-md border border-borda p-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-foco">
             <input
               type="checkbox"
