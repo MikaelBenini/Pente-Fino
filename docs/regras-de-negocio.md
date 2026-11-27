@@ -183,6 +183,12 @@ equipe); a mensagem digitada pela equipe sai como sempre.
   (auditado); os sinais de risco passam a contar a partir daí (`bot_conexao.retomado_em`).
 - **Semana do número por e-mail:** segunda às 9 h, para dono e gestor (desliga em Perfil → Avisos),
   com as automáticas, os SAIR e as pausas dos últimos 7 dias e um conselho.
+- **Hora do cliente:** retorno, aniversário e aviso do clube saem na hora em que o cliente
+  costuma escrever (a mais comum das últimas 30 mensagens dele, com pelo menos 3), entre a rotina
+  das 10 h e as 20 h, com até 30 minutos ao acaso (`horaDoCliente`, `horarioDoEnvio`). Sem
+  histórico, saem na rotina.
+- **Testar meu número:** dono ou gestor mandam do número da unidade uma mensagem para o WhatsApp
+  do Perfil (precisa ter escrito antes para o bot) e a tela mostra se saiu.
 - Número novo conectado na unidade recomeça o aquecimento e sai da pausa do anterior.
 - A administração vê em **Saúde do sistema → WhatsApp** os números pausados ou com 3 ou mais SAIR
   ou falhas em 24 horas (`plataforma_numeros_em_risco()`, só contagens).

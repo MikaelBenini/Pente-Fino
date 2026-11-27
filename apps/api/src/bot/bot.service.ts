@@ -41,12 +41,16 @@ import {
   type DiagnosticoSimulacao,
   type RespostaSimulacao,
   type SimularBotDados,
+  formatarTelefone,
+  variantesTelefone,
+  type TesteDoNumero,
 } from '@pente-fino/shared';
 import type { EstadoConexao, ProvedorWhatsApp } from '@pente-fino/whatsapp';
 import { auditar } from '../auditoria/auditoria.js';
 import { BancoService } from '../comum/banco.service.js';
 import { Contexto } from '../comum/contexto.js';
 import { AlertaConexaoService } from '../whatsapp/alerta-conexao.service.js';
+import { Filas } from '../filas/filas.module.js';
 import { Erros } from '../comum/erros.js';
 import { exigirUnidade, filtroUnidade, GESTAO } from '../comum/escopo.js';
 import { umPorVez } from '../comum/sequencia.js';
@@ -60,6 +64,7 @@ export class BotService {
     @Inject(CONFIGURACAO) private readonly config: Configuracao,
     @Inject(PROVEDOR_WHATSAPP) private readonly provedor: ProvedorWhatsApp,
     @Inject(AlertaConexaoService) private readonly alerta: AlertaConexaoService,
+    @Inject(Filas) private readonly filas: Filas,
   ) {}
 
   private readonly logger = new Logger('Bot');
@@ -638,6 +643,79 @@ export class BotService {
       });
     });
     return this.conexao(unidadeId);
+  }
+
+  /**
+   * "Testar meu número" (sugestão aprovada em 27/11/2026): manda do número da unidade uma
+   * mensagem para o WhatsApp de quem testa (o do Perfil) e a tela acompanha se saiu. Passa pela
+   * mesma fila e verificações das outras; o WhatsApp só deixa escrever para quem já escreveu.
+   */
+  async testarNumero(unidadeId: string): Promise<TesteDoNumero> {
+    exigirUnidade(unidadeId, GESTAO);
+    const quem = Contexto.usuario().id;
+    const r = await this.banco.daConta(async (tx) => {
+      const u = await this.unidade(tx, unidadeId);
+      const conexao = await tx.botConexao.findUnique({ where: { unidadeId } });
+      if (conexao?.status !== 'conectado')
+        throw Erros.conflito('Conecte o WhatsApp desta unidade antes de testar.');
+      const usuario = await tx.usuario.findUniqueOrThrow({
+        where: { id: quem },
+        select: { telefone: true },
+      });
+      if (!usuario.telefone)
+        throw Erros.requisicaoInvalida(
+          'sem_whatsapp',
+          'Cadastre o seu WhatsApp no Perfil para receber a mensagem de teste.',
+        );
+      const telefones = variantesTelefone(usuario.telefone);
+      if (conexao.numero && telefones.includes(conexao.numero))
+        throw Erros.conflito(
+          'Esse é o próprio número do bot. Teste com o seu WhatsApp pessoal, cadastrado no Perfil.',
+        );
+      const escreveu = await tx.mensagem.findFirst({
+        where: { unidadeId, telefone: { in: telefones }, direcao: 'entrada' },
+        select: { id: true },
+      });
+      if (!escreveu)
+        throw Erros.conflito(
+          `Mande um "oi" do seu WhatsApp (${formatarTelefone(usuario.telefone)}) para o número do bot e toque em Testar de novo: o WhatsApp só deixa o bot escrever para quem já escreveu.`,
+        );
+      const m = await tx.mensagem.create({
+        data: {
+          unidadeId,
+          telefone: usuario.telefone,
+          direcao: 'saida',
+          texto: `Teste do Pente Fino: se esta mensagem chegou, o WhatsApp da ${u.nome} está enviando normalmente.`,
+          status: 'pendente',
+          autorId: quem,
+        },
+        select: { id: true },
+      });
+      return {
+        contaId: Contexto.usuario().contaId,
+        instancia: conexao.instancia,
+        id: m.id,
+        para: usuario.telefone,
+      };
+    });
+    await this.filas.whatsappEntrada.add(
+      'enviar',
+      { tipo: 'enviar', contaId: r.contaId, instancia: r.instancia, mensagemIds: [r.id] },
+      { jobId: `enviar_${r.id}` },
+    );
+    return { mensagemId: r.id, status: 'pendente', erro: null, para: formatarTelefone(r.para) };
+  }
+
+  /** Como está a mensagem de teste (a tela consulta até sair ou falhar). */
+  async situacaoDoTeste(unidadeId: string, mensagemId: string): Promise<TesteDoNumero> {
+    exigirUnidade(unidadeId, GESTAO);
+    const m = await this.banco.daConta((tx) =>
+      tx.mensagem.findFirst({
+        where: { id: mensagemId, unidadeId, autorId: Contexto.usuario().id, direcao: 'saida' },
+      }),
+    );
+    if (!m) throw Erros.naoEncontrado('Mensagem de teste não encontrada.');
+    return { mensagemId: m.id, status: m.status, erro: m.erro, para: formatarTelefone(m.telefone) };
   }
 
   /** Desliga o número. Gravado antes, para o aviso de "caiu" não aparecer. */

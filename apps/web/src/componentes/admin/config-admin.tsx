@@ -527,6 +527,76 @@ function SaudeServidor({ d }: { d: SaudeDoSistema }) {
   );
 }
 
+const pctSair = (s: { proativas: number; saidas: number }) =>
+  s.proativas ? (s.saidas / s.proativas) * 100 : 0;
+
+/**
+ * SAIR por semana somando as contas (sugestão aprovada em 27/11/2026): a parte das automáticas
+ * que virou pedido de parar. Subiu de repente: algum texto padrão do bot pode estar incomodando.
+ */
+function RiscoSemanal({ semanas }: { semanas: NonNullable<SaudeDoSistema['riscoSemanal']> }) {
+  const maximo = Math.max(3, ...semanas.map(pctSair));
+  const dm = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+  return (
+    <figure className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie p-4">
+      <figcaption className="text-lg font-semibold">SAIR por semana, todas as contas</figcaption>
+      <p className="text-sm text-tinta-suave">
+        A parte das mensagens automáticas que virou pedido de parar. Acima de 3% pausa o número; se
+        subir para todo mundo de uma vez, revise os textos padrão do bot.
+      </p>
+      <div className="flex h-28 items-end gap-2 border-b border-borda" aria-hidden>
+        {semanas.map((s) => (
+          <div
+            key={s.semana}
+            className="group relative flex h-full flex-1 items-end"
+            title={`Semana de ${dm(s.semana)}: ${pctSair(s).toFixed(1).replace('.', ',')}% (${s.saidas} SAIR em ${s.proativas} automáticas, ${s.pausas} pausas)`}
+          >
+            <div
+              className={`w-full rounded-t-[4px] group-hover:opacity-80 ${pctSair(s) >= 3 ? 'bg-perigo' : 'bg-acao'}`}
+              style={{ height: pctSair(s) ? `${(pctSair(s) / maximo) * 100}%` : 0 }}
+            />
+          </div>
+        ))}
+      </div>
+      <table className="text-sm">
+        <caption className="sr-only">Automáticas, SAIR e pausas por semana</caption>
+        <thead>
+          <tr className="text-left text-tinta-suave">
+            <th scope="col" className="font-medium">
+              Semana de
+            </th>
+            <th scope="col" className="text-right font-medium">
+              Automáticas
+            </th>
+            <th scope="col" className="text-right font-medium">
+              SAIR
+            </th>
+            <th scope="col" className="text-right font-medium">
+              %
+            </th>
+            <th scope="col" className="text-right font-medium">
+              Pausas
+            </th>
+          </tr>
+        </thead>
+        <tbody className="tabular-nums">
+          {semanas.map((s) => (
+            <tr key={s.semana} className="border-t border-borda">
+              <th scope="row" className="py-1 text-left font-normal">
+                {dm(s.semana)}
+              </th>
+              <td className="text-right">{s.proativas}</td>
+              <td className="text-right">{s.saidas}</td>
+              <td className="text-right">{pctSair(s).toFixed(1).replace('.', ',')}%</td>
+              <td className="text-right">{s.pausas}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </figure>
+  );
+}
+
 /** WhatsApp que caiu, rotinas automáticas, filas e webhooks recusados. */
 function SaudeWhatsappERotinas({ d }: { d: SaudeDoSistema }) {
   return (
@@ -589,6 +659,7 @@ function SaudeWhatsappERotinas({ d }: { d: SaudeDoSistema }) {
           </ul>
         )}
       </section>
+      {d.riscoSemanal && d.riscoSemanal.length > 0 && <RiscoSemanal semanas={d.riscoSemanal} />}
       <section aria-labelledby="titulo-rotinas" className="flex flex-col gap-2">
         <h2 id="titulo-rotinas" className="text-lg font-semibold">
           Rotinas automáticas

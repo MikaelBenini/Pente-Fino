@@ -483,11 +483,17 @@ export class WhatsappProcessor implements OnModuleInit, OnApplicationShutdown {
               this.config.APP_URL,
             );
             for (const e of envios) {
-              total += e.mensagemIds.length;
+              total += e.mensagemIds.length + e.maisTarde.length;
               await agendarRespostas(
                 { contaId: e.contaId, instancia: e.instancia, saidas: e.mensagemIds },
                 { relogio, adicionar },
               );
+              // Hora do cliente: a fila segura até lá (o ritmo das proativas vale na hora).
+              for (const t of e.maisTarde)
+                await adicionar(
+                  { contaId: e.contaId, mensagemId: t.mensagemId },
+                  Date.parse(t.quando) - Date.now(),
+                );
             }
           } catch (erro) {
             // Uma conta com problema não impede as outras.

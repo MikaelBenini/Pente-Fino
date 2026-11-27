@@ -39,6 +39,7 @@ import {
   type RespostaSimulacao,
   type SimularBotDados,
   retomarAutomaticasSchema,
+  type TesteDoNumero,
   type RetomarAutomaticasEntrada,
 } from '@pente-fino/shared';
 import { Auditada } from '../auditoria/auditoria.js';
@@ -245,6 +246,24 @@ export class BotController {
     @Corpo(retomarAutomaticasSchema) d: RetomarAutomaticasEntrada,
   ): Promise<ConexaoBot> {
     return this.servico.retomarAutomaticas(unidadeId, d.motivo);
+  }
+
+  @Post('conexao/:unidadeId/testar')
+  @Papeis(...GESTAO)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Testar o número: manda uma mensagem para o WhatsApp de quem testa' })
+  testar(@Param('unidadeId', ParseUUIDPipe) unidadeId: string): Promise<TesteDoNumero> {
+    return this.servico.testarNumero(unidadeId);
+  }
+
+  @Get('conexao/:unidadeId/testar/:mensagemId')
+  @Papeis(...GESTAO)
+  @ApiOperation({ summary: 'Como está a mensagem de teste do número' })
+  situacaoDoTeste(
+    @Param('unidadeId', ParseUUIDPipe) unidadeId: string,
+    @Param('mensagemId', ParseUUIDPipe) mensagemId: string,
+  ): Promise<TesteDoNumero> {
+    return this.servico.situacaoDoTeste(unidadeId, mensagemId);
   }
 
   @LivreDoPlano()

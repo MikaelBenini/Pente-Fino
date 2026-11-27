@@ -996,6 +996,14 @@ describe('configurações e saúde do sistema', () => {
     expect(linha).toMatchObject({ pausaMotivo: 'saidas', saidas24h: 1 });
     expect(linha?.pausadoAte).toBe(ate.toISOString());
     expect(JSON.stringify(s.numerosEmRisco)).not.toContain('5511955554444');
+    // Gráfico semanal: as 8 últimas semanas, só contagens.
+    expect(s.riscoSemanal).toHaveLength(8);
+    expect(Object.keys(s.riscoSemanal![0]!).sort()).toEqual([
+      'pausas',
+      'proativas',
+      'saidas',
+      'semana',
+    ]);
     await naConta(prisma, a.contaId, (tx) =>
       tx.botConexao.update({
         where: { unidadeId: a.unidadeA },

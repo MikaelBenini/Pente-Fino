@@ -187,3 +187,43 @@ export function motivosParaRecuperar(d: {
     motivos.push('sumiu');
   return motivos;
 }
+
+/**
+ * Hora do cliente (sugestão aprovada em 27/11/2026): retorno, aniversário e aviso do clube saem
+ * perto da hora em que o cliente costuma escrever no WhatsApp (a hora mais comum das últimas
+ * mensagens dele), entre a rotina das 10 h e as 20 h. Sem histórico, sai na hora da rotina.
+ */
+export const HORA_MAIS_TARDE_AUTOMACOES = 20;
+
+export function horaDoCliente(horasLocais: readonly number[]): number {
+  if (horasLocais.length < 3) return HORA_DAS_AUTOMACOES;
+  const contagem = new Map<number, number>();
+  for (const h of horasLocais) contagem.set(h, (contagem.get(h) ?? 0) + 1);
+  const [hora] = [...contagem].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]!;
+  return Math.min(HORA_MAIS_TARDE_AUTOMACOES, Math.max(HORA_DAS_AUTOMACOES, hora));
+}
+
+/**
+ * Quando a automática do cliente sai hoje: na hora dele, com até 30 minutos ao acaso (para não
+ * saírem todas juntas); null = agora (a hora dele já chegou ou é a da rotina).
+ */
+export function horarioDoEnvio(
+  hoje: string,
+  hora: number,
+  agora: Date,
+  aleatorio: number,
+): Date | null {
+  const horaAgora = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).format(agora),
+  );
+  if (hora <= horaAgora) return null;
+  const minutos = Math.round(Math.min(Math.max(aleatorio, 0), 1) * 30);
+  const quando = new Date(
+    `${hoje}T${String(hora).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:00-03:00`,
+  );
+  return quando.getTime() - agora.getTime() > 60_000 ? quando : null;
+}

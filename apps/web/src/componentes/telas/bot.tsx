@@ -17,6 +17,7 @@ import {
   type AcaoBot,
   type ConexaoBot,
   type ProtecaoDoNumero,
+  type TesteDoNumero,
   type EstadoBot,
   type GrupoPalavrasChave,
   type MensagensBot,
@@ -1543,6 +1544,60 @@ function ProtecaoDoNumeroBloco({ p, unidadeId }: { p: ProtecaoDoNumero; unidadeI
   );
 }
 
+/**
+ * "Testar meu número" (sugestão aprovada em 27/11/2026): manda do número da unidade uma mensagem
+ * para o WhatsApp de quem testa e mostra se saiu. Falhar aqui é o primeiro sinal de restrição.
+ */
+function TestarNumero({ unidadeId }: { unidadeId: string }) {
+  const [teste, setTeste] = useState<TesteDoNumero | null>(null);
+  const testar = useMutation({
+    mutationFn: () => api<TesteDoNumero>(`bot/conexao/${unidadeId}/testar`, { metodo: 'POST' }),
+    onSuccess: setTeste,
+  });
+  const situacao = useQuery({
+    queryKey: [...chaveBot, 'teste', unidadeId, teste?.mensagemId],
+    queryFn: () => api<TesteDoNumero>(`bot/conexao/${unidadeId}/testar/${teste!.mensagemId}`),
+    enabled: !!teste,
+    refetchInterval: (q) => (q.state.data && q.state.data.status !== 'pendente' ? false : 2_000),
+  });
+  const atual = situacao.data ?? teste;
+  return (
+    <div className="flex flex-col gap-2">
+      <div>
+        <Botao
+          variante="secundario"
+          carregando={testar.isPending || atual?.status === 'pendente'}
+          onClick={() => testar.mutate()}
+        >
+          Testar meu número
+        </Botao>
+      </div>
+      {testar.error && <Aviso tom="aviso">{mensagemDe(testar.error)}</Aviso>}
+      {atual?.status === 'pendente' && (
+        <p role="status" className="text-sm text-tinta-suave">
+          Mandando para {atual.para}…
+        </p>
+      )}
+      {atual?.status === 'enviada' && (
+        <Aviso tom="sucesso">
+          Saiu do número da unidade para {atual.para}. Confira no seu WhatsApp: se chegou, está tudo
+          certo.
+        </Aviso>
+      )}
+      {(atual?.status === 'falhou' || atual?.status === 'descartada') && (
+        <Aviso tom="erro">
+          <p className="font-semibold">A mensagem de teste não saiu.</p>
+          <p className="mt-1">
+            {atual.erro ?? 'O WhatsApp não aceitou o envio.'} Confira se o celular do bot está
+            ligado e com internet. Se continuar, o número pode estar com restrição: fale com o
+            suporte.
+          </p>
+        </Aviso>
+      )}
+    </div>
+  );
+}
+
 /** "Retomar agora": o dono resolveu a causa (chip novo, celular com internet) e conta o que foi. */
 function RetomarAutomaticas({ unidadeId }: { unidadeId: string }) {
   const [aberto, setAberto] = useState(false);
@@ -1652,6 +1707,8 @@ function ConexaoUnidade({ u }: { u: UnidadeDoBot }) {
       )}
 
       {conectado && c.protecao && <ProtecaoDoNumeroBloco p={c.protecao} unidadeId={u.id} />}
+
+      {conectado && <TestarNumero unidadeId={u.id} />}
 
       {c.status === 'aguardando_qr' && aberta && (
         <div className="flex flex-col items-start gap-4 sm:flex-row">

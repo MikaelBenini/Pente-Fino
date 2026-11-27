@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  horaDoCliente,
+  horarioDoEnvio,
   deveConvidarRetorno,
   ehAniversario,
   intervaloHabitual,
@@ -84,5 +86,35 @@ describe('clientes para recuperar', () => {
         temHorarioMarcado: true,
       }),
     ).toEqual([]);
+  });
+});
+
+describe('hora do cliente nas automáticas', () => {
+  it('a hora mais comum das mensagens dele, entre 10 h e 20 h; sem histórico, 10 h', () => {
+    expect(horaDoCliente([])).toBe(10);
+    expect(horaDoCliente([19, 19])).toBe(10);
+    expect(horaDoCliente([19, 19, 8, 19, 14])).toBe(19);
+    expect(horaDoCliente([7, 7, 7])).toBe(10);
+    expect(horaDoCliente([23, 23, 23])).toBe(20);
+  });
+  it('sai hoje na hora dele (com até 30 min ao acaso), ou agora se já passou', () => {
+    const agora = new Date('2026-11-27T10:00:00-03:00');
+    expect(horarioDoEnvio('2026-11-27', 19, agora, 0)).toEqual(
+      new Date('2026-11-27T19:00:00-03:00'),
+    );
+    expect(horarioDoEnvio('2026-11-27', 19, agora, 1)).toEqual(
+      new Date('2026-11-27T19:30:00-03:00'),
+    );
+    expect(horarioDoEnvio('2026-11-27', 10, agora, 0)).toBeNull();
+  });
+});
+
+describe('hora do cliente: sem preferência, sai na rotina', () => {
+  it('a hora da rotina (ou uma que já passou) sai agora, mesmo com minutos ao acaso', () => {
+    const agora = new Date('2026-11-27T10:02:00-03:00');
+    expect(horarioDoEnvio('2026-11-27', 10, agora, 1)).toBeNull();
+    expect(horarioDoEnvio('2026-11-27', 11, agora, 0)).toEqual(
+      new Date('2026-11-27T11:00:00-03:00'),
+    );
   });
 });

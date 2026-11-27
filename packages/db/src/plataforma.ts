@@ -315,6 +315,12 @@ export function numerosEmRiscoPlataforma(prisma: PrismaClient) {
   >`SELECT * FROM plataforma_numeros_em_risco()`;
 }
 
+/** Automáticas, SAIR e pausas por semana, somando as contas (sem as internas). */
+export function riscoSemanalPlataforma(prisma: PrismaClient, semanas = 8) {
+  return prisma.$queryRaw<{ semana: Date; proativas: bigint; saidas: bigint; pausas: bigint }[]>`
+    SELECT * FROM plataforma_risco_semanal(${semanas}::integer)`;
+}
+
 /** Notas fiscais das mensalidades (Saúde do sistema): as dos últimos dias e as a caminho. */
 export function notasFiscaisPlataforma(prisma: PrismaClient, desde: Date) {
   return prisma.$queryRaw<
