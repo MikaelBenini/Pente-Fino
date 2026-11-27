@@ -12,6 +12,11 @@ Detalhe, esforço, riscos e perguntas de cada fase em
 [plano-multissegmento.md](plano-multissegmento.md). Cada fase só começa com a aprovação do dono.
 
 - [x] **Fase 0 · Documentação para IA e automação** (27/11/2026)
+- [ ] **Decisão do dono: marca e licenças** (levantamento de 27/11 em `concorrentes-e-precos.md`)
+  - [x] Nome das licenças: **pelo segmento** (Licença Barbearia, Beleza, Estética, Tatuagem, Fitness), escolhido pelo dono em 27/11
+  - [ ] Licença **Atendimento** (só o bot, sem webhook por enquanto): aprovar R$ 49,90 por número e o plano Agenda voltar a ser só lembretes
+  - [ ] Aprovar os preços por licença (conferir no site dos concorrentes antes de anunciar)
+  - [ ] Depois de aprovado: decisão em `decisoes/` (o segmento passa a ser a licença contratada; sai o seletor de Configurações; só a administração troca), preços em `planos.ts`, duas contas com um login só e 20% na segunda conta
 - [ ] **Fase 1 · Multissegmento** (aprovada em 27/11; ordem 1a → 1b → 1d estética)
   - [x] 1a, PR 1: papel `barbeiro` → `profissional` no banco e no código (S4)
   - [x] 1a, PR 2: segmento na conta, vocabulário por segmento, funções por conta, escolha em Configurações e o primeiro lote de telas (Configurações, Equipe, Perfil, menu do usuário, Resultados, Resumo do dia)
