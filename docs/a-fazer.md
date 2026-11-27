@@ -13,7 +13,8 @@ Detalhe, esforço, riscos e perguntas de cada fase em
 
 - [x] **Fase 0 · Documentação para IA e automação** (27/11/2026)
 - [ ] **Decisão do dono: marca e licenças** (levantamento de 27/11 em `concorrentes-e-precos.md`)
-  - [ ] Nome das licenças (pelo segmento, ferramenta do ofício, material e cor, ou inglês curto)
+  - [x] Nome das licenças: **pelo segmento** (Licença Barbearia, Beleza, Estética, Tatuagem, Fitness), escolhido pelo dono em 27/11
+  - [ ] Licença **Atendimento** (só o bot de WhatsApp, para qualquer segmento): definir o que entra e o preço
   - [ ] Aprovar os preços por licença (conferir no site dos concorrentes antes de anunciar)
   - [ ] Depois de aprovado: decisão em `decisoes/` (o segmento passa a ser a licença contratada; sai o seletor de Configurações; só a administração troca), preços em `planos.ts`, duas contas com um login só e 20% na segunda conta
 - [ ] **Fase 1 · Multissegmento** (aprovada em 27/11; ordem 1a → 1b → 1d estética)

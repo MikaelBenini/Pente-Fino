@@ -128,10 +128,16 @@ Na assinatura aparece assim: *Pente Fino · Licença Estética · Pro*.
 | C. Material e cor | Cobre | Rosa | Pérola | Nanquim | Aço | soa premium e combina com as cores do site; não diz o segmento |
 | D. Inglês curto | Barber | Beauty | Clinic | Ink | Fit | moderno, curto; foge do português do resto do produto |
 
-Possível combinação: **nome da licença pela opção B, com o segmento ao lado na venda**
-("Pente Fino Navalha, para barbearias"), o que junta charme e busca no Google.
+**Escolha do dono (27/11): opção A, pelo segmento.** Licença Barbearia, Licença Beleza, Licença
+Estética, Licença Tatuagem e Licença Fitness.
 
-Antes de escolher: conferir INPI e domínios .com.br dos finalistas.
+### Licença Atendimento (só o bot)
+
+Para o negócio que não quer o sistema inteiro, só o atendimento no WhatsApp: o bot de menus e
+palavras-chave (sem IA), a central de conversas com atendente e ações que resolvem o atendimento
+sozinhas (marcar, remarcar, mandar preço e endereço) ou por integração com o sistema que ele já
+usa. Vale para qualquer segmento (o vocabulário continua vindo do segmento da conta). O que entra e
+o preço ainda serão definidos.
 
 ## Fontes
 
