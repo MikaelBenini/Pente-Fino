@@ -95,5 +95,5 @@ export const NOME_PAPEL: Record<Papel, string> = {
   dono: 'Dono',
   gestor: 'Gestor',
   recepcao: 'Recepção',
-  barbeiro: 'Barbeiro',
+  profissional: 'Barbeiro',
 };

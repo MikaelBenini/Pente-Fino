@@ -209,8 +209,8 @@ export class ComandasService {
     const quem = Contexto.usuario();
     const papeis = papeisNaUnidade(quem.papeis, comanda.unidadeId);
     const propria = comanda.profissional.usuarioId === quem.id;
-    const balcao = papeis.some((p) => p !== 'barbeiro');
-    if (!balcao && !(papeis.includes('barbeiro') && propria))
+    const balcao = papeis.some((p) => p !== 'profissional');
+    if (!balcao && !(papeis.includes('profissional') && propria))
       throw Erros.naoEncontrado('Comanda não encontrada.');
     return { comanda, propria, papeis };
   }
@@ -464,7 +464,7 @@ export class ComandasService {
     tx: Transacao,
     papeis: ReturnType<typeof papeisNaUnidade>,
   ): Promise<boolean> {
-    if (papeis.some((p) => p !== 'barbeiro')) return true;
+    if (papeis.some((p) => p !== 'profissional')) return true;
     const conta = await tx.conta.findFirst({ select: { precoLivreBarbeiro: true } });
     return podeDigitarPrecoLivre(papeis, conta?.precoLivreBarbeiro ?? false);
   }
@@ -602,8 +602,8 @@ export class ComandasService {
       return comandas
         .filter((c) => {
           const papeis = papeisNaUnidade(quem.papeis, c.unidadeId);
-          if (papeis.some((p) => p !== 'barbeiro')) return true;
-          return papeis.includes('barbeiro') && c.profissional.usuarioId === quem.id;
+          if (papeis.some((p) => p !== 'profissional')) return true;
+          return papeis.includes('profissional') && c.profissional.usuarioId === quem.id;
         })
         .map((c) => resumo(c, agora))
         .filter((c) => !status || status.includes(c.status))
@@ -664,7 +664,7 @@ export class ComandasService {
     await this.banco.daConta(async (tx) => {
       const { comanda, propria, papeis } = await this.carregar(tx, id);
       this.exigir('editar_itens', comanda, papeis, propria);
-      if (item.tipo === 'nao_operacional' && !papeis.some((p) => p !== 'barbeiro')) {
+      if (item.tipo === 'nao_operacional' && !papeis.some((p) => p !== 'profissional')) {
         throw Erros.semPermissao('Receita não operacional é lançada pela recepção.');
       }
       const podeDigitar =
@@ -692,7 +692,7 @@ export class ComandasService {
           'item_invalido',
           'Só dá para trocar o serviço de um item de serviço.',
         );
-      if (d.desconto !== undefined && !papeis.some((p) => p !== 'barbeiro'))
+      if (d.desconto !== undefined && !papeis.some((p) => p !== 'profissional'))
         throw Erros.semPermissao('Desconto é dado pela recepção.');
       // Preço livre: troca o valor do item (só serviço com preço livre, fora do clube).
       if (d.precoUnitario !== undefined && d.precoUnitario !== item.precoUnitario) {
@@ -1059,7 +1059,7 @@ export class ComandasService {
     const quem = Contexto.usuario();
     await this.banco.daConta(async (tx) => {
       const { comanda, papeis } = await this.carregar(tx, id);
-      if (!papeis.some((p) => p !== 'barbeiro'))
+      if (!papeis.some((p) => p !== 'profissional'))
         throw Erros.semPermissao('O sinal é recebido pela recepção.');
       if (['fechada', 'cancelada'].includes(comanda.status))
         throw Erros.requisicaoInvalida(
@@ -1104,7 +1104,7 @@ export class ComandasService {
   async devolverSinal(id: string, pagamentoId: string, motivo: string): Promise<ComandaDetalhe> {
     await this.banco.daConta(async (tx) => {
       const { comanda, papeis } = await this.carregar(tx, id);
-      if (!papeis.some((p) => p !== 'barbeiro'))
+      if (!papeis.some((p) => p !== 'profissional'))
         throw Erros.semPermissao('O sinal é devolvido pela recepção.');
       if (comanda.status === 'fechada')
         throw Erros.requisicaoInvalida(

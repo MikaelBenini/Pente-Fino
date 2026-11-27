@@ -7,6 +7,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Mudado (por baixo, sem mudança na tela)
+
+- **Papel "barbeiro" passa a se chamar "profissional" no sistema**, primeiro passo para atender outros segmentos (salão, estética, tatuagem, academia). Na tela continua "Barbeiro". Quem estiver logado no deploy não é desconectado: o nome antigo ainda é aceito.
+
 ### Documentação
 
 - **Documentação para IA e automação:** mapa em `docs/README.md`, arquitetura com diagrama, regras de negócio com exemplos conferidos por teste, fluxos, permissões, glossário e registro de decisões. Modelo de dados, rotas da API, telas, planos e menu agora saem do código (`pnpm docs:gerar`) e o CI confere. `CLAUDE.md` e `AGENTS.md` na raiz para outras ferramentas de IA. Plano das próximas fases em `docs/plano-multissegmento.md`.

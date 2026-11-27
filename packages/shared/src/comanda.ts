@@ -25,7 +25,7 @@ export type AcaoComanda =
 
 const GESTAO: readonly Papel[] = ['dono', 'gestor'];
 const BALCAO: readonly Papel[] = ['dono', 'gestor', 'recepcao'];
-const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'barbeiro'];
+const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'profissional'];
 
 /** De quais estados cada ação parte, e quem pode fazê-la. */
 const REGRAS: Record<AcaoComanda, { de: readonly StatusComanda[]; papeis: readonly Papel[] }> = {

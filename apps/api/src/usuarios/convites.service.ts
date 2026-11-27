@@ -21,7 +21,7 @@ const NOME_PAPEL: Record<Papel, string> = {
   dono: 'dono',
   gestor: 'gestor',
   recepcao: 'recepção',
-  barbeiro: 'barbeiro',
+  profissional: 'barbeiro',
 };
 
 export interface ConviteCriado {

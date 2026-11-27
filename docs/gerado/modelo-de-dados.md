@@ -1853,7 +1853,7 @@ Restrições: índice (indicadorId).
 | Plano | agenda, basico, pro, premium, @@map("plano") |
 | CicloCobranca | mensal, anual, @@map("ciclo_cobranca") |
 | StatusConta | teste, ativa, suspensa, cancelada, @@map("status_conta") |
-| Papel | dono, gestor, recepcao, barbeiro, @@map("papel") |
+| Papel | dono, gestor, recepcao, profissional, @@map("papel") |
 | TipoItemComissao | servico, produto, @@map("tipo_item_comissao") |
 | TipoItemComanda | servico, produto, nao_operacional, @@map("tipo_item_comanda") |
 | StatusAgendamento | agendado, confirmado, atendido, cancelado, falta, @@map("status_agendamento") |

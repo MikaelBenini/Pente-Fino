@@ -29,7 +29,7 @@ export interface ArtigoAjuda {
 
 const GESTAO: readonly Papel[] = ['dono', 'gestor'];
 const BALCAO: readonly Papel[] = ['dono', 'gestor', 'recepcao'];
-const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'barbeiro'];
+const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'profissional'];
 
 export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
   {
@@ -186,7 +186,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     titulo: 'Ler a ficha do profissional',
     resumo: 'Atendimentos, extras, nota dos clientes e comissão de cada barbeiro.',
     categoria: 'Equipe',
-    papeis: ['dono', 'gestor', 'barbeiro'],
+    papeis: ['dono', 'gestor', 'profissional'],
     rota: null,
     passos: [
       'Dono e gestor: em Resultados do mês → Barbeiros (ou em Equipe), toque no nome do profissional; o barbeiro vê a própria ficha em Desempenho.',

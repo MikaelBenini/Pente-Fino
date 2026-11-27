@@ -119,7 +119,7 @@ describe('equipe', () => {
     await gestor.patch(`/usuarios/${id(cenario.emails.dono)}`, { ativo: false }).expect(403);
     await gestor
       .put(`/usuarios/${id(cenario.emails.barbeiro)}/papeis`, {
-        papeis: [{ papel: 'barbeiro', unidadeId: cenario.unidadeB }],
+        papeis: [{ papel: 'profissional', unidadeId: cenario.unidadeB }],
       })
       .expect(403);
     await gestor

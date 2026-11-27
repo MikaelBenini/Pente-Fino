@@ -175,9 +175,9 @@
 
 | Método | Rota | Quem | O que faz |
 | --- | --- | --- | --- |
-| GET | `/chat/minha` | dono,gestor,recepcao,barbeiro | Minha conversa com o suporte (Ajuda do painel); null = nenhuma |
-| POST | `/chat/minha/avaliacao` | dono,gestor,recepcao,barbeiro | Avaliar a última conversa encerrada com o suporte |
-| POST | `/chat/minha/mensagens` | dono,gestor,recepcao,barbeiro | Mandar mensagem ao suporte (começa a conversa se não houver aberta) |
+| GET | `/chat/minha` | dono,gestor,recepcao,profissional | Minha conversa com o suporte (Ajuda do painel); null = nenhuma |
+| POST | `/chat/minha/avaliacao` | dono,gestor,recepcao,profissional | Avaliar a última conversa encerrada com o suporte |
+| POST | `/chat/minha/mensagens` | dono,gestor,recepcao,profissional | Mandar mensagem ao suporte (começa a conversa se não houver aberta) |
 
 `apps/api/src/chat/chat.controller.ts`
 
@@ -242,7 +242,7 @@
 | POST | `/clube/itens` | dono | Novo plano do clube |
 | PUT | `/clube/itens/:id` | dono | Alterar o plano (vale para os próximos atendimentos) |
 | GET | `/clube/adesoes` | BALCAO | Assinantes do clube, com usos e o que resta no ciclo |
-| GET | `/clube/cliente/:clienteId` | dono,gestor,recepcao,barbeiro | O plano do cliente (ficha e comanda); null se não é assinante |
+| GET | `/clube/cliente/:clienteId` | dono,gestor,recepcao,profissional | O plano do cliente (ficha e comanda); null se não é assinante |
 | POST | `/clube/adesoes` | BALCAO | Colocar o cliente no plano (um plano ativo por cliente) |
 | GET | `/clube/relatorio` | dono,gestor | Se o clube dá lucro: mensalidades x comissões e produto, por plano |
 | GET | `/clube/pix` | dono,gestor | Pix da barbearia para as mensalidades (null = não cadastrado) |
@@ -350,7 +350,7 @@
 | Método | Rota | Quem | O que faz |
 | --- | --- | --- | --- |
 | GET | `/profissionais/desempenho` | GESTAO | Ranking da equipe no período (dono: rede; gestor: sua unidade) |
-| GET | `/profissionais/:id/desempenho` | dono,gestor,barbeiro | Ficha do profissional: dono e gestor da unidade, ou o próprio barbeiro (sem margem) |
+| GET | `/profissionais/:id/desempenho` | dono,gestor,profissional | Ficha do profissional: dono e gestor da unidade, ou o próprio barbeiro (sem margem) |
 
 `apps/api/src/desempenho/ocupacao.controller.ts`
 

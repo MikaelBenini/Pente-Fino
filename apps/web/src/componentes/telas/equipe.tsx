@@ -914,8 +914,8 @@ function Acessos() {
 
 function papeisQuePossoDar(eu: ReturnType<typeof useApp>['usuario']): Papel[] {
   return eu.papeis.some((p) => p.papel === 'dono')
-    ? ['dono', 'gestor', 'recepcao', 'barbeiro']
-    : ['recepcao', 'barbeiro'];
+    ? ['dono', 'gestor', 'recepcao', 'profissional']
+    : ['recepcao', 'profissional'];
 }
 
 function Convidar({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
@@ -926,7 +926,7 @@ function Convidar({ aberto, onFechar }: { aberto: boolean; onFechar: () => void 
     nome: '',
     email: '',
     telefone: '',
-    papel: 'barbeiro' as Papel,
+    papel: 'profissional' as Papel,
     unidadeId: unidadeAtiva !== 'todas' ? unidadeAtiva : '',
   };
   const [f, setF] = useState(inicial);
@@ -959,7 +959,7 @@ function Convidar({ aberto, onFechar }: { aberto: boolean; onFechar: () => void 
       {feito ? (
         <div className="flex flex-col gap-4">
           <Aviso tom="sucesso">Convite enviado por e-mail.</Aviso>
-          {f.papel === 'barbeiro' && (
+          {f.papel === 'profissional' && (
             <p className="text-sm text-tinta-suave">
               Falta a comissão e a data de entrada: na aba “Profissionais”, toque em “Completar
               cadastro” ao lado do nome. Da próxima vez, use “Adicionar barbeiro” lá, que convida e

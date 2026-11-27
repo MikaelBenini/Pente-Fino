@@ -6,7 +6,7 @@ Os termos do produto e o nome deles no código (que é em português).
 | --- | --- | --- |
 | Conta | `Conta` (`conta`) | A empresa cliente do Pente Fino (a barbearia ou a rede). Raiz do isolamento: tudo tem `conta_id`. |
 | Unidade | `Unidade` | Um endereço da barbearia, com agenda, equipe, catálogo, WhatsApp e link próprios. |
-| Profissional / barbeiro | `Profissional` + papel `barbeiro` | Quem atende. O cadastro (`profissional`) tem entrada, horários, regras de comissão e preços próprios. |
+| Profissional / barbeiro | `Profissional` + papel `profissional` (antes `barbeiro`) | Quem atende. O cadastro (`profissional`) tem entrada, horários, regras de comissão e preços próprios. |
 | Comanda | `Comanda` | O atendimento de um cliente: itens, total, pagamentos e estado. Nasce do agendamento ou na hora. |
 | Item da comanda | `ItemComanda` | Serviço, produto ou não operacional, com o preço e a comissão gravados no momento. |
 | Agendamento | `Agendamento` | Horário marcado com um profissional; cria a comanda prevista. |

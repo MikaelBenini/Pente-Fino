@@ -127,7 +127,7 @@ export class ProfissionaisService {
         telefone: d.telefone
           ? d.telefone.replace(/\D/g, '').replace(/^(\d{10,11})$/, '55$1')
           : undefined,
-        papel: 'barbeiro',
+        papel: 'profissional',
         unidadeId: d.unidadeId,
       });
       usuarioId = c.usuarioId;
@@ -146,9 +146,9 @@ export class ProfissionaisService {
       if (await tx.profissional.findFirst({ where: { usuarioId, unidadeId: d.unidadeId } })) {
         throw Erros.conflito('Esta pessoa já é profissional nesta unidade.');
       }
-      if (!usuario.papeis.some((p) => p.papel === 'barbeiro' && p.unidadeId === d.unidadeId)) {
+      if (!usuario.papeis.some((p) => p.papel === 'profissional' && p.unidadeId === d.unidadeId)) {
         await tx.papelUsuario.create({
-          data: { usuarioId: usuario.id, papel: 'barbeiro', unidadeId: d.unidadeId },
+          data: { usuarioId: usuario.id, papel: 'profissional', unidadeId: d.unidadeId },
         });
       }
       const p = await tx.profissional.create({

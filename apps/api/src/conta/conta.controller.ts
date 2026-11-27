@@ -220,7 +220,7 @@ export class ContaController {
           tx.precoServico.count(),
           tx.profissional.count({ where: { ativo: true } }),
           tx.usuario.count({
-            where: { papeis: { some: { papel: { in: ['gestor', 'recepcao', 'barbeiro'] } } } },
+            where: { papeis: { some: { papel: { in: ['gestor', 'recepcao', 'profissional'] } } } },
           }),
           tx.botConexao.count({ where: { status: 'conectado' } }),
           tx.agendamento.count(),

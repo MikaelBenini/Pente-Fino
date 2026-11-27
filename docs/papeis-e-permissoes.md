@@ -2,13 +2,13 @@
 
 ## Na barbearia (painel)
 
-Papéis: **dono**, **gestor**, **recepcao** e **barbeiro** (enum `Papel`). Cada pessoa pode ter
+Papéis: **dono**, **gestor**, **recepcao** e **profissional** (enum `Papel`; até 27/11/2026 o último se chamava `barbeiro`, nome que a API ainda aceita como sinônimo). Na tela, o profissional aparece com o nome do segmento (hoje, "Barbeiro"). Cada pessoa pode ter
 papéis em uma unidade ou em todas (`papel_usuario.unidade_id` vazio = todas). A API confere com
 `@Papeis(...)` em cada rota ([gerado/api.md](gerado/api.md)) e com o escopo da unidade
 (`exigirUnidade`, `filtroUnidade`); o menu mostra só o que o papel abre
 ([gerado/menu-por-papel.md](gerado/menu-por-papel.md)), sem cadeado.
 
-| Recurso | Dono | Gestor | Recepção | Barbeiro |
+| Recurso | Dono | Gestor | Recepção | Profissional |
 | --- | --- | --- | --- | --- |
 | Agenda | todas as unidades | a unidade dele | a unidade dela | só a própria |
 | Comandas | tudo | a unidade dele | abrir, receber, fechar | lançar e confirmar as próprias |

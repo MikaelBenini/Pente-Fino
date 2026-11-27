@@ -156,7 +156,7 @@ describe('cadastro de conta e configuração guiada', () => {
       .send({
         nome: 'Barbeiro Novo',
         email: `b-${randomUUID().slice(0, 6)}@e2e.pentefino.dev`,
-        papel: 'barbeiro',
+        papel: 'profissional',
       });
     expect(convite.status).toBe(403);
     expect(convite.body.erro.codigo).toBe('email_nao_confirmado');

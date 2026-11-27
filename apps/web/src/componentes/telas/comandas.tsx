@@ -82,7 +82,7 @@ function Roteador() {
   const id = busca.get('id');
   if (id) return <DetalheComanda id={id} />;
   // Seção 7: o modo recepção é esta mesma tela, em letra grande, para o monitor do balcão.
-  if (busca.get('modo') === 'recepcao' && papeis.some((p) => p !== 'barbeiro'))
+  if (busca.get('modo') === 'recepcao' && papeis.some((p) => p !== 'profissional'))
     return <ModoRecepcao />;
   return <ListaComandas />;
 }
@@ -103,7 +103,7 @@ function ListaComandas() {
   const comandas = useComandas(unidadeId, dia);
   const [aba, setAba] = useState('abertas');
   const [nova, setNova] = useState(false);
-  const balcao = papeis.some((p) => p !== 'barbeiro');
+  const balcao = papeis.some((p) => p !== 'profissional');
   // A impressão leva as comandas do dia que não foram canceladas (igual ao PDF).
   const paraImprimir = (comandas.data ?? []).filter((c) => c.status !== 'cancelada').length;
 
@@ -416,7 +416,7 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
   const [sinal, setSinal] = useState(false);
   const [devolver, setDevolver] = useState<string | null>(null);
   // Sinal (receber adiantado): só o balcão recebe e devolve; vale até fechar.
-  const balcao = papeis.some((p) => p !== 'barbeiro');
+  const balcao = papeis.some((p) => p !== 'profissional');
   const sinalRetido = c.sinais.filter((s) => !s.devolvidoEm).reduce((t, s) => t + s.valor, 0);
   const movimento = useMoverHorario();
   // Reaberta (fechada por engano) também remarca: o horário pode ter sido o erro.

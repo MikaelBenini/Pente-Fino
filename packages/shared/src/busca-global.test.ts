@@ -3,7 +3,7 @@ import { buscaDeClienteValida, buscarOpcoes, buscarTelas } from './busca-global.
 import { menuPara } from './menu.js';
 
 const dono = menuPara(['dono']);
-const barbeiro = menuPara(['barbeiro']);
+const barbeiro = menuPara(['profissional']);
 const ids = (termo: string, menu = dono) => buscarTelas(menu, termo).map((i) => i.id);
 
 describe('buscarTelas', () => {

@@ -193,7 +193,7 @@ export class ClubeController {
   }
 
   @Get('cliente/:clienteId')
-  @Papeis('dono', 'gestor', 'recepcao', 'barbeiro')
+  @Papeis('dono', 'gestor', 'recepcao', 'profissional')
   @ApiOperation({ summary: 'O plano do cliente (ficha e comanda); null se não é assinante' })
   doCliente(
     @Param('clienteId', ParseUUIDPipe) clienteId: string,

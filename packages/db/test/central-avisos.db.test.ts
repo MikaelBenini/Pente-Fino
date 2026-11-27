@@ -59,7 +59,7 @@ beforeAll(async () => {
       data: [
         { usuarioId: donoId, papel: 'dono', unidadeId: null },
         { usuarioId: recepcaoId, papel: 'recepcao', unidadeId },
-        { usuarioId: barbeiroId, papel: 'barbeiro', unidadeId },
+        { usuarioId: barbeiroId, papel: 'profissional', unidadeId },
       ],
     });
     profissionalId = (

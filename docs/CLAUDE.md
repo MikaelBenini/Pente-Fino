@@ -60,7 +60,7 @@ Mapa da documentação em `docs/README.md`: produto, arquitetura (diagrama), reg
 
 ## Papéis
 
-dono, gestor, recepcao, barbeiro. Ver a matriz de permissões em `docs/`.
+dono, gestor, recepcao, profissional (até 27/11/2026, `barbeiro`; a API ainda aceita o nome antigo como sinônimo, `papelAtual`). Na tela, o profissional aparece com o nome do segmento (hoje, "Barbeiro"). Matriz em `docs/papeis-e-permissoes.md`.
 
 ## Planos (limites aplicados pela API)
 

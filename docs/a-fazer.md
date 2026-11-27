@@ -12,7 +12,10 @@ Detalhe, esforço, riscos e perguntas de cada fase em
 [plano-multissegmento.md](plano-multissegmento.md). Cada fase só começa com a aprovação do dono.
 
 - [x] **Fase 0 · Documentação para IA e automação** (27/11/2026)
-- [ ] **Fase 1 · Multissegmento** (respostas recebidas em 27/11; ordem 1a → 1b → 1d estética; falta o ok para começar a 1a)
+- [ ] **Fase 1 · Multissegmento** (aprovada em 27/11; ordem 1a → 1b → 1d estética)
+  - [x] 1a, PR 1: papel `barbeiro` → `profissional` no banco e no código (S4)
+  - [ ] 1a, PR 2: segmento na conta, vocabulário por segmento e funções por conta (S1, S2, S3, S5)
+  - [ ] 1a, PR 3: teste que falha com "barbeiro" fixo em texto visível (S6)
 - [ ] **Fase 2 · Interface mais simples** (aguardando aprovação; depende das decisões da Fase 1)
 - [ ] **Fase 3 · Mentoria financeira** (aguardando aprovação)
 - [ ] **Fase 4 · IA opcional** (aguardando aprovação; muda a ADR 0007)
@@ -20,8 +23,6 @@ Detalhe, esforço, riscos e perguntas de cada fase em
 
 ## Pendências do dono (dados e produção)
 
-- [ ] Responder a pergunta 4, reformulada no [plano](plano-multissegmento.md#respostas-do-dono-27112026) (comanda por baixo do contador +)
-- [ ] Dar o ok para começar a Fase 1a (segmento, vocabulário e papel profissional)
 - [ ] Trocar a senha do root da VPS (ficou registrada numa conversa em 24/11) e, quando quiser,
       tirar o acesso da chave `claude-codespace-pente-fino` do `deploy`
 - [ ] Teste de restauração do backup a partir da cópia externa (`./restaurar.sh --teste --externo`)

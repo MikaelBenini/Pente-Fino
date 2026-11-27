@@ -10,18 +10,18 @@ import {
 
 describe('podeAgirNaComanda', () => {
   it('barbeiro confirma a própria, não a dos outros', () => {
-    expect(podeAgirNaComanda('confirmar', 'em_atendimento', ['barbeiro'], true).permitido).toBe(
+    expect(podeAgirNaComanda('confirmar', 'em_atendimento', ['profissional'], true).permitido).toBe(
       true,
     );
-    expect(podeAgirNaComanda('confirmar', 'em_atendimento', ['barbeiro'], false)).toEqual({
+    expect(podeAgirNaComanda('confirmar', 'em_atendimento', ['profissional'], false)).toEqual({
       permitido: false,
       motivo: 'Você só mexe nas suas comandas.',
     });
   });
 
   it('barbeiro não fecha nem reabre', () => {
-    expect(podeAgirNaComanda('fechar', 'confirmada', ['barbeiro'], true).permitido).toBe(false);
-    expect(podeAgirNaComanda('reabrir', 'fechada', ['barbeiro'], true).permitido).toBe(false);
+    expect(podeAgirNaComanda('fechar', 'confirmada', ['profissional'], true).permitido).toBe(false);
+    expect(podeAgirNaComanda('reabrir', 'fechada', ['profissional'], true).permitido).toBe(false);
   });
 
   it('recepção fecha confirmada, mas pendente só com gestor', () => {
@@ -41,7 +41,7 @@ describe('podeAgirNaComanda', () => {
   });
 
   it('itens: barbeiro não mexe depois de confirmar; ninguém mexe em fechada', () => {
-    expect(podeAgirNaComanda('editar_itens', 'confirmada', ['barbeiro'], true).permitido).toBe(
+    expect(podeAgirNaComanda('editar_itens', 'confirmada', ['profissional'], true).permitido).toBe(
       false,
     );
     expect(podeAgirNaComanda('editar_itens', 'confirmada', ['recepcao'], false).permitido).toBe(

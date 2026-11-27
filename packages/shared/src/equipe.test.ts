@@ -17,13 +17,13 @@ describe('barbeirosSemCadastro', () => {
   it('lista quem foi convidado como barbeiro e ainda não tem ficha naquela unidade', () => {
     const r = barbeirosSemCadastro(
       [
-        usuario('a', [{ papel: 'barbeiro', unidadeId: 'u1' }]),
+        usuario('a', [{ papel: 'profissional', unidadeId: 'u1' }]),
         usuario('b', [
-          { papel: 'barbeiro', unidadeId: 'u1' },
-          { papel: 'barbeiro', unidadeId: 'u2' },
+          { papel: 'profissional', unidadeId: 'u1' },
+          { papel: 'profissional', unidadeId: 'u2' },
         ]),
         usuario('c', [{ papel: 'recepcao', unidadeId: 'u1' }]),
-        usuario('d', [{ papel: 'barbeiro', unidadeId: 'u1' }], { ativo: false }),
+        usuario('d', [{ papel: 'profissional', unidadeId: 'u1' }], { ativo: false }),
       ],
       [{ usuarioId: 'b', unidadeId: 'u1' }],
     );
@@ -34,7 +34,7 @@ describe('barbeirosSemCadastro', () => {
   it('todo barbeiro com ficha: lista vazia', () => {
     expect(
       barbeirosSemCadastro(
-        [usuario('a', [{ papel: 'barbeiro', unidadeId: 'u1' }])],
+        [usuario('a', [{ papel: 'profissional', unidadeId: 'u1' }])],
         [{ usuarioId: 'a', unidadeId: 'u1' }],
       ),
     ).toEqual([]);

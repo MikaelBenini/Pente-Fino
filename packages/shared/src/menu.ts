@@ -41,7 +41,7 @@ export interface ItemMenu {
 const GESTAO: readonly Papel[] = ['dono', 'gestor'];
 /** A recepção atende o balcão; dono e gestor também podem, então veem o mesmo que ela. */
 const BALCAO: readonly Papel[] = ['dono', 'gestor', 'recepcao'];
-const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'barbeiro'];
+const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'profissional'];
 
 /**
  * Ordem única, agrupada por função. Regra: o que a recepção vê, dono e gestor também veem
@@ -50,7 +50,7 @@ const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'barbeiro'];
 export const ITENS_MENU: readonly ItemMenu[] = [
   { id: 'inicio', rotulo: 'Início', rota: '/inicio', papeis: GESTAO, grupo: 'Dia a dia' },
   { id: 'dia', rotulo: 'Resumo do dia', rota: '/dia', papeis: GESTAO, grupo: 'Dia a dia' },
-  { id: 'hoje', rotulo: 'Hoje', rota: '/hoje', papeis: ['barbeiro'], grupo: 'Dia a dia' },
+  { id: 'hoje', rotulo: 'Hoje', rota: '/hoje', papeis: ['profissional'], grupo: 'Dia a dia' },
   { id: 'agenda', rotulo: 'Agenda', rota: '/agenda', papeis: BALCAO, grupo: 'Dia a dia' },
   { id: 'comandas', rotulo: 'Comandas', rota: '/comandas', papeis: TODOS, grupo: 'Dia a dia' },
   { id: 'caixa', rotulo: 'Caixa do dia', rota: '/caixa', papeis: BALCAO, grupo: 'Dia a dia' },
@@ -68,14 +68,14 @@ export const ITENS_MENU: readonly ItemMenu[] = [
     id: 'desempenho',
     rotulo: 'Desempenho',
     rota: '/desempenho',
-    papeis: ['barbeiro'],
+    papeis: ['profissional'],
     grupo: 'Gestão',
   },
   {
     id: 'comissoes',
     rotulo: 'Comissões',
     rota: '/comissoes',
-    papeis: ['barbeiro'],
+    papeis: ['profissional'],
     grupo: 'Gestão',
   },
   { id: 'servicos', rotulo: 'Serviços', rota: '/servicos', papeis: GESTAO, grupo: 'Cadastros' },
@@ -97,7 +97,7 @@ export const ITENS_MENU: readonly ItemMenu[] = [
     papeis: GESTAO,
     grupo: 'Conta',
   },
-  { id: 'perfil', rotulo: 'Perfil', rota: '/perfil', papeis: ['barbeiro'], grupo: 'Conta' },
+  { id: 'perfil', rotulo: 'Perfil', rota: '/perfil', papeis: ['profissional'], grupo: 'Conta' },
   { id: 'ajuda', rotulo: 'Ajuda', rota: '/ajuda', papeis: TODOS, grupo: 'Conta' },
 ];
 

@@ -42,7 +42,7 @@ describe('trocarSenhaSchema', () => {
 });
 
 describe('convidarUsuarioSchema', () => {
-  const base = { nome: 'Ana', email: 'ana@x.com', papel: 'barbeiro' as const };
+  const base = { nome: 'Ana', email: 'ana@x.com', papel: 'profissional' as const };
 
   it('barbeiro precisa de unidade', () => {
     expect(convidarUsuarioSchema.safeParse(base).success).toBe(false);

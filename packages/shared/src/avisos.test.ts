@@ -19,7 +19,7 @@ describe('central de avisos', () => {
     const dono = { usuarioId: 'd', papeis: ['dono'] as const };
     const gestor = { usuarioId: 'g', papeis: ['gestor'] as const };
     const recepcao = { usuarioId: 'r', papeis: ['recepcao'] as const };
-    const barbeiro = { usuarioId: 'b', papeis: ['barbeiro'] as const };
+    const barbeiro = { usuarioId: 'b', papeis: ['profissional'] as const };
     expect(destinatariosDoAviso('comandas_pendentes', [dono, gestor, recepcao, barbeiro])).toEqual([
       'r',
     ]);
@@ -145,7 +145,7 @@ describe('preferências de avisos', () => {
       'cliente_esperando',
       'contato_anuncio',
     ]);
-    expect(tiposDoPapel(['barbeiro'])).toEqual([]);
+    expect(tiposDoPapel(['profissional'])).toEqual([]);
     expect(tiposDoPapel(['gestor'])).toEqual([
       'comandas_pendentes',
       'caixa_divergente',
