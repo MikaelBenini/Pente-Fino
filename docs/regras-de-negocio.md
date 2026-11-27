@@ -176,6 +176,13 @@ equipe); a mensagem digitada pela equipe sai como sempre.
 - **Prioridade no limite do dia:** retorno, aniversário, aviso do clube e pesquisa usam só 70% do
   limite (`limiteDaMensagem`); lembrete do horário, vaga da lista de espera e horário mudado usam o
   limite todo. Num número com limite 20, o 15º retorno do dia espera; o lembrete das 15 h sai.
+- **Abertura variada:** na proativa, "Oi, Ana!" do começo sai como "Oi, Ana!", "Olá, Ana!" ou
+  "Oi, Ana, tudo bem?" (`variarAbertura`, escolhida pelo id da mensagem); o histórico guarda o que
+  saiu.
+- **Retomar agora:** dono ou gestor encerram a pausa em Bot → Conexão, com o que foi resolvido
+  (auditado); os sinais de risco passam a contar a partir daí (`bot_conexao.retomado_em`).
+- **Semana do número por e-mail:** segunda às 9 h, para dono e gestor (desliga em Perfil → Avisos),
+  com as automáticas, os SAIR e as pausas dos últimos 7 dias e um conselho.
 - Número novo conectado na unidade recomeça o aquecimento e sai da pausa do anterior.
 - A administração vê em **Saúde do sistema → WhatsApp** os números pausados ou com 3 ou mais SAIR
   ou falhas em 24 horas (`plataforma_numeros_em_risco()`, só contagens).

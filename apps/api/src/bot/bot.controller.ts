@@ -38,6 +38,8 @@ import {
   type PesquisaBotEntrada,
   type RespostaSimulacao,
   type SimularBotDados,
+  retomarAutomaticasSchema,
+  type RetomarAutomaticasEntrada,
 } from '@pente-fino/shared';
 import { Auditada } from '../auditoria/auditoria.js';
 import { ExigeRecurso, LivreDoPlano, Papeis } from '../auth/decoradores.js';
@@ -230,6 +232,19 @@ export class BotController {
   @ApiOperation({ summary: 'Conectar (ou reconectar) o WhatsApp da unidade: devolve o QR Code' })
   conectar(@Param('unidadeId', ParseUUIDPipe) unidadeId: string): Promise<ConexaoBot> {
     return this.servico.conectar(unidadeId);
+  }
+
+  @Post('conexao/:unidadeId/retomar')
+  @Papeis(...GESTAO)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Retomar as mensagens automáticas pausadas pela proteção do número (com motivo)',
+  })
+  retomar(
+    @Param('unidadeId', ParseUUIDPipe) unidadeId: string,
+    @Corpo(retomarAutomaticasSchema) d: RetomarAutomaticasEntrada,
+  ): Promise<ConexaoBot> {
+    return this.servico.retomarAutomaticas(unidadeId, d.motivo);
   }
 
   @LivreDoPlano()

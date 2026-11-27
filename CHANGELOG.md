@@ -13,6 +13,9 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 - **Pausa automática por sinal de risco:** se os envios começam a falhar ou muitos clientes respondem SAIR, lembretes, retorno e aniversário param por algumas horas e o dono recebe o aviso "Mensagens automáticas pausadas". O bot continua respondendo quem escreve.
 - **Bot → WhatsApp** mostra quantas mensagens automáticas saíram hoje, o limite do dia e até quando o número novo está em aquecimento. Ao conectar, a tela explica que número novo começa devagar e sobe em duas semanas.
 - **O lembrete do horário marcado tem prioridade:** retorno, aniversário, aviso do clube e pesquisa usam só 70% do limite do dia; o resto fica para lembretes, vaga da lista de espera e horário mudado.
+- **Mensagens automáticas com abertura variada** ("Oi, Ana!", "Olá, Ana!", "Oi, Ana, tudo bem?"), para não saírem idênticas em massa.
+- **"Retomar agora"** em Bot → Conexão: depois de resolver a causa (chip novo, celular com internet), dono ou gestor encerram a pausa contando o que foi resolvido.
+- **A semana do número por e-mail**, às segundas de manhã, para dono e gestor: automáticas enviadas, SAIR, pausas e um conselho. Desliga em Perfil → Avisos.
 - **Administração → Saúde do sistema → WhatsApp:** "Números em risco" lista as contas com as automáticas pausadas ou com muitos SAIR ou falhas nas últimas 24 horas, para o suporte agir antes de o WhatsApp restringir o número.
 
 ### Adicionado (licenças)

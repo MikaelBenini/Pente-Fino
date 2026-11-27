@@ -25,6 +25,10 @@ import {
   type StatusComanda,
   type TrabalhoEmail,
   type TrabalhoNotificacao,
+  ehHoraDoEmailDaSemana,
+  emailSemanaDoNumero,
+  fimDoAquecimento,
+  limiteProativasDoDia,
 } from '@pente-fino/shared';
 import { resumoGestao } from './equipe-whatsapp.js';
 import type { Prisma, PrismaClient } from './generated/prisma/client.js';
@@ -275,6 +279,58 @@ async function fimDoDia(
   return saida;
 }
 
+/** A semana do número da unidade (os últimos 7 dias, até ontem) para quem deixou ligado. */
+async function emailsDaSemanaDoNumero(
+  tx: Tx,
+  unidade: { id: string; nome: string },
+  agora: Date,
+  appUrl: string,
+): Promise<SaidaDaRotina['emails']> {
+  const c = await tx.botConexao.findUnique({ where: { unidadeId: unidade.id } });
+  if (!c || c.status !== 'conectado') return [];
+  const hoje = dataLocal(agora);
+  const de = dataLocal(new Date(agora.getTime() - 7 * 86_400_000));
+  const ate = dataLocal(new Date(agora.getTime() - 86_400_000));
+  const periodo = { gte: new Date(`${de}T00:00:00-03:00`), lt: new Date(`${hoje}T00:00:00-03:00`) };
+  const [proativas, saidas, pausas] = await Promise.all([
+    tx.mensagem.count({ where: { unidadeId: unidade.id, proativa: true, enviadaEm: periodo } }),
+    tx.mensagem.count({
+      where: {
+        unidadeId: unidade.id,
+        direcao: 'entrada',
+        texto: { equals: 'sair', mode: 'insensitive' },
+        criadoEm: periodo,
+      },
+    }),
+    tx.aviso.groupBy({
+      by: ['chave'],
+      where: { unidadeId: unidade.id, tipo: 'whatsapp_protegido', criadoEm: periodo },
+    }),
+  ]);
+  const semana = {
+    unidade: unidade.nome,
+    de,
+    ate,
+    proativas,
+    saidas,
+    pausas: pausas.length,
+    limiteHoje: limiteProativasDoDia(c.conectadoEm, agora),
+    aquecendo: fimDoAquecimento(c.conectadoEm, agora) !== null,
+  };
+  const ids = destinatariosDoAviso('whatsapp_protegido', await pessoasDaUnidade(tx, unidade.id));
+  if (!ids.length) return [];
+  const usuarios = await tx.usuario.findMany({
+    where: { id: { in: ids } },
+    select: { nome: true, email: true, preferenciasAvisos: true },
+  });
+  return usuarios
+    .filter((p) => lerPreferenciasAvisos(p.preferenciasAvisos).semanaWhatsappPorEmail)
+    .map((p) => {
+      const e = emailSemanaDoNumero({ nome: p.nome, semana, link: `${appUrl}/bot?aba=conexao` });
+      return { para: p.email, assunto: e.assunto, texto: e.texto };
+    });
+}
+
 /**
  * Rotina de 15 em 15 minutos em cada unidade: comandas pendentes durante o expediente e, depois
  * do fim do dia, o resumo e o caixa aberto.
@@ -304,6 +360,9 @@ export async function rotinaDosAvisos(
       ).map((d) => d.unidadeId),
     );
     for (const u of unidades) {
+      // Segunda às 9 h: a semana do número de WhatsApp por e-mail (vale até em dia fechado).
+      if (ehHoraDoEmailDaSemana(ds, minuto))
+        saida.emails.push(...(await emailsDaSemanaDoNumero(tx, u, agora, appUrl)));
       if (fechadas.has(u.id)) continue;
       // O horário de funcionamento da unidade, quando cadastrado, manda no fim do dia (os avisos
       // de resumo saem no fechamento); sem ele, o expediente da equipe.

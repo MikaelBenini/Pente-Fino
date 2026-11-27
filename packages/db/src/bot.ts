@@ -58,6 +58,7 @@ import {
   type ProtecaoDoNumero,
   pausaPorRisco,
   tempoDigitandoMs,
+  variarAbertura,
   inicioDaJanelaDoLoop,
   pareceLoop,
   situacaoDaConversa,
@@ -1127,14 +1128,17 @@ export async function prepararEnvio(
           : ({ tipo: 'adiar', ate: ate.toISOString() } as const);
       if (conexao.pausadoAte && conexao.pausadoAte > agora)
         return segurar(conexao.pausadoAte, 'Automáticas pausadas para proteger o número.');
-      const umDiaAtras = new Date(agora.getTime() - 86_400_000);
+      // Depois que o dono retomou, só contam os sinais novos (a pausa não volta na hora).
+      const desde = (d: Date) =>
+        conexao.retomadoEm && conexao.retomadoEm > d ? conexao.retomadoEm : d;
+      const umDiaAtras = desde(new Date(agora.getTime() - 86_400_000));
       const [falhasRecentes, saidas24h, proativas24h] = await Promise.all([
         tx.mensagem.count({
           where: {
             unidadeId: m.unidadeId,
             direcao: 'saida',
             status: 'falhou',
-            criadoEm: { gte: new Date(agora.getTime() - JANELA_FALHAS_MIN * 60_000) },
+            criadoEm: { gte: desde(new Date(agora.getTime() - JANELA_FALHAS_MIN * 60_000)) },
           },
         }),
         tx.mensagem.count({
@@ -1185,13 +1189,16 @@ export async function prepararEnvio(
           'Limite diário de mensagens automáticas do número (protege contra restrição).',
         );
     }
+    // Abertura variada nas proativas: nada de texto idêntico em massa. O histórico guarda o que saiu.
+    const texto = proativa ? variarAbertura(m.texto, m.id) : m.texto;
+    if (texto !== m.texto) await tx.mensagem.update({ where: { id: m.id }, data: { texto } });
     return {
       tipo: 'enviar',
       instancia: conexao.instancia,
       telefone: m.telefone,
-      texto: m.texto,
+      texto,
       proativa,
-      digitandoMs: tempoDigitandoMs(m.texto),
+      digitandoMs: tempoDigitandoMs(texto),
     } as const;
   });
 }

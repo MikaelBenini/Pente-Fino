@@ -9,6 +9,7 @@ import {
   naConta,
   prepararEnvio,
   registrarEstadoConexao,
+  rotinaDosAvisos,
   type PrismaClient,
 } from '../src/index.js';
 
@@ -226,5 +227,84 @@ describe('proteção dos números de WhatsApp', () => {
     const c = await naMinha((tx) => tx.botConexao.findUniqueOrThrow({ where: { unidadeId: u } }));
     expect(c.conectadoEm?.toISOString()).toBe(agora.toISOString());
     expect(c.pausadoAte).toBeNull();
+  });
+});
+
+describe('semana do número por e-mail (segunda às 9 h)', () => {
+  it('sai para o dono na segunda às 9 h, com os números da semana; quem desligou não recebe', async () => {
+    const u = await novaUnidade();
+    const segunda9h = new Date('2026-11-30T09:05:00-03:00');
+    await naMinha(async (tx) => {
+      const dono = await tx.usuario.create({
+        data: { nome: 'Carla Dona', email: `${randomUUID()}@teste.dev` },
+      });
+      const desligou = await tx.usuario.create({
+        data: {
+          nome: 'Outro Dono',
+          email: `${randomUUID()}@teste.dev`,
+          preferenciasAvisos: { semanaWhatsappPorEmail: false },
+        },
+      });
+      await tx.papelUsuario.createMany({
+        data: [
+          { usuarioId: dono.id, papel: 'dono', unidadeId: null },
+          { usuarioId: desligou.id, papel: 'dono', unidadeId: null },
+        ],
+      });
+      await tx.mensagem.create({
+        data: {
+          unidadeId: u,
+          telefone: '5511974000001',
+          direcao: 'saida',
+          texto: 'Oi, Ana! Faz tempo',
+          status: 'enviada',
+          enviadaEm: new Date('2026-11-27T12:00:00-03:00'),
+          proativa: true,
+        },
+      });
+      await tx.mensagem.create({
+        data: {
+          unidadeId: u,
+          telefone: '5511974000001',
+          direcao: 'entrada',
+          texto: 'Sair',
+          status: 'recebida',
+          criadoEm: new Date('2026-11-27T12:10:00-03:00'),
+        },
+      });
+    });
+    const r = await rotinaDosAvisos(prisma, conta, segunda9h, 'https://app');
+    const { nome } = await naMinha((tx) => tx.unidade.findUniqueOrThrow({ where: { id: u } }));
+    const daUnidade = r.emails.filter(
+      (e) => e.assunto === `WhatsApp da ${nome}: a semana do número`,
+    );
+    const minha = daUnidade.filter((e) => e.texto.includes('Oi, Carla.'));
+    expect(minha).toHaveLength(1);
+    expect(minha[0]!.texto).toContain('Mensagens automáticas enviadas: 1');
+    expect(minha[0]!.texto).toContain('Clientes que responderam SAIR: 1');
+    expect(minha[0]!.texto).toContain('https://app/bot?aba=conexao');
+    expect(daUnidade.some((e) => e.texto.includes('Oi, Outro.'))).toBe(false);
+    // Fora da janela (terça), nada da semana.
+    const terca = await rotinaDosAvisos(prisma, conta, new Date('2026-12-01T09:05:00-03:00'));
+    expect(terca.emails.some((e) => e.assunto.includes('a semana do número'))).toBe(false);
+  });
+
+  it('abertura variada: a proativa sai com a saudação trocada e o histórico guarda o que saiu', async () => {
+    const u = await novaUnidade();
+    await entrada(u, '5511974000002', 'oi', antes(60 * 50));
+    const textos = new Set<string>();
+    for (let i = 0; i < 6; i++) {
+      const m = await automatica(u, `55119740001${i}`, `Oi, Bruno! Aviso número ${i}`);
+      await entrada(u, `55119740001${i}`, 'oi', antes(60 * 50));
+      const p = await prepararEnvio(prisma, conta, m.id, agora);
+      if (p.tipo === 'enviar') {
+        textos.add(p.texto.split('!')[0]!.split('?')[0]!);
+        const gravada = await naMinha((tx) =>
+          tx.mensagem.findUniqueOrThrow({ where: { id: m.id } }),
+        );
+        expect(gravada.texto).toBe(p.texto);
+      }
+    }
+    expect(textos.size).toBeGreaterThan(1);
   });
 });

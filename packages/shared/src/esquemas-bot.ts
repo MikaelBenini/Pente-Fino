@@ -191,6 +191,16 @@ export interface ConexaoBot {
   protecao?: ProtecaoDoNumero | null;
 }
 
+/** Retomar as automáticas pausadas pela proteção (o dono resolveu a causa). */
+export const retomarAutomaticasSchema = z.object({
+  motivo: z
+    .string()
+    .trim()
+    .min(5, { error: 'Conte em poucas palavras o que foi resolvido (pelo menos 5 letras).' })
+    .max(300),
+});
+export type RetomarAutomaticasEntrada = z.infer<typeof retomarAutomaticasSchema>;
+
 /** O que a tela do Bot mostra sobre a proteção do número contra restrição. */
 export interface ProtecaoDoNumero {
   /** Mensagens automáticas (para quem não escreveu em 24 h) enviadas hoje e o limite de hoje. */

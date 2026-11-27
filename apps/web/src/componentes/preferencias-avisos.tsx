@@ -39,6 +39,7 @@ export function PreferenciasDeAvisos() {
     celular: p.celular,
     resumoPorEmail: p.resumoPorEmail,
     agendaNoCelular: p.agendaNoCelular,
+    semanaWhatsappPorEmail: p.semanaWhatsappPorEmail,
   };
 
   return (
@@ -91,6 +92,17 @@ export function PreferenciasDeAvisos() {
               className="size-5 accent-[var(--modulo)]"
             />
             Receber o resumo do dia também por e-mail
+          </label>
+        )}
+        {p.tipos.includes('whatsapp_protegido') && (
+          <label className="flex min-h-11 items-center gap-3">
+            <input
+              type="checkbox"
+              checked={p.semanaWhatsappPorEmail}
+              onChange={(e) => salvar({ ...atual, semanaWhatsappPorEmail: e.target.checked })}
+              className="size-5 accent-[var(--modulo)]"
+            />
+            Receber às segundas a semana do número de WhatsApp por e-mail
           </label>
         )}
         {salvo && (
