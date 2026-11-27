@@ -1183,6 +1183,11 @@ model BotConexao {
   status       StatusBotConexao @default(desconectado)
   /// A conexão caiu sem o dono pedir: o painel avisa até reconectar.
   caiuEm       DateTime?        @map("caiu_em") @db.Timestamptz(3)
+  /// Quando o número atual foi conectado: o aquecimento conta daqui (protecao-whatsapp.ts).
+  conectadoEm  DateTime?        @map("conectado_em") @db.Timestamptz(3)
+  /// Automáticas pausadas por sinal de risco (falhas seguidas, muitos SAIR) até esta hora.
+  pausadoAte   DateTime?        @map("pausado_ate") @db.Timestamptz(3)
+  pausaMotivo  String?          @map("pausa_motivo")
   criadoEm     DateTime         @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm DateTime         @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
@@ -1263,6 +1268,8 @@ model Mensagem {
   autorId     String?         @map("autor_id") @db.Uuid
   /// A equipe respondeu pelo WhatsApp do celular, fora do sistema.
   peloCelular Boolean         @default(false) @map("pelo_celular")
+  /// Automática para quem não escreveu nas últimas 24 h: conta no limite diário do número.
+  proativa    Boolean         @default(false)
   criadoEm    DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
 
   conta   Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)

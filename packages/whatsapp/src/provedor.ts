@@ -24,6 +24,8 @@ export interface ProvedorWhatsApp {
     instancia: string,
     telefone: string,
     texto: string,
+    /** "Digitando..." por este tempo antes de enviar (proteção do número). */
+    opcoes?: { digitandoMs?: number },
   ): Promise<{ idExterno: string | null }>;
 }
 

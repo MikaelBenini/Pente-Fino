@@ -48,6 +48,15 @@ import {
   proximoHorarioDeEnvio,
   RESPOSTA_ATE_MIN,
   VALIDADE_SEGURADA_H,
+  avisoNumeroProtegido,
+  ehProativa,
+  JANELA_FALHAS_MIN,
+  JANELA_REPETIDA_MIN,
+  limiteProativasDoDia,
+  fimDoAquecimento,
+  type ProtecaoDoNumero,
+  pausaPorRisco,
+  tempoDigitandoMs,
   inicioDaJanelaDoLoop,
   pareceLoop,
   situacaoDaConversa,
@@ -349,12 +358,18 @@ export async function registrarEstadoConexao(
   if (!atual) return null;
   if (atual.status === 'conectado' && novo.status === 'aguardando_qr') return atual;
   const caiu = atual.status === 'conectado' && novo.status === 'desconectado';
+  // Aquecimento (protecao-whatsapp.ts): conta de quando este número foi conectado. Reconectar
+  // o mesmo número mantém a contagem; número novo começa de novo, sem a pausa do anterior.
+  const numeroNovo =
+    novo.status === 'conectado' &&
+    (atual.conectadoEm === null || (!!novo.numero && novo.numero !== atual.numero));
   return tx.botConexao.update({
     where: { unidadeId },
     data: {
       status: novo.status,
       numero: novo.numero ?? atual.numero,
       caiuEm: novo.status === 'conectado' ? null : caiu ? agora : atual.caiuEm,
+      ...(numeroNovo ? { conectadoEm: agora, pausadoAte: null, pausaMotivo: null } : {}),
     },
   });
 }
@@ -1003,7 +1018,16 @@ export async function atenderMensagem(
 // ─── Envio ────────────────────────────────────────────────────────────────
 
 export type PreparoEnvio =
-  | { tipo: 'enviar'; instancia: string; telefone: string; texto: string }
+  | {
+      tipo: 'enviar';
+      instancia: string;
+      telefone: string;
+      texto: string;
+      /** Automática para quem não escreveu em 24 h: sai no ritmo das proativas. */
+      proativa: boolean;
+      /** "Digitando..." antes de enviar (protecao-whatsapp.ts). */
+      digitandoMs: number;
+    }
   | { tipo: 'pular' }
   /** Automático de madrugada (não é resposta): segura até o horário de envio. */
   | { tipo: 'adiar'; ate: string };
@@ -1067,11 +1091,103 @@ export async function prepararEnvio(
         return { tipo: 'adiar', ate: ate.toISOString() } as const;
       }
     }
+    // Proteção do número (27/11/2026): só a automática passa por aqui; a resposta digitada pela
+    // equipe sai como sempre.
+    let proativa = false;
+    if (m.autorId === null) {
+      const telefones = variantesTelefone(m.telefone);
+      const repetida = await tx.mensagem.findFirst({
+        where: {
+          unidadeId: m.unidadeId,
+          telefone: { in: telefones },
+          direcao: 'saida',
+          status: 'enviada',
+          texto: m.texto,
+          enviadaEm: { gte: new Date(agora.getTime() - JANELA_REPETIDA_MIN * 60_000) },
+        },
+        select: { id: true },
+      });
+      if (repetida)
+        return descartar(
+          `O mesmo texto já foi para este número há menos de ${JANELA_REPETIDA_MIN} minutos.`,
+        );
+      const ultimaEntrada = await tx.mensagem.findFirst({
+        where: { unidadeId: m.unidadeId, telefone: { in: telefones }, direcao: 'entrada' },
+        orderBy: { criadoEm: 'desc' },
+        select: { criadoEm: true },
+      });
+      proativa = ehProativa(ultimaEntrada?.criadoEm.getTime() ?? null, agora.getTime());
+    }
+    if (proativa) {
+      // Segura até a hora indicada; se até lá a mensagem perder o sentido, descarta.
+      const segurar = (ate: Date, motivo: string) =>
+        ate.getTime() - m.criadoEm.getTime() > VALIDADE_SEGURADA_H * 3_600_000
+          ? descartar(motivo)
+          : ({ tipo: 'adiar', ate: ate.toISOString() } as const);
+      if (conexao.pausadoAte && conexao.pausadoAte > agora)
+        return segurar(conexao.pausadoAte, 'Automáticas pausadas para proteger o número.');
+      const umDiaAtras = new Date(agora.getTime() - 86_400_000);
+      const [falhasRecentes, saidas24h, proativas24h] = await Promise.all([
+        tx.mensagem.count({
+          where: {
+            unidadeId: m.unidadeId,
+            direcao: 'saida',
+            status: 'falhou',
+            criadoEm: { gte: new Date(agora.getTime() - JANELA_FALHAS_MIN * 60_000) },
+          },
+        }),
+        tx.mensagem.count({
+          where: {
+            unidadeId: m.unidadeId,
+            direcao: 'entrada',
+            texto: { equals: 'sair', mode: 'insensitive' },
+            criadoEm: { gte: umDiaAtras },
+          },
+        }),
+        tx.mensagem.count({
+          where: { unidadeId: m.unidadeId, proativa: true, enviadaEm: { gte: umDiaAtras } },
+        }),
+      ]);
+      const pausa = pausaPorRisco({ falhasRecentes, saidas24h, proativas24h }, agora);
+      if (pausa) {
+        await tx.botConexao.update({
+          where: { unidadeId: m.unidadeId },
+          data: { pausadoAte: pausa.ate, pausaMotivo: pausa.motivo },
+        });
+        await gravarAviso(
+          tx,
+          contaId,
+          m.unidadeId,
+          avisoNumeroProtegido({
+            unidadeId: m.unidadeId,
+            unidade: m.unidade.nome,
+            motivo: pausa.motivo,
+            ate: pausa.ate,
+          }),
+        );
+        return segurar(pausa.ate, 'Automáticas pausadas para proteger o número.');
+      }
+      const hoje = dataLocal(agora);
+      const enviadasHoje = await tx.mensagem.count({
+        where: {
+          unidadeId: m.unidadeId,
+          proativa: true,
+          enviadaEm: { gte: new Date(`${hoje}T00:00:00-03:00`) },
+        },
+      });
+      if (enviadasHoje >= limiteProativasDoDia(conexao.conectadoEm, agora))
+        return segurar(
+          new Date(Date.parse(`${hoje}T09:00:00-03:00`) + 86_400_000),
+          'Limite diário de mensagens automáticas do número (protege contra restrição).',
+        );
+    }
     return {
       tipo: 'enviar',
       instancia: conexao.instancia,
       telefone: m.telefone,
       texto: m.texto,
+      proativa,
+      digitandoMs: tempoDigitandoMs(m.texto),
     } as const;
   });
 }
@@ -1080,13 +1196,19 @@ export async function registrarEnvio(
   prisma: PrismaClient,
   contaId: string,
   mensagemId: string,
-  r: { ok: true; idExterno: string | null } | { ok: false; erro: string },
+  r: { ok: true; idExterno: string | null; proativa?: boolean } | { ok: false; erro: string },
 ): Promise<void> {
   await naConta(prisma, contaId, (tx) =>
     tx.mensagem.update({
       where: { id: mensagemId },
       data: r.ok
-        ? { status: 'enviada', idExterno: r.idExterno, enviadaEm: new Date(), erro: null }
+        ? {
+            status: 'enviada',
+            idExterno: r.idExterno,
+            enviadaEm: new Date(),
+            erro: null,
+            proativa: r.proativa ?? false,
+          }
         : { status: 'falhou', erro: r.erro.slice(0, 500) },
     }),
   );
@@ -1249,4 +1371,26 @@ export async function registrarMensagemPropria(
     });
     return 'equipe';
   });
+}
+
+/** Proteção do número para a tela do Bot: proativas de hoje, limite, aquecimento e pausa. */
+export async function protecaoDoNumero(
+  tx: Tx,
+  unidadeId: string,
+  agora: Date = new Date(),
+): Promise<ProtecaoDoNumero | null> {
+  const c = await tx.botConexao.findUnique({ where: { unidadeId } });
+  if (!c || c.status !== 'conectado') return null;
+  const hoje = dataLocal(agora);
+  const proativasHoje = await tx.mensagem.count({
+    where: { unidadeId, proativa: true, enviadaEm: { gte: new Date(`${hoje}T00:00:00-03:00`) } },
+  });
+  const pausado = c.pausadoAte && c.pausadoAte > agora;
+  return {
+    proativasHoje,
+    limiteHoje: limiteProativasDoDia(c.conectadoEm, agora),
+    aquecendoAte: fimDoAquecimento(c.conectadoEm, agora)?.toISOString() ?? null,
+    pausadoAte: pausado ? c.pausadoAte!.toISOString() : null,
+    pausaMotivo: pausado ? c.pausaMotivo : null,
+  };
 }

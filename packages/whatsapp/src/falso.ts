@@ -8,6 +8,7 @@ const QR_FALSO =
   ).toString('base64');
 
 export interface EnvioFalso {
+  digitandoMs?: number;
   instancia: string;
   telefone: string;
   texto: string;
@@ -39,8 +40,13 @@ export class ProvedorFalso implements ProvedorWhatsApp {
     this.estados.set(instancia, { status: 'desconectado', numero: null, qr: null });
   }
 
-  async enviarTexto(instancia: string, telefone: string, texto: string) {
-    this.enviados.push({ instancia, telefone, texto });
+  async enviarTexto(
+    instancia: string,
+    telefone: string,
+    texto: string,
+    opcoes?: { digitandoMs?: number },
+  ) {
+    this.enviados.push({ instancia, telefone, texto, digitandoMs: opcoes?.digitandoMs });
     return { idExterno: `falso-${++this.contador}` };
   }
 

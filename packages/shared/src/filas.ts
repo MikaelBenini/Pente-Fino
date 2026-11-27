@@ -253,6 +253,8 @@ export type TrabalhoWhatsappEntrada =
 export interface TrabalhoWhatsappSaida {
   contaId: string;
   mensagemId: string;
+  /** Vaga reservada no ritmo das proativas do número (protecao-whatsapp.ts), em ms. */
+  vagaProativaMs?: number;
 }
 
 /** E-mail pronto para envio; o worker só entrega. */

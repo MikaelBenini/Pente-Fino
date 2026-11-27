@@ -152,3 +152,31 @@ gerada do código em [gerado/planos.md](gerado/planos.md).
 - O barbeiro vê só os próprios dados; o telefone do cliente pode ficar oculto para ele.
 - Alterações sensíveis (comanda fechada, preço, comissão, despesa) vão para a auditoria, com
   antes e depois.
+
+## Proteção dos números de WhatsApp
+
+Fonte: `packages/shared/src/protecao-whatsapp.ts` (regras puras, com teste), aplicadas em
+`prepararEnvio` (`packages/db/src/bot.ts`) e no worker. A conexão é por QR Code, não pela API
+oficial: o WhatsApp restringe o número que manda muita mensagem sem resposta, rápido demais,
+repetida ou para quem não quer receber. Valem só para a mensagem **automática** (sem autor da
+equipe); a mensagem digitada pela equipe sai como sempre.
+
+- **Proativa** = automática para quem não escreveu nas últimas 24 horas (lembrete, retorno,
+  aniversário, pesquisa, aviso). É gravada com `mensagem.proativa = true`.
+- **Aquecimento:** limite de proativas por dia pelo tempo desde que o número atual foi conectado
+  (`bot_conexao.conectado_em`): até o 3º dia, 20; até o 7º, 50; até o 14º, 100; depois, 200.
+  Passou do limite: sai no dia seguinte às 9 h, ou é descartada se até lá passar de 12 horas.
+- **Ritmo humano:** entre duas proativas do mesmo número, 25 s mais até 20 s ao acaso (vaga
+  reservada no Redis, sem duas mensagens na mesma vaga). Toda automática mostra "digitando..."
+  antes: 1 s mais 35 ms por letra, entre 1,2 s e 6 s.
+- **Nada repetido:** o mesmo texto para o mesmo número em menos de 10 minutos é descartado.
+- **Pausa por risco:** 5 falhas de envio em 30 minutos pausam as proativas por 6 horas; 5 ou mais
+  SAIR em 24 horas (e pelo menos 3% das proativas do período) pausam por 24 horas. Dono e gestor
+  recebem o aviso "Mensagens automáticas pausadas"; a resposta a quem escreve continua.
+- Número novo conectado na unidade recomeça o aquecimento e sai da pausa do anterior.
+- Já existiam: só para quem já escreveu para a unidade, nunca para número ligado ao sistema,
+  nada automático de madrugada, no máximo 20 automações por dia e a trava contra loop.
+
+Exemplo: número conectado ontem, 20 lembretes já saíram hoje. O 21º, criado às 12 h, ficaria para
+amanhã às 9 h (21 horas depois): é descartado. A resposta "Escolha o serviço" para quem acabou de
+escrever sai na hora.

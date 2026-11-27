@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (proteção dos números de WhatsApp)
+
+- **O sistema protege o número contra restrição do WhatsApp:** número recém-conectado manda poucas mensagens automáticas por dia e o limite sobe aos poucos (20, 50, 100 e 200); entre duas automáticas do mesmo número há de 25 a 45 segundos; toda automática mostra "digitando..." antes; o mesmo texto para o mesmo número em menos de 10 minutos não sai de novo.
+- **Pausa automática por sinal de risco:** se os envios começam a falhar ou muitos clientes respondem SAIR, lembretes, retorno e aniversário param por algumas horas e o dono recebe o aviso "Mensagens automáticas pausadas". O bot continua respondendo quem escreve.
+- **Bot → WhatsApp** mostra quantas mensagens automáticas saíram hoje, o limite do dia e até quando o número novo está em aquecimento.
+
 ### Adicionado (licenças)
 
 - **Pente Fino passa a vender licenças por tipo de negócio:** Barbearia, Beleza (salão, unhas e sobrancelhas), Estética, Tatuagem e Atendimento (só o bot de WhatsApp, R$ 49,90 por número, para qualquer negócio). Cada licença tem os seus planos e preços; o link de cadastro já traz a licença da página de vendas (`/cadastro?licenca=estetica`) e a venda presencial escolhe na administração. Quem já usa continua na Licença Barbearia, com os mesmos preços.

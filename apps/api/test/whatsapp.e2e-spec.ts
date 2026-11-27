@@ -101,6 +101,13 @@ describe('conexão pelo painel', () => {
     provedor.simularLeitura(instancia, '5511900002222');
     const r = await dono.get(`/bot/conexao/${a.unidadeA}`).expect(200);
     expect(r.body).toMatchObject({ status: 'conectado', numero: '5511900002222', qr: null });
+    // Proteção do número (27/11/2026): número recém-conectado começa no aquecimento.
+    expect(r.body.protecao).toMatchObject({
+      proativasHoje: 0,
+      limiteHoje: 20,
+      aquecendoAte: expect.any(String),
+      pausadoAte: null,
+    });
   });
 });
 

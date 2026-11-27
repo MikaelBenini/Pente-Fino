@@ -3,6 +3,7 @@
 import {
   ACOES_BOT,
   conflitosPalavrasChave,
+  formatarData,
   formatarDataHora,
   formatarTelefone,
   MAXIMO_OPCOES,
@@ -15,6 +16,7 @@ import {
   VARIAVEIS_BOT,
   type AcaoBot,
   type ConexaoBot,
+  type ProtecaoDoNumero,
   type EstadoBot,
   type GrupoPalavrasChave,
   type MensagensBot,
@@ -1503,6 +1505,43 @@ function Conexao({ e }: { e: EstadoBot }) {
   );
 }
 
+const MOTIVO_PAUSA: Record<string, string> = {
+  falhas: 'os envios estavam falhando seguidos',
+  saidas: 'muitos clientes responderam SAIR hoje',
+};
+
+/**
+ * Proteção do número (27/11/2026): quanto de mensagem automática já saiu hoje, o limite (que sobe
+ * aos poucos num número novo) e a pausa por sinal de risco. O bot continua respondendo quem escreve.
+ */
+function ProtecaoDoNumeroBloco({ p }: { p: ProtecaoDoNumero }) {
+  if (p.pausadoAte)
+    return (
+      <Aviso tom="aviso">
+        <p className="font-semibold">
+          Mensagens automáticas pausadas até {formatarDataHora(p.pausadoAte)}
+        </p>
+        <p className="mt-1">
+          Para o WhatsApp não restringir o número:{' '}
+          {MOTIVO_PAUSA[p.pausaMotivo ?? ''] ?? 'sinal de risco'}. Lembretes, retorno e aniversário
+          voltam sozinhos depois; o bot continua respondendo quem escreve.
+        </p>
+      </Aviso>
+    );
+  return (
+    <p className="text-sm text-tinta-suave">
+      Mensagens automáticas hoje:{' '}
+      <span className="font-denso tabular-nums text-tinta">
+        {p.proativasHoje} de {p.limiteHoje}
+      </span>
+      .{' '}
+      {p.aquecendoAte
+        ? `Número novo: o limite sobe aos poucos até ${formatarData(p.aquecendoAte)}, para o WhatsApp não restringir.`
+        : 'O que passar do limite sai no dia seguinte, para proteger o número.'}
+    </p>
+  );
+}
+
 function ConexaoUnidade({ u }: { u: UnidadeDoBot }) {
   const [aberta, setAberta] = useState(u.conexao?.status === 'aguardando_qr');
   const [confirmar, setConfirmar] = useState(false);
@@ -1569,6 +1608,8 @@ function ConexaoUnidade({ u }: { u: UnidadeDoBot }) {
           </p>
         </Aviso>
       )}
+
+      {conectado && c.protecao && <ProtecaoDoNumeroBloco p={c.protecao} />}
 
       {c.status === 'aguardando_qr' && aberta && (
         <div className="flex flex-col items-start gap-4 sm:flex-row">

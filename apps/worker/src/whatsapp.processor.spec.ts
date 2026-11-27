@@ -20,6 +20,10 @@ function relogioEmMemoria(inicial: number | null = null) {
     marcar: async (_i, q) => {
       valor = q;
     },
+    reservarProativa: async (_i, agora, intervalo, livre) => {
+      valor = valor !== null && agora - valor < livre ? Math.max(agora, valor + intervalo) : agora;
+      return valor;
+    },
   };
   return { r, valor: () => valor };
 }
