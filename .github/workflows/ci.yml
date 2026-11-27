@@ -44,6 +44,8 @@ jobs:
 
       - run: pnpm format:check
       - run: pnpm lint
+      - name: Regras do docs/CLAUDE.md conferidas no código
+        run: pnpm regras:conferir
       - run: pnpm typecheck
       - run: pnpm test
       - name: Cobertura mínima de 80% nas regras de cálculo

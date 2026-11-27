@@ -14,7 +14,7 @@ plano em andamento: [plano-multissegmento.md](plano-multissegmento.md).
 - Responder sempre em português (pt-BR), inclusive nos avisos curtos entre etapas.
 - Um PR por lote. Antes de abrir o PR, rodar tudo em sequência, nunca em paralelo:
   `pnpm lint`, `pnpm typecheck`, `pnpm test --concurrency=1`, `pnpm test:db`, `pnpm test:e2e`,
-  `pnpm build`, `pnpm docs:conferir` e, no navegador, **só os arquivos de teste ligados ao lote**:
+  `pnpm build`, `pnpm regras:conferir`, `pnpm docs:conferir` e, no navegador, **só os arquivos de teste ligados ao lote**:
   `E2E_PORTA_WEB=3100 E2E_PORTA_API=3101 pnpm --filter @pente-fino/web test:e2e e2e/x.spec.ts ...`.
   A suíte inteira de navegador fica com o CI, que roda num banco limpo; o PR só vai para o merge
   com o CI verde (decisão do dono em 12/11/2026, para encurtar o lote em ~15 min).

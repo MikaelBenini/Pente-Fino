@@ -18,15 +18,37 @@ M (1 a 2), G (2 a 4), GG (4 ou mais). São estimativas para decidir a ordem, nã
 | Fase | Assunto | Esforço | Status |
 | --- | --- | --- | --- |
 | 0 | Documentação para IA e automação | M | feita em 27/11/2026 |
-| 1 | Multissegmento | GG (dividida em 1a a 1d) | aguardando respostas |
+| 1 | Multissegmento | GG (dividida em 1a a 1d) | respostas recebidas em 27/11; aguardando o ok para começar a 1a |
 | 2 | Interface mais simples | G a GG | aguardando aprovação |
 | 3 | Mentoria financeira | G | aguardando aprovação |
 | 4 | IA opcional | GG | aguardando aprovação (muda a [ADR 0007](decisoes/0007-bot-sem-ia.md)) |
 | 5 | Landing page e marca | G | por último |
 
-**Ordem sugerida:** 0 → 1a → 3 → 2 → 1b/1c/1d → 4 → 5. A 1a (vocabulário e segmento) destrava
-tudo; a mentoria financeira (3) é o maior diferencial com o menor risco e já serve barbearia; a
-interface (2) fica melhor depois de saber quais funções cada segmento terá.
+**Ordem (com as respostas de 27/11):** 0 → 1a → 1b → 1d (estética) → 3 → 2 → 1c (academia e
+personal) → 4 → 5. A 1a (vocabulário e segmento) destrava tudo; a estética vem antes por escolha do
+dono; a mentoria financeira (3) é o maior diferencial com o menor risco; a interface (2) fica
+melhor depois de saber quais funções cada segmento terá.
+
+## Respostas do dono (27/11/2026)
+
+| Pergunta | Resposta | O que muda no plano |
+| --- | --- | --- |
+| 1. Segmentos | estúdio = tatuagem, unhas e afins; também personal trainer | Segmentos: barbearia, salão de beleza, estética, unhas e sobrancelhas, tatuagem e piercing, academia e estúdio (pilates, funcional), personal trainer, outro. |
+| 2. Papel `barbeiro` | renomear | `barbeiro` vira `profissional` no banco e no código (S4), numa PR própria, antes do resto. |
+| 3. Mais de um segmento por conta | o dono deixou a decisão comigo | **Um segmento por conta**, com funções de outros segmentos ligáveis por conta (S5): ver a [ADR 0014](decisoes/0014-um-segmento-por-conta.md). |
+| 4. Comanda por baixo do contador | não ficou clara | Reformulada abaixo, em linguagem simples. |
+| 5. Academia ou estética | estética | 1d antes da 1c. |
+| 6. Modo da IA | a nossa IA primeiro (para testar e para faturar com o uso); chave própria depois, para quem quiser | IA2 começa pelo modo "nossa IA" com **créditos pré-pagos** e margem; a chave própria vem depois. Como pagamos o provedor antes, o saldo é sempre pré-pago e o limite é rígido: nunca consumo pós-pago. |
+| 7. Merge | pode mesclar com o CI verde | As PRs são mescladas quando o CI fica verde. |
+
+**Pergunta 4, reformulada:** hoje cada atendimento vira uma *comanda* (a ficha do cliente naquele
+dia: quem atendeu, o que fez, quanto pagou). É dela que saem a comissão, o clube, o histórico do
+cliente e a pesquisa de satisfação. No protótipo, a tela "Lançar atendimentos" tem botões **+**
+para contar os serviços do dia, sem abrir comanda. A dúvida é: quando alguém aperta **+**, o
+sistema (A) cria a comanda sozinho, por trás, e tudo continua funcionando igual (comissão, clube,
+relatórios), só que mais rápido para quem lança; ou (B) deixa de ter comanda, e aí comissão por
+profissional, clube e histórico do cliente precisariam ser refeitos de outro jeito. **Recomendo a
+(A).**
 
 ---
 
@@ -67,8 +89,8 @@ interface (2) fica melhor depois de saber quais funções cada segmento terá.
 
 | ID | Item |
 | --- | --- |
-| S1 | `conta.segmento` (enum: barbearia, salão, estética, academia, estúdio, outro), padrão `barbearia`. Migração reversível: contas existentes viram `barbearia`, sem nenhuma mudança visível. |
-| S2 | `packages/shared/src/vocabulario.ts`: termos por segmento com singular, plural e gênero (profissional/barbeiro/instrutor/esteticista; estabelecimento/barbearia/salão/academia/clínica; cliente/aluno/paciente; atendimento/aula/sessão). Teste para cada segmento. |
+| S1 | `conta.segmento` (enum: barbearia, salão de beleza, estética, unhas e sobrancelhas, tatuagem e piercing, academia e estúdio, personal trainer, outro), padrão `barbearia`. Migração reversível: contas existentes viram `barbearia`, sem nenhuma mudança visível. |
+| S2 | `packages/shared/src/vocabulario.ts`: termos por segmento com singular, plural e gênero, organizados por idioma (pt-BR agora; a estrutura já aceita espanhol depois, sugestão aprovada em 27/11) (profissional/barbeiro/instrutor/esteticista; estabelecimento/barbearia/salão/academia/clínica; cliente/aluno/paciente; atendimento/aula/sessão). Teste para cada segmento. |
 | S3 | Telas, e-mails, PDFs e mensagens do bot leem o vocabulário da conta (`useVocabulario()` no front; `vocabularioDaConta()` na API e no worker). As mensagens do bot ganham `{estabelecimento}` e `{profissional}`; `{barbearia}` continua aceita (as barbearias já personalizaram textos com ela). |
 | S4 | Papel `barbeiro` → `profissional` (proposta abaixo). |
 | S5 | Feature flags por conta: `conta.funcoes` (lista do que está ligado: check-in, turmas, anamnese, pacotes, fotos, IA...), com o padrão vindo do segmento e o dono ligando ou desligando. A API confere como hoje confere o plano. |
@@ -88,7 +110,10 @@ Custo: 94 pontos de código e os testes; feito numa PR mecânica, isolada, antes
 | S8 | Modelos por segmento (ampliando `catalogo-servicos` e o seed): serviços com duração e preço sugerido, categorias, categorias de despesa e menu e mensagens do bot prontos. |
 | S9 | O segmento liga as funções certas (S5): academia já vem com check-in e turmas; estética com anamnese, pacotes e fotos. |
 
-### 1c · Academia (G a GG)
+### 1c · Academia e personal trainer (G a GG)
+
+O personal usa a mesma base da academia (aluno, plano recorrente, frequência), sem turmas por
+padrão e com agenda por aluno.
 
 | ID | Item |
 | --- | --- |
