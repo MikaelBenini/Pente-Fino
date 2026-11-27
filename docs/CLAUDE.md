@@ -72,6 +72,7 @@ dono, gestor, recepcao, profissional (até 27/11/2026, `barbeiro`; a API ainda a
 
 ## Convenções
 
+- **Vocabulário por segmento** (ADR 0014): a conta tem um segmento (`conta.segmento`: barbearia, salão, estética, unhas, tatuagem, academia, personal, outro) e o texto visível vem de `vocabulario()` (`packages/shared/src/vocabulario.ts`); no painel, `useVocabulario()` e `useNomePapel()` (`apps/web/src/lib/vocabulario.ts`). Texto novo não fixa "barbeiro" nem "barbearia". Funções por conta (pacotes, anamnese, check-in...) em `funcoesDaConta`.
 - Código e nomes de domínio em português (`comanda`, `item_comanda`, `unidade`); textos da interface em pt-BR.
 - Conventional Commits (`feat:`, `fix:`, `chore:`), uma branch por tarefa, PR com CI verde.
 - **Documentação acompanha o código:** mudou schema, rota, tela, plano ou menu, rode `pnpm docs:gerar` e commite `docs/gerado/` (o CI confere com `pnpm docs:conferir`). Mudou regra de cálculo, atualize `docs/regras-de-negocio.md` e o exemplo em `packages/shared/src/exemplos-das-regras.test.ts`. Decisão nova de produto ou arquitetura vira um arquivo em `docs/decisoes/`.

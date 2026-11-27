@@ -1,6 +1,8 @@
 'use client';
 
 import type {
+  Funcao,
+  Segmento,
   CaixaDeAvisos,
   ConfigPrecoLivre,
   SaudeDaConta,
@@ -59,6 +61,8 @@ import {
 } from '@pente-fino/shared';
 
 export interface ContaResumo {
+  segmento: Segmento;
+  funcoes: Funcao[];
   id: string;
   nome: string;
   plano: PlanoConta;

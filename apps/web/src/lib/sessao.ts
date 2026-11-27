@@ -90,10 +90,3 @@ export function papeisAtivos(usuario: UsuarioSessao, unidade: UnidadeAtiva): Pap
     return [...new Set(usuario.papeis.filter((p) => p.unidadeId === null).map((p) => p.papel))];
   return papeisNaUnidade(usuario.papeis, unidade);
 }
-
-export const NOME_PAPEL: Record<Papel, string> = {
-  dono: 'Dono',
-  gestor: 'Gestor',
-  recepcao: 'Recepção',
-  profissional: 'Barbeiro',
-};

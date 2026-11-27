@@ -37,7 +37,7 @@ import {
   useUnidadesDetalhe,
   useUsuariosEquipe,
 } from '@/lib/consultas';
-import { NOME_PAPEL } from '@/lib/sessao';
+import { useNomePapel, useVocabulario } from '@/lib/vocabulario';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
@@ -83,6 +83,7 @@ function textoRegra(r?: { percentualBp: number | null; valorFixo: number | null 
 }
 
 function Profissionais() {
+  const v = useVocabulario();
   const { unidadeAtiva } = useApp();
   const profissionais = useProfissionais();
   const unidades = useUnidadesDetalhe();
@@ -115,7 +116,7 @@ function Profissionais() {
         return (
           <div className="flex flex-col gap-4">
             <Botao className="self-start" onClick={() => setNovo(true)}>
-              <UserPlus aria-hidden className="size-5" /> Adicionar barbeiro
+              <UserPlus aria-hidden className="size-5" /> Adicionar {v.profissional.um}
             </Botao>
             {erro && <Aviso tom="erro">{erro}</Aviso>}
             {faltam.length > 0 && (
@@ -128,8 +129,8 @@ function Profissionais() {
                     Falta completar o cadastro
                   </h2>
                   <p className="text-sm text-tinta-suave">
-                    Convidados como barbeiro em “Acessos ao sistema”. Sem comissão e horários, não
-                    aparecem na agenda nem nos indicadores.
+                    Convidados como {v.profissional.um} em “Acessos ao sistema”. Sem comissão e
+                    horários, não aparecem na agenda nem nos indicadores.
                   </p>
                 </div>
                 <ul className="flex flex-col gap-2">
@@ -158,7 +159,7 @@ function Profissionais() {
               <EstadoVazio
                 icone={Users}
                 titulo="Cadastre sua equipe"
-                texto="Adicione os barbeiros com data de entrada e comissão. Quem ainda não tem acesso recebe o convite por e-mail e WhatsApp."
+                texto={`Adicione os ${v.profissional.muitos} com data de entrada e comissão. Quem ainda não tem acesso recebe o convite por e-mail e WhatsApp.`}
               />
             ) : (
               <ul className="animar-escalonado grid gap-3 lg:grid-cols-2">
@@ -335,6 +336,7 @@ export function NovoProfissional({
   /** Já tem acesso como barbeiro: só falta a comissão e a data de entrada. */
   pessoa?: BarbeiroSemCadastro | null;
 }) {
+  const v = useVocabulario();
   const { usuario, unidadeAtiva } = useApp();
   const unidades = useUnidadesDetalhe();
   const usuarios = useUsuariosEquipe();
@@ -405,7 +407,7 @@ export function NovoProfissional({
   return (
     <Dialogo
       aberto={aberto}
-      titulo={pessoa ? `Completar cadastro de ${pessoa.nome}` : 'Adicionar barbeiro'}
+      titulo={pessoa ? `Completar cadastro de ${pessoa.nome}` : `Adicionar ${v.profissional.um}`}
       descricao={
         pessoa
           ? 'Defina a data de entrada e a comissão. O horário padrão segue os dias da unidade.'
@@ -415,7 +417,7 @@ export function NovoProfissional({
     >
       {convite ? (
         <div className="flex flex-col gap-4">
-          <Aviso tom="sucesso">Barbeiro cadastrado e convite enviado por e-mail.</Aviso>
+          <Aviso tom="sucesso">{v.Profissional} cadastrado e convite enviado por e-mail.</Aviso>
           {convite.linkWhatsapp && (
             <a
               href={convite.linkWhatsapp}
@@ -804,6 +806,7 @@ function NovaRegra({
 // ─── Acessos ──────────────────────────────────────────────────────────────
 
 function Acessos() {
+  const nomePapel = useNomePapel();
   const usuarios = useUsuariosEquipe();
   const unidades = useUnidadesDetalhe();
   const { usuario: eu } = useApp();
@@ -850,7 +853,7 @@ function Acessos() {
                   <td className={`${td} text-sm`}>
                     {u.papeis.map((p) => (
                       <span key={`${p.papel}-${p.unidadeId}`} className="block whitespace-nowrap">
-                        {NOME_PAPEL[p.papel]} ·{' '}
+                        {nomePapel(p.papel)} ·{' '}
                         <span className="text-tinta-suave">{nomeUnidade(p.unidadeId)}</span>
                       </span>
                     ))}
@@ -919,6 +922,8 @@ function papeisQuePossoDar(eu: ReturnType<typeof useApp>['usuario']): Papel[] {
 }
 
 function Convidar({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
+  const v = useVocabulario();
+  const nomePapel = useNomePapel();
   const { usuario: eu, unidadeAtiva } = useApp();
   const unidades = useUnidadesDetalhe();
   const opcoesPapel = papeisQuePossoDar(eu);
@@ -962,8 +967,8 @@ function Convidar({ aberto, onFechar }: { aberto: boolean; onFechar: () => void 
           {f.papel === 'profissional' && (
             <p className="text-sm text-tinta-suave">
               Falta a comissão e a data de entrada: na aba “Profissionais”, toque em “Completar
-              cadastro” ao lado do nome. Da próxima vez, use “Adicionar barbeiro” lá, que convida e
-              cadastra de uma vez.
+              cadastro” ao lado do nome. Da próxima vez, use “Adicionar {v.profissional.um}” lá, que
+              convida e cadastra de uma vez.
             </p>
           )}
           {feito.linkWhatsapp && (
@@ -1032,7 +1037,7 @@ function Convidar({ aberto, onFechar }: { aberto: boolean; onFechar: () => void 
             rotulo="Papel"
             value={f.papel}
             onChange={(e) => setF({ ...f, papel: e.target.value as Papel })}
-            opcoes={opcoesPapel.map((p) => ({ valor: p, rotulo: NOME_PAPEL[p] }))}
+            opcoes={opcoesPapel.map((p) => ({ valor: p, rotulo: nomePapel(p) }))}
           />
           {f.papel !== 'dono' && (
             <Selecao
@@ -1064,6 +1069,7 @@ function EditarPapeis({
   usuario: UsuarioEquipe | null;
   onFechar: () => void;
 }) {
+  const nomePapel = useNomePapel();
   const { usuario: eu } = useApp();
   const unidades = useUnidadesDetalhe();
   const [marcados, setMarcados] = useState<Set<string> | null>(null);
@@ -1082,7 +1088,7 @@ function EditarPapeis({
   for (const u of unidades.data ?? []) {
     if (!eu.papeis.some((p) => p.unidadeId === null || p.unidadeId === u.id)) continue;
     for (const papel of possiveis.filter((p) => p !== 'dono'))
-      linhas.push({ papel, unidadeId: u.id, rotulo: `${NOME_PAPEL[papel]} · ${u.nome}` });
+      linhas.push({ papel, unidadeId: u.id, rotulo: `${nomePapel(papel)} · ${u.nome}` });
   }
   function fechar() {
     setMarcados(null);

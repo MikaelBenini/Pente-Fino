@@ -4,6 +4,9 @@ Os termos do produto e o nome deles no código (que é em português).
 
 | Termo | No código | O que é |
 | --- | --- | --- |
+| Segmento | `conta.segmento` | O tipo de negócio da conta (barbearia, salão, estética, unhas, tatuagem, academia, personal, outro): define o vocabulário da tela e as funções ligadas por padrão. Um por conta (ADR 0014). |
+| Vocabulário | `vocabulario()`, `useVocabulario()` | Os nomes que a tela usa conforme o segmento: barbeiro ou esteticista, cliente ou aluno, atendimento ou sessão. |
+| Funções da conta | `conta.funcoes`, `funcoesDaConta` | O que está ligado além do básico (pacotes, anamnese, fotos, termo, check-in, turmas); vazio = o padrão do segmento. |
 | Conta | `Conta` (`conta`) | A empresa cliente do Pente Fino (a barbearia ou a rede). Raiz do isolamento: tudo tem `conta_id`. |
 | Unidade | `Unidade` | Um endereço da barbearia, com agenda, equipe, catálogo, WhatsApp e link próprios. |
 | Profissional / barbeiro | `Profissional` + papel `profissional` (antes `barbeiro`) | Quem atende. O cadastro (`profissional`) tem entrada, horários, regras de comissão e preços próprios. |

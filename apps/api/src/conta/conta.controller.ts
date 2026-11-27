@@ -1,6 +1,6 @@
 import { Controller, Get, HttpCode, HttpStatus, Inject, Patch, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { estadoAssinatura } from '@pente-fino/db';
+import { estadoAssinatura, Prisma } from '@pente-fino/db';
 import {
   DIAS_EXPERIMENTAR,
   podeExperimentar,
@@ -24,6 +24,9 @@ import {
   liberarSuporteSchema,
   type AcessoSuporteDaConta,
   type LiberarSuporteEntrada,
+  funcoesDaConta,
+  segmentoContaSchema,
+  type SegmentoContaEntrada,
 } from '@pente-fino/shared';
 import { Auditada, auditar } from '../auditoria/auditoria.js';
 import { PlanoGuard } from '../assinatura/plano.guard.js';
@@ -255,6 +258,11 @@ export class ContaController {
         id: conta.id,
         nome: conta.nome,
         plano: conta.plano,
+        segmento: conta.segmento,
+        funcoes: funcoesDaConta(
+          conta.segmento,
+          Array.isArray(conta.funcoes) ? (conta.funcoes as string[]) : null,
+        ),
         ciclo: conta.ciclo,
         status: conta.status,
         testeAte: conta.testeAte?.toISOString() ?? null,
@@ -301,6 +309,32 @@ export class ContaController {
         depois: { liberadoAte: ate?.toISOString() ?? null },
       });
       return { liberadoAte: ate?.toISOString() ?? null };
+    });
+  }
+
+  @Put('segmento')
+  @Papeis('dono')
+  @Auditada()
+  @ApiOperation({ summary: 'Tipo de negócio (segmento) e funções ligadas' })
+  segmento(@Corpo(segmentoContaSchema) d: SegmentoContaEntrada) {
+    return this.banco.daConta(async (tx) => {
+      const id = Contexto.usuario().contaId;
+      const antes = await tx.conta.findUniqueOrThrow({ where: { id } });
+      const depois = await tx.conta.update({
+        where: { id },
+        data: { segmento: d.segmento, funcoes: d.funcoes ?? Prisma.DbNull },
+      });
+      await auditar(tx, {
+        entidade: 'conta',
+        entidadeId: id,
+        acao: 'segmento',
+        antes: { segmento: antes.segmento, funcoes: antes.funcoes },
+        depois: { segmento: depois.segmento, funcoes: depois.funcoes },
+      });
+      return {
+        segmento: depois.segmento,
+        funcoes: funcoesDaConta(depois.segmento, d.funcoes),
+      };
     });
   }
 

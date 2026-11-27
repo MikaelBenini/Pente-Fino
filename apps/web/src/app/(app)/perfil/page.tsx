@@ -16,10 +16,11 @@ import { useApp } from '@/componentes/contexto-app';
 import { api } from '@/lib/api';
 import { aplicarErroDaApi } from '@/lib/formularios';
 import { useHidratado } from '@/lib/hidratado';
-import { NOME_PAPEL } from '@/lib/sessao';
+import { useNomePapel } from '@/lib/vocabulario';
 import { useTema } from '@/lib/tema';
 
 export default function Perfil() {
+  const nomePapel = useNomePapel();
   const { usuario, unidades } = useApp();
   const [tema, definirTema] = useTema();
   const nomeUnidade = (id: string | null) =>
@@ -45,7 +46,7 @@ export default function Perfil() {
               key={`${p.papel}-${p.unidadeId}`}
               className="flex items-center justify-between gap-3 px-4 py-3"
             >
-              <span className="font-semibold">{NOME_PAPEL[p.papel]}</span>
+              <span className="font-semibold">{nomePapel(p.papel)}</span>
               <span className="text-tinta-suave">{nomeUnidade(p.unidadeId)}</span>
             </li>
           ))}

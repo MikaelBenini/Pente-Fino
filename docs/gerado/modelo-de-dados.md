@@ -2,13 +2,13 @@
 
 # Modelo de dados
 
-66 entidades e 29 enums em `packages/db/prisma/schema.prisma`. Toda tabela de negócio tem `conta_id` com RLS (`app.conta_id`); dinheiro em centavos (inteiro); datas em UTC. Nomes em camelCase são os do Prisma; a coluna no banco é o `@map` (snake_case).
+66 entidades e 30 enums em `packages/db/prisma/schema.prisma`. Toda tabela de negócio tem `conta_id` com RLS (`app.conta_id`); dinheiro em centavos (inteiro); datas em UTC. Nomes em camelCase são os do Prisma; a coluna no banco é o `@map` (snake_case).
 
 ## Entidades
 
 | Entidade (Prisma) | Tabela | Campos | Isolada por conta | Para que serve |
 | --- | --- | --- | --- | --- |
-| [Conta](#conta) | `conta` | 34 | não | Raiz do isolamento multiempresa. O RLS compara o próprio id com app.conta_id. |
+| [Conta](#conta) | `conta` | 36 | não | Raiz do isolamento multiempresa. O RLS compara o próprio id com app.conta_id. |
 | [Unidade](#unidade) | `unidade` | 29 | sim |  |
 | [CalendarioUnidade](#calendariounidade) | `calendario_unidade` | 8 | sim | Exceções ao expediente padrão (feriado, folga, dia extra). Base da projeção. |
 | [Usuario](#usuario) | `usuario` | 11 | sim | E-mail único no sistema todo: o login acha a conta pelo e-mail. |
@@ -241,6 +241,8 @@ Tabela `conta`. Raiz do isolamento multiempresa. O RLS compara o próprio id com
 | id | String | sim | chave; padrão dbgenerated("uuidv7( |
 | nome | String | sim |  |
 | logoUrl | String | não | coluna `logo_url` |
+| segmento | Segmento | sim | Segmento do negócio (ADR 0014): vocabulário, catálogo inicial e funções padrão.; enum Segmento; padrão barbearia |
+| funcoes | Json | não | Funções ligadas pelo dono (pacotes, anamnese, check-in...); vazio = o padrão do segmento. |
 | plano | Plano | sim | enum Plano; padrão basico |
 | automacoesContratadas | Boolean | sim | Automações contratadas à parte (Agenda e Básico): bot, lista de espera, pesquisa, retorno e aniversário. Do Pro em diante já vêm no plano.; padrão false; coluna `automacoes_contratadas` |
 | experimentaBasicoAte | DateTime | não | "Experimentar 7 dias" no Agenda: os recursos do Básico até esta data (uma vez por conta).; coluna `experimenta_basico_ate` |
@@ -1853,6 +1855,7 @@ Restrições: índice (indicadorId).
 | Plano | agenda, basico, pro, premium, @@map("plano") |
 | CicloCobranca | mensal, anual, @@map("ciclo_cobranca") |
 | StatusConta | teste, ativa, suspensa, cancelada, @@map("status_conta") |
+| Segmento | barbearia, salao, estetica, unhas, tatuagem, academia, personal, outro, @@map("segmento") |
 | Papel | dono, gestor, recepcao, profissional, @@map("papel") |
 | TipoItemComissao | servico, produto, @@map("tipo_item_comissao") |
 | TipoItemComanda | servico, produto, nao_operacional, @@map("tipo_item_comanda") |

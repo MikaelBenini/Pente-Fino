@@ -12,6 +12,9 @@ import {
   NOMES_DIAS,
   NOMES_DIAS_CURTOS,
   podeNaUnidade,
+  SEGMENTOS,
+  vocabulario,
+  type Segmento,
   unidadeSchema,
   type ContaEntrada,
   type UnidadeDetalhe,
@@ -37,6 +40,7 @@ import { z } from 'zod';
 import { api } from '@/lib/api';
 import { chaves, useAcao, useCalendario, useConta, useUnidadesDetalhe } from '@/lib/consultas';
 import { aplicarErroDaApi } from '@/lib/formularios';
+import { useVocabulario, vocabularioDaTela } from '@/lib/vocabulario';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha } from '../pagina';
@@ -49,6 +53,7 @@ import { CopiarConfiguracoes } from '../copiar-configuracoes';
 
 export function TelaConfiguracoes() {
   const { papeis } = useApp();
+  const v = useVocabulario();
   // Avisos do painel e a busca abrem direto na aba (?aba=assinatura, ?aba=link, ?aba=unidades...).
   // "agendamento" (as regras) agora fica junto do link, numa aba só (pedido do dono em 20/11/2026).
   const abaDoLink = useSearchParams().get('aba');
@@ -66,7 +71,7 @@ export function TelaConfiguracoes() {
         atual={aba}
         onTrocar={setAba}
         abas={[
-          { id: 'barbearia', rotulo: 'Barbearia', conteudo: <Barbearia /> },
+          { id: 'barbearia', rotulo: v.Estabelecimento, conteudo: <Barbearia /> },
           { id: 'unidades', rotulo: 'Unidades', conteudo: <Unidades /> },
           { id: 'calendario', rotulo: 'Folgas e feriados', conteudo: <Calendario /> },
           { id: 'link', rotulo: 'Link e agendamento', conteudo: <LinkEAgendamento /> },
@@ -144,7 +149,10 @@ function Barbearia() {
         return (
           <div className="grid max-w-3xl gap-8 md:grid-cols-[minmax(0,1fr)_16rem]">
             {ehDono ? (
-              <NomeConta nome={c.nome} />
+              <div className="flex flex-col gap-8">
+                <NomeConta nome={c.nome} />
+                <TipoDeNegocio segmento={c.segmento} />
+              </div>
             ) : (
               <p className="text-xl font-semibold">{c.nome}</p>
             )}
@@ -207,7 +215,65 @@ function AvisoTeste({ ate }: { ate: string }) {
   );
 }
 
+/**
+ * Tipo de negócio (Fase 1a, ADR 0014): muda os nomes que o sistema mostra (barbeiro,
+ * esteticista, instrutor...) e as funções que vêm ligadas. Os dados ficam como estão.
+ */
+function TipoDeNegocio({ segmento }: { segmento: Segmento }) {
+  const [escolhido, setEscolhido] = useState<Segmento>(segmento);
+  const [ok, setOk] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useAcao(
+    (s: Segmento) =>
+      api('conta/segmento', { metodo: 'PUT', corpo: { segmento: s, funcoes: null } }),
+    [chaves.conta, ['auth', 'eu']],
+  );
+  const novo = vocabularioDaTela(escolhido);
+  return (
+    <section aria-labelledby="titulo-tipo-negocio" className="flex flex-col gap-3">
+      <h2 id="titulo-tipo-negocio" className="text-lg font-semibold">
+        Tipo de negócio
+      </h2>
+      <Selecao
+        id="conta-segmento"
+        rotulo="Qual é o seu negócio?"
+        value={escolhido}
+        onChange={(e) => {
+          setEscolhido(e.target.value as Segmento);
+          setOk(false);
+        }}
+        opcoes={SEGMENTOS.map((s) => ({ valor: s, rotulo: vocabulario(s).nomeSegmento }))}
+      />
+      <p className="text-sm text-tinta-suave">
+        O sistema passa a chamar quem atende de {novo.profissional.um}, quem é atendido de{' '}
+        {novo.cliente.um} e cada visita de {novo.atendimento.um}. Seus dados, preços e agenda
+        continuam iguais.
+      </p>
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+      {ok && <Aviso tom="sucesso">Tipo de negócio salvo.</Aviso>}
+      <Botao
+        variante="secundario"
+        className="self-start"
+        disabled={escolhido === segmento}
+        carregando={salvar.isPending}
+        onClick={async () => {
+          setErro(null);
+          try {
+            await salvar.mutateAsync(escolhido);
+            setOk(true);
+          } catch (e) {
+            setErro(e instanceof Error ? e.message : 'Não foi possível salvar. Tente de novo.');
+          }
+        }}
+      >
+        Salvar tipo de negócio
+      </Botao>
+    </section>
+  );
+}
+
 function NomeConta({ nome }: { nome: string }) {
+  const v = useVocabulario();
   const [ok, setOk] = useState(false);
   const salvar = useAcao(
     (d: ContaEntrada) => api('conta', { metodo: 'PATCH', corpo: d }),
@@ -230,7 +296,7 @@ function NomeConta({ nome }: { nome: string }) {
     <form method="post" noValidate onSubmit={enviar} className="flex flex-col gap-4">
       <Campo
         id="conta-nome"
-        rotulo="Nome da barbearia"
+        rotulo={`Nome ${v.doEstabelecimento}`}
         erro={formState.errors.nome?.message}
         {...register('nome')}
       />
