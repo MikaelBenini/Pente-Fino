@@ -30,7 +30,7 @@ describe('histórico da comanda (seção 7)', () => {
       'Comanda aberta com corte e barba',
       'Atendimento começou',
       'Lançado: Pomada',
-      'Barbeiro confirmou o atendimento',
+      'Atendimento confirmado',
       'Pagamento de R$ 90,00 no pix',
       'Comanda fechada',
       'Comanda reaberta: Cliente pediu nota',

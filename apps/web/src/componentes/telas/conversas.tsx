@@ -239,7 +239,7 @@ export function TelaConversas() {
                   texto={
                     soAnuncio
                       ? 'Quem chegar por um anúncio do Facebook ou do Instagram aparece aqui, marcado "Veio de anúncio".'
-                      : 'Quando um cliente mandar mensagem no WhatsApp da barbearia, a conversa aparece aqui. Quem pedir atendente fica no topo.'
+                      : 'Quando um cliente mandar mensagem no WhatsApp da unidade, a conversa aparece aqui. Quem pedir atendente fica no topo.'
                   }
                 />
               ) : (

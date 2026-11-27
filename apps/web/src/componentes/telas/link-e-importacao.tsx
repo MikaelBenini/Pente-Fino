@@ -20,6 +20,7 @@ import { chaves, chavesOperacao, useAcao, useUnidadesDetalhe } from '@/lib/consu
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { Estado, Ficha, Tabela, td, th } from '../pagina';
+import { useVocabulario } from '@/lib/vocabulario';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
@@ -32,6 +33,7 @@ const LINK_DA_FALTA: Record<string, string> = {
 };
 
 export function LinkAgendamento() {
+  const v = useVocabulario();
   const unidades = useUnidadesDetalhe();
   const { papeis } = useApp();
   const ehDono = papeis.includes('dono');
@@ -40,8 +42,8 @@ export function LinkAgendamento() {
       {() => (
         <div className="flex max-w-3xl flex-col gap-4">
           <p className="text-tinta-suave">
-            O cliente escolhe serviço, barbeiro e horário sozinho, sem conversa. O horário entra na
-            agenda e já cria a comanda. Só aparecem serviços com preço na unidade.
+            O cliente escolhe serviço, {v.profissional.um} e horário sozinho, sem conversa. O
+            horário entra na agenda e já cria a comanda. Só aparecem serviços com preço na unidade.
           </p>
           {unidades
             .data!.filter((u) => u.ativa)

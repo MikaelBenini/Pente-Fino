@@ -16,6 +16,7 @@ import { Aviso } from '../aviso';
 import { Estado, Ficha } from '../pagina';
 import { BuscaCliente, clienteParaApi, type ClienteEscolhido } from './busca-cliente';
 import { ConviteSeFaltar } from '../convite-plano';
+import { useVocabulario } from '@/lib/vocabulario';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
@@ -39,6 +40,7 @@ export function ListaEspera({
   aberto: boolean;
   onFechar: () => void;
 }) {
+  const v = useVocabulario();
   const chave = ['espera', unidadeId, dia] as const;
   const lista = useQuery({
     queryKey: chave,
@@ -85,7 +87,8 @@ export function ListaEspera({
                         </span>
                         <span className="block text-sm text-tinta-suave">
                           {e.servicos.join(' + ')} · {textoFaixa(e.deMin, e.ateMin)} ·{' '}
-                          {e.profissional ?? 'qualquer barbeiro'} · {NOME_ORIGEM_ESPERA[e.origem]}
+                          {e.profissional ?? v.t('qualquer [[profissional]]')} ·{' '}
+                          {NOME_ORIGEM_ESPERA[e.origem]}
                         </span>
                       </span>
                       <span className="flex items-center gap-2">

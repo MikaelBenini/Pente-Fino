@@ -114,7 +114,7 @@ test('cliente troca de unidade no meio do agendamento sem perder o que fez', asy
   );
   await expect(
     page.getByRole('status').filter({ hasText: 'Agora você está agendando na unidade Jardins' }),
-  ).toContainText('escolha o barbeiro de novo');
+  ).toContainText('escolha de novo quem vai atender');
 
   // E agenda na unidade nova.
   await page
@@ -161,7 +161,7 @@ test('dono novo cria a conta e passa pela configuração guiada', async ({ page 
   await page.getByRole('button', { name: 'Pular por agora' }).click();
   await page.getByRole('button', { name: 'Ir para o Início' }).click();
   await page.waitForURL(/inicio/);
-  await expect(page.getByText('Termine a configuração da barbearia')).toHaveCount(0);
+  await expect(page.getByText('Termine a configuração inicial')).toHaveCount(0);
   // Cadastro pelo site: aviso para confirmar o e-mail, com o botão de reenviar (Etapa 15.4).
   const confirmar = page.getByRole('status').filter({ hasText: 'Confirme seu e-mail' });
   await expect(confirmar).toBeVisible();

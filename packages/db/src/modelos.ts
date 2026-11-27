@@ -2,11 +2,12 @@
 // ajusta depois. Usado pelo seed e, na Etapa 4, pelo cadastro de conta.
 import {
   dataParaBanco,
-  MENSAGENS_BOT_PADRAO,
-  MENU_BOT_PADRAO,
+  mensagensBotPadrao,
+  menuBotPadrao,
   TIPOS_MENSAGEM_BOT,
   type DataISO,
 } from '@pente-fino/shared';
+import { vocabularioDaConta } from './vocabulario.js';
 import type { GrupoDespesa, Prisma, TipoModeloMensagem } from './generated/prisma/client.js';
 
 type Tx = Prisma.TransactionClient;
@@ -184,6 +185,8 @@ export async function aplicarModelosIniciais(
   { unidadeIds, vigenciaInicio, incluirServicos = true }: OpcoesModelos,
 ): Promise<Map<string, string>> {
   const servicos = new Map<string, string>();
+  const vocab = await vocabularioDaConta(tx);
+  const mensagens = mensagensBotPadrao(vocab);
   for (const { precoSugerido, ...dados } of incluirServicos ? MODELO_SERVICOS : []) {
     const servico = await tx.servico.create({ data: { ...dados, unidadeIds: [...unidadeIds] } });
     servicos.set(servico.nome, servico.id);
@@ -200,14 +203,14 @@ export async function aplicarModelosIniciais(
   await tx.modeloMensagem.createMany({
     data: [
       ...MODELO_MENSAGENS,
-      ...TIPOS_MENSAGEM_BOT.map((tipo) => ({ tipo, texto: MENSAGENS_BOT_PADRAO[tipo] })),
+      ...TIPOS_MENSAGEM_BOT.map((tipo) => ({ tipo, texto: mensagens[tipo] })),
     ],
   });
   // Menu do bot pronto e publicado: a barbearia já tem um bot que funciona e só edita.
   await tx.botMenu.create({
     data: {
       status: 'publicado',
-      menu: structuredClone(MENU_BOT_PADRAO) as unknown as Prisma.InputJsonValue,
+      menu: menuBotPadrao(vocab) as unknown as Prisma.InputJsonValue,
       publicadoEm: new Date(),
     },
   });

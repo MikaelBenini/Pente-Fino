@@ -27,7 +27,7 @@ export const idSchema = z.object({ id: uuid('Identificador') });
 // ─── Conta e unidades ─────────────────────────────────────────────────────
 
 export const contaSchema = z.object({
-  nome: z.string().trim().min(2, { error: 'Informe o nome da barbearia.' }).max(120),
+  nome: z.string().trim().min(2, { error: 'Informe o nome do seu negócio.' }).max(120),
 });
 export type ContaEntrada = z.infer<typeof contaSchema>;
 
@@ -108,7 +108,7 @@ export const unidadeParcialSchema = unidadeSchema.partial().extend({
     .trim()
     .toLowerCase()
     .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, {
-      error: 'Use letras minúsculas, números e hífen (ex.: barbearia-centro).',
+      error: 'Use letras minúsculas, números e hífen (ex.: unidade-centro).',
     })
     .min(3, { error: 'Pelo menos 3 caracteres.' })
     .max(60)

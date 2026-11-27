@@ -22,6 +22,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useId, useMemo, useState, type ComponentType } from 'react';
 import { api } from '@/lib/api';
 import { chavesOperacao } from '@/lib/consultas';
+import { useVocabulario } from '@/lib/vocabulario';
 import { useApp } from './contexto-app';
 import { ICONES_MENU } from './icones-menu';
 
@@ -84,6 +85,7 @@ export function BuscaGlobal() {
 
 function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
   const { menu, unidadeAtiva, papeis } = useApp();
+  const v = useVocabulario();
   const router = useRouter();
   const id = useId();
   const [termo, setTermo] = useState('');
@@ -130,7 +132,7 @@ function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
     const t = normalizar(termo);
     const ajuda =
       t.length >= 3 && menu.some((i) => i.id === 'ajuda')
-        ? buscarAjuda(termo, papeis)
+        ? buscarAjuda(termo, papeis, v)
             .slice(0, 3)
             .map<Resultado>((a) => ({
               id: `ajuda-${a.id}`,
@@ -169,7 +171,7 @@ function CaixaDeBusca({ onFechar }: { onFechar: () => void }) {
           }))
         : [];
     return [...telas, ...opcoes, ...deHoje, ...achados, ...ajuda];
-  }, [menu, papeis, termo, comandas.data, clientes.data, buscarCliente, atrasado]);
+  }, [menu, papeis, v, termo, comandas.data, clientes.data, buscarCliente, atrasado]);
 
   const indice = Math.min(marcado, Math.max(resultados.length - 1, 0));
   function abrir(r: Resultado | undefined) {

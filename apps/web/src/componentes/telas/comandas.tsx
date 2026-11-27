@@ -537,8 +537,8 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
         </header>
         {c.status === 'pendente' && (
           <Aviso tom="info">
-            O horário terminou e o barbeiro não confirmou. Peça a confirmação ou chame o gestor para
-            fechar.
+            O horário terminou e quem atendeu não confirmou. Peça a confirmação ou chame o gestor
+            para fechar.
           </Aviso>
         )}
         {c.atrasado && (

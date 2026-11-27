@@ -160,3 +160,88 @@ export function funcoesDaConta(
   if (escolhidas) return validas(escolhidas);
   return [...FUNCOES_DO_SEGMENTO[vocabulario(segmento).segmento]];
 }
+
+// ─── Texto com o vocabulário ──────────────────────────────────────────────────
+
+const CAMPOS = ['profissional', 'estabelecimento', 'cliente', 'atendimento'] as const;
+type Campo = (typeof CAMPOS)[number];
+
+/** Artigos e contrações antes do termo: [[o profissional]], [[da estabelecimento]]... */
+const ARTIGOS: Record<string, [masc: string, fem: string, mascPl: string, femPl: string]> = {
+  o: ['o', 'a', 'os', 'as'],
+  a: ['o', 'a', 'os', 'as'],
+  do: ['do', 'da', 'dos', 'das'],
+  da: ['do', 'da', 'dos', 'das'],
+  no: ['no', 'na', 'nos', 'nas'],
+  na: ['no', 'na', 'nos', 'nas'],
+  ao: ['ao', 'à', 'aos', 'às'],
+  um: ['um', 'uma', 'uns', 'umas'],
+  uma: ['um', 'uma', 'uns', 'umas'],
+  pelo: ['pelo', 'pela', 'pelos', 'pelas'],
+  pela: ['pelo', 'pela', 'pelos', 'pelas'],
+  à: ['ao', 'à', 'aos', 'às'],
+};
+for (const [sing, plural] of [
+  ['o', 'os'],
+  ['a', 'as'],
+  ['do', 'dos'],
+  ['da', 'das'],
+  ['no', 'nos'],
+  ['na', 'nas'],
+  ['ao', 'aos'],
+  ['um', 'uns'],
+  ['uma', 'umas'],
+  ['pelo', 'pelos'],
+  ['pela', 'pelas'],
+  ['à', 'às'],
+] as const)
+  ARTIGOS[plural] = ARTIGOS[sing]!;
+
+/**
+ * Troca os marcadores pelo vocabulário: `[[profissional]]` → "barbeiro",
+ * `[[Profissionais]]` → "Barbeiros", `[[o profissional]]` → "o barbeiro" ou "a esteticista",
+ * `[[na estabelecimento]]` → "na barbearia" ou "no salão". Maiúscula no marcador vira maiúscula no
+ * texto. Para barbearia, o resultado é o texto de sempre. Marcador desconhecido fica como está.
+ */
+export function comVocabulario(texto: string, v: Vocabulario): string {
+  return texto.replace(
+    /\[\[(?:(\p{L}+) )?(\p{L}+)\]\]/gu,
+    (inteiro, artigoBruto: string | undefined, palavraBruta: string) => {
+      const palavra = palavraBruta.toLowerCase();
+      const plural = CAMPOS.every((c) => c !== palavra);
+      const campo = (
+        plural
+          ? CAMPOS.find(
+              (c) => `${c}s` === palavra || (c === 'profissional' && palavra === 'profissionais'),
+            )
+          : palavra
+      ) as Campo | undefined;
+      if (!campo) return inteiro;
+      const termo = v[campo];
+      let saida = plural ? termo.muitos : termo.um;
+      if (artigoBruto) {
+        const formas = ARTIGOS[artigoBruto.toLowerCase()];
+        if (!formas) return inteiro;
+        const artigo = formas[(termo.feminino ? 1 : 0) + (plural ? 2 : 0)]!;
+        saida = `${artigo} ${saida}`;
+        return artigoBruto[0] === artigoBruto[0]!.toUpperCase() ? maiuscula(saida) : saida;
+      }
+      return palavraBruta[0] === palavraBruta[0]!.toUpperCase() ? maiuscula(saida) : saida;
+    },
+  );
+}
+
+/**
+ * comVocabulario em todos os textos de um objeto (menu do bot, mensagens prontas): devolve uma
+ * cópia com os marcadores resolvidos. Chaves e o que não é texto ficam como estão.
+ */
+export function comVocabularioEmTudo<T>(valor: T, v: Vocabulario): T {
+  if (typeof valor === 'string') return comVocabulario(valor, v) as T;
+  if (Array.isArray(valor)) return valor.map((x) => comVocabularioEmTudo(x, v)) as T;
+  if (valor && typeof valor === 'object') {
+    return Object.fromEntries(
+      Object.entries(valor).map(([k, x]) => [k, comVocabularioEmTudo(x, v)]),
+    ) as T;
+  }
+  return valor;
+}

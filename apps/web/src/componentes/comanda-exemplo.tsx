@@ -5,7 +5,7 @@ import { formatarMoeda } from '@pente-fino/shared';
 const ITENS = [
   { rotulo: 'Corte + Barba', valor: 7000 },
   { rotulo: 'Produto usado', valor: -350 },
-  { rotulo: 'Comissão do barbeiro (45%)', valor: -3150 },
+  { rotulo: 'Comissão (45%)', valor: -3150 },
 ];
 const SOBRA = ITENS.reduce((s, i) => s + i.valor, 0);
 

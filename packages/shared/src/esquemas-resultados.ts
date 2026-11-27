@@ -85,7 +85,7 @@ export const copiarFixasSchema = z.object({
           vencimento: dataIso.nullable(),
         })
         .refine((i) => !i.origemId !== !i.profissionalId, {
-          error: 'Cada item é uma despesa do mês anterior ou o salário de um barbeiro.',
+          error: 'Cada item é uma despesa do mês anterior ou o salário de alguém da equipe.',
         }),
     )
     .min(1, { error: 'Marque pelo menos uma despesa.' })

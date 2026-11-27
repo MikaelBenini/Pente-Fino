@@ -59,6 +59,7 @@ import { useUnidadeTrabalho } from '../unidade-trabalho';
 import { BuscaCliente, clienteParaApi, type ClienteEscolhido } from './busca-cliente';
 import { Bloqueios } from './bloqueios';
 import { ListaEspera } from './lista-espera';
+import { useVocabulario } from '@/lib/vocabulario';
 
 const PX_POR_MIN = 1.4;
 
@@ -736,6 +737,7 @@ function NovoAgendamento({
   onFechar: () => void;
   onAgendado: (a: { id: string; inicio: string }) => void;
 }) {
+  const v = useVocabulario();
   const router = useRouter();
   const servicos = useServicos();
   const precos = usePrecos();
@@ -809,7 +811,8 @@ function NovoAgendamento({
           e.preventDefault();
           setErro(null);
           if (!cliente) return setErro('Escolha o cliente.');
-          if (encaixe && !profissionalId) return setErro('No encaixe, escolha o barbeiro.');
+          if (encaixe && !profissionalId)
+            return setErro(v.t('No encaixe, escolha [[o profissional]].'));
           if (!encaixe && !horario) return setErro('Escolha um horário livre.');
           try {
             const r = await agendar.mutateAsync({
@@ -913,7 +916,7 @@ function NovoAgendamento({
             <div className="flex flex-col gap-3">
               {(livres.data ?? []).every((l) => l.inicios.length === 0) && (
                 <p className="text-tinta-suave">
-                  Nenhum horário livre neste dia. Tente outro dia ou barbeiro.
+                  {v.t('Nenhum horário livre neste dia. Tente outro dia ou [[profissional]].')}
                 </p>
               )}
               {(livres.data ?? [])
@@ -965,7 +968,9 @@ function NovoAgendamento({
               id="agendar-hora-encaixe"
               rotulo="Horário do encaixe"
               type="time"
-              dica="Com o barbeiro escolhido acima. Fora do expediente ou em cima de bloqueio, o sistema avisa antes."
+              dica={v.t(
+                'Com [[o profissional]] escolhido acima. Fora do expediente ou em cima de bloqueio, o sistema avisa antes.',
+              )}
               value={horaEncaixe}
               onChange={(e) => {
                 setHoraEncaixe(e.target.value);

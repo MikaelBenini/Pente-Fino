@@ -391,7 +391,7 @@ export const NOME_ITEM_COPIA_UNIDADE: Readonly<
   },
   bot: { nome: 'Horário do bot', detalhe: 'Quando o bot responde sozinho nesta unidade.' },
   site: {
-    nome: 'Site da barbearia (rascunho)',
+    nome: 'Site (rascunho)',
     detalhe: 'Textos, cores e blocos vão para o rascunho; você confere e publica.',
   },
   visual: {

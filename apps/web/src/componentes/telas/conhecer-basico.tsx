@@ -26,7 +26,7 @@ const O_QUE_FAZ: Partial<Record<IdMenu, { titulo: string; itens: string[] }>> = 
   comandas: {
     titulo: 'Comanda que nasce do agendamento',
     itens: [
-      'Agendou, a comanda já existe: o barbeiro lança os extras e confirma',
+      'Agendou, a comanda já existe: o profissional lança os extras e confirma',
       'A recepção recebe em Pix, dinheiro ou cartão, até dividido',
       'Comanda impressa em PDF com QR code',
     ],
@@ -43,7 +43,7 @@ const O_QUE_FAZ: Partial<Record<IdMenu, { titulo: string; itens: string[] }>> = 
     titulo: 'O dia num relance',
     itens: [
       'Quem atendeu, quanto entrou e o que falta receber',
-      'Cada barbeiro com os horários e o que lançou',
+      'Cada profissional com os horários e o que lançou',
     ],
   },
   resultados: {
@@ -66,7 +66,7 @@ const O_QUE_FAZ: Partial<Record<IdMenu, { titulo: string; itens: string[] }>> = 
     titulo: 'Comissão automática',
     itens: [
       'Calculada item por item, do jeito que você combina',
-      'Extrato do barbeiro no celular dele',
+      'Extrato de comissão no celular de cada profissional',
     ],
   },
 };
@@ -135,7 +135,7 @@ export function ConhecerBasico({ tela }: { tela: IdMenu }) {
               Mudar de plano
             </Link>
           ) : (
-            <p className="text-tinta-suave">Peça ao dono da barbearia para mudar de plano.</p>
+            <p className="text-tinta-suave">Peça ao dono da conta para mudar de plano.</p>
           )}
         </div>
         {dono && !pode && situacao?.experimentaAte && (

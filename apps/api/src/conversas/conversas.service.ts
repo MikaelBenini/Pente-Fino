@@ -386,11 +386,11 @@ export class ConversasService {
     });
     if (!ultima)
       return nao(
-        'Este cliente ainda não escreveu para o WhatsApp da barbearia. Para proteger o número, o bot só manda mensagem para quem já conversou: use o seu WhatsApp.',
+        'Este cliente ainda não escreveu para o WhatsApp da unidade. Para proteger o número, o bot só manda mensagem para quem já conversou: use o seu WhatsApp.',
       );
     const u = { id: ultima.unidadeId, nome: ultima.unidade.nome };
     if (cliente.consentimentoMsg === false && cliente.consentimentoEm !== null)
-      return nao('O cliente respondeu SAIR e não quer receber mensagens da barbearia.', u);
+      return nao('O cliente respondeu SAIR e não quer receber mensagens automáticas.', u);
     const conexao = ultima.unidade.botConexao;
     if (conexao?.status !== 'conectado')
       return nao(`O WhatsApp da unidade ${u.nome} está desconectado.`, u);

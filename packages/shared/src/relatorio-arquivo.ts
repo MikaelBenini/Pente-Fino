@@ -2,6 +2,7 @@
 // formatadas em pt-BR. A API desenha a planilha (CSV) e o PDF a partir daqui, então os dois
 // arquivos e a tela mostram sempre os mesmos números.
 import { CANAIS, NOME_CANAL } from './canais.js';
+import { comVocabulario, vocabulario, type Vocabulario } from './vocabulario.js';
 import { formatarFracao, formatarMoeda, formatarNumero, formatarValor } from './formatacao.js';
 import {
   compararMeses,
@@ -95,8 +96,15 @@ const variacaoRelativa = (atual: number, antes: number): string => {
  */
 export function relatorioEmArquivo(
   r: RelatorioDoMes,
-  d: { barbearia: string; unidade: string | null; parcial: boolean },
+  d: {
+    barbearia: string;
+    unidade: string | null;
+    parcial: boolean;
+    /** Vocabulário do segmento da conta (sem ele, o de barbearia). */
+    vocabulario?: Vocabulario;
+  },
 ): RelatorioEmArquivo {
+  const v = d.vocabulario ?? vocabulario('barbearia');
   const linhas = compararMeses(r.atual, r.anterior);
   const frases = frasesDoMes(linhas, 6);
   const tabelas: TabelaExportada[] = [];
@@ -167,9 +175,9 @@ export function relatorioEmArquivo(
   const barbeiros = r.barbeiros.filter((b) => b.clientes > 0 || b.faturamentoAnterior > 0);
   if (r.verBarbeiros)
     tabelas.push({
-      titulo: 'Barbeiros: quanto custam e quanto rendem',
+      titulo: comVocabulario('[[Profissionais]]: quanto custam e quanto rendem', v),
       colunas: [
-        { titulo: 'Barbeiro', peso: 2 },
+        { titulo: comVocabulario('[[Profissional]]', v), peso: 2 },
         { titulo: 'Faturamento (R$)', numero: true, peso: 1.4 },
         { titulo: 'vs. mês anterior', numero: true },
         { titulo: 'Comissão (R$)', numero: true, peso: 1.2, noPdf: true },
@@ -214,7 +222,7 @@ export function relatorioEmArquivo(
           pontos.fracos.join('; '),
         ];
       }),
-      vazio: 'Nenhum barbeiro atendeu no período.',
+      vazio: comVocabulario('Nenhum [[profissional]] atendeu no período.', v),
     });
 
   // No PDF, o que não cabe na tabela de barbeiros vem numa segunda, em texto corrido.
@@ -231,9 +239,9 @@ export function relatorioEmArquivo(
     .filter((l) => l.slice(1).some((t) => t !== '—'));
   if (r.verBarbeiros && detalhes.length)
     tabelas.push({
-      titulo: 'Barbeiros: serviços, pontos fortes e a melhorar',
+      titulo: comVocabulario('[[Profissionais]]: serviços, pontos fortes e a melhorar', v),
       colunas: [
-        { titulo: 'Barbeiro', peso: 1.4 },
+        { titulo: comVocabulario('[[Profissional]]', v), peso: 1.4 },
         { titulo: 'Mais faz', peso: 2 },
         { titulo: 'Pontos fortes', peso: 2.2 },
         { titulo: 'A melhorar', peso: 2.2 },

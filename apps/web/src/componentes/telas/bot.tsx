@@ -9,6 +9,7 @@ import {
   NOME_ACAO_BOT,
   MENSAGENS_BOT_PADRAO,
   SOBRE_MENSAGEM_BOT,
+  sobreMensagemBot,
   TIPOS_MENSAGEM_BOT,
   validarMenu,
   VARIAVEIS_BOT,
@@ -54,6 +55,7 @@ import { useSearchParams } from 'next/navigation';
 import { createContext, useContext, useEffect, useState, type FormEvent } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { chaveBot, useAcao, useBot, useConexaoBot, useUnidadesDetalhe } from '@/lib/consultas';
+import { useVocabulario } from '@/lib/vocabulario';
 import { Aviso } from '../aviso';
 import { Automacoes } from './automacoes';
 import { MensagensDeAnuncio } from './mensagens-anuncio';
@@ -229,6 +231,7 @@ function EscolhaDoEscopo({
   escopo: string | null;
   onEscopo: (id: string | null) => void;
 }) {
+  const v = useVocabulario();
   const [confirmar, setConfirmar] = useState(false);
   const usarPadrao = useAcao(
     () => api(`bot/unidade/${escopo}/personalizacao`, { metodo: 'DELETE' }),
@@ -246,7 +249,7 @@ function EscolhaDoEscopo({
               value={escopo ?? ''}
               onChange={(ev) => onEscopo(ev.target.value || null)}
               opcoes={[
-                { valor: '', rotulo: 'Padrão da barbearia (todas as unidades)' },
+                { valor: '', rotulo: `Padrão ${v.doEstabelecimento} (todas as unidades)` },
                 ...e.unidades.map((u) => ({ valor: u.id, rotulo: `Só a ${u.nome}` })),
               ]}
             />
@@ -289,7 +292,7 @@ function EscolhaDoEscopo({
       <ModalConfirmacao
         aberto={confirmar}
         titulo="Voltar ao padrão?"
-        descricao={`O menu e as mensagens próprios da ${e.escopo.nome} serão apagados, e ela volta a usar o padrão da barbearia.`}
+        descricao={`O menu e as mensagens próprios da ${e.escopo.nome} serão apagados, e ela volta a usar o padrão ${v.doEstabelecimento}.`}
         textoConfirmar="Voltar ao padrão"
         carregando={usarPadrao.isPending}
         onCancelar={() => setConfirmar(false)}
@@ -864,6 +867,8 @@ function Variaveis() {
 // ─── Mensagens prontas ────────────────────────────────────────────────────
 
 function Mensagens({ e }: { e: EstadoBot }) {
+  const v = useVocabulario();
+  const sobre = sobreMensagemBot(v);
   const [textos, setTextos] = useState<MensagensBot>(e.mensagens);
   const [erro, setErro] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
@@ -889,7 +894,7 @@ function Mensagens({ e }: { e: EstadoBot }) {
       <p className="text-tinta-suave">
         {e.escopo.unidadeId
           ? `Só na ${e.escopo.nome}: a mensagem igual à do padrão continua seguindo o padrão. `
-          : 'Padrão da barbearia: vale nas unidades que não personalizaram. '}
+          : `Padrão ${v.doEstabelecimento}: vale nas unidades que não personalizaram. `}
         Use {'{cliente}'}, {'{barbearia}'}, {'{unidade}'}, {'{horario}'}, {'{endereco}'} e{' '}
         {'{link}'}; na pesquisa, também {'{profissional}'}.
       </p>
@@ -914,8 +919,8 @@ function Mensagens({ e }: { e: EstadoBot }) {
               <CampoTexto
                 key={t}
                 id={`msg-${t}`}
-                rotulo={SOBRE_MENSAGEM_BOT[t].nome}
-                dica={SOBRE_MENSAGEM_BOT[t].quando}
+                rotulo={sobre[t].nome}
+                dica={sobre[t].quando}
                 rows={2}
                 value={textos[t]}
                 onChange={(ev) => setTextos({ ...textos, [t]: ev.target.value })}
@@ -1098,7 +1103,7 @@ function HorarioUnidade({ u }: { u: UnidadeDoBot }) {
             {
               v: false,
               t: 'Seguir o expediente da equipe',
-              d: 'Do primeiro barbeiro que chega ao último que sai, nos dias da unidade.',
+              d: 'Da primeira pessoa da equipe que chega à última que sai, nos dias da unidade.',
             },
             {
               v: true,
@@ -1200,6 +1205,7 @@ const NOTA_ACAO: Partial<Record<string, string>> = {
 };
 
 function Simulador({ e }: { e: EstadoBot }) {
+  const v = useVocabulario();
   const [unidadeId, setUnidadeId] = useState(e.unidades[0]?.id ?? '');
   const [versao, setVersao] = useState<'rascunho' | 'publicado'>(
     e.rascunho ? 'rascunho' : 'publicado',
@@ -1352,7 +1358,7 @@ function Simulador({ e }: { e: EstadoBot }) {
           <div className="flex flex-col gap-2 text-sm" aria-live="polite">
             <p className="text-tinta-suave">
               Menu usado: {diagnostico.versao === 'rascunho' ? 'rascunho' : 'publicado'}{' '}
-              {diagnostico.deQuem === 'unidade' ? 'da unidade' : 'do padrão da barbearia'}
+              {diagnostico.deQuem === 'unidade' ? 'da unidade' : `do padrão ${v.doEstabelecimento}`}
               {diagnostico.opcoes.length
                 ? `, com ${diagnostico.opcoes.length} ${diagnostico.opcoes.length === 1 ? 'opção' : 'opções'}: ${diagnostico.opcoes.join(', ')}.`
                 : ', sem opções.'}
@@ -1464,7 +1470,7 @@ const NOME_STATUS: Record<ConexaoBot['status'], string> = {
 export function PassosParaConectar() {
   return (
     <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm">
-      <li>No celular da barbearia, abra o WhatsApp do número da unidade.</li>
+      <li>No celular da unidade, abra o WhatsApp do número dela.</li>
       <li>
         Toque em <strong>⋮</strong> (Android) ou em <strong>Configurações</strong> (iPhone) e depois
         em <strong>Aparelhos conectados</strong>.
@@ -1481,8 +1487,8 @@ function Conexao({ e }: { e: EstadoBot }) {
     <div className="flex max-w-3xl flex-col gap-4">
       <p className="text-tinta-suave">
         Cada unidade usa um número de WhatsApp próprio, conectado por QR Code como o WhatsApp Web.
-        Sem custo por mensagem e sem aprovação da Meta. Use um número só da barbearia: o bot
-        responde todas as conversas dele.
+        Sem custo por mensagem e sem aprovação da Meta. Use um número só da unidade: o bot responde
+        todas as conversas dele.
       </p>
       <ul className="animar-escalonado flex flex-col gap-3">
         {e.unidades.map((u) => (

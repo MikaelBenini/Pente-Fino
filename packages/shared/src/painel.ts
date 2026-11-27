@@ -92,7 +92,7 @@ export function pendenciasDoDia(d: DadosPainelDia): PendenciaDoDia[] {
       chave: 'confirmar',
       tom: 'aviso',
       rota: '/comandas',
-      texto: `${n(d.totais.pendentes, 'comanda esperando', 'comandas esperando')} o barbeiro confirmar`,
+      texto: `${n(d.totais.pendentes, 'comanda esperando', 'comandas esperando')} a confirmação de quem atendeu`,
     });
   const prontas = d.totais.aguardandoFechamento - d.totais.pendentes;
   if (prontas > 0)

@@ -10,6 +10,7 @@ import { useTemRecurso } from '@/lib/plano';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { Estado } from '../pagina';
+import { useVocabulario } from '@/lib/vocabulario';
 
 const chave = (unidadeId: string) => ['unidades', unidadeId, 'regras-agendamento'] as const;
 
@@ -63,6 +64,7 @@ export function RegrasDeAgendamento() {
 }
 
 function Formulario({ unidadeId, inicial }: { unidadeId: string; inicial: RegrasAgendamento }) {
+  const v = useVocabulario();
   const [f, setF] = useState(inicial);
   // Agenda e Básico sem as Automações: o bot não responde, então avisa na hora.
   const temBot = useTemRecurso('bot');
@@ -145,7 +147,9 @@ function Formulario({ unidadeId, inicial }: { unidadeId: string; inicial: Regras
         <CampoQuantidade
           id="regra-tolerancia"
           rotulo="Tolerância de atraso (minutos)"
-          dica="Avisada na confirmação e no lembrete; depois, o barbeiro confirma se o cliente não veio"
+          dica={v.t(
+            'Avisada na confirmação e no lembrete; depois, [[o profissional]] confirma se o cliente não veio',
+          )}
           min={0}
           max={60}
           passo={5}
@@ -232,7 +236,7 @@ function Formulario({ unidadeId, inicial }: { unidadeId: string; inicial: Regras
           }}
         />
         <p className="text-sm text-tinta-suave sm:col-span-2">
-          Só para quem aceitou receber avisos e já conversou com o WhatsApp da barbearia.
+          Só para quem aceitou receber avisos e já conversou com o WhatsApp da unidade.
         </p>
       </fieldset>
 

@@ -204,7 +204,7 @@ describe('recursos por plano', () => {
         dia: hoje,
       });
     expect(r.status).toBe(409);
-    expect(r.body.erro.mensagem).toBe('Esta barbearia não usa lista de espera. Tente outro dia.');
+    expect(r.body.erro.mensagem).toBe('Esta unidade não usa lista de espera. Tente outro dia.');
   });
 
   it('Pro: comissões e clube liberados; painel da rede e lucro real, não', async () => {

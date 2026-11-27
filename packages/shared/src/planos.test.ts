@@ -138,7 +138,7 @@ describe('troca de plano', () => {
       'O plano Básico vai até 3 profissionais ativos; a conta tem 4. Registre a saída de quem não atende mais em Equipe.',
     ]);
     expect(p.perdas).toContain(
-      'Clube da barbearia: assinatura, combos e convênios (12 assinantes continuam cadastrados, sem novas adesões nem baixas)',
+      'Clube de assinatura: planos, combos e convênios (12 assinantes continuam cadastrados, sem novas adesões nem baixas)',
     );
     expect(p.perdas).toHaveLength(8);
     expect(p.perdas.join(' ')).not.toContain('Comissão automática');

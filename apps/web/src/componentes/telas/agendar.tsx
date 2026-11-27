@@ -108,7 +108,7 @@ function Agendar({ slugDaRota }: { slugDaRota?: string }) {
         <EstadoVazio
           icone={SearchX}
           titulo="Página de agendamento não encontrada"
-          texto="Confira o link com a barbearia. Ele pode ter sido trocado ou desligado."
+          texto="Confira o link com quem te enviou. Ele pode ter sido trocado ou desligado."
         />
       </Moldura>
     );
@@ -242,7 +242,7 @@ export function Moldura({
           )}
           {visual?.site && (
             <a href={visual.site} className="self-start font-semibold underline underline-offset-4">
-              Ver o site da barbearia
+              Ver o site
             </a>
           )}
         </header>
@@ -275,7 +275,7 @@ function SemAgendamentoOnline({ u }: { u: UnidadePublica }) {
       <h2 id="sem-agendamento" className="text-lg font-semibold">
         Agendamento online indisponível
       </h2>
-      <p className="text-tinta-suave">Fale com a barbearia para marcar o seu horário:</p>
+      <p className="text-tinta-suave">Fale com a gente para marcar o seu horário:</p>
       <ul className="flex flex-col gap-1">
         {whatsapp && (
           <li>
@@ -300,7 +300,7 @@ function SemAgendamentoOnline({ u }: { u: UnidadePublica }) {
         )}
       </ul>
       {!whatsapp && !u.telefone && !mapa && (
-        <p className="text-tinta-suave">A barbearia ainda não cadastrou um contato.</p>
+        <p className="text-tinta-suave">Ainda não há um contato cadastrado.</p>
       )}
     </section>
   );
@@ -434,8 +434,8 @@ function Formulario({
             <div className="flex flex-col gap-2 rounded-md border border-borda bg-fundo p-4">
               <p className="font-semibold">Falta um passo para os lembretes</p>
               <p className="text-sm text-tinta-suave">
-                O WhatsApp só deixa a barbearia te escrever depois que você manda a primeira
-                mensagem. Toque no botão e envie o texto que já vem pronto.
+                O WhatsApp só deixa a gente te escrever depois que você manda a primeira mensagem.
+                Toque no botão e envie o texto que já vem pronto.
               </p>
               <a
                 href={feito.linkLembretes}
@@ -493,7 +493,7 @@ function Formulario({
           </a>
           <p className="text-sm text-tinta-suave">
             Guarde este link: é por ele que você muda o horário sem precisar ligar
-            {u.telefone ? ` (ou fale com a barbearia: ${formatarTelefone(u.telefone)})` : ''}.
+            {u.telefone ? ` (ou fale com a gente: ${formatarTelefone(u.telefone)})` : ''}.
           </p>
         </section>
       </Moldura>
@@ -665,7 +665,7 @@ function Formulario({
                   <div className="flex flex-col gap-2">
                     <p className="flex items-center gap-2 text-tinta-suave">
                       <CalendarCheck aria-hidden className="size-5" /> Sem horário livre neste dia.
-                      Tente outro dia{profissional ? ' ou outro barbeiro' : ''}
+                      Tente outro dia{profissional ? ' ou outra pessoa da equipe' : ''}
                       {u.listaEspera ? ', ou peça para ser avisado.' : '.'}
                     </p>
                     {u.listaEspera && (
@@ -739,7 +739,7 @@ function Formulario({
                     id="agendar-telefone"
                     rotulo="WhatsApp"
                     obrigatorio
-                    dica="Com DDD. A barbearia usa para confirmar o horário."
+                    dica="Com DDD. Usamos para confirmar o horário."
                     valor={telefone}
                     onValor={setTelefone}
                   />
@@ -793,7 +793,7 @@ function EscolherUnidade({
 }) {
   const [aberto, setAberto] = useState(false);
   return (
-    <section aria-label="Outras unidades da barbearia" className="-mt-3 flex flex-col gap-2">
+    <section aria-label="Outras unidades" className="-mt-3 flex flex-col gap-2">
       <button
         type="button"
         aria-expanded={aberto}

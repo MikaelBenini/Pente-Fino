@@ -93,7 +93,7 @@ export function FormularioEntrar() {
     <form onSubmit={enviar} method="post" noValidate className="flex flex-col gap-5">
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl font-semibold">Entrar</h1>
-        <p className="text-tinta-suave">Use o e-mail cadastrado na barbearia.</p>
+        <p className="text-tinta-suave">Use o e-mail com que você foi cadastrado.</p>
       </div>
       {params.get('motivo') === 'sessao' && (
         <Aviso tom="info">Sua sessão terminou. Entre de novo para continuar.</Aviso>
@@ -135,7 +135,7 @@ export function FormularioEntrar() {
           Esqueci minha senha
         </Link>
         <Link href="/cadastro" className={link}>
-          Criar conta para minha barbearia
+          Criar conta para o meu negócio
         </Link>
       </div>
     </form>

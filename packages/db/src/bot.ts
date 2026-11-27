@@ -11,8 +11,9 @@ import {
   grupoDaPalavraChave,
   lerNumeros,
   lerRegrasAgendamento,
-  MENSAGENS_BOT_PADRAO,
   MENU_BOT_PADRAO,
+  mensagensBotPadrao,
+  menuBotPadrao,
   menuBotSchema,
   normalizar,
   responder,
@@ -74,6 +75,7 @@ import {
   type PassoDaAgenda,
 } from './agendar-bot.js';
 import { gravarAviso } from './central-avisos.js';
+import { vocabularioDaConta } from './vocabulario.js';
 import { atenderEquipe, avisarEquipeSobreHorario } from './equipe-whatsapp.js';
 import { notificacaoDoHorario } from './push.js';
 import { responderOferta } from './espera.js';
@@ -131,7 +133,11 @@ export async function menuPublicado(tx: Tx, unidadeId: string | null = null) {
   const atual = await tx.botMenu.findFirst({ where: { status: 'publicado', unidadeId: null } });
   if (atual) return atual;
   return tx.botMenu.create({
-    data: { status: 'publicado', menu: json(MENU_BOT_PADRAO), publicadoEm: new Date() },
+    data: {
+      status: 'publicado',
+      menu: json(menuBotPadrao(await vocabularioDaConta(tx))),
+      publicadoEm: new Date(),
+    },
   });
 }
 
@@ -155,7 +161,7 @@ export async function mensagensDoBot(
         where: { unidadeId: null, ativo: true, tipo: { in: [...TIPOS_MENSAGEM_BOT] } },
       })
     : [];
-  const m: MensagensBot = { ...MENSAGENS_BOT_PADRAO };
+  const m: MensagensBot = mensagensBotPadrao(await vocabularioDaConta(tx));
   // A da unidade vem por último: vence a da barbearia.
   for (const s of [...daConta, ...salvas]) m[s.tipo as keyof MensagensBot] = s.texto;
   return m;
@@ -1030,7 +1036,7 @@ export async function prepararEnvio(
       },
       select: { id: true },
     });
-    if (!falou) return descartar('O número nunca falou com a barbearia.');
+    if (!falou) return descartar('O número nunca falou com a unidade.');
     // Número conectado ao sistema (outra unidade, outra barbearia): nada automático vai para ele
     // (pedido do dono em 18/11/2026). A resposta escrita pela equipe no painel continua saindo.
     if (m.autorId === null) {

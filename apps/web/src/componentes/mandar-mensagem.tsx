@@ -54,7 +54,7 @@ export function MandarMensagem({
       {enviada ? (
         <div className="flex flex-col gap-4">
           <Aviso tom="sucesso">
-            Mensagem na fila do WhatsApp da barbearia. A resposta do cliente aparece em Conversas.
+            Mensagem na fila do WhatsApp da unidade. A resposta do cliente aparece em Conversas.
           </Aviso>
           <div className="flex flex-wrap gap-2">
             <Link
@@ -114,7 +114,7 @@ export function MandarMensagem({
               <Bot aria-hidden className="size-5" />
               {envio.data?.unidade
                 ? `Enviar pelo WhatsApp da ${envio.data.unidade}`
-                : 'Enviar pelo WhatsApp da barbearia'}
+                : 'Enviar pelo WhatsApp da unidade'}
             </Botao>
           </div>
         </div>

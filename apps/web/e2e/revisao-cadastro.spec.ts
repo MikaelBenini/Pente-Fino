@@ -119,7 +119,7 @@ test('Configurações → Unidades: copiar de outra unidade, escolhendo o que ve
     'Horário de funcionamento',
     'Folgas e feriados',
     'Horário do bot',
-    'Site da barbearia (rascunho)',
+    'Site (rascunho)',
     'Visual da página de agendamento',
   ])
     await dialogo.getByLabel(nome).uncheck();

@@ -32,7 +32,7 @@ import { Filas } from '../filas/filas.module.js';
 import { Consulta, Corpo, PipeZod } from '../comum/validacao.js';
 
 const tokenParam = new PipeZod(z.string().regex(/^[A-Za-z0-9_-]{20,40}$/, 'Link inválido.'));
-const NAO_ACHOU = 'Este link não abre mais. Fale com a barbearia ou marque de novo.';
+const NAO_ACHOU = 'Este link não abre mais. Fale com a equipe ou marque de novo.';
 
 /**
  * Link do cliente para o próprio horário (/horario?t=token), sem login: ver, remarcar com o
@@ -142,7 +142,7 @@ export class HorarioPublicoController {
       null;
     const comandaId = await this.banco.naConta(l.contaId, async (tx) => {
       if ((await estadoAssinatura(tx)).somenteLeitura)
-        throw Erros.conflito('Por aqui não dá para mudar agora. Fale com a barbearia.');
+        throw Erros.conflito('Por aqui não dá para mudar agora. Fale com a equipe.');
       const { regras, decisao } = await this.carregar(tx, l.agendamentoId);
       this.exigirQuePode(decisao);
       this.exigirJanela(dataLocal(inicio), regras.janelaDias);
@@ -171,7 +171,7 @@ export class HorarioPublicoController {
       const { ag, decisao } = await this.carregar(tx, l.agendamentoId);
       this.exigirQuePode(decisao);
       if (!(await temNaConta(tx, 'listaEspera')))
-        throw Erros.conflito('Esta barbearia não usa lista de espera.');
+        throw Erros.conflito('Esta unidade não usa lista de espera.');
       const cliente = ag.clienteId
         ? await tx.cliente.findUnique({ where: { id: ag.clienteId } })
         : null;

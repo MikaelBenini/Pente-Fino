@@ -48,7 +48,7 @@ describe('central de avisos', () => {
       tipo: 'comandas_pendentes',
       titulo: '2 comandas esperando confirmação',
       texto:
-        'João (Rafael, até 14:30) e mais 1. 3 comandas pendentes para resolver com o barbeiro.',
+        'João (Rafael, até 14:30) e mais 1. 3 comandas pendentes para resolver com quem atendeu.',
       link: '/comandas',
       chave: 'pendentes:u:c1,c2',
     });

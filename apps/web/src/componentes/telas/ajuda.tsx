@@ -6,7 +6,7 @@ import {
   artigosPara,
   buscarAjuda,
   CATEGORIAS_AJUDA,
-  PERGUNTAS_AJUDA,
+  perguntasAjuda,
   type ArtigoAjuda,
 } from '@pente-fino/shared';
 import { Campo } from '@pente-fino/ui';
@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { EMAIL_CONTATO } from '@/lib/site';
+import { useVocabulario } from '@/lib/vocabulario';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina } from '../pagina';
 import { ChatAjuda } from './chat-ajuda';
@@ -27,15 +28,16 @@ export function TelaAjuda() {
   const params = useSearchParams();
   const router = useRouter();
   const [busca, setBusca] = useState('');
-  const artigos = artigosPara(papeis);
+  const v = useVocabulario();
+  const artigos = artigosPara(papeis, v);
   const aberto = artigos.find((a) => a.id === params.get('artigo'));
   const abrir = (id: string | null) =>
     router.push(id ? `/ajuda?artigo=${id}` : '/ajuda', { scroll: true });
 
   if (aberto) return <Artigo artigo={aberto} onVoltar={() => abrir(null)} />;
 
-  const achados = busca.trim() ? buscarAjuda(busca, papeis) : null;
-  const perguntas = PERGUNTAS_AJUDA.filter(
+  const achados = busca.trim() ? buscarAjuda(busca, papeis, v) : null;
+  const perguntas = perguntasAjuda(v).filter(
     (p) => !p.artigo || artigos.some((a) => a.id === p.artigo),
   );
   return (

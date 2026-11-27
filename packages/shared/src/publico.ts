@@ -5,9 +5,10 @@ import { origemCadastroSchema } from './origem-cadastro.js';
 import { emailSchema, senhaSchema } from './auth.js';
 import { CICLOS, PLANOS } from './planos.js';
 import type { PreviaDoLink, VisualAgendamentoPublico } from './site-barbearia.js';
+import type { Segmento } from './vocabulario.js';
 
 export const cadastroContaSchema = z.object({
-  barbearia: z.string().trim().min(2, { error: 'Informe o nome da barbearia.' }).max(120),
+  barbearia: z.string().trim().min(2, { error: 'Informe o nome do seu negócio.' }).max(120),
   nome: z.string().trim().min(2, { error: 'Informe seu nome.' }).max(120),
   email: emailSchema,
   senha: senhaSchema,
@@ -75,6 +76,8 @@ export type AgendamentoPublicoEntrada = z.infer<typeof agendamentoPublicoSchema>
 export interface UnidadePublica {
   nome: string;
   barbearia: string;
+  /** Segmento da conta: o vocabulário da página (barbeiro, esteticista...). */
+  segmento: Segmento;
   endereco: string | null;
   /** Link do mapa (o escolhido pela barbearia ou a busca com cidade e UF). */
   mapa: string | null;
@@ -167,7 +170,7 @@ export function avisoDaTroca(
     );
   for (const p of t.precoMudou)
     partes.push(`${p.nome} aqui custa ${formatar(p.para)} (era ${formatar(p.de)})`);
-  if (tinhaBarbeiro) partes.push('escolha o barbeiro de novo, a equipe é outra');
+  if (tinhaBarbeiro) partes.push('escolha de novo quem vai atender, a equipe é outra');
   if (!partes.length) return null;
   return `Agora você está agendando na unidade ${unidade}: ${partes.join('; ')}.`;
 }

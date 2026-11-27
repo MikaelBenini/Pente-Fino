@@ -70,6 +70,7 @@ import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado } from '../pagina';
 import { CampoFoto } from '../site-barbearia/campo-foto';
 import { SiteDaBarbearia } from '../site-barbearia/site';
+import { useVocabulario } from '@/lib/vocabulario';
 
 const chave = (id: string) => ['unidades', id, 'site'] as const;
 const mensagemDe = (e: unknown) =>
@@ -80,9 +81,9 @@ const EXPLICACAO: Partial<Record<TipoBloco, string>> = {
   destaques:
     'Mostra a nota dos clientes (com 5 avaliações ou mais), o endereço e o horário, puxados do sistema.',
   servicos: 'Mostra os três primeiros serviços com preço desta unidade.',
-  equipe: 'Mostra os barbeiros ativos da unidade, com a especialidade de cada um.',
+  equipe: 'Mostra a equipe ativa da unidade, com a especialidade de cada um.',
   tabela: 'Lista os serviços com preço desta unidade, por categoria. O preço vem de Serviços.',
-  barbeiros: 'Cada barbeiro ativo da unidade, com a especialidade e a apresentação abaixo.',
+  barbeiros: 'Cada profissional ativo da unidade, com a especialidade e a apresentação abaixo.',
   contato:
     'Endereço e telefone vêm de Configurações, em Unidades; o horário, do expediente da equipe; o Instagram e as redes, de Cabeçalho e rodapé.',
 };
@@ -126,7 +127,7 @@ export function TelaMinhaPagina() {
     <div className="flex flex-col gap-6">
       <CabecalhoPagina
         titulo="Minha página"
-        pergunta="O site da barbearia: monte com blocos, veja como fica e publique."
+        pergunta="O seu site: monte com blocos, veja como fica e publique."
       />
       {permitidas.length > 1 && (
         <Selecao
@@ -548,7 +549,7 @@ function Editor({
         <ModalConfirmacao
           aberto={confirmarTirar}
           titulo="Tirar o site do ar?"
-          descricao="O link da barbearia volta a abrir só a página de agendamento. O que você montou fica guardado para publicar de novo."
+          descricao="O seu link volta a abrir só a página de agendamento. O que você montou fica guardado para publicar de novo."
           textoConfirmar="Tirar do ar"
           tom="perigo"
           carregando={publicando}
@@ -1012,7 +1013,7 @@ function ItemBloco({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-tinta-suave">Nenhum barbeiro ativo nesta unidade.</p>
+              <p className="text-sm text-tinta-suave">Ninguém da equipe ativo nesta unidade.</p>
             ))}
           <Botao variante="fantasma" className="self-start" onClick={onRemover}>
             Tirar bloco da página
@@ -1126,7 +1127,7 @@ function Tema({ site, onMudar }: { site: SiteBarbearia; onMudar: (s: SiteBarbear
         rotulo="Logotipo"
         unidadeId={unidadeId}
         valor={site.logo}
-        dica="Aparece no topo, ao lado do nome. Sem logotipo, vai a inicial da barbearia."
+        dica="Aparece no topo, ao lado do nome. Sem logotipo, vai a inicial do nome."
         onMudar={(f) => {
           if (f) registrar(f);
           onMudar({ ...site, logo: f?.id });
@@ -1435,8 +1436,8 @@ function DominioProprio({
       {!situacao.dominio ? (
         <>
           <p className="text-sm text-tinta-suave">
-            Tem um endereço só da barbearia, como barbeariadocarlos.com.br? Ligue aqui e o site abre
-            nele, com o cadeado de site seguro. É opcional.
+            Tem um endereço próprio, como seunegocio.com.br? Ligue aqui e o site abre nele, com o
+            cadeado de site seguro. É opcional.
           </p>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-0 flex-1">
@@ -1634,6 +1635,7 @@ function CabecalhoERodape({
   site: SiteBarbearia;
   onMudar: (s: SiteBarbearia) => void;
 }) {
+  const v = useVocabulario();
   const c = cabecalhoDoSite(site);
   const r = rodapeDoSite(site);
   const mudarC = (m: Partial<CabecalhoSite>) => onMudar({ ...site, cabecalho: { ...c, ...m } });
@@ -1772,7 +1774,7 @@ function CabecalhoERodape({
             Instagram?" — ficava escondido na aba Tema). */}
         <Campo
           id="rod-instagram"
-          rotulo="Instagram da barbearia"
+          rotulo={`Instagram ${v.doEstabelecimento}`}
           dica="Só o usuário, com ou sem @. Aparece no Contato e no rodapé."
           placeholder="@suabarbearia"
           value={site.instagram}
@@ -1844,12 +1846,14 @@ function PreviaDoLinkEditor({
   slug: string | null;
   onMudar: (m: Partial<VisualAgendamento>) => void;
 }) {
-  const nomeConta = useConta().data?.nome ?? 'Sua barbearia';
+  const vocab = useVocabulario();
+  const nomeConta = useConta().data?.nome ?? 'Seu negócio';
   const p = v.previa ?? { titulo: '', descricao: '', fundo: 'cor' as const };
   const mudarP = (m: Partial<typeof p>) => onMudar({ previa: { ...p, ...m } });
   const titulo = p.titulo.trim() || nomeConta;
   const descricao =
-    p.descricao.trim() || 'Escolha o serviço, o barbeiro e o horário. Agende online.';
+    p.descricao.trim() ||
+    vocab.t('Escolha o serviço, [[o profissional]] e o horário. Agende online.');
   const cor = CORES_SITE[v.cor].hex;
   const fundo = p.fundo === 'capa' && v.capa ? urlDaFoto(v.capa, 640) : null;
   return (
@@ -1885,7 +1889,7 @@ function PreviaDoLinkEditor({
             value={p.fundo === 'capa' && v.capa ? 'capa' : 'cor'}
             onChange={(e) => mudarP({ fundo: e.target.value as 'cor' | 'capa' })}
             opcoes={[
-              { valor: 'cor', rotulo: 'Escuro, com a cor da barbearia' },
+              { valor: 'cor', rotulo: 'Escuro, com a sua cor' },
               ...(v.capa ? [{ valor: 'capa', rotulo: 'A foto de capa' }] : []),
             ]}
           />
@@ -1993,12 +1997,12 @@ function FormVisual({
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-tinta-suave">
-        A página onde o cliente marca o horário pode ter a cara da barbearia: o estilo, a cor, o
+        A página onde o cliente marca o horário pode ter a cara do seu negócio: o estilo, a cor, o
         logotipo, a foto de capa e um recado. Vale assim que salvar; não depende de publicar o site.
       </p>
       <Marcar
         id="visual-ativo"
-        rotulo="Usar o visual da barbearia na página de agendamento"
+        rotulo="Usar o seu visual na página de agendamento"
         marcado={v.ativo}
         onMudar={(ativo) => mudar({ ativo })}
       />
@@ -2123,7 +2127,7 @@ function FormVisual({
           />
           <Marcar
             id="visual-link-site"
-            rotulo="Mostrar o link “Ver o site da barbearia” (quando o site estiver publicado)"
+            rotulo="Mostrar o link “Ver o site” (quando o site estiver publicado)"
             marcado={v.linkSite}
             onMudar={(linkSite) => mudar({ linkSite })}
           />

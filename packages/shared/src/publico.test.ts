@@ -167,7 +167,7 @@ describe('trocar de unidade no link de agendamento', () => {
       precoMudou: [{ nome: 'Corte', de: 5000, para: 6000 }],
     });
     expect(avisoDaTroca(t, 'Jardins', true, real)).toBe(
-      'Agora você está agendando na unidade Jardins: Pigmentação não está disponível nesta unidade pelo link; Corte aqui custa R$ 60,00 (era R$ 50,00); escolha o barbeiro de novo, a equipe é outra.',
+      'Agora você está agendando na unidade Jardins: Pigmentação não está disponível nesta unidade pelo link; Corte aqui custa R$ 60,00 (era R$ 50,00); escolha de novo quem vai atender, a equipe é outra.',
     );
   });
 

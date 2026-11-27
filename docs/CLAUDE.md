@@ -33,7 +33,7 @@ Mapa da documentação em `docs/README.md`: produto, arquitetura (diagrama), reg
 - `pnpm whatsapp:qr` — conecta o WhatsApp de teste à Evolution API local
 - `pnpm admin:criar --email x --nome "Y"` — cria o primeiro admin (`/admin`, segundo fator no 1º acesso); `--redefinir` para senha e autenticador novos. Os próximos acessos (vendedor, admin) se dão em `/admin` → Equipe. Banco que já existia: rode `pnpm infra:plataforma` uma vez (cria o usuário de banco da administração)
 - `pnpm test` / `pnpm lint` / `pnpm typecheck`
-- `pnpm regras:conferir` — confere no código as regras desta página que dá para checar automaticamente (WhatsApp do cliente, telefone com variantes, RLS em tabela nova, IA, centavos); `pnpm docs:gerar` / `pnpm docs:conferir` — documentação gerada do código
+- `pnpm regras:conferir` — confere no código as regras desta página que dá para checar automaticamente (WhatsApp do cliente, telefone com variantes, RLS em tabela nova, IA, centavos, "barbeiro/barbearia" fixo em texto visível via `scripts/textos-fixos.mjs`); `pnpm docs:gerar` / `pnpm docs:conferir` — documentação gerada do código
 
 ## Regras de negócio que não podem quebrar
 

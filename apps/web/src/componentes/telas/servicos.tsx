@@ -47,6 +47,7 @@ import { aplicarErroDaApi } from '@/lib/formularios';
 import { Aviso } from '../aviso';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
+import { useVocabulario } from '@/lib/vocabulario';
 
 export function TelaServicos() {
   const { papeis } = useApp();
@@ -289,7 +290,7 @@ function Catalogo({ podeEditar }: { podeEditar: boolean }) {
           {servicos.data!.length > 0 && (
             <p className="text-sm text-tinta-suave">
               {verMargem && lucroReal
-                ? 'Sobra por atendimento = preço − comissão média dos barbeiros − custo de produto, com os preços e as regras de comissão de hoje. '
+                ? 'Sobra por atendimento = preço − comissão média da equipe − custo de produto, com os preços e as regras de comissão de hoje. '
                 : ''}
               “Conta como” é quanto cada serviço soma nos atendimentos de Resultados do mês e de
               Clientes: Corte conta 1, Corte + Barba conta 2 e extra não conta. Quantas vezes cada
@@ -601,6 +602,7 @@ export function CopiarCatalogo({ unidadeId }: { unidadeId: string }) {
 
 /** Só o dono: o barbeiro também digita o valor dos serviços com preço livre? */
 function LiberacaoPrecoLivre() {
+  const v = useVocabulario();
   const config = useConfigPrecoLivre();
   const salvar = useAcao(
     (barbeiroDigita: boolean) =>
@@ -611,7 +613,9 @@ function LiberacaoPrecoLivre() {
   return (
     <Marcador
       id="preco-livre-barbeiro"
-      rotulo="O barbeiro também digita o valor dos serviços com preço livre (sem marcar, só o balcão)"
+      rotulo={v.t(
+        '[[O profissional]] também digita o valor dos serviços com preço livre (sem marcar, só o balcão)',
+      )}
       checked={config.data.barbeiroDigita}
       disabled={salvar.isPending}
       onChange={(e) => salvar.mutate(e.target.checked)}

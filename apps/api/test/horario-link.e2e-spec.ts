@@ -262,7 +262,7 @@ describe('lembretes pedidos pelo site', () => {
 });
 
 describe('faltas no site', () => {
-  it('3 faltas recentes: o site manda falar com a barbearia', async () => {
+  it('3 faltas recentes: o site manda falar com a equipe', async () => {
     const { token } = await agendar(dia(9), '11977773001');
     // Três faltas nos últimos dias (direto no banco: o passado não se marca pela tela).
     await naConta(prisma, a.contaId, async (tx) => {
@@ -297,7 +297,7 @@ describe('faltas no site', () => {
         inicio: livres[0],
       })
       .expect(409);
-    expect(r.body.erro.mensagem).toContain('fale com a barbearia');
+    expect(r.body.erro.mensagem).toContain('fale com a equipe');
   });
 });
 

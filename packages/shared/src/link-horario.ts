@@ -41,7 +41,7 @@ export function decidirLink(d: {
     return {
       situacao,
       podeMudar: false,
-      motivo: `Pelo link dá para mudar até ${prazo} antes. Agora, fale com a barbearia.`,
+      motivo: `Pelo link dá para mudar até ${prazo} antes. Agora, fale direto com a equipe.`,
     };
   }
   return { situacao, podeMudar: true, motivo: null };

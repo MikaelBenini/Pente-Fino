@@ -39,7 +39,7 @@ export function AssinarClube() {
         <p className="text-tinta-suave">
           {clube.error instanceof ErroApi
             ? clube.error.message
-            : 'Confira o link com a barbearia e tente de novo.'}
+            : 'Confira o link com quem te enviou e tente de novo.'}
         </p>
       </main>
     );
@@ -63,7 +63,7 @@ export function AssinarClube() {
       </div>
 
       {c.planos.length === 0 ? (
-        <Aviso tom="info">A barbearia ainda não tem planos abertos para assinar.</Aviso>
+        <Aviso tom="info">Ainda não há planos abertos para assinar.</Aviso>
       ) : (
         <fieldset className="flex flex-col gap-3">
           <legend className="mb-2 font-semibold">Escolha o plano</legend>

@@ -65,7 +65,7 @@ export function TelaConfiguracoes() {
   });
   return (
     <div className="flex flex-col gap-8">
-      <CabecalhoPagina titulo="Configurações" pergunta="Como a barbearia funciona?" />
+      <CabecalhoPagina titulo="Configurações" pergunta={`Como ${v.oEstabelecimento} funciona?`} />
       <Abas
         rotulo="Configurações"
         atual={aba}
@@ -519,7 +519,7 @@ function FormularioUnidade({
         <Campo
           id="unidade-link-mapa"
           rotulo="Link do Google Maps (opcional)"
-          dica="No Google Maps, abra a barbearia, toque em Compartilhar e cole aqui. Vale no lugar da busca pelo endereço."
+          dica="No Google Maps, abra o seu negócio, toque em Compartilhar e cole aqui. Vale no lugar da busca pelo endereço."
           inputMode="url"
           erro={formState.errors.linkMapa?.message}
           {...register('linkMapa')}
