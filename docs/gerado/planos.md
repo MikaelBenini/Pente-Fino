@@ -11,7 +11,7 @@ Fonte: `packages/shared/src/planos.ts` (a API confere com `temRecurso` e `verifi
 | Pro | R$ 149,90 | R$ 124,90 | 1 | 10 |
 | Premium | R$ 249,90 | R$ 207,90 | ilimitado | ilimitado |
 
-Unidade extra (Premium): R$ 99,90 por mês (R$ 82,90 no anual). Automações à parte nos planos Agenda e Básico: R$ 10,00 por mês (R$ 8,25 no anual), destravam bot, listaEspera, avaliacoes, automacoes. Teste grátis: 14 dias.
+Unidade extra (Premium): R$ 99,90 por mês (R$ 82,90 no anual). Automações à parte nos planos Agenda e Básico: R$ 10,00 por mês (R$ 8,25 no anual), destravam bot, listaEspera, avaliacoes, automacoes; no Agenda, só para quem já tinha (desde 27/11/2026 quem quer só o bot assina a Licença Atendimento, `podeContratarAutomacoes`). Teste grátis: 14 dias.
 
 ## Preço por licença (ADR 0015)
 

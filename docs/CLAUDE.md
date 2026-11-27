@@ -66,7 +66,7 @@ dono, gestor, recepcao, profissional (até 27/11/2026, `barbeiro`; a API ainda a
 ## Licenças e planos (limites aplicados pela API)
 
 - **Licença** (ADR 0015, `packages/shared/src/licencas.ts`): o produto contratado. `conta.licenca` (barbearia, beleza, estetica, tatuagem, fitness, atendimento) define preço, planos e recursos; `conta.segmento` define o vocabulário e precisa combinar com a licença (`segmentoNaLicenca`). Só a administração troca (`PUT /admin/contas/:id/licenca`). Preço sempre com a licença: `precoPorMes(..., licenca)`, `valorDaCobranca(..., licenca)`, `limitesDaConta(plano, licenca, unidades)`. Tabela por licença em `docs/gerado/planos.md`.
-- Licença Atendimento: só o plano Agenda, Automações incluídas, R$ 49,90 por número de WhatsApp (3 profissionais por número). Fitness fora da venda até a Fase 1c.
+- Licença Atendimento: só o plano Agenda, Automações incluídas, R$ 49,90 por número de WhatsApp (3 profissionais por número); o menu não mostra comanda, caixa, resultados, financeiro, comissões, desempenho, produtos, clube nem site (`menuDaLicenca`). Fitness fora da venda até a Fase 1c.
 
 Planos da Licença Barbearia (e Beleza):
 
@@ -75,7 +75,7 @@ Planos da Licença Barbearia (e Beleza):
 - Básico R$ 79,90/mês (anual R$ 66,90/mês): 1 unidade, até 3 profissionais
 - Pro R$ 149,90/mês (anual R$ 124,90/mês): 1 unidade, até 10 profissionais
 - Premium R$ 249,90/mês + R$ 99,90 por unidade extra (anual R$ 207,90 + R$ 82,90): profissionais ilimitados
-- **Automações** (bot que marca pela conversa, retorno, aniversário, pesquisa, lista de espera): R$ 10,00/mês à parte no Agenda e no Básico (anual R$ 8,25); já vêm no Pro e no Premium (`PRECO_AUTOMACOES`, `temRecurso` em `packages/shared/src/planos.ts`)
+- **Automações** (bot que marca pela conversa, retorno, aniversário, pesquisa, lista de espera): R$ 10,00/mês à parte no Básico (anual R$ 8,25); já vêm no Pro, no Premium e na Licença Atendimento. No Agenda deixaram de ser vendidas em 27/11/2026: só quem já tinha continua (`podeContratarAutomacoes`, `temRecurso` em `packages/shared/src/planos.ts`)
 
 ## Convenções
 

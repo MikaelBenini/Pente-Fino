@@ -69,7 +69,7 @@ export const CONCORRENTES: readonly Concorrente[] = [
     ondePenteFinoEMelhor: [
       'Até 3 profissionais por R$ 79,90 no Básico; no AppBarber, 2 ou 3 já pagam R$ 109,90.',
       'Lucro e margem de cada serviço e produto (plano Premium), não só o faturamento.',
-      'Bot de WhatsApp com a conta da barbearia, sem custo por mensagem (incluso no Pro e no Premium; no Agenda e no Básico, com as Automações).',
+      'Bot de WhatsApp com a conta da barbearia, sem custo por mensagem (incluso no Pro e no Premium; no Básico, com as Automações).',
       'Caixa do dia com a diferença apontada no fechamento.',
     ],
     resumo: {
@@ -137,7 +137,7 @@ export const CONCORRENTES: readonly Concorrente[] = [
     ondePenteFinoEMelhor: [
       'Não cobra por agenda: 5 barbeiros no Pro pagam R$ 149,90, contra R$ 179,99 mais impostos.',
       'Comissão automática por item, com extrato do barbeiro, em todos os planos.',
-      'Bot de WhatsApp com a conta da barbearia (incluso no Pro e no Premium; no Agenda e no Básico, com as Automações).',
+      'Bot de WhatsApp com a conta da barbearia (incluso no Pro e no Premium; no Básico, com as Automações).',
       'Lucro e margem de cada serviço e produto (Premium).',
     ],
     resumo: {
@@ -266,7 +266,7 @@ export const concorrente = (slug: Concorrente['slug']) => {
 /** O Pente Fino nas mesmas linhas (os preços vêm de @pente-fino/shared na página). */
 export const PENTE_FINO = {
   whatsapp:
-    'Avisos em todos os planos; bot com a conta da barbearia, sem custo por mensagem (incluso no Pro e no Premium; no Agenda e no Básico, com as Automações)',
+    'Avisos em todos os planos; bot com a conta da barbearia, sem custo por mensagem (incluso no Pro e no Premium; no Básico, com as Automações)',
   comissao: 'Sim, em todos os planos, com extrato do barbeiro',
   notaFiscal: 'Não emite',
   lucroPorServico: 'Sim, margem de cada serviço e produto (Premium)',

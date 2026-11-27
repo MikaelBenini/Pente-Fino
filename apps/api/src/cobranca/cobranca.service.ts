@@ -14,7 +14,7 @@ import {
   type Licenca,
   NOME_PLANO,
   valorDaCobranca,
-  automacoesAParte,
+  podeContratarAutomacoes,
   type AssinarEntrada,
   type CobrancaExterna,
   conferirTrocaDePlano,
@@ -152,12 +152,11 @@ export class CobrancaService {
     );
     const tabelaHoje = await this.precos.vigente(dataLocal(new Date()));
     const incluidas = automacoesIncluidasNaLicenca(conta.licenca);
-    const automacoes = !incluidas && d.automacoes && automacoesAParte(d.plano);
+    const automacoes =
+      !incluidas && d.automacoes && podeContratarAutomacoes(d.plano, conta.automacoesContratadas);
     // Plano Agenda: o cupom só vale com as Automações juntas (decisão do dono em 13/11).
     if (d.cupom?.trim() && d.plano === 'agenda' && !automacoes && !incluidas)
-      throw Erros.validacao([
-        { campo: 'cupom', mensagem: 'No plano Agenda, o cupom vale só com as Automações juntas.' },
-      ]);
+      throw Erros.validacao([{ campo: 'cupom', mensagem: 'O cupom não vale no plano Agenda.' }]);
     const desconto = await this.descontoAoAssinar(conta, d.cupom);
     const assinatura = await this.externo(() =>
       this.provedor.criarAssinatura({
@@ -277,7 +276,9 @@ export class CobrancaService {
         tabelaNova: await this.precos.vigente(dataLocal(new Date())),
         descontoBp: conta.descontoBp,
         automacoes: conta.automacoesContratadas,
-        automacoesNovo: automacoes ?? conta.automacoesContratadas,
+        automacoesNovo:
+          (automacoes ?? conta.automacoesContratadas) &&
+          podeContratarAutomacoes(para, conta.automacoesContratadas),
         licenca: conta.licenca,
       });
     });
@@ -291,7 +292,9 @@ export class CobrancaService {
     const previa = await this.previaTroca(para, pedidas);
     const conta = await this.banco.daConta((tx) => tx.conta.findFirstOrThrow());
     // Do Pro em diante as Automações vêm no plano: a parte contratada deixa de existir.
-    const automacoes = (pedidas ?? conta.automacoesContratadas) && automacoesAParte(para);
+    const automacoes =
+      (pedidas ?? conta.automacoesContratadas) &&
+      podeContratarAutomacoes(para, conta.automacoesContratadas);
     if (previa.de === para && automacoes === conta.automacoesContratadas)
       throw Erros.conflito(`A conta já está no plano ${NOME_PLANO[para]}.`);
     if (previa.bloqueios.length)

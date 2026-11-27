@@ -892,6 +892,46 @@ describe('configurações e saúde do sistema', () => {
         .expect(400);
   });
 
+  it('Licença Atendimento: R$ 49,90 com o bot; Agenda novo não contrata as Automações', async () => {
+    const cadastrar = async (email: string, extra: object) => {
+      await http()
+        .post('/publico/contas')
+        .send({
+          barbearia: 'Negócio Teste',
+          nome: 'Ana Teste',
+          email,
+          senha: 'senha-da-ana-1234',
+          aceite: true,
+          abertoEm: Date.now() - 10_000,
+          ...extra,
+        })
+        .expect(201);
+      const c = await como(app, email, 'senha-da-ana-1234');
+      contasCriadas.push((await c.get('/auth/eu').expect(200)).body.contaId);
+      return c;
+    };
+    const atendimento = await cadastrar(`site-atend-${sufixo}@e2e.pentefino.dev`, {
+      licenca: 'atendimento',
+      segmento: 'estetica',
+      plano: 'agenda',
+    });
+    expect((await atendimento.get('/auth/eu').expect(200)).body).toMatchObject({
+      licenca: 'atendimento',
+      segmento: 'estetica',
+    });
+    expect((await atendimento.get('/conta/assinatura').expect(200)).body).toMatchObject({
+      licenca: 'atendimento',
+      precoPorMes: 4990,
+    });
+    expect((await atendimento.get('/conta/situacao').expect(200)).body.automacoes).toBe(true);
+    const agenda = await cadastrar(`site-agenda-${sufixo}@e2e.pentefino.dev`, {
+      plano: 'agenda',
+      automacoes: true,
+    });
+    expect((await agenda.get('/conta/situacao').expect(200)).body.automacoes).toBe(false);
+    expect((await agenda.get('/conta/assinatura').expect(200)).body.precoPorMes).toBe(1000);
+  });
+
   it('aviso geral aparece para as barbearias só enquanto vale', async () => {
     const dono = await como(app, a.emails.dono);
     expect((await dono.get('/sistema/aviso').expect(200)).body).toEqual({ aviso: null });

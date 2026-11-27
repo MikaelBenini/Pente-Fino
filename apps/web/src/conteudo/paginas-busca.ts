@@ -115,7 +115,7 @@ export const PAGINAS_BUSCA: readonly PaginaBusca[] = [
       {
         titulo: 'Bot e lista de espera, se quiser',
         texto:
-          'Com as Automações, por mais R$ 10 por mês, o bot responde e marca pela conversa, e o horário que vaga vai para quem está na lista de espera.',
+          'Com a Licença Atendimento (R$ 49,90 por mês), o bot responde e marca pela conversa, e o horário que vaga vai para quem está na lista de espera.',
       },
     ],
     perguntas: [

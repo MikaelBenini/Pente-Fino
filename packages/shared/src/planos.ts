@@ -166,6 +166,14 @@ export const automacoesAParte = (plano: PlanoConta) =>
   PLANOS_COM_AUTOMACOES_A_PARTE.includes(plano);
 
 /**
+ * Contratar as Automações agora (ADR 0015, aprovado em 27/11/2026): no Agenda deixaram de ser
+ * vendidas (quem quer só o bot assina a Licença Atendimento); quem já tem continua com elas. No
+ * Básico seguem à parte; do Pro em diante já vêm no plano.
+ */
+export const podeContratarAutomacoes = (plano: PlanoConta, jaTem = false) =>
+  plano === 'agenda' ? jaTem : automacoesAParte(plano);
+
+/**
  * Cupom no Agenda (decisão do dono em 13/11): só vale com as Automações juntas. No Agenda
  * sozinho (R$ 10), 10% a 30% de desconto deixaria o plano barato demais.
  */

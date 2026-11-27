@@ -252,7 +252,7 @@ async function gerarPlanosEMenu() {
     p += `| ${sh.NOME_PLANO[plano]} | ${reais(sh.PRECOS_PLANO[plano].mensal)} | ${reais(sh.PRECOS_PLANO[plano].anualPorMes)} | ${n(l.unidades)} | ${n(l.profissionais)} |\n`;
   }
   p += `\nUnidade extra (Premium): ${reais(sh.PRECO_UNIDADE_EXTRA.mensal)} por mês (${reais(sh.PRECO_UNIDADE_EXTRA.anualPorMes)} no anual). `;
-  p += `Automações à parte nos planos ${sh.PLANOS_COM_AUTOMACOES_A_PARTE.map((x) => sh.NOME_PLANO[x]).join(' e ')}: ${reais(sh.PRECO_AUTOMACOES.mensal)} por mês (${reais(sh.PRECO_AUTOMACOES.anualPorMes)} no anual), destravam ${sh.RECURSOS_DAS_AUTOMACOES.join(', ')}. `;
+  p += `Automações à parte nos planos ${sh.PLANOS_COM_AUTOMACOES_A_PARTE.map((x) => sh.NOME_PLANO[x]).join(' e ')}: ${reais(sh.PRECO_AUTOMACOES.mensal)} por mês (${reais(sh.PRECO_AUTOMACOES.anualPorMes)} no anual), destravam ${sh.RECURSOS_DAS_AUTOMACOES.join(', ')}; no Agenda, só para quem já tinha (desde 27/11/2026 quem quer só o bot assina a Licença Atendimento, \`podeContratarAutomacoes\`). `;
   p += `Teste grátis: ${sh.DIAS_TESTE} dias.\n\n`;
   p += `## Preço por licença (ADR 0015)\n\nFonte: \`packages/shared/src/licencas.ts\`. Barbearia e Beleza usam a tabela acima (com vigência); as demais, a tabela da licença. Mensal / anual por mês.\n\n`;
   p += `| Licença | Para quem | À venda | ${sh.PLANOS.map((x) => sh.NOME_PLANO[x]).join(' | ')} |\n| --- | --- | --- | ${sh.PLANOS.map(() => '---').join(' | ')} |\n`;

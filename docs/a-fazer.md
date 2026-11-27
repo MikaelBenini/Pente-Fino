@@ -16,7 +16,7 @@ Detalhe, esforço, riscos e perguntas de cada fase em
   - [x] Nome pelo segmento; preços por licença; Atendimento a R$ 49,90 por número
   - [x] PR 1: licença na conta, preços e limites por licença, troca só pela administração, cadastro com `?licenca=`, venda presencial com licença
   - [x] PR 2: proteção dos números de WhatsApp (aquecimento, ritmo, "digitando...", repetida, pausa por risco)
-  - [ ] PR 3: Licença Atendimento com o menu enxuto (sem comanda, caixa, financeiro) e o plano Agenda só com lembretes para quem assina a partir de agora
+  - [x] PR 3: Licença Atendimento com o menu enxuto e o plano Agenda sem Automações para quem assina a partir de agora
   - [ ] PR 4: duas contas com um login só (seletor no menu do usuário) e 20% na segunda conta
   - [ ] A licença nas métricas e no funil da administração (`plataforma_contas()` ainda não traz; hoje todas as contas são Barbearia)
   - [ ] Páginas de vendas por licença (Fase 5), cada uma com o link de cadastro da licença
