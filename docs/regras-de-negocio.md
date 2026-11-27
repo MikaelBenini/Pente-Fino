@@ -173,7 +173,12 @@ equipe); a mensagem digitada pela equipe sai como sempre.
 - **Pausa por risco:** 5 falhas de envio em 30 minutos pausam as proativas por 6 horas; 5 ou mais
   SAIR em 24 horas (e pelo menos 3% das proativas do período) pausam por 24 horas. Dono e gestor
   recebem o aviso "Mensagens automáticas pausadas"; a resposta a quem escreve continua.
+- **Prioridade no limite do dia:** retorno, aniversário, aviso do clube e pesquisa usam só 70% do
+  limite (`limiteDaMensagem`); lembrete do horário, vaga da lista de espera e horário mudado usam o
+  limite todo. Num número com limite 20, o 15º retorno do dia espera; o lembrete das 15 h sai.
 - Número novo conectado na unidade recomeça o aquecimento e sai da pausa do anterior.
+- A administração vê em **Saúde do sistema → WhatsApp** os números pausados ou com 3 ou mais SAIR
+  ou falhas em 24 horas (`plataforma_numeros_em_risco()`, só contagens).
 - Já existiam: só para quem já escreveu para a unidade, nunca para número ligado ao sistema,
   nada automático de madrugada, no máximo 20 automações por dia e a trava contra loop.
 

@@ -11,7 +11,9 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 - **O sistema protege o número contra restrição do WhatsApp:** número recém-conectado manda poucas mensagens automáticas por dia e o limite sobe aos poucos (20, 50, 100 e 200); entre duas automáticas do mesmo número há de 25 a 45 segundos; toda automática mostra "digitando..." antes; o mesmo texto para o mesmo número em menos de 10 minutos não sai de novo.
 - **Pausa automática por sinal de risco:** se os envios começam a falhar ou muitos clientes respondem SAIR, lembretes, retorno e aniversário param por algumas horas e o dono recebe o aviso "Mensagens automáticas pausadas". O bot continua respondendo quem escreve.
-- **Bot → WhatsApp** mostra quantas mensagens automáticas saíram hoje, o limite do dia e até quando o número novo está em aquecimento.
+- **Bot → WhatsApp** mostra quantas mensagens automáticas saíram hoje, o limite do dia e até quando o número novo está em aquecimento. Ao conectar, a tela explica que número novo começa devagar e sobe em duas semanas.
+- **O lembrete do horário marcado tem prioridade:** retorno, aniversário, aviso do clube e pesquisa usam só 70% do limite do dia; o resto fica para lembretes, vaga da lista de espera e horário mudado.
+- **Administração → Saúde do sistema → WhatsApp:** "Números em risco" lista as contas com as automáticas pausadas ou com muitos SAIR ou falhas nas últimas 24 horas, para o suporte agir antes de o WhatsApp restringir o número.
 
 ### Adicionado (licenças)
 

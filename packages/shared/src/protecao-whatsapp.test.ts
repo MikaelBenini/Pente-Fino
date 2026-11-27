@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ehProativa,
+  limiteDaMensagem,
   limiteProativasDoDia,
   pausaPorRisco,
   proximaProativa,
@@ -51,5 +52,14 @@ describe('proteção dos números de WhatsApp (27/11/2026)', () => {
     // 5 SAIR em 200 proativas é 2,5%: abaixo dos 3%, segue.
     expect(pausaPorRisco({ falhasRecentes: 0, saidas24h: 5, proativas24h: 200 }, agora)).toBeNull();
     expect(pausaPorRisco({ falhasRecentes: 4, saidas24h: 4, proativas24h: 10 }, agora)).toBeNull();
+  });
+});
+
+describe('prioridade no limite do dia', () => {
+  it('lembrete usa o limite todo; retorno e aniversário, 70%', () => {
+    expect(limiteDaMensagem(20, 'lembrete')).toBe(20);
+    expect(limiteDaMensagem(20, null)).toBe(20);
+    expect(limiteDaMensagem(20, 'retorno')).toBe(14);
+    expect(limiteDaMensagem(200, 'aniversario')).toBe(140);
   });
 });

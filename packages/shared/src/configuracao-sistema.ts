@@ -172,6 +172,22 @@ export interface SaudeDoSistema {
     numero: string | null;
     caiuEm: string;
   }[];
+  /**
+   * Números com as mensagens automáticas pausadas ou com sinal de risco nas últimas 24 h
+   * (proteção dos números, 27/11/2026): só contagens, nada das conversas.
+   */
+  numerosEmRisco?: {
+    contaId: string;
+    conta: string;
+    unidade: string;
+    numero: string | null;
+    conectadoEm: string | null;
+    pausadoAte: string | null;
+    pausaMotivo: string | null;
+    saidas24h: number;
+    falhas24h: number;
+    proativas24h: number;
+  }[];
   /** Trabalhos que falharam nas últimas 24 h (sem o conteúdo, só o motivo). */
   errosRecentes: { fila: string; tipo: string; motivo: string; quando: string }[];
   /** Últimas execuções da limpeza de dados (a mais recente primeiro). */

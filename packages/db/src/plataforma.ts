@@ -297,6 +297,24 @@ export function conexoesCaidasPlataforma(prisma: PrismaClient) {
   >`SELECT * FROM plataforma_conexoes_caidas()`;
 }
 
+/** Números com as automáticas pausadas ou com sinal de risco (SAIR, falhas): só contagens. */
+export function numerosEmRiscoPlataforma(prisma: PrismaClient) {
+  return prisma.$queryRaw<
+    {
+      conta_id: string;
+      conta: string;
+      unidade: string;
+      numero: string | null;
+      conectado_em: Date | null;
+      pausado_ate: Date | null;
+      pausa_motivo: string | null;
+      saidas_24h: bigint;
+      falhas_24h: bigint;
+      proativas_24h: bigint;
+    }[]
+  >`SELECT * FROM plataforma_numeros_em_risco()`;
+}
+
 /** Notas fiscais das mensalidades (Saúde do sistema): as dos últimos dias e as a caminho. */
 export function notasFiscaisPlataforma(prisma: PrismaClient, desde: Date) {
   return prisma.$queryRaw<

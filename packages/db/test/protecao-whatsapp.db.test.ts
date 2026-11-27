@@ -149,6 +149,56 @@ describe('proteção dos números de WhatsApp', () => {
     expect((await situacao(mais.id)).erro).toContain('Limite diário');
   });
 
+  it('prioridade: retorno usa 70% do limite; lembrete do horário usa o limite todo', async () => {
+    const u = await novaUnidade(antes(60));
+    await naMinha((tx) =>
+      tx.mensagem.createMany({
+        data: Array.from({ length: 14 }, (_, i) => ({
+          unidadeId: u,
+          telefone: `55119730000${String(i).padStart(2, '0')}`,
+          direcao: 'saida' as const,
+          texto: `Aviso ${i}`,
+          status: 'enviada' as const,
+          enviadaEm: antes(30),
+          proativa: true,
+        })),
+      }),
+    );
+    await entrada(u, '5511970000008', 'oi', antes(60 * 50));
+    await entrada(u, '5511970000009', 'oi', antes(60 * 50));
+    const retorno = await naMinha((tx) =>
+      tx.mensagem.create({
+        data: {
+          unidadeId: u,
+          telefone: '5511970000008',
+          direcao: 'saida',
+          texto: 'Faz tempo que você não vem',
+          status: 'pendente',
+          automacao: 'retorno',
+          criadoEm: agora,
+        },
+      }),
+    );
+    const lembrete = await naMinha((tx) =>
+      tx.mensagem.create({
+        data: {
+          unidadeId: u,
+          telefone: '5511970000009',
+          direcao: 'saida',
+          texto: 'Lembrete do seu horário às 15h',
+          status: 'pendente',
+          automacao: 'lembrete',
+          criadoEm: agora,
+        },
+      }),
+    );
+    expect(await prepararEnvio(prisma, conta, retorno.id, agora)).toEqual({ tipo: 'pular' });
+    expect(await prepararEnvio(prisma, conta, lembrete.id, agora)).toMatchObject({
+      tipo: 'enviar',
+      proativa: true,
+    });
+  });
+
   it('muitos SAIR no dia pausam as proativas por 24 h', async () => {
     const u = await novaUnidade();
     for (let i = 0; i < 5; i++) await entrada(u, `551197200000${i}`, 'SAIR', antes(60 + i));
