@@ -5,6 +5,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { textosFixos } from './textos-fixos.mjs';
 
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 
@@ -129,6 +130,14 @@ for (const p of fontes.filter((f) => /packages\/shared|apps\/api/.test(f))) {
     });
 }
 
+// 6. Vocabulário por segmento (ADR 0014): texto que a pessoa vê não fixa "barbeiro" nem "barbearia".
+for (const a of textosFixos())
+  falhar(
+    'Texto fixo de barbearia',
+    `${a.arquivo}:${a.linha}`,
+    'use o vocabulário do segmento: useVocabulario() na tela (v.t("[[o profissional]]")), vocabularioDaConta(tx) na API, ou um texto neutro (equipe, unidade)',
+  );
+
 if (falhas.length) {
   console.error(`\n${falhas.length} regra(s) do docs/CLAUDE.md quebrada(s):\n`);
   for (const f of falhas)
@@ -136,5 +145,5 @@ if (falhas.length) {
   process.exit(1);
 }
 console.log(
-  'Regras do docs/CLAUDE.md: tudo certo (WhatsApp do cliente, telefone, RLS, IA, centavos).',
+  'Regras do docs/CLAUDE.md: tudo certo (WhatsApp do cliente, telefone, RLS, IA, centavos, vocabulário).',
 );

@@ -76,6 +76,7 @@ export async function montarSitePublico(
     // Vazio = link de agendamento desligado: o site mostra o WhatsApp no lugar de "Agendar".
     slugAgendamento: u.agendamentoPublico && u.slug ? u.slug : '',
     barbearia: conta.nome,
+    segmento: conta.segmento,
     unidade: u.nome,
     site,
     endereco: enderecoCompleto(u),

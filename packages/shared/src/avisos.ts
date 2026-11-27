@@ -22,7 +22,7 @@ export const TIPOS_AVISO = [
 export type TipoAviso = (typeof TIPOS_AVISO)[number];
 
 export const NOME_TIPO_AVISO: Readonly<Record<TipoAviso, string>> = {
-  comandas_pendentes: 'Comandas esperando confirmação do barbeiro',
+  comandas_pendentes: 'Comandas esperando confirmação de quem atendeu',
   caixa_divergente: 'Caixa do dia fechado com diferença',
   caixa_sem_fechar: 'Caixa que ficou sem fechar no fim do dia',
   caixa_fechado: 'Resumo do fechamento do caixa',
@@ -113,7 +113,7 @@ export function avisoComandasPendentes(d: {
       d.novas.length === 1
         ? 'Comanda esperando confirmação'
         : `${d.novas.length} comandas esperando confirmação`,
-    texto: `${linha}${mais}. ${d.total === 1 ? '1 comanda pendente' : `${d.total} comandas pendentes`} para resolver com o barbeiro.`,
+    texto: `${linha}${mais}. ${d.total === 1 ? '1 comanda pendente' : `${d.total} comandas pendentes`} para resolver com quem atendeu.`,
     link: '/comandas',
     chave: `pendentes:${d.unidadeId}:${d.novas
       .map((n) => n.comandaId)

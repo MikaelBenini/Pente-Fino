@@ -590,7 +590,7 @@ function Conteudo({ f, periodo }: { f: FichaProfissional; periodo: Periodo }) {
             <Star aria-hidden className="mt-0.5 size-5 shrink-0" />
             <p>
               Nenhuma pesquisa no período. Uma hora depois de fechar a comanda, o cliente que aceita
-              avisos e já conversou com o WhatsApp da barbearia recebe a pergunta de 1 a 5.
+              avisos e já conversou com o WhatsApp da unidade recebe a pergunta de 1 a 5.
             </p>
           </div>
         ) : (

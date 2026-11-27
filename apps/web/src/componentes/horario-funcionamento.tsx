@@ -144,7 +144,7 @@ function Formulario({
     >
       <p className="text-sm text-tinta-suave">
         O cliente só consegue marcar (pelo link, pelo WhatsApp ou no balcão) dentro deste horário,
-        mesmo que o barbeiro trabalhe mais. O site mostra este horário.
+        mesmo que alguém da equipe trabalhe mais. O site mostra este horário.
       </p>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
       <ul className="flex flex-col gap-2">

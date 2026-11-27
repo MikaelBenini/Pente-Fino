@@ -2,6 +2,9 @@
 // para a tela de ajuda, o cartão de primeiros passos do Início e os testes usarem a mesma fonte.
 // Cada artigo diz em que tela fazer, passo a passo, com os nomes que aparecem no sistema.
 import type { Papel } from './papeis.js';
+import { comVocabularioEmTudo, vocabulario, type Vocabulario } from './vocabulario.js';
+
+const BARBEARIA = vocabulario('barbearia');
 
 export const CATEGORIAS_AJUDA = [
   'Começar',
@@ -31,20 +34,21 @@ const GESTAO: readonly Papel[] = ['dono', 'gestor'];
 const BALCAO: readonly Papel[] = ['dono', 'gestor', 'recepcao'];
 const TODOS: readonly Papel[] = ['dono', 'gestor', 'recepcao', 'profissional'];
 
-export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
+/** Os artigos com os marcadores do vocabulário ([[o profissional]]...). */
+const MODELO_ARTIGOS: readonly ArtigoAjuda[] = [
   {
     id: 'primeiros-passos',
     titulo: 'Primeiros passos: do cadastro ao primeiro atendimento',
-    resumo: 'A ordem que deixa a barbearia pronta para atender em poucos minutos.',
+    resumo: 'A ordem que deixa [[a estabelecimento]] pronta para atender em poucos minutos.',
     categoria: 'Começar',
     papeis: GESTAO,
     rota: '/inicio',
     passos: [
-      'Termine a Configuração guiada: dados da barbearia, horário de funcionamento, serviços com preço e barbeiros.',
-      'Em Equipe, convide quem vai usar o sistema (recepção e barbeiros): cada um recebe um link por e-mail para criar a senha.',
-      'Em Bot, conecte o WhatsApp da barbearia lendo o QR Code com o celular da unidade.',
+      'Termine a Configuração guiada: dados [[da estabelecimento]], horário de funcionamento, serviços com preço e [[profissionais]].',
+      'Em Equipe, convide quem vai usar o sistema (recepção e [[profissionais]]): cada um recebe um link por e-mail para criar a senha.',
+      'Em Bot, conecte o WhatsApp [[da estabelecimento]] lendo o QR Code com o celular da unidade.',
       'Na Agenda, marque o primeiro horário. A comanda nasce sozinha com o serviço e o preço.',
-      'No fim do atendimento, o barbeiro confirma a comanda e a recepção toca em "Receber e fechar".',
+      'No fim do atendimento, [[o profissional]] confirma a comanda e a recepção toca em "Receber e fechar".',
       'Em Resultados do mês, defina a meta do mês: o Início passa a mostrar quanto falta.',
     ],
     dica: 'O cartão "Primeiros passos" no Início marca cada etapa sozinho, conforme você usa o sistema.',
@@ -66,7 +70,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
   },
   {
     id: 'equipe-e-acessos',
-    titulo: 'Cadastrar barbeiros, comissão e dar acesso à equipe',
+    titulo: 'Cadastrar [[profissionais]], comissão e dar acesso à equipe',
     resumo: 'Comissão por serviço e produto, papéis e o convite por e-mail.',
     categoria: 'Equipe',
     papeis: GESTAO,
@@ -74,13 +78,13 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     passos: [
       'Em Equipe, adicione o profissional com a data de entrada e a comissão em serviços e em produtos.',
       'Para ele usar o sistema, informe o e-mail: o convite chega com o link para criar a senha.',
-      'Escolha o papel: Barbeiro vê só a agenda, as comandas e os números dele; Recepção cuida da agenda e do caixa; Gestor vê tudo da unidade.',
+      'Escolha o papel: [[Profissional]] vê só a agenda, as comandas e os números dele; Recepção cuida da agenda e do caixa; Gestor vê tudo da unidade.',
       'A comissão pode mudar com data de início: o que já foi fechado continua com a regra antiga.',
     ],
   },
   {
     id: 'conectar-whatsapp',
-    titulo: 'Conectar o WhatsApp da barbearia',
+    titulo: 'Conectar o WhatsApp [[da estabelecimento]]',
     resumo: 'Ler o QR Code e o que fazer se o WhatsApp desconectar.',
     categoria: 'WhatsApp',
     papeis: GESTAO,
@@ -88,7 +92,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     passos: [
       'Abra Bot e escolha a unidade.',
       'Toque para conectar: aparece um QR Code.',
-      'No celular da barbearia, abra o WhatsApp → Aparelhos conectados → Conectar um aparelho e leia o código.',
+      'No celular [[da estabelecimento]], abra o WhatsApp → Aparelhos conectados → Conectar um aparelho e leia o código.',
       'Pronto: o status fica "Conectado" e o bot começa a responder quem escrever.',
     ],
     dica: 'Se o WhatsApp cair (celular sem internet por muito tempo, aparelho desconectado), você recebe um aviso no sistema e por e-mail. É só ler o QR Code de novo.',
@@ -118,35 +122,35 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     passos: [
       'Em Configurações → Link de agendamento, ligue o link da unidade e copie.',
       'Cole na bio do Instagram, no status do WhatsApp e no perfil do Google.',
-      'O cliente escolhe serviço, barbeiro e horário. O horário entra na agenda com a comanda pronta.',
+      'O cliente escolhe serviço, [[profissional]] e horário. O horário entra na agenda com a comanda pronta.',
       'Em Configurações → Link e agendamento, ajuste antecedência mínima, até quantos dias à frente e os intervalos.',
     ],
   },
   {
     id: 'agenda',
     titulo: 'Agenda: marcar, mover, encaixe e falta',
-    resumo: 'O dia de cada barbeiro, com aviso automático ao cliente.',
+    resumo: 'O dia de cada [[profissional]], com aviso automático ao cliente.',
     categoria: 'Agenda e atendimento',
     papeis: BALCAO,
     rota: '/agenda',
     passos: [
-      'Toque num horário livre para um novo agendamento: cliente, serviços (pode escolher mais de um) e barbeiro.',
+      'Toque num horário livre para um novo agendamento: cliente, serviços (pode escolher mais de um) e [[profissional]].',
       'Arraste ou edite para mover. Marque "Avisar o cliente" e ele recebe o novo horário pelo WhatsApp.',
       'Para encaixe, informe o horário do encaixe mesmo com a agenda cheia.',
       'Cliente não veio? Marque "O cliente não veio": conta como falta no histórico dele.',
-      'Bloqueie folgas e pausas do barbeiro para ninguém marcar nesse horário.',
+      'Bloqueie folgas e pausas [[do profissional]] para ninguém marcar nesse horário.',
     ],
   },
   {
     id: 'comanda',
     titulo: 'Comanda: do agendamento ao fechamento',
-    resumo: 'Lançamento único: o barbeiro confirma, a recepção fecha.',
+    resumo: 'Lançamento único: [[o profissional]] confirma, a recepção fecha.',
     categoria: 'Agenda e atendimento',
     papeis: TODOS,
     rota: '/comandas',
     passos: [
       'O agendamento já cria a comanda prevista com serviço e preço.',
-      'No atendimento, o barbeiro inicia, lança os extras e produtos vendidos e confirma pelo celular.',
+      'No atendimento, [[o profissional]] inicia, lança os extras e produtos vendidos e confirma pelo celular.',
       'A recepção toca em "Receber e fechar", escolhe a forma de pagamento (pode dividir) e dá desconto se precisar.',
       'Só comanda fechada entra no faturamento, nas comissões e nos indicadores.',
       'Errou? Dono ou gestor reabre a comanda com o motivo (fica na auditoria).',
@@ -169,7 +173,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
   {
     id: 'lucro-e-indicadores',
     titulo: 'Lucro real, metas e indicadores',
-    resumo: 'Quanto sobra de cada serviço, barbeiro e unidade.',
+    resumo: 'Quanto sobra de cada serviço, [[profissional]] e unidade.',
     categoria: 'Dinheiro',
     papeis: GESTAO,
     rota: '/resultados',
@@ -184,12 +188,12 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
   {
     id: 'ficha-do-profissional',
     titulo: 'Ler a ficha do profissional',
-    resumo: 'Atendimentos, extras, nota dos clientes e comissão de cada barbeiro.',
+    resumo: 'Atendimentos, extras, nota dos clientes e comissão de cada [[profissional]].',
     categoria: 'Equipe',
     papeis: ['dono', 'gestor', 'profissional'],
     rota: null,
     passos: [
-      'Dono e gestor: em Resultados do mês → Barbeiros (ou em Equipe), toque no nome do profissional; o barbeiro vê a própria ficha em Desempenho.',
+      'Dono e gestor: em Resultados do mês → [[Profissionais]] (ou em Equipe), toque no nome do profissional; [[o profissional]] vê a própria ficha em Desempenho.',
       'Atendimentos e faturamento do período, com a comparação com o período anterior.',
       '% de extras: quanto dos atendimentos teve sobrancelha, hidratação ou produto.',
       'Nota média dos clientes na pesquisa pós-atendimento e os comentários.',
@@ -205,14 +209,14 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
     rota: null,
     passos: [
       'Cada item fechado grava a comissão da regra que valia no dia.',
-      'O barbeiro vê o extrato em Comissões, item por item.',
+      '[[O profissional]] vê o extrato em Comissões, item por item.',
       'Dono e gestor registram o pagamento no Financeiro: o sistema mostra quanto falta pagar no período.',
     ],
   },
   {
     id: 'clube',
     titulo: 'Clube de assinatura: planos, adesões e cobrança pelo link',
-    resumo: 'Receita todo mês, com a mensalidade caindo direto na conta da barbearia.',
+    resumo: 'Receita todo mês, com a mensalidade caindo direto na conta [[da estabelecimento]].',
     categoria: 'Clube',
     papeis: GESTAO,
     rota: '/clube',
@@ -263,7 +267,7 @@ export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = [
       'Abra o cliente em Clientes e vá até "Dados do cliente (LGPD)".',
       '"Baixar os dados" gera o arquivo com tudo o que o sistema guarda dele, para você enviar.',
       '"Apagar os dados pessoais" pede o motivo e o nome para confirmar. Antes, cancele horários futuros e o clube, se houver.',
-      'Os atendimentos e o caixa continuam, sem o nome (são histórico financeiro da barbearia).',
+      'Os atendimentos e o caixa continuam, sem o nome (são histórico financeiro [[da estabelecimento]]).',
     ],
   },
 ];
@@ -275,7 +279,7 @@ export interface PerguntaAjuda {
   artigo?: string;
 }
 
-export const PERGUNTAS_AJUDA: readonly PerguntaAjuda[] = [
+const MODELO_PERGUNTAS: readonly PerguntaAjuda[] = [
   {
     pergunta: 'O bot do WhatsApp usa inteligência artificial?',
     resposta:
@@ -285,7 +289,7 @@ export const PERGUNTAS_AJUDA: readonly PerguntaAjuda[] = [
   {
     pergunta: 'Preciso de um número de WhatsApp novo?',
     resposta:
-      'Não. Use o WhatsApp da barbearia, conectado pelo QR Code como no WhatsApp Web. Recomendamos um chip só da barbearia, no celular que fica na unidade.',
+      'Não. Use o WhatsApp [[da estabelecimento]], conectado pelo QR Code como no WhatsApp Web. Recomendamos um chip só [[da estabelecimento]], no celular que fica na unidade.',
     artigo: 'conectar-whatsapp',
   },
   {
@@ -295,9 +299,9 @@ export const PERGUNTAS_AJUDA: readonly PerguntaAjuda[] = [
     artigo: 'lucro-e-indicadores',
   },
   {
-    pergunta: 'O barbeiro vê o faturamento da barbearia?',
+    pergunta: '[[O profissional]] vê o faturamento [[da estabelecimento]]?',
     resposta:
-      'Não. O barbeiro vê só a agenda, as comandas, a comissão e o desempenho dele. O telefone do cliente pode ficar oculto para ele.',
+      'Não. [[O profissional]] vê só a agenda, as comandas, a comissão e o desempenho dele. O telefone do cliente pode ficar oculto para ele.',
     artigo: 'equipe-e-acessos',
   },
   {
@@ -320,13 +324,13 @@ export const PERGUNTAS_AJUDA: readonly PerguntaAjuda[] = [
   {
     pergunta: 'Como o cliente assina o clube?',
     resposta:
-      'Você manda o link do plano pelo WhatsApp; ele assina no Pix ou no cartão e a mensalidade cai direto na conta da barbearia, todo mês.',
+      'Você manda o link do plano pelo WhatsApp; ele assina no Pix ou no cartão e a mensalidade cai direto na conta [[da estabelecimento]], todo mês.',
     artigo: 'clube',
   },
   {
     pergunta: 'Meus dados estão seguros?',
     resposta:
-      'Cada barbearia só enxerga os próprios dados, o acesso é por papel e unidade, e há cópia de segurança diária criptografada fora do servidor.',
+      'Cada [[estabelecimento]] só enxerga os próprios dados, o acesso é por papel e unidade, e há cópia de segurança diária criptografada fora do servidor.',
   },
   {
     pergunta: 'Posso levar meus dados se cancelar?',
@@ -336,14 +340,24 @@ export const PERGUNTAS_AJUDA: readonly PerguntaAjuda[] = [
   {
     pergunta: 'O WhatsApp desconectou. E agora?',
     resposta:
-      'Você recebe um aviso no sistema e por e-mail. Abra Bot e leia o QR Code de novo com o celular da barbearia.',
+      'Você recebe um aviso no sistema e por e-mail. Abra Bot e leia o QR Code de novo com o celular [[da estabelecimento]].',
     artigo: 'conectar-whatsapp',
   },
 ];
 
+/** Artigos no vocabulário do segmento (barbeiro, esteticista...). */
+export const artigosAjuda = (v: Vocabulario = BARBEARIA): ArtigoAjuda[] =>
+  comVocabularioEmTudo(MODELO_ARTIGOS as ArtigoAjuda[], v);
+export const ARTIGOS_AJUDA: readonly ArtigoAjuda[] = artigosAjuda();
+
+/** Perguntas frequentes no vocabulário do segmento. */
+export const perguntasAjuda = (v: Vocabulario = BARBEARIA): PerguntaAjuda[] =>
+  comVocabularioEmTudo(MODELO_PERGUNTAS as PerguntaAjuda[], v);
+export const PERGUNTAS_AJUDA: readonly PerguntaAjuda[] = perguntasAjuda();
+
 /** Artigos que o papel enxerga, na ordem da lista. */
-export const artigosPara = (papeis: readonly Papel[]) =>
-  ARTIGOS_AJUDA.filter((a) => a.papeis.some((p) => papeis.includes(p)));
+export const artigosPara = (papeis: readonly Papel[], v?: Vocabulario) =>
+  (v ? artigosAjuda(v) : ARTIGOS_AJUDA).filter((a) => a.papeis.some((p) => papeis.includes(p)));
 
 const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -351,11 +365,15 @@ const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toL
  * Busca simples por palavras (sem acento, sem diferença de maiúscula): título vale mais que
  * resumo e passos. Todas as palavras precisam aparecer em algum lugar do artigo.
  */
-export function buscarAjuda(texto: string, papeis: readonly Papel[]): ArtigoAjuda[] {
+export function buscarAjuda(
+  texto: string,
+  papeis: readonly Papel[],
+  v?: Vocabulario,
+): ArtigoAjuda[] {
   const palavras = normalizar(texto)
     .split(/\s+/)
     .filter((p) => p.length >= 2);
-  const lista = artigosPara(papeis);
+  const lista = artigosPara(papeis, v);
   if (palavras.length === 0) return lista;
   return lista
     .map((a) => {
@@ -395,7 +413,7 @@ export interface DefinicaoPasso {
   artigo: string;
 }
 
-export const DEFINICAO_PASSOS: Readonly<Record<PassoInicial, DefinicaoPasso>> = {
+const MODELO_PASSOS: Readonly<Record<PassoInicial, DefinicaoPasso>> = {
   servicos: {
     titulo: 'Cadastrar os serviços com preço',
     porque: 'Sem preço não tem agenda nem lucro.',
@@ -403,19 +421,19 @@ export const DEFINICAO_PASSOS: Readonly<Record<PassoInicial, DefinicaoPasso>> = 
     artigo: 'servicos-e-precos',
   },
   equipe: {
-    titulo: 'Cadastrar os barbeiros',
+    titulo: 'Cadastrar [[os profissionais]]',
     porque: 'Cada um com a agenda e a comissão dele.',
     rota: '/equipe',
     artigo: 'equipe-e-acessos',
   },
   convite: {
     titulo: 'Convidar a equipe para usar o sistema',
-    porque: 'O barbeiro confirma a comanda pelo celular.',
+    porque: '[[O profissional]] confirma a comanda pelo celular.',
     rota: '/equipe',
     artigo: 'equipe-e-acessos',
   },
   whatsapp: {
-    titulo: 'Conectar o WhatsApp da barbearia',
+    titulo: 'Conectar o WhatsApp [[da estabelecimento]]',
     porque: 'O bot agenda, lembra o horário e reduz as faltas.',
     rota: '/bot',
     artigo: 'conectar-whatsapp',
@@ -445,6 +463,11 @@ export const DEFINICAO_PASSOS: Readonly<Record<PassoInicial, DefinicaoPasso>> = 
     artigo: 'notificacoes',
   },
 };
+
+/** Os primeiros passos no vocabulário do segmento. */
+export const definicaoPassos = (v: Vocabulario = BARBEARIA): Record<PassoInicial, DefinicaoPasso> =>
+  comVocabularioEmTudo({ ...MODELO_PASSOS } as Record<PassoInicial, DefinicaoPasso>, v);
+export const DEFINICAO_PASSOS: Readonly<Record<PassoInicial, DefinicaoPasso>> = definicaoPassos();
 
 export type EstadoPrimeirosPassos = Record<PassoInicial, boolean>;
 

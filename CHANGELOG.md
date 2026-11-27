@@ -10,6 +10,8 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 ### Adicionado (tipo de negócio)
 
 - **Configurações → Tipo de negócio** (só o dono): barbearia, salão de beleza, clínica de estética, unhas e sobrancelhas, tatuagem e piercing, academia e estúdio, personal trainer ou outro. O sistema passa a chamar quem atende pelo nome do negócio (barbeiro, esteticista, tatuador, instrutor...) em Configurações, Equipe, Perfil, Resultados e Resumo do dia; as demais telas vêm na sequência. Quem já usa continua como barbearia, sem nenhuma mudança.
+- **O tipo de negócio vale no sistema todo:** o menu e as mensagens prontas do bot, a Ajuda, os primeiros passos, a busca, o site e a página de agendamento, o relatório do mês e a comanda impressa falam "esteticista", "clínica", "tatuador"... conforme o negócio. Para a barbearia o texto do bot, da Ajuda e do relatório continua o mesmo. A página de agendamento avisa o Google do tipo certo (salão de beleza, estética, estúdio de tatuagem, academia).
+- **Textos neutros onde não precisa do nome do negócio:** avisos e erros para o cliente dizem "fale com a equipe", "esta unidade" e "quem atendeu" em vez de "a barbearia" e "o barbeiro"; os planos falam em "profissionais" e "equipe".
 
 ### Mudado (por baixo, sem mudança na tela)
 

@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { api, ErroApi } from '@/lib/api';
 import { INVALIDAR_OPERACAO, useAcao, useLivres } from '@/lib/consultas';
 import { Aviso } from './aviso';
+import { useVocabulario } from '@/lib/vocabulario';
 
 export interface Movimento {
   agendamentoId: string;
@@ -30,6 +31,7 @@ const mensagemDe = (e: unknown) =>
  * grava, e deixa "Desfazer" por alguns segundos. O aviso ao cliente só sai depois desse tempo.
  */
 export function useMoverHorario(aoMover?: (c: ComandaDetalhe) => void) {
+  const v = useVocabulario();
   const [pendente, setPendente] = useState<Movimento | null>(null);
   const [avisar, setAvisar] = useState(false);
   const [feito, setFeito] = useState<Movimento | null>(null);
@@ -153,7 +155,7 @@ export function useMoverHorario(aoMover?: (c: ComandaDetalhe) => void) {
                 />
                 {mudouHorario
                   ? 'Avisar o cliente pelo WhatsApp do novo horário'
-                  : 'Avisar o cliente da troca de barbeiro'}
+                  : v.t('Avisar o cliente da troca de [[profissional]]')}
               </label>
             </span>
           )
@@ -194,6 +196,7 @@ export function MoverComanda({
   onFechar: () => void;
   onEscolher: (m: Movimento) => void;
 }) {
+  const v = useVocabulario();
   const [profissionalId, setProfissionalId] = useState(c.profissionalId);
   const [dia, setDia] = useState(c.inicio ? dataLocal(new Date(c.inicio)) : dataLocal(new Date()));
   const duracao =
@@ -206,7 +209,9 @@ export function MoverComanda({
     <Dialogo
       aberto={aberto}
       titulo="Mover horário"
-      descricao="Escolha o barbeiro, o dia e um horário livre. A comanda prevista vai junto."
+      descricao={v.t(
+        'Escolha [[o profissional]], o dia e um horário livre. A comanda prevista vai junto.',
+      )}
       onFechar={onFechar}
     >
       <div className="flex flex-col gap-4">
@@ -229,7 +234,9 @@ export function MoverComanda({
         {livres.isPending ? (
           <p className="text-tinta-suave">Procurando horários…</p>
         ) : inicios.length === 0 ? (
-          <p className="text-tinta-suave">Nenhum horário livre. Tente outro dia ou barbeiro.</p>
+          <p className="text-tinta-suave">
+            {v.t('Nenhum horário livre. Tente outro dia ou [[profissional]].')}
+          </p>
         ) : (
           <fieldset className="min-w-0">
             <legend className="mb-1 text-sm font-medium">Horários livres</legend>

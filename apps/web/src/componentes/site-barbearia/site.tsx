@@ -850,7 +850,7 @@ function PlanosDoClube({ dados }: { dados: SitePublico }) {
       <section
         className={`${LARGURA} flex flex-col items-start gap-5 py-16 text-[var(--site-tinta-media)]`}
       >
-        <p>Os planos do clube desta barbearia ainda não estão no site.</p>
+        <p>Os planos do clube ainda não estão no site.</p>
         {dados.whatsapp && (
           <a
             href={dados.whatsapp}
@@ -904,7 +904,7 @@ function PlanosDoClube({ dados }: { dados: SitePublico }) {
                 {dados.clube!.link ? `Assinar ${p.nome}` : 'Assinar pelo WhatsApp'}
               </a>
             ) : (
-              <p className="mt-auto font-semibold">Assine na barbearia.</p>
+              <p className="mt-auto font-semibold">Assine na recepção.</p>
             )}
           </li>
         ))}

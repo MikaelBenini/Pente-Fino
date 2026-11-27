@@ -103,7 +103,7 @@ export function podeAgirNaComanda(
   ) {
     return {
       permitido: false,
-      motivo: 'O barbeiro ainda não confirmou. Peça a confirmação ou chame o gestor para fechar.',
+      motivo: 'Quem atendeu ainda não confirmou. Peça a confirmação ou chame o gestor para fechar.',
     };
   }
   return { permitido: true };

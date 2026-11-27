@@ -203,7 +203,7 @@ export function FormularioCadastro() {
     >
       {/* Campo isca: fora da tela e do teclado; só robô preenche. */}
       <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
-        <label htmlFor="cadastro-site">Site da barbearia (deixe em branco)</label>
+        <label htmlFor="cadastro-site">Site (deixe em branco)</label>
         <input id="cadastro-site" name="site" type="text" tabIndex={-1} autoComplete="off" />
       </div>
       <div className="flex flex-col gap-1">

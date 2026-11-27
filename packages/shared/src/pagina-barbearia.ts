@@ -3,8 +3,27 @@
 // calendário da confirmação (P6). Regras puras, sem nada da tela.
 import { formatarMoeda } from './formatacao.js';
 import type { UnidadePublica } from './publico.js';
+import { comVocabulario, vocabulario, type Segmento } from './vocabulario.js';
 
-type ParaPagina = Pick<UnidadePublica, 'nome' | 'barbearia' | 'endereco' | 'telefone' | 'servicos'>;
+type ParaPagina = Pick<
+  UnidadePublica,
+  'nome' | 'barbearia' | 'endereco' | 'telefone' | 'servicos'
+> & {
+  /** Sem segmento, vale o de barbearia. */
+  segmento?: Segmento;
+};
+
+/** Tipo do negócio no schema.org, pelo segmento da conta (Fase 1a, 27/11/2026). */
+const TIPO_SCHEMA_ORG: Record<Segmento, string> = {
+  barbearia: 'HairSalon',
+  salao: 'HairSalon',
+  estetica: 'BeautySalon',
+  unhas: 'NailSalon',
+  tatuagem: 'TattooParlor',
+  academia: 'ExerciseGym',
+  personal: 'ExerciseGym',
+  outro: 'LocalBusiness',
+};
 
 /** Preço inicial: o menor preço entre os serviços principais (extras não contam). */
 export function precoInicial(u: Pick<UnidadePublica, 'servicos'>): number | null {
@@ -29,17 +48,17 @@ export function metadadosDaPagina(u: ParaPagina): { titulo: string; descricao: s
     preco !== null ? `a partir de ${formatarMoeda(preco)}` : null,
   ].filter(Boolean);
   const descricao = partes.length
-    ? `${partes.join(' · ')}. Escolha o serviço, o barbeiro e o horário online.`
-    : 'Escolha o serviço, o barbeiro e o horário online.';
-  return { titulo, descricao: descricao.slice(0, 155) };
+    ? `${partes.join(' · ')}. Escolha o serviço, [[o profissional]] e o horário online.`
+    : 'Escolha o serviço, [[o profissional]] e o horário online.';
+  return { titulo, descricao: comVocabulario(descricao, vocabulario(u.segmento)).slice(0, 155) };
 }
 
-/** JSON-LD HairSalon (schema.org) para o Google, só quando o dono liga "Aparecer no Google". */
+/** JSON-LD (schema.org: HairSalon para barbearia, BeautySalon para estética...) para o Google, só quando o dono liga "Aparecer no Google". */
 export function jsonLdDaBarbearia(u: ParaPagina, url: string): Record<string, unknown> {
   const preco = precoInicial(u);
   return {
     '@context': 'https://schema.org',
-    '@type': 'HairSalon',
+    '@type': TIPO_SCHEMA_ORG[vocabulario(u.segmento).segmento],
     name: u.nome && u.nome !== u.barbearia ? `${u.barbearia} · ${u.nome}` : u.barbearia,
     url,
     ...(u.endereco ? { address: u.endereco } : {}),

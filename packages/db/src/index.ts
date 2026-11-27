@@ -13,6 +13,7 @@ export * from './vigencia.js';
 export * from './bot.js';
 export * from './avaliacao.js';
 export * from './assinatura.js';
+export * from './vocabulario.js';
 
 /** Cliente dentro de uma transação de naConta(). */
 export type Transacao = Prisma.TransactionClient;

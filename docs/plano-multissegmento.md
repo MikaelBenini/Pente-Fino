@@ -18,7 +18,7 @@ M (1 a 2), G (2 a 4), GG (4 ou mais). São estimativas para decidir a ordem, nã
 | Fase | Assunto | Esforço | Status |
 | --- | --- | --- | --- |
 | 0 | Documentação para IA e automação | M | feita em 27/11/2026 |
-| 1 | Multissegmento | GG (dividida em 1a a 1d) | respostas recebidas em 27/11; aguardando o ok para começar a 1a |
+| 1 | Multissegmento | GG (dividida em 1a a 1d) | em andamento: 1a concluída em 27/11 (PRs #255, #256 e o do vocabulário no restante) |
 | 2 | Interface mais simples | G a GG | aguardando aprovação |
 | 3 | Mentoria financeira | G | aguardando aprovação |
 | 4 | IA opcional | GG | aguardando aprovação (muda a [ADR 0007](decisoes/0007-bot-sem-ia.md)) |

@@ -18,12 +18,12 @@ Unidade extra (Premium): R$ 99,90 por mês (R$ 82,90 no anual). Automações à 
 | Recurso | O que é | A partir de |
 | --- | --- | --- |
 | `operacao` | Comanda, caixa do dia, despesas e resultados do mês | Básico |
-| `comissoes` | Comissão automática por item, com extrato do barbeiro | Básico |
+| `comissoes` | Comissão automática por item, com extrato de cada profissional | Básico |
 | `metas` | Metas por unidade e serviço, com ritmo e projeção | Pro |
-| `clube` | Clube da barbearia: assinatura, combos e convênios | Pro |
+| `clube` | Clube de assinatura: planos, combos e convênios | Pro |
 | `bot` | Bot de WhatsApp sem custo por mensagem | Pro |
 | `listaEspera` | Lista de espera: o horário que vaga vai para quem pediu | Pro |
-| `fichaProfissional` | Ficha e ranking dos barbeiros | Pro |
+| `fichaProfissional` | Ficha e ranking de cada profissional | Pro |
 | `avaliacoes` | Pesquisa depois do atendimento, com as notas | Pro |
 | `canais` | Agendamentos por canal: balcão, WhatsApp e site | Pro |
 | `rede` | Várias unidades e painel da rede | Premium |

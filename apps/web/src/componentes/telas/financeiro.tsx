@@ -42,6 +42,7 @@ import { useApp } from '../contexto-app';
 import { SeletorMes } from '../indicadores';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 import { SoNoPlano } from '../convite-plano';
+import { useVocabulario } from '@/lib/vocabulario';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
@@ -489,6 +490,7 @@ function CopiarFixas({
   nomeUnidade: (id: string | null) => string;
   onFechar: () => void;
 }) {
+  const v = useVocabulario();
   const { unidadeAtiva } = useApp();
   const fixas = useFixasParaCopiar(unidadeAtiva, mes, aberto);
   const [edicao, setEdicao] = useState<Record<string, { marcada: boolean; valor: string }>>({});
@@ -515,9 +517,9 @@ function CopiarFixas({
             return (
               <div className="flex flex-col gap-4">
                 <p className="text-tinta-suave">
-                  Nenhuma despesa fixa do mês anterior nem salário de barbeiro para copiar: ou não
-                  houve, ou já foram copiados para este mês. O salário vem do valor fixo de cada
-                  barbeiro em Equipe.
+                  {v.t(
+                    'Nenhuma despesa fixa do mês anterior nem salário de [[profissional]] para copiar: ou não houve, ou já foram copiados para este mês. O salário vem do valor fixo de cada [[profissional]] em Equipe.',
+                  )}
                 </p>
                 <Botao className="self-end" variante="secundario" onClick={fechar}>
                   Fechar
@@ -555,7 +557,7 @@ function CopiarFixas({
             >
               <p className="text-sm text-tinta-suave">
                 Confira os valores antes de copiar. Elas entram neste mês a pagar, com o vencimento
-                no mesmo dia. Os salários vêm do valor fixo de cada barbeiro em Equipe.
+                no mesmo dia. Os salários vêm do valor fixo de cada {v.profissional.um} em Equipe.
               </p>
               {erro && <Aviso tom="erro">{erro}</Aviso>}
               <ul className="flex flex-col gap-3" aria-label="Despesas fixas do mês anterior">
@@ -622,6 +624,7 @@ function CopiarFixas({
 // ─── Comissões ────────────────────────────────────────────────────────────
 
 function Comissoes({ mes }: { mes: string }) {
+  const v = useVocabulario();
   const { unidadeAtiva } = useApp();
   const [de, ate] = limitesDoMes(mes);
   const resumo = useResumoComissoes(unidadeAtiva, de, ate);
@@ -638,10 +641,10 @@ function Comissoes({ mes }: { mes: string }) {
           />
         ) : (
           <>
-            <Tabela rotulo="Comissões por barbeiro">
+            <Tabela rotulo={`Comissões por ${v.profissional.um}`}>
               <thead className="bg-superficie-2">
                 <tr>
-                  <th className={th}>Barbeiro</th>
+                  <th className={th}>{v.Profissional}</th>
                   <th className={`${th} text-right`}>Previsto</th>
                   <th className={`${th} text-right`}>Fechado</th>
                   <th className={`${th} text-right`}>Pago</th>

@@ -55,6 +55,7 @@ import {
   type SiteBarbearia,
   type SitePainel,
   type SitePublico,
+  vocabulario,
 } from '@pente-fino/shared';
 import { isDeepStrictEqual } from 'node:util';
 import { z } from 'zod';
@@ -266,7 +267,11 @@ export class UnidadesController {
     const u = await tx.unidade.findUnique({ where: { id } });
     if (!u) throw Erros.naoEncontrado('Unidade não encontrada.');
     const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
-    return { u, rascunho: lerSite(u.siteRascunho, conta.nome), barbearia: conta.nome };
+    return {
+      u,
+      rascunho: lerSite(u.siteRascunho, conta.nome, vocabulario(conta.segmento)),
+      barbearia: conta.nome,
+    };
   }
 
   private async painelDoSite(
@@ -314,12 +319,12 @@ export class UnidadesController {
     if (dominio === alvo || dominio.endsWith(`.${alvo}`))
       throw Erros.requisicaoInvalida(
         'dominio_invalido',
-        'Use o domínio da barbearia, não o do Pente Fino.',
+        'Use o seu próprio domínio, não o do Pente Fino.',
       );
     return this.banco.daConta(async (tx) => {
       const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
       if (await dominioEmUso(tx, dominio, id))
-        throw Erros.conflito('Esse domínio já está cadastrado em outra barbearia.');
+        throw Erros.conflito('Esse domínio já está cadastrado em outra conta.');
       const apontado = await dominioApontado(this.config, dominio);
       const salvo = await tx.unidade.update({
         where: { id },
@@ -466,7 +471,7 @@ export class UnidadesController {
       const { u, rascunho, barbearia } = await this.unidadeDoSite(tx, id);
       if (u.siteSlug === slug) return this.painelDoSite(u, rascunho, barbearia);
       if (await siteSlugEmUso(tx, slug, id))
-        throw Erros.conflito('Esse endereço já é de outra barbearia. Escolha outro.');
+        throw Erros.conflito('Esse endereço já é de outra conta. Escolha outro.');
       const salvo = await tx.unidade.update({ where: { id }, data: { siteSlug: slug } });
       await registrarTrocaDeEndereco(tx, id, 'site', u.siteSlug, slug);
       await auditar(tx, {

@@ -163,8 +163,7 @@ async function responderEquipe(
         'Nenhuma unidade ativa.',
     ];
   if (!prof) {
-    if (!gestao)
-      return ['Você não está mais na agenda desta unidade. Fale com o dono da barbearia.'];
+    if (!gestao) return ['Você não está mais na agenda desta unidade. Fale com o dono da conta.'];
     return [textoAjudaEquipe(quem)];
   }
 

@@ -225,7 +225,7 @@ function SemAcesso() {
     <EstadoVazio
       icone={CircleSlash}
       titulo="Esta tela não faz parte do seu acesso"
-      texto="O menu mostra tudo o que o seu papel usa nesta unidade. Se precisar desta tela, fale com o dono da barbearia."
+      texto="O menu mostra tudo o que o seu papel usa nesta unidade. Se precisar desta tela, fale com o dono da conta."
       acao={
         menu[0] && (
           <Link
@@ -839,7 +839,7 @@ function AvisoAssinatura() {
             </Link>
           )
         ) : (
-          <span className="text-tinta-suave">Fale com o dono da barbearia.</span>
+          <span className="text-tinta-suave">Fale com o dono da conta.</span>
         )}
       </p>
     </div>

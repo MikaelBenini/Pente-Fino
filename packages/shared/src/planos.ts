@@ -52,13 +52,13 @@ export function conviteDoLimite(plano: PlanoConta, recurso: keyof LimitesPlano):
   );
   if (!proximo) return 'Para adicionar mais, fale com o suporte.';
   const cabem = Number.isFinite(LIMITES_PLANO[proximo].profissionais)
-    ? `cabem até ${LIMITES_PLANO[proximo].profissionais} barbeiros`
-    : 'os barbeiros são ilimitados';
+    ? `cabem até ${LIMITES_PLANO[proximo].profissionais} profissionais`
+    : 'os profissionais são ilimitados';
   const extra =
     proximo === 'basico'
       ? ', e você passa a ver quanto sobra: comanda, caixa e comissões'
       : proximo === 'pro'
-        ? ', com metas, clube e o ranking dos barbeiros'
+        ? ', com metas, clube e o ranking da equipe'
         : ', com várias unidades e o lucro de cada uma';
   return `No ${NOME_PLANO[proximo]} ${cabem}${extra}.`;
 }
@@ -257,12 +257,15 @@ export const RECURSOS = {
     nome: 'Comanda, caixa do dia, despesas e resultados do mês',
     desde: 'basico',
   },
-  comissoes: { nome: 'Comissão automática por item, com extrato do barbeiro', desde: 'basico' },
+  comissoes: {
+    nome: 'Comissão automática por item, com extrato de cada profissional',
+    desde: 'basico',
+  },
   metas: { nome: 'Metas por unidade e serviço, com ritmo e projeção', desde: 'pro' },
-  clube: { nome: 'Clube da barbearia: assinatura, combos e convênios', desde: 'pro' },
+  clube: { nome: 'Clube de assinatura: planos, combos e convênios', desde: 'pro' },
   bot: { nome: 'Bot de WhatsApp sem custo por mensagem', desde: 'pro' },
   listaEspera: { nome: 'Lista de espera: o horário que vaga vai para quem pediu', desde: 'pro' },
-  fichaProfissional: { nome: 'Ficha e ranking dos barbeiros', desde: 'pro' },
+  fichaProfissional: { nome: 'Ficha e ranking de cada profissional', desde: 'pro' },
   avaliacoes: { nome: 'Pesquisa depois do atendimento, com as notas', desde: 'pro' },
   canais: { nome: 'Agendamentos por canal: balcão, WhatsApp e site', desde: 'pro' },
   rede: { nome: 'Várias unidades e painel da rede', desde: 'premium' },
@@ -324,9 +327,9 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
     desde: 'agenda',
     disponivel: true,
   },
-  { nome: 'Site da barbearia, com o seu endereço', desde: 'agenda', disponivel: true },
+  { nome: 'Site próprio, com o seu endereço', desde: 'agenda', disponivel: true },
   {
-    nome: 'Avisos no WhatsApp da barbearia: confirmação, lembrete e remarcar',
+    nome: 'Avisos no WhatsApp: confirmação, lembrete e remarcar',
     desde: 'agenda',
     disponivel: true,
   },
@@ -335,7 +338,7 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
   { nome: 'Caixa do dia com divergência', desde: 'basico', disponivel: true },
   { nome: 'Despesas por grupo e % sobre o faturamento', desde: 'basico', disponivel: true },
   { nome: 'Indicadores: faturamento, clientes, ticket, extras', desde: 'basico', disponivel: true },
-  { nome: 'App do barbeiro no celular, funciona sem internet', desde: 'agenda', disponivel: true },
+  { nome: 'App da equipe no celular, funciona sem internet', desde: 'agenda', disponivel: true },
   { nome: 'Comanda impressa em PDF com QR code', desde: 'basico', disponivel: true },
   { nome: 'Importação da sua planilha', desde: 'basico', disponivel: true },
   doRecurso('comissoes'),
@@ -355,7 +358,7 @@ export const RECURSOS_PLANO: readonly RecursoPlano[] = [
   { nome: 'Preço por unidade', desde: 'premium', disponivel: true },
   doRecurso('lucroReal'),
   doRecurso('automacoes'),
-  { nome: 'Campeonato dos barbeiros', desde: 'premium', disponivel: false },
+  { nome: 'Campeonato da equipe', desde: 'premium', disponivel: false },
 ];
 
 export const incluiRecurso = (plano: PlanoConta, r: RecursoPlano) => ORDEM[plano] >= ORDEM[r.desde];

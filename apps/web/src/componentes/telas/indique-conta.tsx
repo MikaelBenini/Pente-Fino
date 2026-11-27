@@ -22,9 +22,9 @@ export function IndiqueConta() {
       {() => (
         <div className="flex max-w-4xl flex-col gap-6">
           <p className="text-tinta-suave">
-            Indique o Pente Fino para outras barbearias. Quem entra pelo seu link ganha 30 dias para
+            Indique o Pente Fino para outros negócios. Quem entra pelo seu link ganha 30 dias para
             testar, e você escolhe: 20% das mensalidades dela nos 12 primeiros meses, no Pix, ou 1
-            mês grátis na sua assinatura a cada barbearia que pagar.
+            mês grátis na sua assinatura a cada negócio que pagar.
           </p>
           {q.data && <ConteudoPainel p={q.data} link={q.data.link} />}
           <Escolha atual={q.data ?? null} />
@@ -60,8 +60,8 @@ function Escolha({ atual }: { atual: Painel | null }) {
       <legend className="px-1 font-semibold">Como você quer ganhar</legend>
       {(
         [
-          ['meses', '1 mês grátis na assinatura por barbearia que pagar'],
-          ['pix', '20% das mensalidades no Pix, nos 12 primeiros meses de cada barbearia'],
+          ['meses', '1 mês grátis na assinatura por negócio que pagar'],
+          ['pix', '20% das mensalidades no Pix, nos 12 primeiros meses de cada negócio'],
         ] as const
       ).map(([v, t]) => (
         <label key={v} className="flex min-h-11 cursor-pointer items-center gap-3">

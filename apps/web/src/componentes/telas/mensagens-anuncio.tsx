@@ -139,7 +139,7 @@ function Formulario({
         <CampoTexto
           id="anuncio-frases"
           rotulo="Frases prontas do anúncio (uma por linha)"
-          dica="Opcional. O WhatsApp já avisa quando a pessoa veio do anúncio, e isso basta (recomendado: deixe vazio). Se usar, ponha a frase inteira que o seu anúncio deixa pronta (pelo menos 3 palavras); ela só vale para quem nunca escreveu para a barbearia. Não use a frase do botão do Instagram ou do Facebook: ela pega cliente que não veio de anúncio."
+          dica="Opcional. O WhatsApp já avisa quando a pessoa veio do anúncio, e isso basta (recomendado: deixe vazio). Se usar, ponha a frase inteira que o seu anúncio deixa pronta (pelo menos 3 palavras); ela só vale para quem nunca escreveu para a unidade. Não use a frase do botão do Instagram ou do Facebook: ela pega cliente que não veio de anúncio."
 
           rows={3}
           value={frases}

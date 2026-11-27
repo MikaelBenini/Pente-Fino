@@ -680,7 +680,7 @@ function ReceberMensalidade({ adesao, onFechar }: { adesao: AdesaoDetalhe; onFec
                     {copiado ? 'Copiado' : 'Copiar Pix copia e cola'}
                   </Botao>
                   <p className="text-sm text-tinta-suave">
-                    Confira o Pix no extrato da barbearia antes de confirmar.
+                    Confira o Pix no extrato bancário antes de confirmar.
                   </p>
                 </div>
               ) : (

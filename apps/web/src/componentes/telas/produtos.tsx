@@ -59,7 +59,7 @@ export function TelaProdutos() {
             <EstadoVazio
               icone={Package}
               titulo="Cadastre seus produtos"
-              texto="Pomadas, óleos e o que mais a barbearia vende. A venda entra na comanda como receita de produto."
+              texto="Pomadas, óleos e o que mais você vende. A venda entra na comanda como receita de produto."
             />
           ) : (
             <Tabela rotulo="Produtos">

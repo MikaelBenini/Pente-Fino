@@ -79,6 +79,7 @@ import {
   linkWaMe,
   enderecoCompleto,
   linkMapaDaUnidade,
+  vocabulario,
 } from '@pente-fino/shared';
 import { IndicacaoService } from '../indicacao/indicacao.controller.js';
 import type { Request, Response } from 'express';
@@ -279,7 +280,7 @@ export class PublicoController {
           data: {
             nome: 'Unidade principal',
             capacidade: 2,
-            slug: `${gerarSlug(d.barbearia).slice(0, 50) || 'barbearia'}-${randomBytes(2).toString('hex')}`,
+            slug: `${gerarSlug(d.barbearia).slice(0, 50) || 'agenda'}-${randomBytes(2).toString('hex')}`,
           },
         });
         // Começa sem e-mail confirmado: o link vai no e-mail de boas-vindas.
@@ -395,6 +396,7 @@ export class PublicoController {
       return {
         nome: u.nome,
         barbearia: conta.nome,
+        segmento: conta.segmento,
         aparecerNoGoogle: u.aparecerNoGoogle,
         endereco: enderecoCompleto(u),
         mapa: linkMapaDaUnidade(u),
@@ -458,10 +460,14 @@ export class PublicoController {
       tx.unidade.findUnique({ where: { siteSlug: slug } }),
     );
     if (!u || !u.ativa || !u.sitePublicado)
-      throw Erros.naoEncontrado('Esta barbearia ainda não publicou o site.');
+      throw Erros.naoEncontrado('Este site ainda não foi publicado.');
     return this.banco.naConta(u.contaId, async (tx) => {
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
-      return montarSitePublico(tx, u, lerSite(u.sitePublicado, conta.nome));
+      return montarSitePublico(
+        tx,
+        u,
+        lerSite(u.sitePublicado, conta.nome, vocabulario(conta.segmento)),
+      );
     });
   }
 
@@ -631,7 +637,7 @@ export class PublicoController {
       // Conta só para consulta não recebe agendamento novo pelo link.
       if ((await estadoAssinatura(tx)).somenteLeitura)
         throw Erros.conflito(
-          'O agendamento pelo link está indisponível no momento. Fale com a barbearia pelo telefone ou WhatsApp.',
+          'O agendamento pelo link está indisponível no momento. Fale com a equipe pelo telefone ou WhatsApp.',
         );
       const cliente = await tx.cliente.findFirst({
         where: { telefone: { in: variantesTelefone(d.telefone) } },
@@ -642,7 +648,7 @@ export class PublicoController {
         bloqueadoPorFaltas(await faltasRecentes(tx, cliente.id, new Date(), regras), regras)
       )
         throw Erros.conflito(
-          'Para marcar um novo horário, fale com a barbearia pelo WhatsApp ou telefone.',
+          'Para marcar um novo horário, fale com a equipe pelo WhatsApp ou telefone.',
         );
       if (cliente) {
         const futuros = await tx.agendamento.count({
@@ -655,7 +661,7 @@ export class PublicoController {
         });
         if (futuros >= regras.maxFuturos) {
           throw Erros.conflito(
-            'Você já tem horários marcados com a gente. Para mudar, fale com a barbearia pelo WhatsApp.',
+            'Você já tem horários marcados com a gente. Para mudar, fale com a equipe pelo WhatsApp.',
           );
         }
       }
@@ -795,9 +801,9 @@ export class PublicoController {
     return this.banco.naConta(u.contaId, async (tx) => {
       const estado = await estadoAssinatura(tx);
       if (estado.somenteLeitura)
-        throw Erros.conflito('Indisponível no momento. Fale com a barbearia.');
+        throw Erros.conflito('Indisponível no momento. Fale com a equipe.');
       if (!temRecurso(estado.plano, 'listaEspera', estado.automacoes))
-        throw Erros.conflito('Esta barbearia não usa lista de espera. Tente outro dia.');
+        throw Erros.conflito('Esta unidade não usa lista de espera. Tente outro dia.');
       await duracaoDosServicos(tx, d.servicoIds).catch(() => {
         throw Erros.naoEncontrado('Serviço não encontrado.');
       });

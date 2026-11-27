@@ -115,7 +115,7 @@ async function lancarSalario(
     where: { id: profissionalId },
     include: { usuario: { select: { nome: true } } },
   });
-  if (!p) throw Erros.naoEncontrado('Barbeiro não encontrado.');
+  if (!p) throw Erros.naoEncontrado('Profissional não encontrado.');
   exigirAlcance(p.unidadeId);
   const competencia = data(`${mes}-01`);
   if (await tx.despesa.findFirst({ where: { profissionalId, competencia }, select: { id: true } }))

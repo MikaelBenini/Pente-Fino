@@ -2,6 +2,13 @@
 // como numa loja virtual. O conteúdo editável fica aqui (esquema, conteúdo inicial e regras);
 // os dados vivos (serviços, preços, equipe, nota, horário) vêm do sistema na hora de mostrar.
 import { z } from 'zod';
+import {
+  comVocabulario,
+  comVocabularioEmTudo,
+  vocabulario,
+  type Segmento,
+  type Vocabulario,
+} from './vocabulario.js';
 
 export const TEMAS_SITE = ['tradicional', 'clube', 'letreiro', 'estudio'] as const;
 export type TemaSite = (typeof TEMAS_SITE)[number];
@@ -373,130 +380,136 @@ export type SiteBarbearia = z.infer<typeof siteBarbeariaSchema>;
  * Página já montada, com textos sugeridos (decisão do dono, 13/11): o dono só ajusta. Nada de
  * número inventado: nota, preço e horário vêm do sistema; depoimentos começam escondidos e vazios.
  */
-export function siteInicial(barbearia: string): SiteBarbearia {
-  const nome = barbearia.trim() || 'a barbearia';
-  return {
-    versao: 1,
-    tema: 'tradicional',
-    cor: 'latao',
-    fonte: 'serifa',
-    botoes: 'retos',
-    slogan: 'Corte e barba com hora marcada.',
-    instagram: '',
-    paginas: {
-      inicio: [
-        {
-          id: 'banner',
-          tipo: 'banner',
-          visivel: true,
-          titulo: 'Corte, barba e atendimento sem pressa.',
-          texto:
-            'Escolha o serviço, o barbeiro e o horário pelo site. Chegou, sentou: a cadeira já está esperando.',
-        },
-        { id: 'destaques', tipo: 'destaques', visivel: true },
-        {
-          id: 'sobre',
-          tipo: 'sobre',
-          visivel: true,
-          titulo: `Conheça a ${nome}`,
-          texto:
-            'Aqui cada cliente tem hora marcada e é atendido por quem conhece o seu corte. Venha tomar um café e sair do jeito que você pediu.',
-        },
-        { id: 'servicos', tipo: 'servicos', visivel: true, titulo: 'Os mais pedidos' },
-        { id: 'equipe', tipo: 'equipe', visivel: true, titulo: 'Os barbeiros' },
-        { id: 'galeria', tipo: 'galeria', visivel: false, titulo: 'Nosso trabalho', itens: [] },
-        {
-          id: 'depoimentos',
-          tipo: 'depoimentos',
-          visivel: false,
-          titulo: 'Quem corta aqui, volta',
-          itens: [],
-        },
-        {
-          id: 'agendar',
-          tipo: 'agendar',
-          visivel: true,
-          titulo: 'Marque seu horário',
-          texto: 'Escolha o serviço, o barbeiro e o horário. Leva menos de um minuto.',
-        },
-      ],
-      servicos: [
-        {
-          id: 'cabecalho',
-          tipo: 'cabecalho',
-          visivel: true,
-          titulo: 'Serviços e preços',
-          texto: 'Escolha o serviço e marque o horário com o barbeiro que preferir.',
-        },
-        { id: 'tabela', tipo: 'tabela', visivel: true },
-        {
-          id: 'agendar',
-          tipo: 'agendar',
-          visivel: true,
-          titulo: 'Escolheu? Marque em menos de um minuto.',
-          texto: '',
-        },
-      ],
-      equipe: [
-        {
-          id: 'cabecalho',
-          tipo: 'cabecalho',
-          visivel: true,
-          titulo: 'A equipe',
-          texto: 'Escolha com quem você quer cortar, ou deixe que o primeiro livre te atenda.',
-        },
-        { id: 'barbeiros', tipo: 'barbeiros', visivel: true },
-        {
-          id: 'agendar',
-          tipo: 'agendar',
-          visivel: true,
-          titulo: 'Tanto faz o barbeiro? Pegue o primeiro horário livre.',
-          texto: '',
-        },
-      ],
-      contato: [
-        {
-          id: 'cabecalho',
-          tipo: 'cabecalho',
-          visivel: true,
-          titulo: 'Contato e endereço',
-          texto: '',
-        },
-        { id: 'contato', tipo: 'contato', visivel: true },
-        {
-          id: 'perguntas',
-          tipo: 'perguntas',
-          visivel: true,
-          titulo: 'Perguntas frequentes',
-          itens: [
-            {
-              titulo: 'Precisa marcar horário?',
-              texto:
-                'Recomendamos marcar pelo site para não esperar. Se tiver cadeira livre, atendemos na hora.',
-            },
-            {
-              titulo: 'E se eu precisar desmarcar?',
-              texto: 'Pelo link da confirmação você remarca ou cancela sem precisar ligar.',
-            },
-          ],
-        },
-        {
-          id: 'agendar',
-          tipo: 'agendar',
-          visivel: true,
-          titulo: 'A cadeira está te esperando.',
-          texto: '',
-        },
-      ],
+export function siteInicial(
+  barbearia: string,
+  v: Vocabulario = vocabulario('barbearia'),
+): SiteBarbearia {
+  const nome = barbearia.trim() || comVocabulario('[[a estabelecimento]]', v);
+  return comVocabularioEmTudo<SiteBarbearia>(
+    {
+      versao: 1,
+      tema: 'tradicional',
+      cor: 'latao',
+      fonte: 'serifa',
+      botoes: 'retos',
+      slogan: 'Corte e barba com hora marcada.',
+      instagram: '',
+      paginas: {
+        inicio: [
+          {
+            id: 'banner',
+            tipo: 'banner',
+            visivel: true,
+            titulo: 'Corte, barba e atendimento sem pressa.',
+            texto:
+              'Escolha o serviço, [[o profissional]] e o horário pelo site. Chegou, sentou: a cadeira já está esperando.',
+          },
+          { id: 'destaques', tipo: 'destaques', visivel: true },
+          {
+            id: 'sobre',
+            tipo: 'sobre',
+            visivel: true,
+            titulo: `Conheça a ${nome}`,
+            texto:
+              'Aqui cada cliente tem hora marcada e é atendido por quem conhece o seu corte. Venha tomar um café e sair do jeito que você pediu.',
+          },
+          { id: 'servicos', tipo: 'servicos', visivel: true, titulo: 'Os mais pedidos' },
+          { id: 'equipe', tipo: 'equipe', visivel: true, titulo: '[[Os profissionais]]' },
+          { id: 'galeria', tipo: 'galeria', visivel: false, titulo: 'Nosso trabalho', itens: [] },
+          {
+            id: 'depoimentos',
+            tipo: 'depoimentos',
+            visivel: false,
+            titulo: 'Quem corta aqui, volta',
+            itens: [],
+          },
+          {
+            id: 'agendar',
+            tipo: 'agendar',
+            visivel: true,
+            titulo: 'Marque seu horário',
+            texto: 'Escolha o serviço, [[o profissional]] e o horário. Leva menos de um minuto.',
+          },
+        ],
+        servicos: [
+          {
+            id: 'cabecalho',
+            tipo: 'cabecalho',
+            visivel: true,
+            titulo: 'Serviços e preços',
+            texto: 'Escolha o serviço e marque o horário com [[o profissional]] que preferir.',
+          },
+          { id: 'tabela', tipo: 'tabela', visivel: true },
+          {
+            id: 'agendar',
+            tipo: 'agendar',
+            visivel: true,
+            titulo: 'Escolheu? Marque em menos de um minuto.',
+            texto: '',
+          },
+        ],
+        equipe: [
+          {
+            id: 'cabecalho',
+            tipo: 'cabecalho',
+            visivel: true,
+            titulo: 'A equipe',
+            texto: 'Escolha com quem você quer cortar, ou deixe que o primeiro livre te atenda.',
+          },
+          { id: 'barbeiros', tipo: 'barbeiros', visivel: true },
+          {
+            id: 'agendar',
+            tipo: 'agendar',
+            visivel: true,
+            titulo: 'Tanto faz [[o profissional]]? Pegue o primeiro horário livre.',
+            texto: '',
+          },
+        ],
+        contato: [
+          {
+            id: 'cabecalho',
+            tipo: 'cabecalho',
+            visivel: true,
+            titulo: 'Contato e endereço',
+            texto: '',
+          },
+          { id: 'contato', tipo: 'contato', visivel: true },
+          {
+            id: 'perguntas',
+            tipo: 'perguntas',
+            visivel: true,
+            titulo: 'Perguntas frequentes',
+            itens: [
+              {
+                titulo: 'Precisa marcar horário?',
+                texto:
+                  'Recomendamos marcar pelo site para não esperar. Se tiver cadeira livre, atendemos na hora.',
+              },
+              {
+                titulo: 'E se eu precisar desmarcar?',
+                texto: 'Pelo link da confirmação você remarca ou cancela sem precisar ligar.',
+              },
+            ],
+          },
+          {
+            id: 'agendar',
+            tipo: 'agendar',
+            visivel: true,
+            titulo: 'A cadeira está te esperando.',
+            texto: '',
+          },
+        ],
+      },
+      equipe: {},
     },
-    equipe: {},
-  };
+    v,
+  );
 }
 
 /** Lê o que está gravado; sem nada ou inválido, devolve a página inicial sugerida. */
-export function lerSite(valor: unknown, barbearia: string): SiteBarbearia {
+export function lerSite(valor: unknown, barbearia: string, v?: Vocabulario): SiteBarbearia {
   const r = siteBarbeariaSchema.safeParse(valor);
-  return r.success ? r.data : siteInicial(barbearia);
+  return r.success ? r.data : siteInicial(barbearia, v);
 }
 
 /** Blocos da página (vazio para página extra desligada). */
@@ -659,6 +672,8 @@ export interface SitePublico {
   /** Link de agendamento atual (/b/<slugAgendamento>), para onde vão os botões "Agendar". */
   slugAgendamento: string;
   barbearia: string;
+  /** Segmento da conta: o vocabulário do site (barbeiro, esteticista...). */
+  segmento: Segmento;
   unidade: string;
   site: SiteBarbearia;
   endereco: string | null;
@@ -825,9 +840,10 @@ export function adicionarBloco(
   pagina: PaginaSite,
   tipo: TipoBloco,
   barbearia: string,
+  v?: Vocabulario,
 ): SiteBarbearia {
   if (!blocosParaAdicionar(site, pagina).includes(tipo)) return site;
-  const modelo = blocosDaPagina(siteInicial(barbearia), pagina).find((b) => b.tipo === tipo);
+  const modelo = blocosDaPagina(siteInicial(barbearia, v), pagina).find((b) => b.tipo === tipo);
   const usados = new Set(blocosDaPagina(site, pagina).map((b) => b.id));
   let id: string = tipo;
   for (let n = 2; usados.has(id); n++) id = `${tipo}-${n}`;
@@ -1107,10 +1123,10 @@ export interface VisualAgendamentoPublico {
 export const ROTULO_TEMA: Record<TemaSite, { nome: string; descricao: string }> = {
   tradicional: {
     nome: 'Tradicional',
-    descricao: 'Verde-garrafa e papel, cara de barbearia de bairro.',
+    descricao: 'Verde-garrafa e papel, cara de comércio de bairro.',
   },
-  clube: { nome: 'Clube', descricao: 'Escuro, couro e marfim: elegante, de barbearia premium.' },
-  letreiro: { nome: 'Letreiro', descricao: 'Claro, azul-marinho e a faixa listrada de barbearia.' },
+  clube: { nome: 'Clube', descricao: 'Escuro, couro e marfim: elegante e premium.' },
+  letreiro: { nome: 'Letreiro', descricao: 'Claro, azul-marinho e a faixa listrada.' },
   estudio: { nome: 'Estúdio', descricao: 'Concreto e preto, moderno e minimalista.' },
 };
 

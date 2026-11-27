@@ -4,7 +4,7 @@
 // barbearia já fez. Cada passo leva à tela e ao artigo da central de ajuda. Some quando termina;
 // dá para esconder antes (fica guardado neste aparelho).
 import {
-  DEFINICAO_PASSOS,
+  definicaoPassos,
   PASSOS_INICIAIS,
   progressoPrimeirosPassos,
   type EstadoPrimeirosPassos,
@@ -14,6 +14,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { useVocabulario } from '@/lib/vocabulario';
 
 const CHAVE = 'pf-primeiros-passos-oculto';
 const lerOculto = () => {
@@ -25,6 +26,7 @@ const lerOculto = () => {
 };
 
 export function PrimeirosPassos() {
+  const DEFINICAO_PASSOS = definicaoPassos(useVocabulario());
   const [oculto, setOculto] = useState(lerOculto);
   const [aberto, setAberto] = useState(true);
   const estado = useQuery({

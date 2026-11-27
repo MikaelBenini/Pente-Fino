@@ -67,7 +67,7 @@ export function historicoDaComanda(d: DadosHistoricoComanda): EventoComanda[] {
   if (d.confirmadaEm)
     r.push({
       quando: d.confirmadaEm,
-      texto: 'Barbeiro confirmou o atendimento',
+      texto: 'Atendimento confirmado',
       quem: d.confirmadaPor,
       tom: 'neutro',
     });

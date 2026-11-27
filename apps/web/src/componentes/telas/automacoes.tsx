@@ -69,7 +69,7 @@ function Configurar({ inicial, podeEditar }: { inicial: AutomacoesConta; podeEdi
     >
       <p className="text-tinta-suave">
         Todo dia às 10 h, pelo WhatsApp da unidade onde o cliente veio por último. Só para quem
-        aceitou receber mensagens e já conversou com a barbearia, e no máximo 20 por número por dia.
+        aceitou receber mensagens e já conversou com a unidade, e no máximo 20 por número por dia.
         Os textos ficam em “Mensagens prontas”.
       </p>
       <div className="flex flex-col gap-2">

@@ -510,7 +510,7 @@
 
 | Método | Rota | Quem | O que faz |
 | --- | --- | --- | --- |
-| GET | `/relatorio/mes` | dono,gestor | Relatório do mês contra o anterior: indicadores, clientes, canais, barbeiros (custo e lucro), mix e 12 meses |
+| GET | `/relatorio/mes` | dono,gestor | Relatório do mês contra o anterior: indicadores, clientes, canais, profissionais (custo e lucro), mix e 12 meses |
 | GET | `/relatorio/mes/arquivo` | dono,gestor | Relatório do mês para baixar: planilha (CSV) ou PDF |
 
 `apps/api/src/resultados/resultados.controller.ts`

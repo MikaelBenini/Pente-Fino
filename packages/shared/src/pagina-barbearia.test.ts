@@ -76,3 +76,20 @@ describe('página da barbearia (painel P1, P4 e P6)', () => {
     expect(t.split('\r\n')[0]).toBe('BEGIN:VCALENDAR');
   });
 });
+
+describe('página pública por segmento (Fase 1a)', () => {
+  it('estética: BeautySalon e "a esteticista" na descrição', () => {
+    const u = {
+      nome: 'Centro',
+      barbearia: 'Clínica Bela',
+      endereco: null,
+      telefone: null,
+      servicos: [],
+      segmento: 'estetica' as const,
+    };
+    expect(jsonLdDaBarbearia(u, 'https://x/b/bela')['@type']).toBe('BeautySalon');
+    expect(metadadosDaPagina(u).descricao).toBe(
+      'Escolha o serviço, a esteticista e o horário online.',
+    );
+  });
+});

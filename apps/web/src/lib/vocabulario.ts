@@ -5,6 +5,7 @@
 // "barbeiro": usa este gancho. Fora da casca do app (páginas públicas), passe o segmento.
 import {
   comArtigo,
+  comVocabulario,
   maiuscula,
   vocabulario,
   type Papel,
@@ -28,6 +29,8 @@ export interface VocabularioTela extends Vocabulario {
   oProfissional: string;
   /** "do barbeiro", "da esteticista". */
   doProfissional: string;
+  /** Texto com marcadores: t('Tente outro dia ou [[profissional]].'). */
+  t: (texto: string) => string;
 }
 
 export function vocabularioDaTela(segmento: string | null | undefined): VocabularioTela {
@@ -42,6 +45,7 @@ export function vocabularioDaTela(segmento: string | null | undefined): Vocabula
     doEstabelecimento: de(v.estabelecimento),
     oProfissional: comArtigo(v.profissional),
     doProfissional: de(v.profissional),
+    t: (texto) => comVocabulario(texto, v),
   };
 }
 

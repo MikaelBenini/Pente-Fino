@@ -41,7 +41,7 @@ export function ConvitePlano({
           Ver planos e mudar
         </Link>
       ) : (
-        <p className="text-sm text-tinta-suave">Fale com o dono da barbearia para mudar o plano.</p>
+        <p className="text-sm text-tinta-suave">Fale com o dono da conta para mudar o plano.</p>
       )}
     </div>
   );

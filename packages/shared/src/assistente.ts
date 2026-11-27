@@ -208,7 +208,7 @@ export function textoNotaBaixa(n: {
 }): string {
   const notas = [
     n.notaAtendimento !== null ? `atendimento ${n.notaAtendimento}` : null,
-    n.notaBarbearia !== null ? `barbearia ${n.notaBarbearia}` : null,
+    n.notaBarbearia !== null ? `ambiente ${n.notaBarbearia}` : null,
   ].filter(Boolean);
   return [
     `⚠️ Nota baixa · ${n.unidade}`,

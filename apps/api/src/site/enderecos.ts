@@ -34,7 +34,7 @@ export async function siteSlugEmUso(
 /** Sugestão de endereço do site: o do link de agendamento ou o nome da barbearia. */
 export function sugestaoDeSiteSlug(slugAgendamento: string | null, barbearia: string): string {
   const base = slugAgendamento ?? gerarSlug(barbearia);
-  return base.length >= 3 ? base : `barbearia-${base || 'nova'}`;
+  return base.length >= 3 ? base : `site-${base || 'novo'}`;
 }
 
 /** Primeira sugestão livre: "x", "x-2", "x-3"... */

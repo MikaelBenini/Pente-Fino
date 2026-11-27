@@ -8,6 +8,7 @@ import {
   precoDoProfissional,
   precoServicoVigente,
   regraComissaoVigente,
+  vocabularioDaConta,
   type Transacao,
 } from '@pente-fino/db';
 import {
@@ -39,6 +40,7 @@ import {
   historicoDaComanda,
   type EventoComanda,
   variantesTelefone,
+  maiuscula,
 } from '@pente-fino/shared';
 import type { z } from 'zod';
 import type { alterarItemSchema } from '@pente-fino/shared';
@@ -237,6 +239,7 @@ export class ComandasService {
       if (!unidade) throw Erros.naoEncontrado('Unidade não encontrada.');
       return {
         unidade,
+        vocab: await vocabularioDaConta(tx),
         comandas: await umPorVez(ativas, async (c) =>
           detalhe((await this.carregar(tx, c.id)).comanda),
         ),
@@ -259,6 +262,7 @@ export class ComandasService {
       porFolha,
       (id) => `${this.config.appUrl}/comandas?id=${id}`,
       `Comandas ${dia}`,
+      maiuscula(detalhes.vocab.profissional.um),
     );
   }
 

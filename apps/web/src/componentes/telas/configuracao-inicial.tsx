@@ -13,6 +13,7 @@ import { useApp } from '../contexto-app';
 import { Estado } from '../pagina';
 import { NovoProfissional } from './equipe';
 import { CampoTelefone } from '../campos';
+import { useVocabulario } from '@/lib/vocabulario';
 
 interface Modelo {
   nome: string;
@@ -53,7 +54,7 @@ export function TelaConfiguracaoInicial() {
       <EstadoVazio
         icone={CircleSlash}
         titulo="Configuração feita pelo dono"
-        texto="O assistente de primeiro acesso é do dono da barbearia."
+        texto="O assistente de primeiro acesso é do dono da conta."
       />
     );
   }
@@ -63,7 +64,7 @@ export function TelaConfiguracaoInicial() {
         <p className="text-sm font-semibold uppercase tracking-wider text-modulo-texto">
           Primeiro acesso
         </p>
-        <h1 className="text-3xl font-semibold sm:text-4xl">Vamos deixar a barbearia pronta</h1>
+        <h1 className="text-3xl font-semibold sm:text-4xl">Vamos deixar tudo pronto</h1>
         <p className="text-lg text-tinta-suave">Quatro passos. Dá para mudar tudo depois.</p>
       </header>
       <ol className="grid grid-cols-4 gap-2" aria-label="Passos">
@@ -285,8 +286,8 @@ function PassoServicos({
       }}
     >
       <p className="text-tinta-suave">
-        Marque o que a barbearia faz e ponha o seu preço. Custo de produto, duração e peso vêm
-        prontos; ajuste depois em Serviços.
+        Marque os serviços que você oferece e ponha o seu preço. Custo de produto, duração e peso
+        vêm prontos; ajuste depois em Serviços.
       </p>
       {erro && <Aviso tom="erro">{erro}</Aviso>}
       <ul className="flex flex-col divide-y divide-borda rounded-lg border border-borda bg-superficie">
@@ -333,13 +334,14 @@ function PassoServicos({
 }
 
 function PassoEquipe({ onSeguir, onVoltar }: { onSeguir: () => void; onVoltar: () => void }) {
+  const v = useVocabulario();
   const profissionais = useProfissionais();
   const [aberto, setAberto] = useState(false);
   return (
     <div className="flex flex-col gap-4">
       <p className="text-tinta-suave">
-        Cadastre os barbeiros com a comissão de cada um. Eles recebem um convite por e-mail e pelo
-        WhatsApp. Pode pular e fazer depois em Equipe.
+        Cadastre {v.t('[[os profissionais]]')} com a comissão de cada um. Eles recebem um convite
+        por e-mail e pelo WhatsApp. Pode pular e fazer depois em Equipe.
       </p>
       <ul className="flex flex-col gap-2">
         {(profissionais.data ?? []).map((p) => (

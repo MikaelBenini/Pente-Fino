@@ -50,7 +50,7 @@ export function TelaHorario() {
         <EstadoVazio
           icone={SearchX}
           titulo="Link não encontrado"
-          texto="Ele pode ter sido trocado por um mais novo. Confira a última mensagem da barbearia."
+          texto="Ele pode ter sido trocado por um mais novo. Confira a última mensagem que você recebeu."
         />
       </Moldura>
     );

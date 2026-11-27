@@ -6,6 +6,7 @@ import { lerNota } from './avaliacao.js';
 import { textoClubeNoBot, type ClubeNoBot } from './clube.js';
 import { formatarMoeda } from './formatacao.js';
 import { perguntaDePreco, servicosCitados } from './pedido-bot.js';
+import { comVocabularioEmTudo, vocabulario, type Vocabulario } from './vocabulario.js';
 
 // ─── Menu ─────────────────────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ export interface MenuBot {
 /** Variáveis que o dono pode usar nos textos. */
 export const VARIAVEIS_BOT = {
   cliente: 'Primeiro nome do cliente, quando ele já está cadastrado',
-  barbearia: 'Nome da barbearia',
+  barbearia: 'Nome [[da estabelecimento]]',
   unidade: 'Nome da unidade (útil para quem tem mais de uma)',
   endereco: 'Endereço da unidade',
   mapa: 'Link do endereço no mapa',
@@ -111,13 +112,14 @@ export const TIPOS_MENSAGEM_BOT = [
 export type TipoMensagemBot = (typeof TIPOS_MENSAGEM_BOT)[number];
 export type MensagensBot = Record<TipoMensagemBot, string>;
 
-export const SOBRE_MENSAGEM_BOT: Readonly<
-  Record<TipoMensagemBot, { nome: string; quando: string }>
-> = {
+type SobreMensagemBot = Record<TipoMensagemBot, { nome: string; quando: string }>;
+
+const MODELO_SOBRE_MENSAGEM_BOT: Readonly<SobreMensagemBot> = {
   boas_vindas: { nome: 'Boas-vindas', quando: 'Primeira mensagem da conversa, antes do menu.' },
   fora_horario: {
     nome: 'Fora do horário',
-    quando: 'Quando a conversa começa com a barbearia fechada. O menu continua funcionando.',
+    quando:
+      'Quando a conversa começa fora do horário de funcionamento. O menu continua funcionando.',
   },
   nao_entendi: {
     nome: 'Não entendi',
@@ -157,12 +159,12 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
       'Uma hora depois de fechar a comanda, para quem aceitou avisos. Use {profissional} para o nome de quem atendeu.',
   },
   pesquisa_barbearia: {
-    nome: 'Pesquisa: nota da barbearia',
+    nome: 'Pesquisa: nota [[do estabelecimento]]',
     quando: 'Depois que o cliente dá a nota do atendimento.',
   },
   pesquisa_comentario: {
     nome: 'Pesquisa: comentário',
-    quando: 'Depois da nota da barbearia. O cliente escreve ou responde 0 para terminar.',
+    quando: 'Depois da nota [[do estabelecimento]]. O cliente escreve ou responde 0 para terminar.',
   },
   pesquisa_obrigado: { nome: 'Pesquisa: agradecimento', quando: 'No fim da pesquisa.' },
   lembrete_primeiro: {
@@ -202,7 +204,17 @@ export const SOBRE_MENSAGEM_BOT: Readonly<
   },
 };
 
-export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
+/** Nome e quando sai cada mensagem pronta, no vocabulário do segmento (editor do bot). */
+export function sobreMensagemBot(v: Vocabulario): SobreMensagemBot {
+  return comVocabularioEmTudo(structuredClone(MODELO_SOBRE_MENSAGEM_BOT) as SobreMensagemBot, v);
+}
+
+export const SOBRE_MENSAGEM_BOT: Readonly<SobreMensagemBot> = sobreMensagemBot(
+  vocabulario('barbearia'),
+);
+
+/** As mensagens prontas com os marcadores do vocabulário ([[o estabelecimento]]...). */
+const MODELO_MENSAGENS_BOT: Readonly<MensagensBot> = {
   boas_vindas: 'Olá, {cliente}! Aqui é a {barbearia}.',
   fora_horario:
     'Agora estamos fechados. Funcionamos {horario}. Você pode agendar pelo menu a qualquer hora.',
@@ -220,7 +232,7 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
   pesquisa_atendimento:
     'Oi, {cliente}! Obrigado pela visita na {barbearia}. De 1 a 5, que nota você dá para o atendimento de {profissional}? Responda só com o número.',
   pesquisa_barbearia:
-    'Valeu! E de 1 a 5, que nota você dá para a barbearia (ambiente, recepção, pontualidade)?',
+    'Valeu! E de 1 a 5, que nota você dá para [[o estabelecimento]] (ambiente, recepção, pontualidade)?',
   pesquisa_comentario: 'Quer deixar um comentário? Escreva aqui, ou responda 0 para terminar.',
   pesquisa_obrigado: 'Obrigado pela avaliação! Ela ajuda a gente a melhorar.',
   lembrete_primeiro: 'Oi, {cliente}! Lembrete do seu horário na {barbearia}:',
@@ -237,18 +249,28 @@ export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = {
     'Desculpe a demora! Nossa equipe não conseguiu responder agora. Voltei a atender por aqui: responda 0 para ver as opções, ou ATENDENTE para tentar de novo mais tarde.',
 };
 
+/** Mensagens prontas no vocabulário do segmento da conta. */
+export function mensagensBotPadrao(v: Vocabulario): MensagensBot {
+  return comVocabularioEmTudo({ ...MODELO_MENSAGENS_BOT }, v);
+}
+
+/** As mensagens prontas de uma barbearia (as de sempre). */
+export const MENSAGENS_BOT_PADRAO: Readonly<MensagensBot> = mensagensBotPadrao(
+  vocabulario('barbearia'),
+);
+
 /** Resposta fora de 1 a 5 durante a pesquisa (uma vez só; na segunda, a pesquisa termina). */
 export const NOTA_NAO_ENTENDIDA = 'Responda só com um número de 1 a 5, por favor.';
 
-/** Menu que toda barbearia recebe pronto, para editar à vontade. */
-export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
+/** Menu que toda conta recebe pronto, para editar à vontade (com os marcadores do vocabulário). */
+const MODELO_MENU_BOT: Readonly<MenuBot> = {
   menu: {
     texto: 'Como posso ajudar?',
     opcoes: [
       {
         id: 'agendar',
         rotulo: 'Agendar horário',
-        resposta: 'Para agendar, escolha o serviço, o barbeiro e o horário por aqui:',
+        resposta: 'Para agendar, escolha o serviço, [[o profissional]] e o horário por aqui:',
         acao: 'agendar',
         submenu: null,
       },
@@ -305,7 +327,7 @@ export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
     {
       id: 'kw-agendar',
       palavras: ['agendar', 'marcar', 'agenda', 'marcar horário', 'agendar horário', 'tem horário'],
-      resposta: 'Para agendar, escolha o serviço, o barbeiro e o horário por aqui:',
+      resposta: 'Para agendar, escolha o serviço, [[o profissional]] e o horário por aqui:',
       acao: 'agendar',
     },
     {
@@ -339,6 +361,14 @@ export const MENU_BOT_PADRAO: Readonly<MenuBot> = {
     },
   ],
 };
+
+/** Menu pronto no vocabulário do segmento da conta. */
+export function menuBotPadrao(v: Vocabulario): MenuBot {
+  return comVocabularioEmTudo(structuredClone(MODELO_MENU_BOT) as MenuBot, v);
+}
+
+/** O menu pronto de uma barbearia (o de sempre). */
+export const MENU_BOT_PADRAO: Readonly<MenuBot> = menuBotPadrao(vocabulario('barbearia'));
 
 // ─── Texto ────────────────────────────────────────────────────────────────
 

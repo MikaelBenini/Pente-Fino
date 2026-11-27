@@ -44,7 +44,7 @@ export function TelaAvisos() {
             <EstadoVazio
               icone={BellOff}
               titulo="Nenhum aviso por enquanto"
-              texto="Quando algo precisar de você (cliente esperando no WhatsApp, comanda esperando o barbeiro, caixa com diferença, avaliação baixa), aparece aqui."
+              texto="Quando algo precisar de você (cliente esperando no WhatsApp, comanda esperando confirmação, caixa com diferença, avaliação baixa), aparece aqui."
             />
           ) : (
             <ListaDeAvisos

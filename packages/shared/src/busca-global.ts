@@ -17,7 +17,7 @@ export const PALAVRAS_DA_TELA: Partial<Record<IdMenu, readonly string[]>> = {
   financeiro: ['despesa', 'conta a pagar', 'retirada', 'cartao'],
   equipe: ['profissional', 'profissional', 'funcionario', 'convite', 'expediente'],
   desempenho: ['ranking', 'meta'],
-  comissoes: ['comissao', 'pagar barbeiro', 'vale'],
+  comissoes: ['comissao', 'pagar profissional', 'vale'],
   servicos: ['corte', 'barba', 'preco', 'combo'],
   produtos: ['estoque', 'pomada', 'venda'],
   clube: ['assinatura', 'plano', 'mensalidade', 'assinante'],
@@ -244,11 +244,11 @@ export const OPCOES_DE_BUSCA: readonly OpcaoDeBusca[] = [
   },
   {
     id: 'comissao',
-    titulo: 'Comissão, salário e expediente do barbeiro',
+    titulo: 'Comissão, salário e expediente da equipe',
     onde: 'Equipe',
     rota: '/equipe',
     tela: 'equipe',
-    palavras: ['comissao', 'percentual', 'salario', 'expediente', 'horario do barbeiro'],
+    palavras: ['comissao', 'percentual', 'salario', 'expediente', 'horario do profissional'],
   },
   {
     id: 'senha',

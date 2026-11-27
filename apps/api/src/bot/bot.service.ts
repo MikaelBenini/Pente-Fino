@@ -80,7 +80,7 @@ export class BotService {
 
   /** Unidade do escopo (nulo = padrão da barbearia), conferida e com o nome. */
   private async escopo(tx: Transacao, unidadeId: string | null) {
-    if (!unidadeId) return { unidadeId: null, nome: 'Padrão da barbearia' };
+    if (!unidadeId) return { unidadeId: null, nome: 'Padrão da conta' };
     exigirUnidade(unidadeId, GESTAO);
     const u = await this.unidade(tx, unidadeId);
     return { unidadeId: u.id, nome: u.nome };

@@ -51,7 +51,8 @@ export class UsuariosService {
         PAPEIS_DO_GESTOR.has(p.papel) &&
         p.unidadeId !== null &&
         podeNaUnidade(quem.papeis, p.unidadeId, ['gestor']);
-      if (!ok) throw Erros.semPermissao('Seu papel só altera recepção e barbeiros da sua unidade.');
+      if (!ok)
+        throw Erros.semPermissao('Seu papel só altera recepção e profissionais da sua unidade.');
     }
   }
 

@@ -27,8 +27,8 @@ test('visual da página de agendamento: liga, aparece no link e desliga', async 
   await expect(unidade.locator('option:checked')).toHaveText('Jardins');
   const secao = page.getByRole('region', { name: 'Página de agendamento' });
   const titulo = `Marque com a gente ${Date.now().toString(36)}`;
-  const ligar = secao.getByLabel('Usar o visual da barbearia na página de agendamento');
-  if (!(await ligar.isChecked())) await secao.getByText('Usar o visual da barbearia').click();
+  const ligar = secao.getByLabel('Usar o seu visual na página de agendamento');
+  if (!(await ligar.isChecked())) await secao.getByText('Usar o seu visual').click();
   await secao.getByLabel('Título (opcional)').fill(titulo);
   // A página inteira veste o tema escolhido, e a barbearia pode tirar a marca do Pente Fino.
   await secao.getByRole('radio', { name: /^Clube/ }).check({ force: true });
@@ -47,7 +47,7 @@ test('visual da página de agendamento: liga, aparece no link e desliga', async 
     .evaluate((d) => getComputedStyle(d).backgroundColor);
   expect(fundo).toBe('rgb(35, 26, 22)');
 
-  await secao.getByText('Usar o visual da barbearia').click();
+  await secao.getByText('Usar o seu visual').click();
   await secao.getByRole('button', { name: 'Salvar página de agendamento' }).click();
   await expect(secao.getByText('Salvo.')).toBeVisible();
   await cliente.reload();

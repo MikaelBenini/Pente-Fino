@@ -169,7 +169,7 @@ export class ClubeOnlineService {
     const u = await this.unidade(slug);
     return this.banco.naConta(u.contaId, async (tx) => {
       const recebe = await tx.recebimentoOnline.findFirst();
-      if (!recebe) throw Erros.naoEncontrado('Esta barbearia ainda não recebe o clube online.');
+      if (!recebe) throw Erros.naoEncontrado('O clube online ainda não está ligado aqui.');
       const conta = await tx.conta.findUniqueOrThrow({ where: { id: u.contaId } });
       const planos = await tx.itemClube.findMany({
         where: { unidadeId: u.id, ativo: true },
@@ -199,7 +199,7 @@ export class ClubeOnlineService {
     const taxaBp = await this.taxaBp();
     const preparo = await this.banco.naConta(u.contaId, async (tx) => {
       const recebe = await tx.recebimentoOnline.findFirst();
-      if (!recebe) throw Erros.conflito('Esta barbearia ainda não recebe o clube online.');
+      if (!recebe) throw Erros.conflito('O clube online ainda não está ligado aqui.');
       const plano = await tx.itemClube.findFirst({
         where: { id: d.itemClubeId, unidadeId: u.id, ativo: true },
       });
@@ -218,9 +218,7 @@ export class ClubeOnlineService {
           },
         }));
       if (await adesaoDoCliente(tx, cliente.id))
-        throw Erros.conflito(
-          'Você já tem um plano ativo nesta barbearia. Para trocar, fale com a recepção.',
-        );
+        throw Erros.conflito('Você já tem um plano ativo aqui. Para trocar, fale com a recepção.');
       // Assinatura iniciada e ainda não paga: devolve a mesma página de pagamento.
       const pendente = await tx.assinaturaClubeOnline.findFirst({
         where: { clienteId: cliente.id, itemClubeId: plano.id, status: 'aguardando' },

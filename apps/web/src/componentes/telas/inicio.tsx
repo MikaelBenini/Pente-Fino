@@ -39,7 +39,7 @@ export function TelaInicio() {
           <span className="text-xs font-semibold uppercase tracking-wider text-modulo-texto">
             Primeiro acesso
           </span>
-          <span className="text-xl font-semibold">Termine a configuração da barbearia</span>
+          <span className="text-xl font-semibold">Termine a configuração inicial</span>
           <span className="text-tinta-suave">
             {configuracao.data.servicos} serviços · {configuracao.data.profissionais} barbeiros.
             Faltam poucos passos para o primeiro atendimento.

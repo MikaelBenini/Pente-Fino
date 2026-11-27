@@ -22,6 +22,7 @@ import {
   type RelatorioDoMes,
   mesesDoHistorico,
 } from '@pente-fino/shared';
+import { vocabularioDaConta } from '@pente-fino/db';
 import type { Response } from 'express';
 import { z } from 'zod';
 import { Papeis, ExigeRecurso } from '../auth/decoradores.js';
@@ -355,7 +356,8 @@ export class RelatorioService {
     formato: 'csv' | 'pdf',
   ): Promise<{ nome: string; tipo: string; conteudo: Buffer }> {
     const r = await this.mes(unidadeId, mes);
-    const { barbearia, unidade } = await this.banco.daConta(async (tx) => ({
+    const { barbearia, unidade, vocab } = await this.banco.daConta(async (tx) => ({
+      vocab: await vocabularioDaConta(tx),
       barbearia: (await tx.conta.findUniqueOrThrow({ where: { id: Contexto.usuario().contaId } }))
         .nome,
       unidade: unidadeId
@@ -365,6 +367,7 @@ export class RelatorioService {
     const conteudo = relatorioEmArquivo(r, {
       barbearia,
       unidade,
+      vocabulario: vocab,
       parcial: mes === dataLocal(new Date()).slice(0, 7),
     });
     const nome = `relatorio-${mes}`;
@@ -394,7 +397,7 @@ export class RelatorioController {
   @Papeis('dono', 'gestor')
   @ApiOperation({
     summary:
-      'Relatório do mês contra o anterior: indicadores, clientes, canais, barbeiros (custo e lucro), mix e 12 meses',
+      'Relatório do mês contra o anterior: indicadores, clientes, canais, profissionais (custo e lucro), mix e 12 meses',
   })
   mes(@Consulta(consultaRelatorio) c: z.infer<typeof consultaRelatorio>): Promise<RelatorioDoMes> {
     return this.servico.mes(c.unidadeId, c.mes);

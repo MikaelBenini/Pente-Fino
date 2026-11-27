@@ -289,7 +289,7 @@ export async function criarAgendamentoNoBanco(
   if (!d.encaixe) {
     const prof = await tx.profissional.findUnique({ where: { id: d.profissionalId } });
     if (prof && !fazOsServicos(prof.servicoIds, d.servicoIds))
-      throw new ErroAgenda('conflito', 'Este barbeiro não faz um dos serviços escolhidos.');
+      throw new ErroAgenda('conflito', 'Este profissional não faz um dos serviços escolhidos.');
   }
   // Encaixe: a recepção já viu os avisos e confirmou; só outro cliente no horário impede.
   if (d.encaixe) await avisosDoEncaixe(tx, d.profissionalId, d.unidadeId, d.inicio, fim);

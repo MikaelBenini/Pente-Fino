@@ -78,10 +78,10 @@ describe('convites', () => {
 
   it('o limite aponta o plano que resolve', () => {
     expect(conviteDoLimite('agenda', 'profissionais')).toBe(
-      'No Básico cabem até 3 barbeiros, e você passa a ver quanto sobra: comanda, caixa e comissões.',
+      'No Básico cabem até 3 profissionais, e você passa a ver quanto sobra: comanda, caixa e comissões.',
     );
     expect(conviteDoLimite('pro', 'profissionais')).toMatch(
-      /^No Premium os barbeiros são ilimitados/,
+      /^No Premium os profissionais são ilimitados/,
     );
     expect(verificarLimite('agenda', 'unidades', 1)).toMatch(
       /segunda unidade, o plano é o Premium/,

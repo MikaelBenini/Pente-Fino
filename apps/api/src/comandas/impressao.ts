@@ -21,6 +21,8 @@ export async function pdfComandas(
   porFolha: 4 | 6,
   urlComanda: (id: string) => string,
   titulo: string,
+  /** "Barbeiro", "Esteticista": o profissional no vocabulário do segmento da conta. */
+  rotuloProfissional = 'Profissional',
 ): Promise<Uint8Array> {
   const { doc, fonte, negrito } = await novoDocumento(titulo);
   const colunas = 2;
@@ -80,7 +82,7 @@ export async function pdfComandas(
       y -= 20;
       texto(pagina, c.cliente, x, y, negrito, corpo + 6, { largura });
       y -= 16;
-      texto(pagina, `Barbeiro: ${c.profissional}`, x, y, fonte, corpo, { largura });
+      texto(pagina, `${rotuloProfissional}: ${c.profissional}`, x, y, fonte, corpo, { largura });
       y -= 18;
       for (const item of c.itens.slice(0, porFolha === 4 ? 6 : 4)) {
         texto(pagina, item.descricao, x, y, fonte, corpo, { largura: largura - 70 });

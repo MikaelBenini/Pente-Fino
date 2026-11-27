@@ -95,7 +95,7 @@ test('Perfil → Avisos: a recepção escolhe o que vai para o celular e a escol
   await entrar(page, 'recepcao.jardins@demo.pentefino.dev');
   await page.goto('/perfil');
   const secao = page.getByRole('region', { name: 'Avisos' });
-  const pendentes = secao.getByLabel('Comandas esperando confirmação do barbeiro');
+  const pendentes = secao.getByLabel('Comandas esperando confirmação de quem atendeu');
   await expect(pendentes).toBeVisible();
   // Recepção não tem resumo do dia nem caixa com diferença.
   await expect(secao.getByLabel('Resumo do dia da unidade')).toHaveCount(0);
@@ -107,7 +107,7 @@ test('Perfil → Avisos: a recepção escolhe o que vai para o celular e a escol
   await expect(
     page
       .getByRole('region', { name: 'Avisos' })
-      .getByLabel('Comandas esperando confirmação do barbeiro'),
+      .getByLabel('Comandas esperando confirmação de quem atendeu'),
   ).toBeChecked({ checked: !antes });
 });
 
