@@ -23,7 +23,7 @@ qualquer coisa. O Claude Code carrega o mesmo arquivo pelo `CLAUDE.md` da raiz.
 - Dinheiro em centavos (inteiro); datas em UTC no banco, exibição em `America/Sao_Paulo`.
 - Regra de cálculo nova vai para `packages/shared`, com teste, antes da tela.
 - Verificação antes de abrir PR: `pnpm lint`, `pnpm typecheck`, `pnpm test --concurrency=1`,
-  `pnpm test:db`, `pnpm test:e2e`, `pnpm build` e `pnpm docs:conferir`.
+  `pnpm test:db`, `pnpm test:e2e`, `pnpm build`, `pnpm regras:conferir` e `pnpm docs:conferir`.
 - A parte da documentação que sai do código (`docs/gerado/`) é refeita com `pnpm docs:gerar`.
 
 O `apps/web/AGENTS.md` (escrito pelo Next.js) avisa que a versão do Next usada aqui tem mudanças
