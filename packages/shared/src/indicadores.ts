@@ -14,6 +14,8 @@ export interface ItemFechado {
   comissaoValor: number;
   /** Coberto pelo plano do clube: entra com valor zero (a receita vem da mensalidade). */
   cobertoClube?: boolean;
+  /** Sessão de um pacote pago antes (Fase 1d): valor zero, a receita veio na venda do pacote. */
+  pacoteClienteId?: string | null;
 }
 
 export interface ComandaFechada {
@@ -31,6 +33,8 @@ export interface DespesaValor {
 /** Mensalidades do clube recebidas no período (o que chegou na conta da barbearia). */
 export interface ClubeNoPeriodo {
   mensalidades: number;
+  /** Pacotes de sessões pagos no período (igual ao clube: entram no dia em que são pagos). */
+  pacotes?: number;
 }
 
 export interface Indicadores {
@@ -44,6 +48,10 @@ export interface Indicadores {
   receitaNaoOperacional: number;
   /** Mensalidades do clube recebidas no período (entram no dia em que são pagas). */
   receitaClube: number;
+  /** Pacotes de sessões pagos no período (linha própria, como o clube). */
+  receitaPacotes: number;
+  /** Sessões de pacote usadas (soma do peso). */
+  atendimentosPacote: number;
   /** Comandas fechadas com pelo menos um serviço (assinante conta: ocupou a cadeira). */
   clientes: number;
   /** Clientes que pagaram algum serviço na hora (não só o que o plano cobre). */
@@ -95,6 +103,7 @@ export function calcularIndicadores(
   let clientes = 0;
   let clientesAvulsos = 0;
   let atendimentosClube = 0;
+  let atendimentosPacote = 0;
   let atendimentos = 0;
   let extrasQuantidade = 0;
   let extrasValor = 0;
@@ -103,7 +112,9 @@ export function calcularIndicadores(
 
   for (const c of comandas) {
     if (c.itens.some((i) => i.tipo === 'servico')) clientes += 1;
-    if (c.itens.some((i) => i.tipo === 'servico' && !i.cobertoClube)) clientesAvulsos += 1;
+    // Cliente avulso: pagou algum serviço na hora (sem clube nem pacote cobrindo).
+    if (c.itens.some((i) => i.tipo === 'servico' && !i.cobertoClube && !i.pacoteClienteId))
+      clientesAvulsos += 1;
     for (const i of c.itens) {
       const valor = valorLiquido(i);
       if (i.tipo === 'nao_operacional') {
@@ -119,6 +130,7 @@ export function calcularIndicadores(
       receitaServicos += valor;
       atendimentos += i.quantidade * i.pesoAtendimento;
       if (i.cobertoClube) atendimentosClube += i.quantidade * i.pesoAtendimento;
+      if (i.pacoteClienteId) atendimentosPacote += i.quantidade * i.pesoAtendimento;
       if (i.ehExtra) {
         extrasQuantidade += i.quantidade;
         extrasValor += valor;
@@ -133,8 +145,9 @@ export function calcularIndicadores(
   for (const d of despesas) despesasPorGrupo[d.grupo] += d.valor;
 
   const receitaClube = clube?.mensalidades ?? 0;
+  const receitaPacotes = clube?.pacotes ?? 0;
   const vendido = receitaServicos + receitaProdutos;
-  const faturamento = vendido + receitaClube;
+  const faturamento = vendido + receitaClube + receitaPacotes;
   const despesasOperacionais =
     despesasPorGrupo.fixa + despesasPorGrupo.variavel + despesasPorGrupo.manutencao + comissoes;
   return {
@@ -143,6 +156,8 @@ export function calcularIndicadores(
     receitaProdutos,
     receitaNaoOperacional,
     receitaClube,
+    receitaPacotes,
+    atendimentosPacote,
     clientes,
     clientesAvulsos,
     ticketMedio: clientesAvulsos > 0 ? Math.round(vendido / clientesAvulsos) : 0,

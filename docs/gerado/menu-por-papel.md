@@ -21,6 +21,7 @@ Fonte: `packages/shared/src/menu.ts` (`ITENS_MENU`, `menuPara`). A tela só apar
 | Serviços | `/servicos` | Cadastros | sim | sim |  |  |  |
 | Produtos | `/produtos` | Cadastros | sim | sim |  |  |  |
 | Clube | `/clube` | Cadastros | sim | sim |  |  |  |
+| Pacotes | `/pacotes` | Cadastros | sim | sim |  |  | operacao |
 | Minha página | `/pagina` | Cadastros | sim | sim |  |  |  |
 | Bot | `/bot` | WhatsApp | sim | sim |  |  |  |
 | Conversas do bot | `/conversas` | WhatsApp | sim | sim | sim |  |  |

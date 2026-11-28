@@ -94,10 +94,11 @@ export class ResumoService {
             where: { status: 'fechada', fechadaEm: periodo },
             include: { itens: true },
           });
-          const mensalidades = await this.resultados.pagamentosClube(tx, de, hoje, {});
-          faturamentoMes = calcularIndicadores(fechadas, [], {
-            mensalidades: mensalidades.reduce((soma, m) => soma + m.valor, 0),
-          }).faturamento;
+          faturamentoMes = calcularIndicadores(
+            fechadas,
+            [],
+            await this.resultados.clube(tx, de, hoje, {}),
+          ).faturamento;
         }
         return {
           contaId: u.contaId,
@@ -353,18 +354,23 @@ export class ResumoService {
       );
       const dias: string[] = [];
       for (let d = de; d <= ate; d = somarDias(d, 1)) dias.push(d);
+      // Clube e pacotes entram no dia em que são pagos (o desempenho do barbeiro não leva).
       const mensalidades = profissionalId
         ? []
         : await this.resultados.pagamentosClube(tx, de, ate, filtroComanda);
+      const pacotes = profissionalId
+        ? []
+        : await this.resultados.pagamentosPacote(tx, de, ate, filtroComanda);
       const linhas = resumoPorDia(
         dias,
         [...trabalho],
         fechadas.map((c) => ({ data: dataLocal(c.fechadaEm!), comanda: c })),
         agendamentos.map((a) => ({ data: dataLocal(a.inicio), status: a.status })),
-        mensalidades,
+        [...mensalidades, ...pacotes],
       );
       const total = calcularIndicadores(fechadas, [], {
         mensalidades: mensalidades.reduce((s, m) => s + m.valor, 0),
+        pacotes: pacotes.reduce((s, m) => s + m.valor, 0),
       });
       const hoje = dataLocal(new Date());
       return {

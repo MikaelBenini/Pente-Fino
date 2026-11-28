@@ -388,6 +388,9 @@ model Conta {
   enderecosAntigos     EnderecoAntigo[]
   passkeys             Passkey[]
 
+  pacotes         Pacote[]
+  pacotesClientes PacoteCliente[]
+
   @@map("conta")
 }
 
@@ -472,6 +475,9 @@ model Unidade {
   fotosSite        FotoSite[]
   enderecosAntigos EnderecoAntigo[]
 
+  pacotes         Pacote[]
+  pacotesClientes PacoteCliente[]
+
   @@index([contaId])
   @@map("unidade")
 }
@@ -536,6 +542,8 @@ model Usuario {
   avisos                Aviso[]
   mensagensEscritas     Mensagem[]          @relation("MensagemAutor")
   eventosDeConversa     BotSessaoEvento[]   @relation("BotSessaoEventoAutor")
+
+  pacotesVendidos PacoteCliente[] @relation("PacoteVendidoPor")
 
   @@unique([contaId, email])
   @@index([contaId])
@@ -750,6 +758,8 @@ model Servico {
   metas              Meta[]
   clube              ItemClubeServico[]
 
+  pacotes Pacote[]
+
   @@unique([contaId, nome])
   @@index([unidadeIds], type: Gin)
   @@map("servico")
@@ -855,6 +865,8 @@ model Cliente {
   assinaturasClubeOnline AssinaturaClubeOnline[]
 
   listaEspera ListaEspera[]
+
+  pacotes PacoteCliente[]
 
   @@unique([contaId, telefone])
   @@index([contaId, nome])
@@ -984,6 +996,8 @@ model ItemComanda {
   cobertoClube         Boolean         @default(false) @map("coberto_clube")
   /// Adesão do clube que cobriu o item (conta no uso do ciclo).
   adesaoId             String?         @map("adesao_id") @db.Uuid
+  /// Sessão de um pacote do cliente (Fase 1d): valor zero, comissão sobre o preço de tabela.
+  pacoteClienteId      String?         @map("pacote_cliente_id") @db.Uuid
   ehExtra              Boolean         @default(false) @map("eh_extra")
   pesoAtendimento      Int             @default(0) @map("peso_atendimento")
   comissaoPercentualBp Int?            @map("comissao_percentual_bp")
@@ -992,16 +1006,18 @@ model ItemComanda {
   criadoEm             DateTime        @default(now()) @map("criado_em") @db.Timestamptz(3)
   atualizadoEm         DateTime        @updatedAt @map("atualizado_em") @db.Timestamptz(3)
 
-  conta        Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
-  comanda      Comanda       @relation(fields: [comandaId], references: [id], onDelete: Cascade)
-  servico      Servico?      @relation(fields: [servicoId], references: [id], onDelete: NoAction)
-  produto      Produto?      @relation(fields: [produtoId], references: [id], onDelete: NoAction)
-  profissional Profissional? @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
-  adesao       AdesaoClube?  @relation(fields: [adesaoId], references: [id], onDelete: SetNull)
+  conta         Conta          @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  comanda       Comanda        @relation(fields: [comandaId], references: [id], onDelete: Cascade)
+  servico       Servico?       @relation(fields: [servicoId], references: [id], onDelete: NoAction)
+  produto       Produto?       @relation(fields: [produtoId], references: [id], onDelete: NoAction)
+  profissional  Profissional?  @relation(fields: [profissionalId], references: [id], onDelete: NoAction)
+  adesao        AdesaoClube?   @relation(fields: [adesaoId], references: [id], onDelete: SetNull)
+  pacoteCliente PacoteCliente? @relation(fields: [pacoteClienteId], references: [id], onDelete: SetNull)
 
   @@index([contaId])
   @@index([comandaId])
   @@index([profissionalId, criadoEm])
+  @@index([pacoteClienteId])
   @@map("item_comanda")
 }
 
@@ -2163,4 +2179,62 @@ model ComissaoIndicacao {
 
   @@index([indicadorId])
   @@map("comissao_indicacao")
+}
+
+/// Pacote de sessões que a conta vende (Fase 1d; packages/shared/src/pacotes.ts).
+model Pacote {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId      String   @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  unidadeId    String   @map("unidade_id") @db.Uuid
+  servicoId    String   @map("servico_id") @db.Uuid
+  nome         String
+  sessoes      Int
+  validadeDias Int      @map("validade_dias")
+  /// Centavos.
+  valor        Int
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em") @db.Timestamptz(3)
+  atualizadoEm DateTime @updatedAt @map("atualizado_em") @db.Timestamptz(3)
+
+  conta    Conta           @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  unidade  Unidade         @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  servico  Servico         @relation(fields: [servicoId], references: [id], onDelete: Restrict)
+  vendidos PacoteCliente[]
+
+  @@index([contaId])
+  @@index([unidadeId])
+  @@map("pacote")
+}
+
+/// Pacote vendido a um cliente: sessões, o que pagou e até quando vale (igual ao clube nos números).
+model PacoteCliente {
+  id                 String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contaId            String         @default(dbgenerated("conta_atual()")) @map("conta_id") @db.Uuid
+  pacoteId           String         @map("pacote_id") @db.Uuid
+  clienteId          String         @map("cliente_id") @db.Uuid
+  unidadeId          String         @map("unidade_id") @db.Uuid
+  /// Gravados na venda: mudar o pacote depois não muda o que o cliente comprou.
+  servicoId          String         @map("servico_id") @db.Uuid
+  nome               String
+  sessoes            Int
+  /// Centavos; entra no faturamento no dia do pagamento (linha "Pacotes").
+  valorPago          Int            @map("valor_pago")
+  forma              FormaPagamento
+  pagoEm             DateTime       @map("pago_em") @db.Date
+  validoAte          DateTime       @map("valido_ate") @db.Date
+  canceladoEm        DateTime?      @map("cancelado_em") @db.Timestamptz(3)
+  motivoCancelamento String?        @map("motivo_cancelamento")
+  vendidoPorId       String?        @map("vendido_por_id") @db.Uuid
+  criadoEm           DateTime       @default(now()) @map("criado_em") @db.Timestamptz(3)
+
+  conta         Conta         @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  pacote        Pacote        @relation(fields: [pacoteId], references: [id], onDelete: Restrict)
+  cliente       Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  unidade       Unidade       @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  vendidoPor    Usuario?      @relation("PacoteVendidoPor", fields: [vendidoPorId], references: [id], onDelete: SetNull)
+  sessoesUsadas ItemComanda[]
+
+  @@index([contaId, pagoEm])
+  @@index([clienteId])
+  @@map("pacote_cliente")
 }

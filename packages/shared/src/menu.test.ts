@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { itemDaRota, menuDoPlano, menuEmGrupos, menuPara } from './menu.js';
+import { itemDaRota, menuDasFuncoes, menuDoPlano, menuEmGrupos, menuPara } from './menu.js';
+import type { Funcao } from './vocabulario.js';
 
 const rotulos = (papeis: Parameters<typeof menuPara>[0]) => menuPara(papeis).map((i) => i.rotulo);
 
@@ -18,6 +19,7 @@ describe('menu por papel', () => {
       'Serviços',
       'Produtos',
       'Clube',
+      'Pacotes',
       'Minha página',
       'Bot',
       'Conversas do bot',
@@ -105,5 +107,14 @@ describe('menuDoPlano (Plano Agenda)', () => {
     const dono = menuPara(['dono']);
     expect(menuDoPlano(dono, 'basico')).toEqual(dono);
     expect(menuDoPlano(dono, 'premium')).toEqual(dono);
+  });
+});
+
+describe('funções da conta no menu (Fase 1d)', () => {
+  it('Pacotes só aparece com a função ligada', () => {
+    const ids = (f: readonly Funcao[]) => menuDasFuncoes(menuPara(['dono']), f).map((i) => i.id);
+    expect(ids([])).not.toContain('pacotes');
+    expect(ids(['pacotes'])).toContain('pacotes');
+    expect(ids([])).toContain('clube');
   });
 });

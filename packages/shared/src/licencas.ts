@@ -134,6 +134,7 @@ export const TELAS_FORA_DA_LICENCA: Partial<Record<Licenca, readonly string[]>> 
     'desempenho',
     'produtos',
     'clube',
+    'pacotes',
     'pagina',
   ],
 };

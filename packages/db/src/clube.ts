@@ -3,6 +3,7 @@
 import {
   cicloDaAdesao,
   coberturaDoServico,
+  saldoDoPacote,
   restantesDoCiclo,
   situacaoDaAdesao,
   type AdesaoDetalhe,
@@ -96,6 +97,44 @@ export interface ParteDoItem {
   precoUnitario: number;
   cobertoClube: boolean;
   adesaoId: string | null;
+  /** Sessão de um pacote do cliente (Fase 1d): valor zero, a receita veio na venda do pacote. */
+  pacoteClienteId?: string | null;
+}
+
+/** Sessões usadas de um pacote, lidas das comandas não canceladas (nunca de um contador). */
+export async function usadasDoPacote(tx: Tx, pacoteClienteId: string): Promise<number> {
+  const r = await tx.itemComanda.aggregate({
+    where: { pacoteClienteId, comanda: { status: { not: 'cancelada' } } },
+    _sum: { quantidade: true },
+  });
+  return r._sum.quantidade ?? 0;
+}
+
+/**
+ * Pacotes do cliente que cobrem o serviço no dia (ativos, da unidade, com saldo), o que vence
+ * primeiro antes.
+ */
+async function pacotesQueCobrem(
+  tx: Tx,
+  d: { clienteId: string; unidadeId: string; servicoId: string; dia: DataISO },
+): Promise<{ id: string; saldo: number }[]> {
+  const pacotes = await tx.pacoteCliente.findMany({
+    where: {
+      clienteId: d.clienteId,
+      unidadeId: d.unidadeId,
+      servicoId: d.servicoId,
+      canceladoEm: null,
+      validoAte: { gte: new Date(`${d.dia}T00:00:00Z`) },
+    },
+    orderBy: [{ validoAte: 'asc' }, { criadoEm: 'asc' }],
+    select: { id: true, sessoes: true },
+  });
+  const comSaldo: { id: string; saldo: number }[] = [];
+  for (const p of pacotes) {
+    const saldo = saldoDoPacote(p.sessoes, await usadasDoPacote(tx, p.id));
+    if (saldo > 0) comSaldo.push({ id: p.id, saldo });
+  }
+  return comSaldo;
 }
 
 /**
@@ -103,7 +142,7 @@ export interface ParteDoItem {
  * à adesão; o que passa do limite (ou está fora do plano) entra com o preço normal. Só vale a
  * adesão em dia e na unidade do plano.
  */
-export async function partesDoServico(
+async function partesDoClube(
   tx: Tx,
   d: {
     clienteId: string | null;
@@ -143,6 +182,49 @@ export async function partesDoServico(
       ? [{ quantidade: extras, precoUnitario: d.preco, cobertoClube: false, adesaoId: null }]
       : []),
   ];
+}
+
+/**
+ * Serviço lançado para o cliente: o que o clube cobre entra com valor zero (RN-07); depois, o que
+ * um pacote pago antes cobre (Fase 1d, igual ao clube); o resto, com o preço normal.
+ */
+export async function partesDoServico(
+  tx: Tx,
+  d: {
+    clienteId: string | null;
+    unidadeId: string;
+    servicoId: string;
+    quantidade: number;
+    preco: number;
+    dia: DataISO;
+  },
+): Promise<ParteDoItem[]> {
+  const partes = await partesDoClube(tx, d);
+  const normal = partes.find((p) => !p.cobertoClube);
+  if (!d.clienteId || !normal) return partes;
+  const pacotes = await pacotesQueCobrem(tx, {
+    clienteId: d.clienteId,
+    unidadeId: d.unidadeId,
+    servicoId: d.servicoId,
+    dia: d.dia,
+  });
+  if (pacotes.length === 0) return partes;
+  const resultado = partes.filter((p) => p !== normal);
+  let falta = normal.quantidade;
+  for (const p of pacotes) {
+    if (falta === 0) break;
+    const usar = Math.min(falta, p.saldo);
+    resultado.push({
+      quantidade: usar,
+      precoUnitario: 0,
+      cobertoClube: false,
+      adesaoId: null,
+      pacoteClienteId: p.id,
+    });
+    falta -= usar;
+  }
+  if (falta > 0) resultado.push({ ...normal, quantidade: falta });
+  return resultado;
 }
 
 /** Comissão fixa que o dono definiu para o serviço no plano da adesão (null = % do barbeiro). */

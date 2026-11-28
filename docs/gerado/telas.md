@@ -2,7 +2,7 @@
 
 # Telas
 
-75 páginas do Next (`apps/web/src/app`). As telas do painel ficam em `apps/web/src/componentes/telas`; o menu por papel está em [menu-por-papel.md](menu-por-papel.md).
+76 páginas do Next (`apps/web/src/app`). As telas do painel ficam em `apps/web/src/componentes/telas`; o menu por papel está em [menu-por-papel.md](menu-por-papel.md).
 
 ## Painel (logado)
 
@@ -32,6 +32,7 @@
 | `/metas` | na própria página | `apps/web/src/app/(app)/metas/page.tsx` |
 | `/metricas` | na própria página | `apps/web/src/app/(app)/metricas/page.tsx` |
 | `/outro-negocio` | TelaOutroNegocio (`componentes/telas/outro-negocio.tsx`) | `apps/web/src/app/(app)/outro-negocio/page.tsx` |
+| `/pacotes` | TelaPacotes (`componentes/telas/pacotes.tsx`) | `apps/web/src/app/(app)/pacotes/page.tsx` |
 | `/pagina` | TelaMinhaPagina (`componentes/telas/minha-pagina.tsx`) | `apps/web/src/app/(app)/pagina/page.tsx` |
 | `/perfil` | AssistenteEquipe (`componentes/assistente-equipe.tsx`) | `apps/web/src/app/(app)/perfil/page.tsx` |
 | `/produtos` | TelaProdutos (`componentes/telas/produtos.tsx`) | `apps/web/src/app/(app)/produtos/page.tsx` |

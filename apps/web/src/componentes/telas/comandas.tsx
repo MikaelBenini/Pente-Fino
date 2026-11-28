@@ -625,11 +625,18 @@ function Comanda({ c }: { c: ComandaDetalhe }) {
                         Clube
                       </span>
                     )}
+                    {i.cobertoPacote && (
+                      <span className="rounded-sm bg-acao px-1.5 font-denso text-xs font-semibold uppercase text-sobre-acao">
+                        Pacote
+                      </span>
+                    )}
                   </span>
                   <span className="font-denso text-sm tabular-nums text-tinta-suave">
                     {i.cobertoClube
                       ? `${i.quantidade} × coberto pelo plano`
-                      : `${i.quantidade} × ${formatarMoeda(i.precoUnitario)}`}
+                      : i.cobertoPacote
+                        ? `${i.quantidade} × sessão do pacote`
+                        : `${i.quantidade} × ${formatarMoeda(i.precoUnitario)}`}
                     {i.precoLivre && ' · preço livre'}
                     {i.desconto > 0 && ` · desconto ${formatarMoeda(i.desconto)}`}
                     {c.status === 'fechada' &&

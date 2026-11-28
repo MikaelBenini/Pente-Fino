@@ -289,6 +289,8 @@ export interface ItemComandaDetalhe {
   ehExtra: boolean;
   /** Coberto pelo plano do clube: entra com valor zero e conta no uso do mês. */
   cobertoClube: boolean;
+  /** Sessão de um pacote pago antes (Fase 1d): valor zero, conta no saldo do pacote. */
+  cobertoPacote: boolean;
   comissaoValor: number;
   /** Serviço com preço livre (fora do clube): a faixa e se quem vê pode trocar o valor. */
   precoLivre: { minimo: number | null; maximo: number | null; podeAlterar: boolean } | null;

@@ -2,7 +2,7 @@
 
 # Modelo de dados
 
-66 entidades e 31 enums em `packages/db/prisma/schema.prisma`. Toda tabela de negócio tem `conta_id` com RLS (`app.conta_id`); dinheiro em centavos (inteiro); datas em UTC. Nomes em camelCase são os do Prisma; a coluna no banco é o `@map` (snake_case).
+68 entidades e 31 enums em `packages/db/prisma/schema.prisma`. Toda tabela de negócio tem `conta_id` com RLS (`app.conta_id`); dinheiro em centavos (inteiro); datas em UTC. Nomes em camelCase são os do Prisma; a coluna no banco é o `@map` (snake_case).
 
 ## Entidades
 
@@ -27,7 +27,7 @@
 | [NotaCliente](#notacliente) | `nota_cliente` | 8 | sim |  |
 | [Agendamento](#agendamento) | `agendamento` | 17 | sim | Cria a comanda prevista. Dois agendamentos ativos do mesmo profissional não se sobrepõem (restrição de exclusão na migração "restricoes"). |
 | [Comanda](#comanda) | `comanda` | 20 | sim | Só comanda fechada entra em faturamento, comissão e indicadores. |
-| [ItemComanda](#itemcomanda) | `item_comanda` | 21 | sim | Grava preço, custo, peso e comissão do momento: mudanças futuras não reescrevem o passado. |
+| [ItemComanda](#itemcomanda) | `item_comanda` | 22 | sim | Grava preço, custo, peso e comissão do momento: mudanças futuras não reescrevem o passado. |
 | [Pagamento](#pagamento) | `pagamento` | 10 | sim |  |
 | [CaixaDia](#caixadia) | `caixa_dia` | 14 | sim |  |
 | [CategoriaDespesa](#categoriadespesa) | `categoria_despesa` | 7 | sim | Investimento, retirada do dono e cartão/resgates ficam fora do % operacional. |
@@ -74,6 +74,8 @@
 | [DepoimentoSite](#depoimentosite) | `depoimento_site` | 11 | não | Depoimentos da página de vendas (pedido do dono em 14/11). Tabela só da administração. |
 | [Indicador](#indicador) | `indicador` | 11 | sim | Indique e ganhe (pedido do dono em 14/11): quem indica, cliente ou não. Tabela só da administração; o painel do indicador abre pelo link secreto (só o hash fica aqui). |
 | [ComissaoIndicacao](#comissaoindicacao) | `comissao_indicacao` | 11 | sim | Uma comissão por fatura paga da indicada (o gatilho da migração "indique_e_ganhe" cria). |
+| [Pacote](#pacote) | `pacote` | 11 | sim | Pacote de sessões que a conta vende (Fase 1d; packages/shared/src/pacotes.ts). |
+| [PacoteCliente](#pacotecliente) | `pacote_cliente` | 16 | sim | Pacote vendido a um cliente: sessões, o que pagou e até quando vale (igual ao clube nos números). |
 
 ## Relações
 
@@ -131,6 +133,7 @@ erDiagram
   Produto |o--o{ ItemComanda : "produto"
   Profissional |o--o{ ItemComanda : "profissional"
   AdesaoClube |o--o{ ItemComanda : "adesao"
+  PacoteCliente |o--o{ ItemComanda : "pacoteCliente"
   Conta ||--o{ Pagamento : "conta"
   Comanda ||--o{ Pagamento : "comanda"
   Usuario |o--o{ Pagamento : "recebidoPor"
@@ -228,6 +231,14 @@ erDiagram
   Conta ||--o{ EnderecoAntigo : "conta"
   Unidade ||--o{ EnderecoAntigo : "unidade"
   Indicador ||--o{ ComissaoIndicacao : "indicador"
+  Conta ||--o{ Pacote : "conta"
+  Unidade ||--o{ Pacote : "unidade"
+  Servico ||--o{ Pacote : "servico"
+  Conta ||--o{ PacoteCliente : "conta"
+  Pacote ||--o{ PacoteCliente : "pacote"
+  Cliente ||--o{ PacoteCliente : "cliente"
+  Unidade ||--o{ PacoteCliente : "unidade"
+  Usuario |o--o{ PacoteCliente : "vendidoPor"
 ```
 
 ## Campos por entidade
@@ -326,6 +337,8 @@ Tabela `conta`. Raiz do isolamento multiempresa. O RLS compara o próprio id com
 | fotosSite | FotoSite[] | não | lista de FotoSite |
 | enderecosAntigos | EnderecoAntigo[] | não | lista de EnderecoAntigo |
 | passkeys | Passkey[] | não | lista de Passkey |
+| pacotes | Pacote[] | não | lista de Pacote |
+| pacotesClientes | PacoteCliente[] | não | lista de PacoteCliente |
 
 ### Unidade
 
@@ -387,6 +400,8 @@ Tabela `unidade`.
 | avisos | Aviso[] | não | lista de Aviso |
 | fotosSite | FotoSite[] | não | lista de FotoSite |
 | enderecosAntigos | EnderecoAntigo[] | não | lista de EnderecoAntigo |
+| pacotes | Pacote[] | não | lista de Pacote |
+| pacotesClientes | PacoteCliente[] | não | lista de PacoteCliente |
 
 Restrições: índice (contaId).
 
@@ -449,6 +464,7 @@ Tabela `usuario`. E-mail único no sistema todo: o login acha a conta pelo e-mai
 | avisos | Aviso[] | não | lista de Aviso |
 | mensagensEscritas | Mensagem[] | não | lista de Mensagem |
 | eventosDeConversa | BotSessaoEvento[] | não | lista de BotSessaoEvento |
+| pacotesVendidos | PacoteCliente[] | não | lista de PacoteCliente |
 
 Restrições: único (contaId, email) · índice (contaId) · índice (email).
 
@@ -639,6 +655,7 @@ Tabela `servico`. Peso: principal 1, extra 0, combo = soma dos inclusos. Define 
 | itens | ItemComanda[] | não | lista de ItemComanda |
 | metas | Meta[] | não | lista de Meta |
 | clube | ItemClubeServico[] | não | lista de ItemClubeServico |
+| pacotes | Pacote[] | não | lista de Pacote |
 
 Restrições: único (contaId, nome) · índice (unidadeIds).
 
@@ -738,6 +755,7 @@ Tabela `cliente`. Telefone em dígitos com DDI (5511999998888); único por conta
 | adesoesClube | AdesaoClube[] | não | lista de AdesaoClube |
 | assinaturasClubeOnline | AssinaturaClubeOnline[] | não | lista de AssinaturaClubeOnline |
 | listaEspera | ListaEspera[] | não | lista de ListaEspera |
+| pacotes | PacoteCliente[] | não | lista de PacoteCliente |
 
 Restrições: único (contaId, telefone) · índice (contaId, nome).
 
@@ -855,6 +873,7 @@ Tabela `item_comanda`. Grava preço, custo, peso e comissão do momento: mudanç
 | custoUnitario | Int | sim | Custo de produto por unidade no momento do lançamento.; padrão 0; coluna `custo_unitario` |
 | cobertoClube | Boolean | sim | padrão false; coluna `coberto_clube` |
 | adesaoId | String | não | Adesão do clube que cobriu o item (conta no uso do ciclo).; coluna `adesao_id` |
+| pacoteClienteId | String | não | Sessão de um pacote do cliente (Fase 1d): valor zero, comissão sobre o preço de tabela.; coluna `pacote_cliente_id` |
 | ehExtra | Boolean | sim | padrão false; coluna `eh_extra` |
 | pesoAtendimento | Int | sim | padrão 0; coluna `peso_atendimento` |
 | comissaoPercentualBp | Int | não | coluna `comissao_percentual_bp` |
@@ -868,8 +887,9 @@ Tabela `item_comanda`. Grava preço, custo, peso e comissão do momento: mudanç
 | produto | Produto | não | relação com Produto |
 | profissional | Profissional | não | relação com Profissional |
 | adesao | AdesaoClube | não | relação com AdesaoClube |
+| pacoteCliente | PacoteCliente | não | relação com PacoteCliente |
 
-Restrições: índice (contaId) · índice (comandaId) · índice (profissionalId, criadoEm).
+Restrições: índice (contaId) · índice (comandaId) · índice (profissionalId, criadoEm) · índice (pacoteClienteId).
 
 ### Pagamento
 
@@ -1853,6 +1873,61 @@ Tabela `comissao_indicacao`. Uma comissão por fatura paga da indicada (o gatilh
 | indicador | Indicador | sim | relação com Indicador |
 
 Restrições: índice (indicadorId).
+
+### Pacote
+
+Tabela `pacote`. Pacote de sessões que a conta vende (Fase 1d; packages/shared/src/pacotes.ts).
+
+| Campo | Tipo | Obrigatório | Observação |
+| --- | --- | --- | --- |
+| id | String | sim | chave; padrão dbgenerated("uuidv7( |
+| contaId | String | sim | padrão dbgenerated("conta_atual(; coluna `conta_id` |
+| unidadeId | String | sim | coluna `unidade_id` |
+| servicoId | String | sim | coluna `servico_id` |
+| nome | String | sim |  |
+| sessoes | Int | sim |  |
+| validadeDias | Int | sim | coluna `validade_dias` |
+| valor | Int | sim | Centavos. |
+| ativo | Boolean | sim | padrão true |
+| criadoEm | DateTime | sim | padrão now(); coluna `criado_em` |
+| atualizadoEm | DateTime | sim | coluna `atualizado_em` |
+| conta | Conta | sim | relação com Conta |
+| unidade | Unidade | sim | relação com Unidade |
+| servico | Servico | sim | relação com Servico |
+| vendidos | PacoteCliente[] | não | lista de PacoteCliente |
+
+Restrições: índice (contaId) · índice (unidadeId).
+
+### PacoteCliente
+
+Tabela `pacote_cliente`. Pacote vendido a um cliente: sessões, o que pagou e até quando vale (igual ao clube nos números).
+
+| Campo | Tipo | Obrigatório | Observação |
+| --- | --- | --- | --- |
+| id | String | sim | chave; padrão dbgenerated("uuidv7( |
+| contaId | String | sim | padrão dbgenerated("conta_atual(; coluna `conta_id` |
+| pacoteId | String | sim | coluna `pacote_id` |
+| clienteId | String | sim | coluna `cliente_id` |
+| unidadeId | String | sim | coluna `unidade_id` |
+| servicoId | String | sim | Gravados na venda: mudar o pacote depois não muda o que o cliente comprou.; coluna `servico_id` |
+| nome | String | sim |  |
+| sessoes | Int | sim |  |
+| valorPago | Int | sim | Centavos; entra no faturamento no dia do pagamento (linha "Pacotes").; coluna `valor_pago` |
+| forma | FormaPagamento | sim | enum FormaPagamento |
+| pagoEm | DateTime | sim | coluna `pago_em` |
+| validoAte | DateTime | sim | coluna `valido_ate` |
+| canceladoEm | DateTime | não | coluna `cancelado_em` |
+| motivoCancelamento | String | não | coluna `motivo_cancelamento` |
+| vendidoPorId | String | não | coluna `vendido_por_id` |
+| criadoEm | DateTime | sim | padrão now(); coluna `criado_em` |
+| conta | Conta | sim | relação com Conta |
+| pacote | Pacote | sim | relação com Pacote |
+| cliente | Cliente | sim | relação com Cliente |
+| unidade | Unidade | sim | relação com Unidade |
+| vendidoPor | Usuario | não | relação com Usuario |
+| sessoesUsadas | ItemComanda[] | não | lista de ItemComanda |
+
+Restrições: índice (contaId, pagoEm) · índice (clienteId).
 
 ## Enums
 

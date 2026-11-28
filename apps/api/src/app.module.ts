@@ -16,6 +16,7 @@ import { CobrancaService } from './cobranca/cobranca.service.js';
 import { AssistenteController } from './me/assistente.controller.js';
 import { PushController } from './me/push.controller.js';
 import { ClubeController } from './clube/clube.controller.js';
+import { PacotesController } from './pacotes/pacotes.controller.js';
 import { ClubeOnlineController, ClubePublicoController } from './clube/clube-online.controller.js';
 import { ClubeOnlineService } from './clube/clube-online.service.js';
 import { EsperaController } from './agenda/espera.controller.js';
@@ -217,6 +218,7 @@ export class ComumModule {}
     ClubeOnlineController,
     ClubePublicoController,
     ClubeController,
+    PacotesController,
     EsperaController,
     ConfiguracaoController,
     ImportacaoController,
