@@ -2,15 +2,12 @@
 
 import {
   NOME_PLANO,
-  LICENCAS_A_VENDA,
-  NOME_LICENCA,
+  licencaDoProduto,
+  NOME_PRODUTO,
   PLANOS_DA_LICENCA,
-  SEGMENTOS_DA_LICENCA,
-  segmentoPadraoDaLicenca,
-  vocabulario,
-  type Licenca,
+  PRODUTOS,
+  type Produto,
   type PlanoConta,
-  type Segmento,
   precoPorMes,
   type VendaCriada,
   type VendasDoVendedor,
@@ -55,8 +52,9 @@ export function NovaVenda({
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [licenca, setLicenca] = useState<Licenca>('barbearia');
-  const [segmento, setSegmento] = useState<Segmento>('barbearia');
+  // Um campo só, "Produto" (pedido do dono em 28/11/2026): licença e tipo de negócio saem dele.
+  const [produto, setProduto] = useState<Produto>('barbearia');
+  const { licenca, segmento } = licencaDoProduto(produto);
   const [plano, setPlano] = useState<PlanoConta>('pro');
   const [ciclo, setCiclo] = useState<'mensal' | 'anual'>('mensal');
   const [dias, setDias] = useState('14');
@@ -207,30 +205,18 @@ export function NovaVenda({
               onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Selecao
-              id="venda-licenca"
-              rotulo="Licença"
-              value={licenca}
-              onChange={(e) => {
-                const nova = e.target.value as Licenca;
-                setLicenca(nova);
-                setSegmento(segmentoPadraoDaLicenca(nova));
-                if (!PLANOS_DA_LICENCA[nova].includes(plano)) setPlano(PLANOS_DA_LICENCA[nova][0]!);
-              }}
-              opcoes={LICENCAS_A_VENDA.map((l) => ({ valor: l, rotulo: NOME_LICENCA[l] }))}
-            />
-            <Selecao
-              id="venda-segmento"
-              rotulo="Tipo de negócio"
-              value={segmento}
-              onChange={(e) => setSegmento(e.target.value as Segmento)}
-              opcoes={SEGMENTOS_DA_LICENCA[licenca].map((s) => ({
-                valor: s,
-                rotulo: vocabulario(s).nomeSegmento,
-              }))}
-            />
-          </div>
+          <Selecao
+            id="venda-produto"
+            rotulo="Produto"
+            value={produto}
+            onChange={(e) => {
+              const novo = e.target.value as Produto;
+              setProduto(novo);
+              const planos = PLANOS_DA_LICENCA[licencaDoProduto(novo).licenca];
+              if (!planos.includes(plano)) setPlano(planos[0]!);
+            }}
+            opcoes={PRODUTOS.map((p) => ({ valor: p, rotulo: NOME_PRODUTO[p] }))}
+          />
           <div className="grid gap-4 sm:grid-cols-3">
             <Selecao
               id="venda-plano"

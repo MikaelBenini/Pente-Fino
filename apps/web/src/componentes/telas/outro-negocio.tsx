@@ -7,18 +7,14 @@ import {
   aplicarDesconto,
   DESCONTO_SEGUNDA_CONTA_BP,
   formatarMoeda,
-  LICENCAS_A_VENDA,
-  NOME_LICENCA,
+  licencaDoProduto,
+  NOME_PRODUTO,
   NOME_PLANO,
-  PARA_QUEM_LICENCA,
+  PRODUTOS,
   PLANOS_DA_LICENCA,
   precoPorMes,
-  SEGMENTOS_DA_LICENCA,
-  segmentoPadraoDaLicenca,
-  vocabulario,
-  type Licenca,
+  type Produto,
   type PlanoConta,
-  type Segmento,
 } from '@pente-fino/shared';
 import { Botao, Campo, Selecao } from '@pente-fino/ui';
 import { useState } from 'react';
@@ -31,8 +27,8 @@ import { CabecalhoPagina } from '../pagina';
 export function TelaOutroNegocio() {
   const app = useApp();
   const [nome, setNome] = useState('');
-  const [licenca, setLicenca] = useState<Licenca>('barbearia');
-  const [segmento, setSegmento] = useState<Segmento>('barbearia');
+  const [produto, setProduto] = useState<Produto>('barbearia');
+  const { licenca, segmento } = licencaDoProduto(produto);
   const [plano, setPlano] = useState<PlanoConta>('basico');
   const [erro, setErro] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
@@ -49,10 +45,10 @@ export function TelaOutroNegocio() {
   const cheio = precoPorMes(plano, 'mensal', 1, undefined, false, licenca);
   const comDesconto = aplicarDesconto(cheio, DESCONTO_SEGUNDA_CONTA_BP);
 
-  const mudarLicenca = (l: Licenca) => {
-    setLicenca(l);
-    setSegmento(segmentoPadraoDaLicenca(l));
-    if (!PLANOS_DA_LICENCA[l].includes(plano)) setPlano(PLANOS_DA_LICENCA[l][0]!);
+  const mudarProduto = (p: Produto) => {
+    setProduto(p);
+    const planosNovos = PLANOS_DA_LICENCA[licencaDoProduto(p).licenca];
+    if (!planosNovos.includes(plano)) setPlano(planosNovos[0]!);
   };
 
   const criar = async () => {
@@ -93,27 +89,12 @@ export function TelaOutroNegocio() {
           onChange={(e) => setNome(e.target.value)}
         />
         <Selecao
-          id="negocio-licenca"
-          rotulo="Licença"
-          value={licenca}
-          onChange={(e) => mudarLicenca(e.target.value as Licenca)}
-          opcoes={LICENCAS_A_VENDA.map((l) => ({
-            valor: l,
-            rotulo: `${NOME_LICENCA[l]}: ${PARA_QUEM_LICENCA[l]}`,
-          }))}
+          id="negocio-produto"
+          rotulo="Produto"
+          value={produto}
+          onChange={(e) => mudarProduto(e.target.value as Produto)}
+          opcoes={PRODUTOS.map((p) => ({ valor: p, rotulo: NOME_PRODUTO[p] }))}
         />
-        {SEGMENTOS_DA_LICENCA[licenca].length > 1 && (
-          <Selecao
-            id="negocio-segmento"
-            rotulo="Tipo de negócio"
-            value={segmento}
-            onChange={(e) => setSegmento(e.target.value as Segmento)}
-            opcoes={SEGMENTOS_DA_LICENCA[licenca].map((s) => ({
-              valor: s,
-              rotulo: vocabulario(s).nomeSegmento,
-            }))}
-          />
-        )}
         {planos.length > 1 && (
           <Selecao
             id="negocio-plano"

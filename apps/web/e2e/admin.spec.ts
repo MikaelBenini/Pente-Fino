@@ -2,6 +2,14 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { codigoDoPasso, passoDe } from './totp';
+import type { Page } from '@playwright/test';
+
+/** Uma tela do menu da administração (organizado por assunto em 28/11/2026). */
+const menuAdmin = (page: Page, nome: string) =>
+  page
+    .getByRole('navigation', { name: 'Administração' })
+    // O Chat mostra quantas conversas esperam: "Chat (2)".
+    .getByRole('button', { name: new RegExp('^' + nome + '( \\(\\d+\\))?$') });
 
 // Etapa 15.1: login da administração com segundo fator e a lista de contas.
 test('administração: 1º acesso configura o autenticador, entra e vê as contas', async ({
@@ -78,11 +86,11 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await page.getByRole('list', { name: 'Contas por situação' }).getByRole('button').first().click();
   await expect(page).toHaveURL(/#contas\?situacao=\w+$/);
   await expect(page.getByLabel('Situação')).not.toHaveValue('');
-  await page.getByRole('tab', { name: 'Início' }).click();
+  await menuAdmin(page, 'Início').click();
   // Admin F6: o chat do site tem a aba própria.
-  await page.getByRole('tab', { name: 'Chat' }).click();
+  await menuAdmin(page, 'Chat').click();
   await expect(page.getByRole('heading', { name: 'Chat do site', level: 1 })).toBeVisible();
-  await page.getByRole('tab', { name: 'Contas' }).click();
+  await menuAdmin(page, 'Contas').click();
   await expect(page).toHaveURL(/#contas$/);
   await expect(page.getByRole('heading', { name: 'Contas', exact: true })).toBeVisible();
   const tabela = page.getByRole('table', { name: 'Contas das barbearias' });
@@ -103,6 +111,8 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await tabela.getByRole('button', { name: 'Barbearia Plano Básico' }).click();
   const ficha = page.getByRole('dialog', { name: 'Barbearia Plano Básico' });
   await expect(ficha).toContainText('basico@demo.pentefino.dev');
+  // Ficha em abas: Resumo, Ações, Cobranças e Histórico e notas.
+  await ficha.getByRole('tab', { name: 'Ações' }).click();
   const estender = ficha.getByRole('form', { name: 'Estender teste' });
   await expect(estender.getByRole('button', { name: 'Salvar data' })).toBeDisabled();
   // O campo já vem dentro do limite de 60 dias (admin R6) e explica a cortesia.
@@ -110,6 +120,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await estender.getByLabel('Motivo').fill('Cortesia do teste de navegador');
   await estender.getByRole('button', { name: 'Salvar data' }).click();
   await expect(estender.getByRole('status')).toHaveText('Feito. Ficou registrado no histórico.');
+  await ficha.getByRole('tab', { name: 'Histórico e notas' }).click();
   await expect(ficha.getByRole('list', { name: 'Histórico da conta' })).toContainText(
     'Cortesia do teste de navegador',
   );
@@ -140,15 +151,19 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   );
   await venda.getByRole('button', { name: 'Registrar pagamento agora' }).click();
   const fichaVenda = page.getByRole('dialog', { name: `Barbearia da Feira ${sufixoVenda}` });
+  await fichaVenda.getByRole('tab', { name: 'Ações' }).click();
   const pagar = fichaVenda.getByRole('form', { name: 'Registrar pagamento' });
   await pagar.getByRole('button', { name: 'Registrar pagamento' }).click();
   await expect(pagar.getByRole('status')).toHaveText('Feito. Ficou registrado no histórico.');
+  await fichaVenda.getByRole('tab', { name: /^Cobranças/ }).click();
   await expect(fichaVenda.getByRole('table', { name: 'Cobranças da conta' })).toContainText(
     'Manual',
   );
   // Admin U3: próxima cobrança, ativação e notas da equipe.
+  await fichaVenda.getByRole('tab', { name: 'Resumo' }).click();
   await expect(fichaVenda.getByText('Próxima cobrança')).toBeVisible();
   await expect(fichaVenda.getByText(/de \d primeiros passos/)).toBeVisible();
+  await fichaVenda.getByRole('tab', { name: 'Histórico e notas' }).click();
   await fichaVenda
     .getByLabel('Nova nota')
     .fill('Combinado: ligar na sexta para ajudar com a agenda.');
@@ -157,10 +172,10 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
     'Combinado: ligar na sexta',
   );
   await fichaVenda.getByRole('button', { name: 'Fechar' }).click();
-  await page.getByRole('tab', { name: 'Vendas' }).click();
+  await menuAdmin(page, 'Vendas e site').click();
   await expect(page.getByRole('table', { name: 'Vendas por vendedor' })).toContainText('Ana Teste');
   await expect(page.getByRole('table', { name: 'Vendas por origem' })).toBeVisible();
-  await page.getByRole('tab', { name: 'Cobrança' }).click();
+  await menuAdmin(page, 'Cobrança').click();
   await expect(page.getByRole('heading', { name: 'Cobrança', exact: true })).toBeVisible();
   await page.getByLabel('Ver', { exact: true }).selectOption('recebidas');
   await expect(page.getByRole('table', { name: 'Cobranças recebidas' })).toContainText(
@@ -168,7 +183,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   );
 
   // Equipe: dá acesso a um vendedor (senha aparece uma vez) e a auditoria registra.
-  await page.getByRole('tab', { name: 'Equipe' }).click();
+  await menuAdmin(page, 'Equipe').click();
   const darAcesso = page.getByRole('form', { name: 'Dar acesso' });
   await darAcesso.getByLabel('Nome').fill('Vítor Vendas');
   await darAcesso.getByLabel('E-mail').fill(`vitor-${sufixoVenda}@pentefino.dev`);
@@ -199,7 +214,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(
     equipe.getByRole('row', { name: new RegExp(`vitor-${sufixoVenda}@`) }),
   ).toContainText('Desativado', { timeout: 20_000 });
-  await page.getByRole('tab', { name: 'Auditoria' }).click();
+  await menuAdmin(page, 'Auditoria').click();
   await page.getByRole('combobox', { name: 'Ação', exact: true }).selectOption('criar_membro');
   await expect(page.getByRole('table', { name: 'Auditoria da plataforma' })).toContainText(
     `vitor-${sufixoVenda}@pentefino.dev`,
@@ -215,7 +230,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   expect(csv.suggestedFilename()).toMatch(/^auditoria-pente-fino-\d{4}-\d{2}-\d{2}\.csv$/);
 
   // Configurações: aviso geral (vale 15 min) aparece para a barbearia; saúde do sistema.
-  await page.getByRole('tab', { name: 'Configurações' }).click();
+  await menuAdmin(page, 'Configurações').click();
   // Respostas prontas do chat: editáveis, começando pelas de fábrica.
   await expect(
     page.getByRole('region', { name: 'Respostas prontas do chat' }).getByLabel('Título').first(),
@@ -304,7 +319,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(page.getByRole('combobox', { name: 'Ação', exact: true })).toHaveValue(
     'configurar_precos',
   );
-  await page.getByRole('tab', { name: 'Saúde do sistema' }).click();
+  await menuAdmin(page, 'Saúde do sistema').click();
   // Reorganizada em 16/11/2026: resumo no alto e as abas Servidor, WhatsApp e rotinas, Erros e
   // e-mails e Integrações.
   await expect(page.getByText(/^Tudo certo\.$|pontos? pedem? atenção/).first()).toBeVisible();
@@ -327,7 +342,7 @@ test('administração: 1º acesso configura o autenticador, entra e vê as conta
   await expect(
     page.getByRole('region', { name: 'Nota fiscal das mensalidades' }).getByText(/Emissão/),
   ).toBeVisible();
-  await page.getByRole('tab', { name: 'Início' }).click();
+  await menuAdmin(page, 'Início').click();
 
   // A sessão da barbearia não existe aqui, e a da administração não abre o painel.
   await page.goto('/app');

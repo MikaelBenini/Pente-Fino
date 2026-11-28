@@ -18,7 +18,9 @@ import {
   fimDoPeriodo,
   formatarData,
   formatarMoeda,
+  licencaDoProduto,
   NOME_LICENCA,
+  produtoDaConta,
   NOME_PLANO,
   PLANOS_DA_LICENCA,
   origemCadastroSchema,
@@ -32,6 +34,7 @@ import {
   type WhatsappDonoEntrada,
   type FichaContaPlataforma,
   type MudarLicencaContaEntrada,
+  type MudarProdutoContaEntrada,
   type MudarPlanoContaEntrada,
   type MudarTesteContaEntrada,
   type NotaInterna,
@@ -208,6 +211,74 @@ export class AdminContasService {
     // Na auditoria fica só que houve nota; o texto está na própria nota.
     await this.auth.auditar({ usuarioId: a.id, acao: 'nota_interna', contaId, ip });
     return { id: n.id, texto: n.texto, autor: a.nome, criadoEm: n.criadoEm.toISOString() };
+  }
+
+  /**
+   * Produto e plano de uma vez (o bloco "Produto e plano" da ficha): licença e tipo de negócio
+   * saem do produto; no Atendimento, o tipo de negócio fica o que a conta já tem. Uma auditoria
+   * e uma atualização no Asaas com o valor final.
+   */
+  async mudarProduto(
+    contaId: string,
+    d: MudarProdutoContaEntrada,
+    a: AdminAutenticado,
+    ip: string | null,
+  ) {
+    const ficha = (await fichaDaContaPlataforma(
+      this.banco.prisma,
+      contaId,
+    )) as FichaContaPlataforma | null;
+    if (!ficha) throw Erros.naoEncontrado('Conta não encontrada.');
+    const { licenca, segmento } = licencaDoProduto(d.produto, ficha.segmento);
+    const mudouLicenca = licenca !== ficha.licenca || segmento !== ficha.segmento;
+    const mudouPlano = d.plano !== ficha.plano || d.ciclo !== ficha.ciclo;
+    if (!mudouLicenca && !mudouPlano)
+      throw Erros.conflito('Nada mudou: é o mesmo produto e plano.');
+    const antesLicenca = mudouLicenca
+      ? await mudarLicencaDaConta(this.banco.prisma, contaId, licenca, segmento).catch(traduzir)
+      : null;
+    const antesPlano = mudouPlano
+      ? await mudarPlanoDaConta(this.banco.prisma, contaId, d.plano, d.ciclo).catch(traduzir)
+      : null;
+    const asaasId = antesPlano?.asaasAssinaturaId ?? antesLicenca?.asaasAssinaturaId ?? null;
+    const automacoes = (antesPlano?.automacoes ?? antesLicenca?.automacoes) === true;
+    const unidades = Number(antesPlano?.unidades ?? antesLicenca?.unidades) || 1;
+    let asaas: 'atualizado' | 'falhou' | null = null;
+    if (asaasId) {
+      try {
+        await this.provedor.atualizarAssinatura(asaasId, {
+          valor: valorDaCobranca(
+            d.plano,
+            d.ciclo,
+            unidades,
+            await this.precos.vigente(dataLocal(new Date())),
+            Number(ficha.descontoBp ?? 0),
+            automacoes,
+            licenca,
+          ),
+          descricao: `Pente Fino ${NOME_LICENCA[licenca]} ${NOME_PLANO[d.plano]} (${d.ciclo})`,
+        });
+        asaas = 'atualizado';
+      } catch (e) {
+        asaas = 'falhou';
+        this.logger.error(`Asaas ao mudar o produto da conta ${contaId}: ${(e as Error).message}`);
+      }
+    }
+    await this.auth.auditar({
+      usuarioId: a.id,
+      acao: 'mudar_produto',
+      contaId,
+      antes: {
+        produto: produtoDaConta(ficha.licenca, ficha.segmento),
+        plano: ficha.plano,
+        ciclo: ficha.ciclo,
+      },
+      depois: { produto: d.produto, plano: d.plano, ciclo: d.ciclo, asaas },
+      motivo: d.motivo,
+      ip,
+    });
+    this.valeNaHora(contaId);
+    return { asaas };
   }
 
   async mudarPlano(

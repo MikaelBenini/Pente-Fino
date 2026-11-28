@@ -8,12 +8,12 @@ import {
   formatarData,
   formatarTelefone,
   mapaPodeErrar,
-  NOME_LICENCA,
+  NOME_PRODUTO,
+  produtoDaConta,
   NOME_PLANO,
   NOMES_DIAS,
   NOMES_DIAS_CURTOS,
   podeNaUnidade,
-  vocabulario,
   unidadeSchema,
   type ContaEntrada,
   type UnidadeDetalhe,
@@ -157,12 +157,12 @@ function Barbearia() {
             <dl className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
-                  Licença
+                  Produto
                 </dt>
-                <dd className="text-xl font-semibold">{NOME_LICENCA[c.licenca]}</dd>
-                <dd className="text-sm text-tinta-suave">
-                  {vocabulario(c.segmento).nomeSegmento}. Para trocar, fale com o suporte.
+                <dd className="text-xl font-semibold">
+                  {NOME_PRODUTO[produtoDaConta(c.licenca, c.segmento)]}
                 </dd>
+                <dd className="text-sm text-tinta-suave">Para trocar, fale com o suporte.</dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">

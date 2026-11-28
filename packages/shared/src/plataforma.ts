@@ -6,7 +6,15 @@ import { z } from 'zod';
 import type { EtapaFunil } from './funil.js';
 import type { SaudeConta } from './saude-conta.js';
 import { PLANOS, type Ciclo, type PlanoConta } from './planos.js';
-import { LICENCAS, NOME_LICENCA, segmentoNaLicenca, type Licenca } from './licencas.js';
+import {
+  LICENCAS,
+  licencaDoProduto,
+  NOME_LICENCA,
+  PLANOS_DA_LICENCA,
+  PRODUTOS,
+  segmentoNaLicenca,
+  type Licenca,
+} from './licencas.js';
 import { SEGMENTOS, type Segmento } from './vocabulario.js';
 
 export const PAPEIS_PLATAFORMA = ['admin', 'vendedor', 'suporte', 'financeiro'] as const;
@@ -158,6 +166,23 @@ export const mudarPlanoContaSchema = z.object({
   motivo,
 });
 export type MudarPlanoContaEntrada = z.infer<typeof mudarPlanoContaSchema>;
+
+/**
+ * Produto e plano de uma vez (pedido do dono em 28/11/2026: um campo "Produto" no lugar de
+ * licença + tipo de negócio). O plano precisa existir no produto.
+ */
+export const mudarProdutoContaSchema = z
+  .object({
+    produto: z.enum(PRODUTOS, { error: 'Escolha o produto.' }),
+    plano: z.enum(PLANOS),
+    ciclo: z.enum(['mensal', 'anual']),
+    motivo,
+  })
+  .refine((d) => PLANOS_DA_LICENCA[licencaDoProduto(d.produto).licenca].includes(d.plano), {
+    error: 'Esse produto não tem esse plano.',
+    path: ['plano'],
+  });
+export type MudarProdutoContaEntrada = z.infer<typeof mudarProdutoContaSchema>;
 
 /** Trocar a licença (e o segmento junto) de uma conta: só a administração (ADR 0015). */
 export const mudarLicencaContaSchema = z

@@ -172,3 +172,58 @@ export function licencaDaContaNova(d: {
       : segmentoPadraoDaLicenca(d.licenca);
   return { licenca: d.licenca, segmento };
 }
+
+/**
+ * O que a administração e a venda escolhem (pedido do dono em 28/11/2026: "licença e tipo de
+ * negócio separados não faz sentido"): um campo só, "Produto". Cada produto é uma licença com o
+ * tipo de negócio já dentro. Atendimento serve a qualquer negócio: o tipo fica o que a conta já
+ * tem (ou é confirmado pelo dono no primeiro acesso).
+ */
+export const PRODUTOS = [
+  'barbearia',
+  'salao',
+  'unhas',
+  'estetica',
+  'tatuagem',
+  'atendimento',
+] as const;
+export type Produto = (typeof PRODUTOS)[number];
+
+export const NOME_PRODUTO: Readonly<Record<Produto, string>> = {
+  barbearia: 'Barbearia',
+  salao: 'Salão de beleza',
+  unhas: 'Unhas e sobrancelhas',
+  estetica: 'Clínica de estética',
+  tatuagem: 'Tatuagem e piercing',
+  atendimento: 'Atendimento (só o bot de WhatsApp)',
+};
+
+const LICENCA_DO_PRODUTO: Readonly<Record<Produto, Licenca>> = {
+  barbearia: 'barbearia',
+  salao: 'beleza',
+  unhas: 'beleza',
+  estetica: 'estetica',
+  tatuagem: 'tatuagem',
+  atendimento: 'atendimento',
+};
+
+/**
+ * Licença e tipo de negócio do produto. No Atendimento, o tipo é o que a conta já tem
+ * (`segmentoAtual`); sem ele, barbearia (o dono confirma no primeiro acesso).
+ */
+export function licencaDoProduto(
+  produto: Produto,
+  segmentoAtual?: Segmento | null,
+): { licenca: Licenca; segmento: Segmento } {
+  const licenca = LICENCA_DO_PRODUTO[produto];
+  if (licenca === 'atendimento') return { licenca, segmento: segmentoAtual ?? 'barbearia' };
+  return { licenca, segmento: produto === 'barbearia' ? 'barbearia' : (produto as Segmento) };
+}
+
+/** O produto de uma conta (licença + tipo de negócio). */
+export function produtoDaConta(licenca: Licenca, segmento: Segmento): Produto {
+  if (licenca === 'atendimento') return 'atendimento';
+  if (licenca === 'beleza') return segmento === 'unhas' ? 'unhas' : 'salao';
+  if (licenca === 'fitness') return 'barbearia';
+  return licenca;
+}

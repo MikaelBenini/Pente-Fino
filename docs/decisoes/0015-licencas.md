@@ -35,6 +35,14 @@ Levantamento de preços dos concorrentes e o que falta para competir: `docs/conc
 - **Complementos de todas as licenças:** Automações (onde não vêm incluídas), unidade extra,
   segunda conta com 20% de desconto e, na Fase 4, créditos de IA.
 
+## Um campo "Produto" (28/11/2026)
+
+Na tela, licença e tipo de negócio viram um campo só, **Produto** (`PRODUTOS`, `licencaDoProduto`,
+`produtoDaConta`): Barbearia, Salão de beleza, Unhas e sobrancelhas, Clínica de estética, Tatuagem e
+piercing e Atendimento. A licença e o segmento continuam no banco; no Atendimento o tipo de negócio
+fica o que a conta já tem (o dono confirma no primeiro acesso). A ficha da administração muda produto
+e plano de uma vez em `PUT /admin/contas/:id/produto`.
+
 ## Duas contas, um login (implementado em 27/11/2026)
 
 Cada negócio continua com o seu usuário e isolado pelo RLS; o e-mail passa a ser único dentro
