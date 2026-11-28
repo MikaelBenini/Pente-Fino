@@ -103,7 +103,11 @@ export function textosFixos() {
         const textos = [...linha.matchAll(/'([^'\\]|\\.)*'|"([^"\\]|\\.)*"|`([^`\\]|\\.)*`/g)].map(
           (m) => m[0],
         );
-        const jsx = linha.match(/>([^<>{}]+)</g) ?? [];
+        // Texto entre tags e também depois de uma expressão ({n} barbeiros.), até a próxima.
+        const jsx = [
+          ...(linha.match(/>([^<>{}]+)</g) ?? []),
+          ...(linha.match(/\}([^<>{}=;()]+)(?=[{<]|$)/g) ?? []),
+        ];
         // Texto solto entre tags JSX numa linha só (sem aspas, sem chave de objeto como `barbearia:`).
         const soltoJsx =
           /^\s*[^<>{}=;()'"`]*[A-Za-zÀ-ú][^<>{}=;()'"`]*$/.test(linha) &&

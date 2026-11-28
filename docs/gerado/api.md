@@ -2,7 +2,7 @@
 
 # Rotas da API
 
-336 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
+337 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
 
 ## admin
 
@@ -304,6 +304,7 @@
 | --- | --- | --- | --- |
 | GET | `/configuracao/estado` | dono,gestor | Em que ponto está a configuração da conta |
 | POST | `/configuracao/servicos` | dono | Criar os serviços escolhidos com preço em todas as unidades (a partir de hoje) |
+| PUT | `/configuracao/segmento` | dono | Primeiro acesso: confirmar o tipo de negócio dentro da licença |
 | POST | `/configuracao/concluir` | dono | Marcar a configuração guiada como concluída |
 
 ## conta

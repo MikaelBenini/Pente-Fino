@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Adicionado (primeiro acesso por tipo de negócio)
+
+- **Serviços prontos por tipo de negócio:** a configuração inicial sugere os serviços certos, com duração e preço de referência: salão (corte feminino, escova, coloração...), unhas (manicure, pedicure, alongamento...), estética (limpeza de pele, drenagem, peeling...), tatuagem, academia, personal e outros. Barbearia continua com os de sempre.
+- **"Qual é o seu negócio?" no primeiro acesso:** nas licenças com mais de um tipo (Beleza: salão ou unhas; Atendimento: qualquer um), o dono confirma no primeiro passo. As palavras do sistema, os serviços sugeridos e os textos prontos do bot que ninguém editou passam a ser os do negócio. Depois de concluir, só o suporte troca.
+
 ### Mudado (licença na administração)
 
 - **Receita mensal (MRR) pela licença:** as métricas da administração somam o preço da licença de cada conta (Estética, Tatuagem, Atendimento), não mais o da Barbearia para todas.

@@ -265,7 +265,7 @@ function EscolhaDoEscopo({
       )}
       {escopo && !personalizada && (
         <Aviso tom="info">
-          A {e.escopo.nome} usa o menu e as mensagens do padrão da barbearia. O que você salvar aqui
+          A {e.escopo.nome} usa o menu e as mensagens do padrão da conta. O que você salvar aqui
           vale só para ela; as outras unidades continuam com o padrão.
         </Aviso>
       )}
