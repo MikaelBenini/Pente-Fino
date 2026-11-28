@@ -19,7 +19,7 @@ import {
   ABAS_DO_PAPEL,
   type ConfigNotaFiscal,
 } from '@pente-fino/shared';
-import { Abas, Botao, Campo, Selecao } from '@pente-fino/ui';
+import { Botao, Campo, cn, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -221,7 +221,21 @@ function Entrar() {
   );
 }
 
-/** Painel: abas por assunto; a ficha da conta e a nova venda abrem de qualquer aba. */
+/** O menu da administração em grupos, na ordem do dia a dia. */
+const GRUPOS_ADMIN: readonly { titulo: string; ids: readonly string[] }[] = [
+  { titulo: 'Atendimento', ids: ['inicio', 'chat', 'contas'] },
+  { titulo: 'Dinheiro', ids: ['cobranca', 'vendas'] },
+  { titulo: 'Sistema', ids: ['equipe', 'auditoria', 'configuracoes', 'saude'] },
+];
+
+/** Título e frase das telas que não têm título próprio. */
+const DESCRICAO_ADMIN: Readonly<Record<string, string>> = {
+  vendas: 'De onde vêm as contas: visitas do site, indicações, depoimentos e vendedores.',
+  configuracoes: 'Preços, cupons, teste grátis, e-mails, aviso geral e nota fiscal.',
+  saude: 'Servidor, filas, WhatsApp, backup e erros recentes.',
+};
+
+/** Painel: menu por assunto; a ficha da conta e a nova venda abrem de qualquer tela. */
 function Painel({ u }: { u: UsuarioPlataformaSessao }) {
   // A aba fica no endereço (#contas), para voltar nela ao recarregar. O painel só monta no
   // navegador (depois de conferir a sessão), então dá para ler o endereço aqui.
@@ -275,7 +289,7 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     },
     {
       id: 'vendas',
-      rotulo: 'Vendas',
+      rotulo: 'Vendas e site',
       conteudo: (
         <div className="flex flex-col gap-8">
           <VisitasSiteAdmin />
@@ -299,19 +313,63 @@ function Painel({ u }: { u: UsuarioPlataformaSessao }) {
     },
     { id: 'saude', rotulo: 'Saúde do sistema', conteudo: <SaudeAdmin /> },
   ].filter((x) => ABAS_DO_PAPEL[u.papel].includes(x.id));
+  const atual = abas.find((x) => x.id === abaId) ?? abas[0]!;
+  const grupos = GRUPOS_ADMIN.map((g) => ({
+    ...g,
+    itens: g.ids.map((id) => abas.find((x) => x.id === id)).filter((x) => !!x),
+  })).filter((g) => g.itens.length > 0);
   return (
-    <main className="flex flex-col gap-6">
-      {(u.papel === 'admin' || u.papel === 'vendedor') && (
-        <div className="flex justify-end">
+    <main className="grid gap-6 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start">
+      {/* Organizado por assunto (pedido do dono em 28/11/2026: "organize o admin"). */}
+      <nav aria-label="Administração" className="flex flex-col gap-4 lg:sticky lg:top-4">
+        {(u.papel === 'admin' || u.papel === 'vendedor') && (
           <Botao onClick={() => setVender(true)}>Nova venda</Botao>
+        )}
+        <div className="lg:hidden">
+          <Selecao
+            id="admin-ir-para"
+            rotulo="Ir para"
+            value={atual.id}
+            onChange={(e) => setAba(e.target.value)}
+            opcoes={grupos.flatMap((g) =>
+              g.itens.map((x) => ({ valor: x.id, rotulo: `${g.titulo} · ${x.rotulo}` })),
+            )}
+          />
         </div>
-      )}
-      <Abas
-        rotulo="Administração"
-        atual={abas.some((x) => x.id === abaId) ? abaId : 'inicio'}
-        onTrocar={setAba}
-        abas={abas}
-      />
+        <div className="hidden flex-col gap-4 lg:flex">
+          {grupos.map((g) => (
+            <div key={g.titulo} className="flex flex-col gap-1">
+              <p className="px-3 text-xs font-semibold text-tinta-suave">{g.titulo}</p>
+              {g.itens.map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  aria-current={x.id === atual.id ? 'page' : undefined}
+                  onClick={() => setAba(x.id)}
+                  className={cn(
+                    'min-h-10 rounded-md px-3 text-left font-medium hover:bg-superficie-2 focus-visible:outline-2 focus-visible:outline-foco',
+                    x.id === atual.id ? 'bg-superficie-2 text-tinta' : 'text-tinta-suave',
+                  )}
+                >
+                  {x.rotulo}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </nav>
+      <section aria-label={atual.rotulo} className="flex min-w-0 flex-col gap-6">
+        {/* As telas sem título próprio ganham título e uma frase; as outras já têm os seus. */}
+        {DESCRICAO_ADMIN[atual.id] && (
+          <header className="flex flex-col gap-1">
+            <h1 id="titulo-tela-admin" className="text-3xl font-semibold">
+              {atual.rotulo}
+            </h1>
+            <p className="text-tinta-suave">{DESCRICAO_ADMIN[atual.id]}</p>
+          </header>
+        )}
+        {atual.conteudo}
+      </section>
       <FichaConta id={aberta} onFechar={() => setAberta(null)} papel={u.papel} />
       <NovaVenda aberto={vender} onFechar={() => setVender(false)} onAbrirConta={setAberta} />
     </main>

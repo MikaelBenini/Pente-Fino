@@ -10,6 +10,10 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 ### Mudado (um campo "Produto")
 
 - **Um campo só, "Produto", no lugar de "Licença" e "Tipo de negócio":** Barbearia, Salão de beleza, Unhas e sobrancelhas, Clínica de estética, Tatuagem e piercing ou Atendimento (só o bot). Vale na ficha da conta, na venda presencial, em "Abrir outro negócio", em Configurações e na lista de contas.
+- **Administração organizada por assunto:** o menu fica ao lado, em três grupos (Atendimento: Início, Chat, Contas; Dinheiro: Cobrança, Vendas e site; Sistema: Equipe, Auditoria, Configurações, Saúde do sistema), com "Nova venda" no topo. No celular, vira "Ir para".
+- **Ficha da conta em abas:** Resumo (situação, produto e plano, próxima cobrança, quem paga), Ações (cada uma com motivo), Cobranças e Histórico e notas.
+- **Administração organizada por assunto:** no lugar das 9 abas soltas, um menu lateral em três grupos (Atendimento: Início, Chat, Contas; Dinheiro: Cobrança, Vendas e site; Sistema: Equipe, Auditoria, Configurações, Saúde do sistema), com "Nova venda" no topo. No celular, uma lista "Ir para".
+- **Ficha da conta em abas:** Resumo (situação, produto e plano, próxima cobrança, quem paga), Ações (cada uma com motivo e registro no histórico, e o modo suporte), Cobranças e Histórico e notas.
 - **Ficha da conta: "Produto e plano" num bloco só** (antes eram "Mudar plano" e "Mudar licença"), com uma confirmação e uma atualização no Asaas.
 
 ### Adicionado (primeiro acesso por tipo de negócio)

@@ -36,7 +36,7 @@ import {
   type ProximoPasso,
   type PapelPlataforma,
 } from '@pente-fino/shared';
-import { Botao, Campo, CampoTexto, Dialogo, Selecao } from '@pente-fino/ui';
+import { Abas, Botao, Campo, CampoTexto, Dialogo, Selecao } from '@pente-fino/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { ErroApi } from '@/lib/api';
@@ -228,10 +228,12 @@ export function FichaConta({
               atualizar={atualizar}
               admin={papel === 'admin'}
               podePagar={papel !== 'suporte'}
+              extraAcoes={
+                (papel === 'admin' || papel === 'suporte') && (
+                  <ModoSuporte liberadoAte={ficha.data!.suporteLiberadoAte} contaId={id!} />
+                )
+              }
             />
-            {(papel === 'admin' || papel === 'suporte') && (
-              <ModoSuporte liberadoAte={ficha.data!.suporteLiberadoAte} contaId={id!} />
-            )}
           </>
         )}
       </Estado>
@@ -297,6 +299,7 @@ function Conteudo({
   atualizar,
   admin,
   podePagar,
+  extraAcoes,
 }: {
   f: FichaContaPlataforma;
   contaId: string;
@@ -305,7 +308,10 @@ function Conteudo({
   admin: boolean;
   /** Admin U6: o suporte só lê a ficha. */
   podePagar: boolean;
+  /** O que mais vai na aba Ações (o modo suporte). */
+  extraAcoes?: ReactNode;
 }) {
+  const [aba, setAba] = useState<'resumo' | 'acoes' | 'cobrancas' | 'historico'>('resumo');
   const hoje = dataLocal(new Date());
   const produtoAtual = produtoDaConta(f.licenca, f.segmento);
   const [produto, setProduto] = useState<Produto>(produtoAtual);
@@ -359,7 +365,9 @@ function Conteudo({
   const proxima = proximaCobrancaDaConta(f, sugerido, hoje);
   const diasTeste = diasRestantesDoTeste(f, hoje);
 
-  return (
+  // Ficha em abas (pedido do dono em 28/11/2026: "organize o admin"): o resumo primeiro, as
+  // ações agrupadas, as cobranças e o histórico com as notas.
+  const resumoJsx = (
     <div className="flex flex-col gap-6">
       {/* Admin U3: o que importa na primeira olhada. */}
       <dl className="grid gap-3 rounded-lg border border-borda p-3 sm:grid-cols-3">
@@ -504,7 +512,13 @@ function Conteudo({
           </dd>
         </div>
       </dl>
-
+    </div>
+  );
+  const acoesJsx = (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-tinta-suave">
+        Cada ação pede um motivo e fica registrada no histórico, com quem fez.
+      </p>
       <div className="grid gap-4 lg:grid-cols-2">
         {podePagar && (
           <Acao
@@ -781,76 +795,105 @@ function Conteudo({
         )}
       </div>
 
-      <Notas contaId={contaId} notas={f.notas} podeEscrever={admin} atualizar={atualizar} />
-
-      <section aria-labelledby="titulo-faturas-conta" className="flex flex-col gap-2">
-        <h3 id="titulo-faturas-conta" className="font-semibold">
-          Cobranças
-        </h3>
-        {f.faturas.length === 0 ? (
-          <p className="text-sm text-tinta-suave">Nenhuma cobrança ainda.</p>
-        ) : (
-          <Tabela rotulo="Cobranças da conta">
-            <thead>
-              <tr className="border-b border-borda">
-                {['Período', 'Valor', 'Situação', 'Origem', 'Pago em'].map((c) => (
-                  <th key={c} scope="col" className={th}>
-                    {c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {f.faturas.map((x, i) => (
-                <tr key={i} className="border-b border-borda">
-                  <td className={`${td} tabular-nums`}>
-                    {formatarData(`${x.periodoInicio}T12:00:00Z`)} a{' '}
-                    {formatarData(`${x.periodoFim}T12:00:00Z`)}
-                  </td>
-                  <td className={`${td} tabular-nums`}>{formatarMoeda(x.valor)}</td>
-                  <td className={td}>{x.status}</td>
-                  <td className={td}>
-                    {x.origem === 'manual' ? 'Manual' : 'Asaas'}
-                    {x.forma ? ` · ${x.forma}` : ''}
-                    {x.comprovante ? ` · ${x.comprovante}` : ''}
-                  </td>
-                  <td className={`${td} tabular-nums`}>
-                    {x.pagaEm ? formatarDataHora(x.pagaEm) : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Tabela>
-        )}
-      </section>
-
-      <section aria-labelledby="titulo-historico-conta" className="flex flex-col gap-2">
-        <h3 id="titulo-historico-conta" className="font-semibold">
-          Histórico da administração
-        </h3>
-        {f.historico.length === 0 ? (
-          <p className="text-sm text-tinta-suave">Nenhuma ação ainda.</p>
-        ) : (
-          <ul className="flex flex-col gap-1 text-sm" aria-label="Histórico da conta">
-            {f.historico.map((h, i) => (
-              <li
-                key={i}
-                className="flex flex-wrap justify-between gap-x-3 border-b border-borda py-1"
-              >
-                <span>
-                  <strong>{NOME_ACAO[h.acao] ?? h.acao}</strong>
-                  {h.quem ? ` · ${h.quem}` : ''}
-                  {h.motivo ? ` · “${h.motivo}”` : ''}
-                </span>
-                <span className="tabular-nums text-tinta-suave">
-                  {formatarDataHora(h.criadoEm)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {extraAcoes}
     </div>
+  );
+  return (
+    <Abas
+      rotulo="Ficha da conta"
+      atual={aba}
+      onTrocar={(id) => setAba(id as typeof aba)}
+      abas={[
+        { id: 'resumo', rotulo: 'Resumo', conteudo: resumoJsx },
+        ...(admin || podePagar || extraAcoes
+          ? [{ id: 'acoes', rotulo: 'Ações', conteudo: acoesJsx }]
+          : []),
+        {
+          id: 'cobrancas',
+          rotulo: `Cobranças (${f.faturas.length})`,
+          conteudo: (
+            <div className="flex flex-col gap-6">
+              <section aria-labelledby="titulo-faturas-conta" className="flex flex-col gap-2">
+                <h3 id="titulo-faturas-conta" className="font-semibold">
+                  Cobranças
+                </h3>
+                {f.faturas.length === 0 ? (
+                  <p className="text-sm text-tinta-suave">Nenhuma cobrança ainda.</p>
+                ) : (
+                  <Tabela rotulo="Cobranças da conta">
+                    <thead>
+                      <tr className="border-b border-borda">
+                        {['Período', 'Valor', 'Situação', 'Origem', 'Pago em'].map((c) => (
+                          <th key={c} scope="col" className={th}>
+                            {c}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {f.faturas.map((x, i) => (
+                        <tr key={i} className="border-b border-borda">
+                          <td className={`${td} tabular-nums`}>
+                            {formatarData(`${x.periodoInicio}T12:00:00Z`)} a{' '}
+                            {formatarData(`${x.periodoFim}T12:00:00Z`)}
+                          </td>
+                          <td className={`${td} tabular-nums`}>{formatarMoeda(x.valor)}</td>
+                          <td className={td}>{x.status}</td>
+                          <td className={td}>
+                            {x.origem === 'manual' ? 'Manual' : 'Asaas'}
+                            {x.forma ? ` · ${x.forma}` : ''}
+                            {x.comprovante ? ` · ${x.comprovante}` : ''}
+                          </td>
+                          <td className={`${td} tabular-nums`}>
+                            {x.pagaEm ? formatarDataHora(x.pagaEm) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Tabela>
+                )}
+              </section>
+            </div>
+          ),
+        },
+        {
+          id: 'historico',
+          rotulo: 'Histórico e notas',
+          conteudo: (
+            <div className="flex flex-col gap-6">
+              <Notas contaId={contaId} notas={f.notas} podeEscrever={admin} atualizar={atualizar} />
+
+              <section aria-labelledby="titulo-historico-conta" className="flex flex-col gap-2">
+                <h3 id="titulo-historico-conta" className="font-semibold">
+                  Histórico da administração
+                </h3>
+                {f.historico.length === 0 ? (
+                  <p className="text-sm text-tinta-suave">Nenhuma ação ainda.</p>
+                ) : (
+                  <ul className="flex flex-col gap-1 text-sm" aria-label="Histórico da conta">
+                    {f.historico.map((h, i) => (
+                      <li
+                        key={i}
+                        className="flex flex-wrap justify-between gap-x-3 border-b border-borda py-1"
+                      >
+                        <span>
+                          <strong>{NOME_ACAO[h.acao] ?? h.acao}</strong>
+                          {h.quem ? ` · ${h.quem}` : ''}
+                          {h.motivo ? ` · “${h.motivo}”` : ''}
+                        </span>
+                        <span className="tabular-nums text-tinta-suave">
+                          {formatarDataHora(h.criadoEm)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          ),
+        },
+      ]}
+    />
   );
 }
 
