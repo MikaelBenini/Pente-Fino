@@ -1,5 +1,6 @@
 import type { IdMenu } from '@pente-fino/shared';
 import {
+  Layers,
   CalendarDays,
   ClipboardList,
   ChartLine,
@@ -36,6 +37,7 @@ export const ICONES_MENU: Record<IdMenu, LucideIcon> = {
   resultados: ChartLine,
   equipe: Users,
   clube: Crown,
+  pacotes: Layers,
   pagina: Globe,
   servicos: Scissors,
   produtos: Package,

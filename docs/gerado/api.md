@@ -2,7 +2,7 @@
 
 # Rotas da API
 
-338 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
+344 rotas em 49 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
 
 ## admin
 
@@ -446,6 +446,19 @@
 | POST | `/me/push` | TODOS | Ligar as notificações neste aparelho |
 | POST | `/me/push/remover` | TODOS | Desligar as notificações neste aparelho |
 | POST | `/me/push/teste` | TODOS | Mandar uma notificação de teste para os aparelhos ligados |
+
+## pacotes
+
+`apps/api/src/pacotes/pacotes.controller.ts`
+
+| Método | Rota | Quem | O que faz |
+| --- | --- | --- | --- |
+| GET | `/pacotes` | BALCAO | Pacotes de sessões que a conta vende, por unidade |
+| POST | `/pacotes` | CADASTRO | Novo pacote (ex.: 10 sessões de drenagem por R$ 1.000, em 180 dias) |
+| PUT | `/pacotes/:id` | CADASTRO | Alterar o pacote (quem já comprou fica com o que comprou) |
+| POST | `/pacotes/vender` | BALCAO | Vender o pacote ao cliente: o pagamento entra no faturamento hoje |
+| POST | `/pacotes/vendidos/:id/cancelar` | BALCAO | Cancelar o pacote do cliente, com motivo (o que já foi pago continua no mês) |
+| GET | `/pacotes/cliente/:clienteId` | dono,gestor,recepcao,profissional | Pacotes do cliente com o saldo de sessões (ficha e comanda) |
 
 ## produtos
 

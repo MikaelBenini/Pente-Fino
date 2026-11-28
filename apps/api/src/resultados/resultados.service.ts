@@ -97,7 +97,43 @@ export class ResultadosService {
     filtro: Record<string, unknown>,
   ): Promise<ClubeNoPeriodo> {
     const pagos = await this.pagamentosClube(tx, de, ate, filtro);
-    return { mensalidades: pagos.reduce((s, p) => s + p.valor, 0) };
+    // Pacotes: só a soma (uma consulta leve; o detalhe por dia fica em pagamentosPacote).
+    const pacotes = await tx.pacoteCliente.aggregate({
+      where: {
+        pagoEm: { gte: data(de), lte: data(ate) },
+        ...(filtro.unidadeId ? { unidadeId: filtro.unidadeId as string | { in: string[] } } : {}),
+      },
+      _sum: { valorPago: true },
+    });
+    return {
+      mensalidades: pagos.reduce((s, p) => s + p.valor, 0),
+      pacotes: pacotes._sum.valorPago ?? 0,
+    };
+  }
+
+  /**
+   * Pacotes de sessões pagos no período (Fase 1d, igual ao clube): entram no dia do pagamento,
+   * numa linha própria. Cancelar depois não tira o que já foi recebido.
+   */
+  async pagamentosPacote(
+    tx: Transacao,
+    de: string,
+    ate: string,
+    filtro: Record<string, unknown>,
+  ): Promise<{ data: string; valor: number; unidadeId: string }[]> {
+    const pagos = await tx.pacoteCliente.findMany({
+      where: {
+        pagoEm: { gte: data(de), lte: data(ate) },
+        ...(filtro.unidadeId ? { unidadeId: filtro.unidadeId as string | { in: string[] } } : {}),
+      },
+      select: { valorPago: true, pagoEm: true, unidadeId: true },
+      orderBy: { pagoEm: 'asc' },
+    });
+    return pagos.map((p) => ({
+      data: dataTexto(p.pagoEm),
+      valor: p.valorPago,
+      unidadeId: p.unidadeId,
+    }));
   }
 
   /** As mensalidades do período, uma por pagamento, com o dia (para o resumo dia a dia). */

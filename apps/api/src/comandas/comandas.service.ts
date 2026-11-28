@@ -81,6 +81,7 @@ type ComandaCompleta = NonNullable<Awaited<ReturnType<Transacao['comanda']['find
     profissionalId: string | null;
     cobertoClube: boolean;
     adesaoId: string | null;
+    pacoteClienteId: string | null;
     servico: {
       nome: string;
       precoLivre: boolean;
@@ -151,9 +152,10 @@ function detalhe(
       desconto: i.desconto,
       ehExtra: i.ehExtra,
       cobertoClube: i.cobertoClube,
+      cobertoPacote: i.pacoteClienteId !== null,
       comissaoValor: i.comissaoValor,
       precoLivre:
-        i.servico?.precoLivre && !i.cobertoClube
+        i.servico?.precoLivre && !i.cobertoClube && !i.pacoteClienteId
           ? {
               minimo: i.servico.precoMinimo,
               maximo: i.servico.precoMaximo,
@@ -546,6 +548,7 @@ export class ComandasService {
             precoUnitario: p.precoUnitario,
             cobertoClube: p.cobertoClube,
             adesaoId: p.adesaoId,
+            pacoteClienteId: p.pacoteClienteId ?? null,
             custoUnitario: s.custoProduto,
             ehExtra: s.ehExtra,
             pesoAtendimento: s.pesoAtendimento,
@@ -700,7 +703,12 @@ export class ComandasService {
         throw Erros.semPermissao('Desconto é dado pela recepção.');
       // Preço livre: troca o valor do item (só serviço com preço livre, fora do clube).
       if (d.precoUnitario !== undefined && d.precoUnitario !== item.precoUnitario) {
-        if (item.tipo !== 'servico' || !item.servico?.precoLivre || item.cobertoClube)
+        if (
+          item.tipo !== 'servico' ||
+          !item.servico?.precoLivre ||
+          item.cobertoClube ||
+          item.pacoteClienteId
+        )
           throw Erros.requisicaoInvalida(
             'preco_fixo',
             'Este item tem preço de tabela. Para cobrar menos, dê desconto.',
@@ -735,7 +743,9 @@ export class ComandasService {
       // Trocar o serviço, ou mudar a quantidade de um item do clube: lança de novo, e o plano
       // decide outra vez o que cobre (o limite do mês não estoura).
       const mudouQtdClube =
-        item.cobertoClube && d.quantidade !== undefined && d.quantidade !== item.quantidade;
+        (item.cobertoClube || item.pacoteClienteId !== null) &&
+        d.quantidade !== undefined &&
+        d.quantidade !== item.quantidade;
       if ((d.servicoId && d.servicoId !== item.servicoId) || mudouQtdClube) {
         await tx.itemComanda.delete({ where: { id: itemId } });
         await this.criarItem(tx, comanda, diaDaComanda(comanda), {
@@ -892,6 +902,24 @@ export class ComandasService {
                   : { valorFixo: regra.valorFixo! }
                 : null,
               valorFixoClube: fixo,
+            }),
+          };
+        } else if (item.pacoteClienteId && item.servicoId && item.profissionalId) {
+          // Pacote (Fase 1d, igual ao clube): sobre o preço de tabela da unidade na data.
+          const regra = await regraComissaoVigente(tx, item.profissionalId, 'servico', dia);
+          comissao = {
+            comissaoPercentualBp: regra?.percentualBp ?? null,
+            comissaoValorFixo: regra?.valorFixo ?? null,
+            comissaoValor: comissaoDoClube({
+              precoTabela:
+                (await precoServicoVigente(tx, item.servicoId, comanda.unidadeId, dia)) ?? 0,
+              quantidade: item.quantidade,
+              regraProfissional: regra
+                ? regra.percentualBp !== null
+                  ? { percentualBp: regra.percentualBp }
+                  : { valorFixo: regra.valorFixo! }
+                : null,
+              valorFixoClube: null,
             }),
           };
         } else if (item.tipo !== 'nao_operacional' && item.profissionalId) {

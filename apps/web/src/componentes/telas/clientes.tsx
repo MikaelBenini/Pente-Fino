@@ -7,7 +7,9 @@ import {
   formatarTelefone,
   NOME_CLIENTE_REMOVIDO,
   NOME_MOTIVO_RECUPERAR,
+  NOME_SITUACAO_PACOTE,
   type AdesaoDetalhe,
+  type PacoteDoCliente,
   type ClienteParaRecuperar,
   type ClienteDetalhe,
   type ClienteResumo,
@@ -33,6 +35,7 @@ import { MandarMensagem } from '../mandar-mensagem';
 import { useApp } from '../contexto-app';
 import { CabecalhoPagina, Estado, Ficha, Tabela, td, th } from '../pagina';
 import { CampoTelefone } from '../campos';
+import { VenderPacote } from './pacotes';
 
 const mensagemDe = (e: unknown) =>
   e instanceof ErroApi ? (e.campos[0]?.mensagem ?? e.message) : 'Não foi possível concluir.';
@@ -280,6 +283,7 @@ function FichaCliente({ id, onFechar }: { id: string | null; onFechar: () => voi
             )}
             {editando && <EditarCliente cliente={c!} onFechar={() => setEditando(false)} />}
             <ClubeDoCliente clienteId={c!.id} />
+            <PacotesDoCliente clienteId={c!.id} />
             <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">
@@ -637,5 +641,109 @@ function ClubeDoCliente({ clienteId }: { clienteId: string }) {
           ` · ${a.restantes.map((r) => (r.restam === null ? `${r.servico} à vontade` : `${r.servico}: restam ${r.restam}`)).join(' · ')}`}
       </p>
     </div>
+  );
+}
+
+/**
+ * Na ficha: os pacotes de sessões do cliente com o saldo (Fase 1d). Só com a função ligada; o
+ * balcão vende dali e cancela com motivo.
+ */
+function PacotesDoCliente({ clienteId }: { clienteId: string }) {
+  const { usuario, papeis } = useApp();
+  const ligada = usuario.funcoes?.includes('pacotes') ?? false;
+  const balcao = papeis.some((p) => p !== 'profissional');
+  const [vendendo, setVendendo] = useState(false);
+  const [cancelando, setCancelando] = useState<PacoteDoCliente | null>(null);
+  const lista = useQuery({
+    queryKey: ['pacotes-cliente', clienteId],
+    queryFn: () => api<PacoteDoCliente[]>(`pacotes/cliente/${clienteId}`),
+    enabled: ligada,
+  });
+  if (!ligada) return null;
+  const pacotes = lista.data ?? [];
+  if (pacotes.length === 0 && !balcao) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-borda p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold">Pacotes</p>
+        {balcao && (
+          <Botao variante="secundario" onClick={() => setVendendo(true)}>
+            Vender pacote
+          </Botao>
+        )}
+      </div>
+      {pacotes.length === 0 ? (
+        <p className="text-sm text-tinta-suave">Nenhum pacote comprado.</p>
+      ) : (
+        <ul className="flex flex-col gap-2" aria-label="Pacotes do cliente">
+          {pacotes.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span>
+                <span className="font-semibold">{p.nome}</span>
+                {p.situacao === 'ativo'
+                  ? ` · restam ${p.saldo} de ${p.sessoes} · vale até ${formatarData(p.validoAte)}`
+                  : ` · ${p.usadas} de ${p.sessoes} usadas`}
+              </span>
+              <span className="flex items-center gap-2">
+                <Ficha tom={p.situacao === 'ativo' ? 'acao' : 'neutro'}>
+                  {NOME_SITUACAO_PACOTE[p.situacao]}
+                </Ficha>
+                {balcao && p.situacao === 'ativo' && (
+                  <Botao variante="fantasma" onClick={() => setCancelando(p)}>
+                    Cancelar
+                  </Botao>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {vendendo && <VenderPacote clienteId={clienteId} onFechar={() => setVendendo(false)} />}
+      {cancelando && <CancelarPacote pacote={cancelando} onFechar={() => setCancelando(null)} />}
+    </div>
+  );
+}
+
+function CancelarPacote({ pacote, onFechar }: { pacote: PacoteDoCliente; onFechar: () => void }) {
+  const [motivo, setMotivo] = useState('');
+  const [erro, setErro] = useState<string | null>(null);
+  const cancelar = useAcao(
+    () => api(`pacotes/vendidos/${pacote.id}/cancelar`, { corpo: { motivo } }),
+    [['pacotes-cliente'], ['pacotes']],
+  );
+  return (
+    <Dialogo
+      aberto
+      titulo={`Cancelar ${pacote.nome}`}
+      descricao={`Restam ${pacote.saldo} sessões. O que foi pago continua no mês da venda; se devolver dinheiro, lance como despesa.`}
+      onFechar={onFechar}
+    >
+      <form
+        method="post"
+        noValidate
+        className="flex flex-col gap-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setErro(null);
+          try {
+            await cancelar.mutateAsync(undefined);
+            onFechar();
+          } catch (er) {
+            setErro(mensagemDe(er));
+          }
+        }}
+      >
+        <Campo
+          id="pacote-motivo"
+          rotulo="Motivo"
+          value={motivo}
+          onChange={(e) => setMotivo(e.target.value)}
+        />
+        {erro && <Aviso tom="erro">{erro}</Aviso>}
+        <Botao type="submit" variante="perigo" carregando={cancelar.isPending}>
+          Cancelar o pacote
+        </Botao>
+      </form>
+    </Dialogo>
   );
 }

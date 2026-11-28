@@ -2,6 +2,7 @@
 // Nada aparece bloqueado: o que o papel não usa simplesmente não está no menu.
 import type { Papel } from './papeis.js';
 import { temRecurso, type PlanoConta, type Recurso } from './planos.js';
+import type { Funcao } from './vocabulario.js';
 
 export type IdMenu =
   | 'inicio'
@@ -14,6 +15,7 @@ export type IdMenu =
   | 'resultados'
   | 'equipe'
   | 'clube'
+  | 'pacotes'
   | 'pagina'
   | 'servicos'
   | 'produtos'
@@ -81,6 +83,7 @@ export const ITENS_MENU: readonly ItemMenu[] = [
   { id: 'servicos', rotulo: 'Serviços', rota: '/servicos', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'produtos', rotulo: 'Produtos', rota: '/produtos', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'clube', rotulo: 'Clube', rota: '/clube', papeis: GESTAO, grupo: 'Cadastros' },
+  { id: 'pacotes', rotulo: 'Pacotes', rota: '/pacotes', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'pagina', rotulo: 'Minha página', rota: '/pagina', papeis: GESTAO, grupo: 'Cadastros' },
   { id: 'bot', rotulo: 'Bot', rota: '/bot', papeis: GESTAO, grupo: 'WhatsApp' },
   {
@@ -128,7 +131,23 @@ export const RECURSO_DA_TELA: Partial<Record<IdMenu, Recurso>> = {
   resultados: 'operacao',
   financeiro: 'operacao',
   comissoes: 'comissoes',
+  // As sessões saem na comanda.
+  pacotes: 'operacao',
 };
+
+/** Telas de uma função da conta (ADR 0014): só aparecem com a função ligada. */
+export const FUNCAO_DA_TELA: Partial<Record<IdMenu, Funcao>> = { pacotes: 'pacotes' };
+
+/** O menu sem as telas das funções desligadas. */
+export function menuDasFuncoes<T extends { id: string }>(
+  menu: readonly T[],
+  funcoes: readonly Funcao[],
+): T[] {
+  return menu.filter((i) => {
+    const f = FUNCAO_DA_TELA[i.id as IdMenu];
+    return !f || funcoes.includes(f);
+  });
+}
 
 /** O menu sem as telas que o plano (com as Automações à parte) não traz. */
 export function menuDoPlano(

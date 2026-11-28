@@ -94,3 +94,4 @@ export * from './fila-recepcao.js';
 export * from './historico-comanda.js';
 export * from './horario-funcionamento.js';
 export * from './origem-cadastro.js';
+export * from './pacotes.js';

@@ -78,7 +78,9 @@ export class ExportacaoController {
       ]);
       // Mensalidades do clube: receita do mês pelo dia do pagamento (decisão do dono, 11/11/2026).
       const mensalidades = await this.resultados.pagamentosClube(tx, de, ate, filtro);
-      return { conta, unidades, comandas, despesas, mensalidades };
+      // Pacotes de sessões: igual ao clube, no dia do pagamento (Fase 1d).
+      const pacotes = await this.resultados.pagamentosPacote(tx, de, ate, filtro);
+      return { conta, unidades, comandas, despesas, mensalidades, pacotes };
     });
     const nomeUnidade = (id: string | null) =>
       id ? (dados.unidades.find((u) => u.id === id)?.nome ?? '') : 'Rede';
@@ -119,6 +121,20 @@ export class ExportacaoController {
             .join(';'),
         );
       }
+      for (const m of dados.pacotes) {
+        linhas.push(
+          [
+            m.data,
+            'receita',
+            'Pacote de sessões',
+            nomeUnidade(m.unidadeId),
+            'Pacotes',
+            formatarValor(m.valor),
+          ]
+            .map(campo)
+            .join(';'),
+        );
+      }
       for (const d of dados.despesas) {
         linhas.push(
           [
@@ -144,7 +160,10 @@ export class ExportacaoController {
     const ind = calcularIndicadores(
       dados.comandas,
       dados.despesas.map((d) => ({ grupo: d.categoria.grupo, valor: d.valor })),
-      { mensalidades: dados.mensalidades.reduce((s, m) => s + m.valor, 0) },
+      {
+        mensalidades: dados.mensalidades.reduce((s, m) => s + m.valor, 0),
+        pacotes: dados.pacotes.reduce((s, m) => s + m.valor, 0),
+      },
     );
     const porForma = new Map<string, number>();
     for (const p of dados.comandas.flatMap((x) => x.pagamentos.filter((y) => !y.devolvidoEm)))
@@ -183,6 +202,7 @@ export class ExportacaoController {
     linha('Serviços', formatarMoeda(ind.receitaServicos));
     linha('Produtos', formatarMoeda(ind.receitaProdutos));
     linha('Clube (mensalidades)', formatarMoeda(ind.receitaClube));
+    if (ind.receitaPacotes > 0) linha('Pacotes', formatarMoeda(ind.receitaPacotes));
     linha('Faturamento', formatarMoeda(ind.faturamento), true);
     linha('Receita não operacional', formatarMoeda(ind.receitaNaoOperacional));
     linha(`Comandas fechadas / clientes`, `${dados.comandas.length} / ${ind.clientes}`);

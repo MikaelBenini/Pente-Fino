@@ -130,6 +130,7 @@ function Resultado({ mes }: { mes: string }) {
                 {linha('Serviços', i.receitaServicos)}
                 {linha('Produtos', i.receitaProdutos)}
                 {i.receitaClube > 0 && linha('Clube (mensalidades)', i.receitaClube)}
+                {i.receitaPacotes > 0 && linha('Pacotes', i.receitaPacotes)}
                 {linha('Faturamento', i.faturamento, { forte: true })}
                 {linha('Comissões', i.comissoes, { sinal: '−', recuo: true })}
                 {linha('Fixas', i.despesasPorGrupo.fixa, { sinal: '−', recuo: true })}

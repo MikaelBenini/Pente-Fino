@@ -145,6 +145,38 @@ describe('exemplos de docs/regras-de-negocio.md', () => {
     expect(telefoneCanonico('(44) 9976-4653')).toBe('5544999764653');
   });
 
+  it('E9 pacote: entra no dia da venda; a sessão conta, mas fica fora do ticket', () => {
+    const r = calcularIndicadores(
+      [
+        {
+          itens: [
+            item({ precoUnitario: 0, comissaoValor: 4000, pacoteClienteId: 'p1' }),
+            item({ precoUnitario: 15000, comissaoValor: 6000 }),
+          ],
+        },
+      ],
+      [],
+      { mensalidades: 0, pacotes: 24000 },
+    );
+    expect(r).toMatchObject({
+      faturamento: 39000,
+      receitaPacotes: 24000,
+      receitaServicos: 15000,
+      clientes: 1,
+      atendimentos: 2,
+      atendimentosPacote: 1,
+      ticketMedio: 15000,
+    });
+    expect(
+      comissaoDoClube({
+        precoTabela: 10000,
+        quantidade: 1,
+        regraProfissional: { percentualBp: 4000 },
+        valorFixoClube: null,
+      }),
+    ).toBe(4000);
+  });
+
   it('E8 automático da madrugada sai às 7h', () => {
     expect(proximoHorarioDeEnvio(new Date('2026-11-20T23:30:00-03:00'))).toEqual(
       new Date('2026-11-21T07:00:00-03:00'),

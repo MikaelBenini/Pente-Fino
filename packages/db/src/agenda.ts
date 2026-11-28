@@ -352,6 +352,7 @@ export async function criarAgendamentoNoBanco(
           precoUnitario: p.precoUnitario,
           cobertoClube: p.cobertoClube,
           adesaoId: p.adesaoId,
+          pacoteClienteId: p.pacoteClienteId ?? null,
           custoUnitario: s.custoProduto,
           ehExtra: s.ehExtra,
           pesoAtendimento: s.pesoAtendimento,

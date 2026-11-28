@@ -7,6 +7,8 @@ import {
   diasRestantesTeste,
   formatarData,
   formatarTelefone,
+  FUNCOES,
+  type Funcao,
   mapaPodeErrar,
   NOME_PRODUTO,
   produtoDaConta,
@@ -150,6 +152,7 @@ function Barbearia() {
             {ehDono ? (
               <div className="flex flex-col gap-8">
                 <NomeConta nome={c.nome} />
+                <FuncoesDaConta ligadas={c.funcoes} />
               </div>
             ) : (
               <p className="text-xl font-semibold">{c.nome}</p>
@@ -197,6 +200,47 @@ function Barbearia() {
         );
       }}
     </Estado>
+  );
+}
+
+/**
+ * Funções que o dono liga ou desliga (ADR 0014): só as que já existem. Negócio misto (barbearia
+ * que vende pacotes) liga sem trocar de produto.
+ */
+const FUNCOES_PRONTAS: readonly Funcao[] = ['pacotes'];
+const DICA_FUNCAO: Partial<Record<Funcao, string>> = {
+  pacotes: 'O cliente paga antes um número de sessões; a comanda desconta do saldo.',
+};
+
+function FuncoesDaConta({ ligadas }: { ligadas: Funcao[] }) {
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useAcao(
+    (funcoes: Funcao[]) => api('conta/funcoes', { metodo: 'PUT', corpo: { funcoes } }),
+    [chaves.conta, ['auth', 'eu']],
+  );
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="mb-1 text-lg font-semibold">Funções</legend>
+      {FUNCOES_PRONTAS.map((f) => (
+        <Marcador
+          key={f}
+          id={`funcao-${f}`}
+          rotulo={`${FUNCOES[f]}: ${DICA_FUNCAO[f] ?? ''}`}
+          checked={ligadas.includes(f)}
+          disabled={salvar.isPending}
+          onChange={async (e) => {
+            setErro(null);
+            const nova = e.target.checked ? [...ligadas, f] : ligadas.filter((x) => x !== f);
+            try {
+              await salvar.mutateAsync(nova);
+            } catch {
+              setErro('Não foi possível salvar agora. Tente de novo.');
+            }
+          }}
+        />
+      ))}
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+    </fieldset>
   );
 }
 

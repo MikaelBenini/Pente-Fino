@@ -28,7 +28,8 @@ Detalhe, esforço, riscos e perguntas de cada fase em
   - [x] 1a, PR 3: as demais telas, o bot, a Ajuda, o site, o relatório e a comanda impressa com o vocabulário (S3) e o detector de "barbeiro" fixo no `regras:conferir` (S6)
   - [x] 1b: serviços prontos por segmento na configuração inicial e "Qual é o seu negócio?" no primeiro acesso para licenças com mais de um tipo (o cadastro já recebe a licença pelo link desde as licenças)
   - [ ] Os e-mails do sistema (`modelos-email.ts`) no vocabulário do negócio
-  - [ ] 1d estética: anamnese, fotos de antes e depois, pacotes de sessões e termo de consentimento
+  - [x] 1d, E2: pacotes de sessões (igual ao clube nos números; ADR 0016)
+  - [ ] 1d estética: anamnese, fotos de antes e depois e termo de consentimento (prontos e desligados até os textos jurídicos chegarem)
 - [ ] **Fase 2 · Interface mais simples** (aguardando aprovação; depende das decisões da Fase 1)
 - [ ] **Fase 3 · Mentoria financeira** (aguardando aprovação)
 - [ ] **Fase 4 · IA opcional** (aguardando aprovação; muda a ADR 0007)

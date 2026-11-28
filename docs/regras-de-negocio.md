@@ -101,6 +101,27 @@ com 10 dias trabalhados e R$ 12.000,00 faturados: projeção = 12.000 ÷ 10 × 2
   unidade**, ou um valor fixo definido pelo dono (`comissaoDoClube`). **(E5)** Corte de tabela
   R$ 50,00, regra 40%: R$ 20,00. Com valor fixo de R$ 15,00: R$ 15,00.
 
+## 5b. Pacotes de sessões (Fase 1d)
+
+Decisão do dono em 28/11/2026: **igual ao clube** (ADR 0016). Função "Pacotes" da conta (padrão na
+estética e em unhas; qualquer conta liga em Configurações → Funções).
+
+- O pacote é de **um serviço**, com número de sessões, validade em dias e valor (`pacoteSchema`).
+  A venda grava sessões, valor e serviço do momento: mudar o pacote depois não muda o que o
+  cliente comprou.
+- O **valor entra no faturamento no dia em que é pago**, na linha "Pacotes" (`receitaPacotes`).
+  Cancelar depois não tira o que já entrou; devolução de dinheiro é despesa.
+- Na comanda, o serviço do cliente usa primeiro o clube, depois o **pacote que vence primeiro**
+  (`partesDoServico`): a sessão entra com **valor zero** e desconta do saldo. Saldo = sessões −
+  itens nas comandas não canceladas (`saldoDoPacote`); cancelar a comanda devolve a sessão.
+  Vencido, esgotado ou cancelado, o serviço volta ao preço normal (`situacaoDoPacote`).
+- A sessão conta como **cliente e atendimento**, fica **fora do ticket médio** e paga **comissão
+  sobre o preço de tabela da unidade** na data (`comissaoDoClube`, sem valor fixo).
+  **(E9)** Pacote de 3 drenagens por R$ 240,00 vendido hoje; uma sessão usada (tabela R$ 100,00,
+  regra 40%) e uma limpeza de pele avulsa de R$ 150,00: faturamento R$ 390,00 (R$ 240,00 de
+  pacotes + R$ 150,00 de serviços), 1 cliente, 2 atendimentos, ticket médio R$ 150,00 e comissão
+  da sessão R$ 40,00.
+
 ## 6. Sinal (receber adiantado)
 
 Pagamento com `sinal = true` na comanda aberta (só o balcão, com o caixa de hoje aberto, até o que
