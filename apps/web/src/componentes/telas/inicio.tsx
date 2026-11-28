@@ -12,6 +12,7 @@ import { useApp } from '../contexto-app';
 import { PainelIndicadores } from '../indicadores';
 import { PainelHoje } from '../painel-hoje';
 import { PrimeirosPassos } from '../primeiros-passos';
+import { SeusNegocios } from '../seus-negocios';
 import { CabecalhoPagina, Estado } from '../pagina';
 
 export function TelaInicio() {
@@ -46,6 +47,7 @@ export function TelaInicio() {
           </span>
         </Link>
       )}
+      <SeusNegocios />
       <PainelHoje soAgenda={soAgenda} />
       {configuracao.data?.configurada !== false && <PrimeirosPassos />}
       {soAgenda && situacao ? (

@@ -110,6 +110,24 @@ describe('duas contas, um login', () => {
     await gestor.post('/auth/trocar-conta', { contaId: novaContaId }).expect(404);
   });
 
+  it('o Início mostra os negócios lado a lado (só para o dono) e a sessão traz o nome do atual', async () => {
+    const dono = await como(app, cenario.emails.dono);
+    const eu = (await dono.get('/auth/eu').expect(200)).body;
+    expect(eu.nomeConta).toBeTruthy();
+    const negocios = (await dono.get('/resumo/negocios').expect(200)).body as {
+      contaId: string;
+      atual: boolean;
+      faturamentoMes: number | null;
+      agendamentosHoje: number;
+    }[];
+    expect(negocios.map((n) => n.contaId).sort()).toEqual([cenario.contaId, novaContaId].sort());
+    expect(negocios.find((n) => n.contaId === cenario.contaId)?.atual).toBe(true);
+    const nova = negocios.find((n) => n.contaId === novaContaId)!;
+    expect(nova).toMatchObject({ atual: false, faturamentoMes: 0, agendamentosHoje: 0 });
+    const gestor = await como(app, cenario.emails.gestor);
+    await gestor.get('/resumo/negocios').expect(403);
+  });
+
   it('trocar a senha num negócio vale no outro', async () => {
     const dono = await como(app, cenario.emails.dono);
     const nova = 'senha-nova-do-dono-9';

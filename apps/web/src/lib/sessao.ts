@@ -113,3 +113,11 @@ export function guardarNegocio(contaId: string, trocou = false) {
     // Sem armazenamento (aba anônima restrita): vale a escolha do servidor.
   }
 }
+
+/** Troca de negócio (mesmo login) e recarrega o painel já nele. */
+export async function trocarDeNegocio(contaId: string, destino = '/inicio') {
+  await api('auth/trocar-conta', { corpo: { contaId } });
+  guardarNegocio(contaId, true);
+  // Recarga completa: nada do negócio anterior fica na memória da página.
+  window.location.assign(destino);
+}

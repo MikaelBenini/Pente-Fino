@@ -20,9 +20,11 @@ import {
   type ResumoDoMes,
   type SaudeDaConta,
   type StatusComanda,
+  type NegocioNoResumo,
 } from '@pente-fino/shared';
 import { BancoService } from '../comum/banco.service.js';
 import { Erros } from '../comum/erros.js';
+import { Contexto } from '../comum/contexto.js';
 import { data, dataTexto, exigirUnidade, filtroUnidade, GESTAO } from '../comum/escopo.js';
 import { DesempenhoService } from '../desempenho/desempenho.service.js';
 import {
@@ -47,6 +49,69 @@ export class ResumoService {
     @Inject(DesempenhoService) private readonly desempenho: DesempenhoService,
     @Inject(ResultadosService) private readonly resultados: ResultadosService,
   ) {}
+
+  /**
+   * Os negócios do mesmo login lado a lado (só onde a pessoa é dona): cada um lido dentro da
+   * própria conta, com o RLS de sempre. Com um negócio só, a lista vem vazia (o Início não mostra).
+   */
+  async negocios(): Promise<NegocioNoResumo[]> {
+    const quem = Contexto.usuario();
+    const { email } = await this.banco.daConta((tx) =>
+      tx.usuario.findUniqueOrThrow({ where: { id: quem.id }, select: { email: true } }),
+    );
+    const usuarios = await this.banco.semConta({ loginEmail: email }, (tx) =>
+      tx.usuario.findMany({
+        where: { email, ativo: true },
+        include: { conta: { select: { id: true, nome: true, licenca: true, status: true } } },
+        orderBy: { criadoEm: 'asc' },
+      }),
+    );
+    const ativos = usuarios.filter(
+      (u) => u.conta.status !== 'suspensa' && u.conta.status !== 'cancelada',
+    );
+    if (ativos.length < 2) return [];
+    const hoje = dataLocal(new Date());
+    const mes = hoje.slice(0, 7);
+    const de = `${mes}-01`;
+    const periodo = { gte: inicioDoDia(de), lt: inicioDoDia(somarDias(hoje, 1)) };
+    const negocios: NegocioNoResumo[] = [];
+    for (const u of ativos) {
+      const linha = await this.banco.naConta(u.contaId, async (tx) => {
+        const dono = await tx.papelUsuario.findFirst({
+          where: { usuarioId: u.id, papel: 'dono' },
+          select: { id: true },
+        });
+        if (!dono) return null;
+        const agendamentosHoje = await tx.agendamento.count({
+          where: {
+            inicio: { gte: inicioDoDia(hoje), lt: inicioDoDia(somarDias(hoje, 1)) },
+            status: { in: ['agendado', 'confirmado'] },
+          },
+        });
+        let faturamentoMes: number | null = null;
+        if (u.conta.licenca !== 'atendimento') {
+          const fechadas = await tx.comanda.findMany({
+            where: { status: 'fechada', fechadaEm: periodo },
+            include: { itens: true },
+          });
+          const mensalidades = await this.resultados.pagamentosClube(tx, de, hoje, {});
+          faturamentoMes = calcularIndicadores(fechadas, [], {
+            mensalidades: mensalidades.reduce((soma, m) => soma + m.valor, 0),
+          }).faturamento;
+        }
+        return {
+          contaId: u.contaId,
+          nome: u.conta.nome,
+          licenca: u.conta.licenca,
+          atual: u.contaId === quem.contaId,
+          faturamentoMes,
+          agendamentosHoje,
+        };
+      });
+      if (linha) negocios.push(linha);
+    }
+    return negocios.length > 1 ? negocios : [];
+  }
 
   /** Filtro de unidade e, se pedido, de um profissional (conferido contra o escopo). */
   private async escopo(tx: Transacao, unidadeId?: string, profissionalId?: string) {
