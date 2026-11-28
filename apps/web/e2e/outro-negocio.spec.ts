@@ -11,7 +11,7 @@ test('dono vê "Abrir outro negócio" e o preço com 20% de desconto', async ({ 
 
   await page.goto('/outro-negocio');
   await expect(page.getByRole('heading', { name: 'Abrir outro negócio' })).toBeVisible();
-  await page.getByLabel('Licença').selectOption('estetica');
+  await page.getByLabel('Produto').selectOption('estetica');
   await page.getByLabel('Plano').selectOption('basico');
   // Estética Básico R$ 89,90 com 20%: R$ 71,92.
   await expect(page.getByText('R$ 71,92 por mês')).toBeVisible();
