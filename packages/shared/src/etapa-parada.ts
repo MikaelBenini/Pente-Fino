@@ -1,6 +1,7 @@
 // Admin F1d: e-mail para a barbearia parada há 3 dias na mesma etapa do funil de ativação, com o
 // link do passo que falta. Uma vez por etapa; a rotina guarda a etapa e desde quando está nela.
-import { DEFINICAO_PASSOS, type PassoInicial } from './ajuda.js';
+import { definicaoPassos, type PassoInicial } from './ajuda.js';
+import { vocabulario, type Vocabulario } from './vocabulario.js';
 import type { EtapaFunil } from './funil.js';
 import type { PlanoConta } from './planos.js';
 
@@ -51,8 +52,12 @@ export function decidirEtapaParada(d: {
   return parada >= DIAS_PARADA * 86_400_000 ? { acao: 'avisar', passo } : { acao: 'nada' };
 }
 
-/** Variáveis e link do e-mail do passo. */
-export function emailDoPasso(passo: PassoInicial, appUrl: string) {
-  const p = DEFINICAO_PASSOS[passo];
+/** Variáveis e link do e-mail do passo, no vocabulário do negócio (barbeiro, esteticista...). */
+export function emailDoPasso(
+  passo: PassoInicial,
+  appUrl: string,
+  v: Vocabulario = vocabulario('barbearia'),
+) {
+  const p = definicaoPassos(v)[passo];
   return { passo: p.titulo, porque: p.porque, link: `${appUrl}${p.rota}` };
 }

@@ -19,14 +19,14 @@ Detalhe, esforço, riscos e perguntas de cada fase em
   - [x] PR 3: Licença Atendimento com o menu enxuto e o plano Agenda sem Automações para quem assina a partir de agora
   - [x] PR 4: duas contas com um login só (menu "Seus outros negócios", "Abrir outro negócio") e 20% na segunda conta
   - [ ] Uma fatura só para quem tem dois negócios (as duas mensalidades numa cobrança do Asaas, com os 20%): desenhar com o dono antes (muda cobrança, webhooks e bloqueio de cada conta)
-  - [ ] A licença nas métricas e no funil da administração (`plataforma_contas()` ainda não traz; hoje todas as contas são Barbearia)
+  - [x] A licença nas métricas e na lista de contas da administração
   - [ ] Páginas de vendas por licença (Fase 5), cada uma com o link de cadastro da licença
   - [ ] IA com créditos pré-pagos como complemento de todas as licenças, inclusive Atendimento (Fase 4)
 - [ ] **Fase 1 · Multissegmento** (aprovada em 27/11; ordem 1a → 1b → 1d estética)
   - [x] 1a, PR 1: papel `barbeiro` → `profissional` no banco e no código (S4)
   - [x] 1a, PR 2: segmento na conta, vocabulário por segmento, funções por conta, escolha em Configurações e o primeiro lote de telas (Configurações, Equipe, Perfil, menu do usuário, Resultados, Resumo do dia)
   - [x] 1a, PR 3: as demais telas, o bot, a Ajuda, o site, o relatório e a comanda impressa com o vocabulário (S3) e o detector de "barbeiro" fixo no `regras:conferir` (S6)
-  - [ ] Ficaram para a 1b: o cadastro público ("Nome da barbearia", escolha do segmento), os e-mails do sistema (`modelos-email.ts`) e o e-mail "próximo passo" (a função `plataforma_contas()` não traz o segmento)
+  - [ ] Ficaram para a 1b: o cadastro público ("Nome da barbearia", escolha do segmento), os e-mails do sistema (`modelos-email.ts`); o e-mail "próximo passo" já sai no vocabulário do negócio
 - [ ] **Fase 2 · Interface mais simples** (aguardando aprovação; depende das decisões da Fase 1)
 - [ ] **Fase 3 · Mentoria financeira** (aguardando aprovação)
 - [ ] **Fase 4 · IA opcional** (aguardando aprovação; muda a ADR 0007)

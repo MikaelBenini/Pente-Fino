@@ -40,6 +40,7 @@ import {
   type TipoAlertaEquipe,
   type TrabalhoEmail,
   type TrabalhoPushEquipe,
+  vocabulario,
 } from '@pente-fino/shared';
 import { Queue, Worker } from 'bullmq';
 import * as webpush from 'web-push';
@@ -180,7 +181,7 @@ export async function executarAvisosDeEtapa(
       const ficha = (await fichaDaContaPlataforma(d.prisma, f.id)) as {
         donos?: { nome: string; email: string }[];
       } | null;
-      const { link, ...vars } = emailDoPasso(decisao.passo, d.appUrl);
+      const { link, ...vars } = emailDoPasso(decisao.passo, d.appUrl, vocabulario(c.segmento));
       for (const dono of ficha?.donos ?? []) {
         await d.enviarEmail(
           emailPronto(

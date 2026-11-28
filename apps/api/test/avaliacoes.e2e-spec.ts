@@ -38,8 +38,9 @@ let prof = '';
 let corte = '';
 let instancia = '';
 const hoje = dataLocal(new Date());
-// A pesquisa sai 1 h depois do fechamento: perto da meia-noite a resposta cai no dia seguinte.
-const ateAmanha = dataLocal(new Date(Date.now() + 2 * 3_600_000));
+// A pesquisa sai 1 h depois do fechamento; depois das 21 h ela cai no horário de silêncio
+// (22 h às 7 h) e sai às 7 h do dia seguinte. O período vai até lá para pegar a resposta.
+const ateAmanha = dataLocal(new Date(Date.now() + 36 * 3_600_000));
 const periodo = `de=${hoje.slice(0, 7)}-01&ate=${ateAmanha}`;
 
 /** Cliente que aceitou avisos e já escreveu para a unidade (pode receber a pesquisa). */

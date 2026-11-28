@@ -22,6 +22,8 @@ export function contaParaTela(
     id: c.id,
     nome: c.nome,
     plano: c.plano,
+    licenca: c.licenca,
+    segmento: c.segmento,
     ciclo: c.ciclo,
     status: c.status,
     criadaEm: c.criado_em.toISOString(),
