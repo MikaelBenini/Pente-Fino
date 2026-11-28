@@ -97,10 +97,17 @@ export class ResultadosService {
     filtro: Record<string, unknown>,
   ): Promise<ClubeNoPeriodo> {
     const pagos = await this.pagamentosClube(tx, de, ate, filtro);
-    const pacotes = await this.pagamentosPacote(tx, de, ate, filtro);
+    // Pacotes: só a soma (uma consulta leve; o detalhe por dia fica em pagamentosPacote).
+    const pacotes = await tx.pacoteCliente.aggregate({
+      where: {
+        pagoEm: { gte: data(de), lte: data(ate) },
+        ...(filtro.unidadeId ? { unidadeId: filtro.unidadeId as string | { in: string[] } } : {}),
+      },
+      _sum: { valorPago: true },
+    });
     return {
       mensalidades: pagos.reduce((s, p) => s + p.valor, 0),
-      pacotes: pacotes.reduce((s, p) => s + p.valor, 0),
+      pacotes: pacotes._sum.valorPago ?? 0,
     };
   }
 
