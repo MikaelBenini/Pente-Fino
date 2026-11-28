@@ -83,7 +83,7 @@ export function AssistenteEquipe() {
             <p className="text-sm text-tinta-suave">
               Mande {comandos.slice(0, -1).join(', ')}
               {comandos.length > 1 ? ' ou ' : ''}
-              {comandos.at(-1)} para o WhatsApp da barbearia. PARAR pausa os avisos.
+              {comandos.at(-1)} para o WhatsApp da unidade. PARAR pausa os avisos.
             </p>
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-1 text-sm font-medium">Avisos que quero receber</legend>

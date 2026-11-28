@@ -174,6 +174,8 @@ export interface OpcoesModelos {
   vigenciaInicio: DataISO;
   /** false: cria só categorias, mensagens e menu do bot (os serviços vêm da configuração guiada). */
   incluirServicos?: boolean;
+  /** Serviços a criar (padrão: os de barbearia, usados pelo seed). */
+  servicos?: readonly ModeloServico[];
 }
 
 /**
@@ -182,12 +184,12 @@ export interface OpcoesModelos {
  */
 export async function aplicarModelosIniciais(
   tx: Tx,
-  { unidadeIds, vigenciaInicio, incluirServicos = true }: OpcoesModelos,
+  { unidadeIds, vigenciaInicio, incluirServicos = true, servicos: modelos }: OpcoesModelos,
 ): Promise<Map<string, string>> {
   const servicos = new Map<string, string>();
   const vocab = await vocabularioDaConta(tx);
   const mensagens = mensagensBotPadrao(vocab);
-  for (const { precoSugerido, ...dados } of incluirServicos ? MODELO_SERVICOS : []) {
+  for (const { precoSugerido, ...dados } of incluirServicos ? (modelos ?? MODELO_SERVICOS) : []) {
     const servico = await tx.servico.create({ data: { ...dados, unidadeIds: [...unidadeIds] } });
     servicos.set(servico.nome, servico.id);
     await tx.precoServico.createMany({

@@ -9,6 +9,7 @@ import { InicioAgenda } from '../inicio-agenda';
 import { useEstadoConfiguracao } from './configuracao-inicial';
 import { limitesDoMes, mesAtual, nomeDoMes } from '@/lib/periodo';
 import { useApp } from '../contexto-app';
+import { useVocabulario } from '@/lib/vocabulario';
 import { PainelIndicadores } from '../indicadores';
 import { PainelHoje } from '../painel-hoje';
 import { PrimeirosPassos } from '../primeiros-passos';
@@ -17,6 +18,7 @@ import { CabecalhoPagina, Estado } from '../pagina';
 
 export function TelaInicio() {
   const { unidadeAtiva, unidades, papeis } = useApp();
+  const v = useVocabulario();
   const configuracao = useEstadoConfiguracao(papeis.includes('dono'));
   const mes = mesAtual();
   const [de, ate] = limitesDoMes(mes);
@@ -42,8 +44,8 @@ export function TelaInicio() {
           </span>
           <span className="text-xl font-semibold">Termine a configuração inicial</span>
           <span className="text-tinta-suave">
-            {configuracao.data.servicos} serviços · {configuracao.data.profissionais} barbeiros.
-            Faltam poucos passos para o primeiro atendimento.
+            {configuracao.data.servicos} serviços · {configuracao.data.profissionais}{' '}
+            {v.profissional.muitos}. Faltam poucos passos para o primeiro atendimento.
           </span>
         </Link>
       )}

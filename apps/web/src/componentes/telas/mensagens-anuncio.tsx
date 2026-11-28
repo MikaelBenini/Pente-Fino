@@ -44,8 +44,8 @@ export function MensagensDeAnuncio({
         <div className="flex max-w-3xl flex-col gap-4">
           {unidadeId && !fluxo.data!.proprio && (
             <Aviso tom="info">
-              A {nome} usa as mensagens de anúncio do padrão da barbearia. O que você salvar aqui
-              vale só para ela.
+              A {nome} usa as mensagens de anúncio do padrão da conta. O que você salvar aqui vale
+              só para ela.
             </Aviso>
           )}
           {unidadeId && fluxo.data!.proprio && podeEditar && (

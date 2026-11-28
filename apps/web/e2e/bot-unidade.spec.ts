@@ -24,7 +24,7 @@ test('editar o padrão ou uma unidade; a unidade usa o padrão até personalizar
   const opcoes = await escopo.locator('option').allTextContents();
   expect(opcoes[0]).toBe('Padrão da barbearia (todas as unidades)');
   await escopo.selectOption({ label: opcoes[1]! });
-  await expect(page.getByText(/usa o menu e as mensagens do padrão da barbearia/)).toBeVisible();
+  await expect(page.getByText(/usa o menu e as mensagens do padrão da conta/)).toBeVisible();
 });
 
 test('mensagens prontas: o convite para receber lembretes liga e desliga', async ({ page }) => {

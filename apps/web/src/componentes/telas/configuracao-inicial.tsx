@@ -1,8 +1,15 @@
 'use client';
 
-import { lerMoeda, NOMES_DIAS, NOMES_DIAS_CURTOS, valorParaCampo } from '@pente-fino/shared';
-import { Botao, Campo, CampoQuantidade, EstadoVazio, Marcador } from '@pente-fino/ui';
-import { useQuery } from '@tanstack/react-query';
+import {
+  lerMoeda,
+  NOMES_DIAS,
+  NOMES_DIAS_CURTOS,
+  valorParaCampo,
+  vocabulario,
+  type Segmento,
+} from '@pente-fino/shared';
+import { Botao, Campo, CampoQuantidade, EstadoVazio, Marcador, Selecao } from '@pente-fino/ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, CircleSlash, UserPlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -31,6 +38,9 @@ interface EstadoConfiguracao {
   servicosComPreco: number;
   profissionais: number;
   modelos: Modelo[];
+  /** Tipo de negócio e os que a licença aceita (mais de um: o primeiro passo pergunta). */
+  segmento: Segmento;
+  segmentosDaLicenca: Segmento[];
 }
 
 const PASSOS = ['Unidade', 'Serviços e preços', 'Equipe', 'Pronto'] as const;
@@ -88,7 +98,14 @@ export function TelaConfiguracaoInicial() {
       <Estado consulta={estado}>
         {() => (
           <>
-            {passo === 0 && <PassoUnidade onSeguir={() => setPasso(1)} />}
+            {passo === 0 && (
+              <>
+                {estado.data!.segmentosDaLicenca.length > 1 && (
+                  <TipoDoNegocio estado={estado.data!} />
+                )}
+                <PassoUnidade onSeguir={() => setPasso(1)} />
+              </>
+            )}
             {passo === 1 && (
               <PassoServicos
                 estado={estado.data!}
@@ -104,6 +121,69 @@ export function TelaConfiguracaoInicial() {
         )}
       </Estado>
     </div>
+  );
+}
+
+/**
+ * Fase 1b (S7): na licença com mais de um tipo de negócio (Beleza: salão ou unhas; Atendimento:
+ * qualquer um), o primeiro acesso pergunta qual é. Muda as palavras do sistema, os serviços
+ * sugeridos no próximo passo e os textos prontos do bot. Depois de concluir, só o suporte troca.
+ */
+function TipoDoNegocio({ estado }: { estado: EstadoConfiguracao }) {
+  const cliente = useQueryClient();
+  const [escolhido, setEscolhido] = useState<Segmento>(estado.segmento);
+  const [erro, setErro] = useState<string | null>(null);
+  const salvar = useMutation({
+    mutationFn: (segmento: Segmento) =>
+      api('configuracao/segmento', { metodo: 'PUT', corpo: { segmento } }),
+    onSuccess: async () => {
+      await cliente.invalidateQueries({ queryKey: ['configuracao'] });
+      await cliente.invalidateQueries({ queryKey: ['auth', 'eu'] });
+    },
+    onError: (e) => setErro(mensagemDe(e)),
+  });
+  return (
+    <section
+      aria-labelledby="titulo-tipo-negocio"
+      className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie p-4"
+    >
+      <h2 id="titulo-tipo-negocio" className="text-lg font-semibold">
+        Qual é o seu negócio?
+      </h2>
+      <p className="text-sm text-tinta-suave">
+        O sistema passa a usar as palavras do seu negócio e sugere os serviços certos no próximo
+        passo.
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <Selecao
+          id="inicial-segmento"
+          rotulo="Tipo de negócio"
+          value={escolhido}
+          onChange={(e) => {
+            setEscolhido(e.target.value as Segmento);
+            setErro(null);
+          }}
+          opcoes={estado.segmentosDaLicenca.map((sg) => ({
+            valor: sg,
+            rotulo: vocabulario(sg).nomeSegmento,
+          }))}
+        />
+        <Botao
+          variante="secundario"
+          disabled={escolhido === estado.segmento}
+          carregando={salvar.isPending}
+          onClick={() => salvar.mutate(escolhido)}
+        >
+          Confirmar
+        </Botao>
+      </div>
+      {salvar.isSuccess && escolhido === estado.segmento && (
+        <p role="status" className="text-sm text-acao-texto">
+          Pronto: {vocabulario(estado.segmento).nomeSegmento}.
+        </p>
+      )}
+      {erro && <Aviso tom="erro">{erro}</Aviso>}
+    </section>
   );
 }
 

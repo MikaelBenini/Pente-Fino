@@ -932,6 +932,55 @@ describe('configurações e saúde do sistema', () => {
     expect((await agenda.get('/conta/assinatura').expect(200)).body.precoPorMes).toBe(1000);
   });
 
+  it('primeiro acesso: serviços do segmento e o tipo de negócio confirmado dentro da licença', async () => {
+    const cadastrar = async (email: string, extra: object) => {
+      await http()
+        .post('/publico/contas')
+        .send({
+          barbearia: 'Negócio 1b',
+          nome: 'Lia Teste',
+          email,
+          senha: 'senha-da-lia-1234',
+          aceite: true,
+          abertoEm: Date.now() - 10_000,
+          ...extra,
+        })
+        .expect(201);
+      const c = await como(app, email, 'senha-da-lia-1234');
+      contasCriadas.push((await c.get('/auth/eu').expect(200)).body.contaId);
+      return c;
+    };
+    // Beleza começa como salão: os serviços sugeridos são de salão; salão e unhas na licença.
+    const beleza = await cadastrar(`fase1b-beleza-${sufixo}@e2e.pentefino.dev`, {
+      licenca: 'beleza',
+      plano: 'basico',
+    });
+    const estado = (await beleza.get('/configuracao/estado').expect(200)).body;
+    expect(estado.segmento).toBe('salao');
+    expect(estado.segmentosDaLicenca).toEqual(['salao', 'unhas']);
+    expect(estado.modelos.map((m: { nome: string }) => m.nome)).toContain('Corte feminino');
+    await beleza.put('/configuracao/segmento', { segmento: 'estetica' }).expect(400);
+    const unhas = (await beleza.put('/configuracao/segmento', { segmento: 'unhas' }).expect(200))
+      .body;
+    expect(unhas.modelos.map((m: { nome: string }) => m.nome)).toContain('Manicure');
+    expect((await beleza.get('/auth/eu').expect(200)).body.segmento).toBe('unhas');
+    await beleza.post('/configuracao/concluir').expect(200);
+    await beleza.put('/configuracao/segmento', { segmento: 'salao' }).expect(409);
+
+    // Atendimento começa como barbearia; ao confirmar estética, o bot pronto troca o vocabulário.
+    const atendimento = await cadastrar(`fase1b-atend-${sufixo}@e2e.pentefino.dev`, {
+      licenca: 'atendimento',
+      plano: 'agenda',
+    });
+    expect(JSON.stringify((await atendimento.get('/bot').expect(200)).body)).toContain(
+      'o barbeiro',
+    );
+    await atendimento.put('/configuracao/segmento', { segmento: 'estetica' }).expect(200);
+    const bot = JSON.stringify((await atendimento.get('/bot').expect(200)).body);
+    expect(bot).toContain('a esteticista');
+    expect(bot).not.toContain('o barbeiro');
+  });
+
   it('aviso geral aparece para as barbearias só enquanto vale', async () => {
     const dono = await como(app, a.emails.dono);
     expect((await dono.get('/sistema/aviso').expect(200)).body).toEqual({ aviso: null });

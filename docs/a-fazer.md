@@ -26,7 +26,9 @@ Detalhe, esforço, riscos e perguntas de cada fase em
   - [x] 1a, PR 1: papel `barbeiro` → `profissional` no banco e no código (S4)
   - [x] 1a, PR 2: segmento na conta, vocabulário por segmento, funções por conta, escolha em Configurações e o primeiro lote de telas (Configurações, Equipe, Perfil, menu do usuário, Resultados, Resumo do dia)
   - [x] 1a, PR 3: as demais telas, o bot, a Ajuda, o site, o relatório e a comanda impressa com o vocabulário (S3) e o detector de "barbeiro" fixo no `regras:conferir` (S6)
-  - [ ] Ficaram para a 1b: o cadastro público ("Nome da barbearia", escolha do segmento), os e-mails do sistema (`modelos-email.ts`); o e-mail "próximo passo" já sai no vocabulário do negócio
+  - [x] 1b: serviços prontos por segmento na configuração inicial e "Qual é o seu negócio?" no primeiro acesso para licenças com mais de um tipo (o cadastro já recebe a licença pelo link desde as licenças)
+  - [ ] Os e-mails do sistema (`modelos-email.ts`) no vocabulário do negócio
+  - [ ] 1d estética: anamnese, fotos de antes e depois, pacotes de sessões e termo de consentimento
 - [ ] **Fase 2 · Interface mais simples** (aguardando aprovação; depende das decisões da Fase 1)
 - [ ] **Fase 3 · Mentoria financeira** (aguardando aprovação)
 - [ ] **Fase 4 · IA opcional** (aguardando aprovação; muda a ADR 0007)
