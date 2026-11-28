@@ -7,6 +7,11 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Mudado (um campo "Produto")
+
+- **Um campo só, "Produto", no lugar de "Licença" e "Tipo de negócio":** Barbearia, Salão de beleza, Unhas e sobrancelhas, Clínica de estética, Tatuagem e piercing ou Atendimento (só o bot). Vale na ficha da conta, na venda presencial, em "Abrir outro negócio", em Configurações e na lista de contas.
+- **Ficha da conta: "Produto e plano" num bloco só** (antes eram "Mudar plano" e "Mudar licença"), com uma confirmação e uma atualização no Asaas.
+
 ### Adicionado (primeiro acesso por tipo de negócio)
 
 - **Serviços prontos por tipo de negócio:** a configuração inicial sugere os serviços certos, com duração e preço de referência: salão (corte feminino, escova, coloração...), unhas (manicure, pedicure, alongamento...), estética (limpeza de pele, drenagem, peeling...), tatuagem, academia, personal e outros. Barbearia continua com os de sempre.

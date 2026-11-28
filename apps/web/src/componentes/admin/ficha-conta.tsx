@@ -10,15 +10,12 @@ import {
   lerMoeda,
   NOME_FORMA_MANUAL,
   NOME_PLANO,
-  LICENCAS,
-  NOME_LICENCA,
+  licencaDoProduto,
+  NOME_PRODUTO,
   PLANOS_DA_LICENCA,
-  SEGMENTOS_DA_LICENCA,
-  segmentoNaLicenca,
-  segmentoPadraoDaLicenca,
-  vocabulario,
-  type Licenca,
-  type Segmento,
+  produtoDaConta,
+  PRODUTOS,
+  type Produto,
   aplicarDesconto,
   precoPorMes,
   LIMITE_TESTE_DIAS,
@@ -51,6 +48,7 @@ import { useTabelasAdmin } from './precos-admin';
 const NOME_ACAO: Record<string, string> = {
   mudar_plano: 'Mudou o plano',
   mudar_licenca: 'Mudou a licença',
+  mudar_produto: 'Mudou o produto e o plano',
   mudar_teste: 'Mudou o fim do teste',
   bloquear: 'Bloqueou',
   desbloquear: 'Desbloqueou',
@@ -309,12 +307,12 @@ function Conteudo({
   podePagar: boolean;
 }) {
   const hoje = dataLocal(new Date());
+  const produtoAtual = produtoDaConta(f.licenca, f.segmento);
+  const [produto, setProduto] = useState<Produto>(produtoAtual);
   const [plano, setPlano] = useState(f.plano);
   const [ciclo, setCiclo] = useState(f.ciclo);
   const [motivoPlano, setMotivoPlano] = useState('');
-  const [licenca, setLicenca] = useState<Licenca>(f.licenca);
-  const [segmento, setSegmento] = useState<Segmento>(f.segmento);
-  const [motivoLicenca, setMotivoLicenca] = useState('');
+  const planosDoProduto = PLANOS_DA_LICENCA[licencaDoProduto(produto, f.segmento).licenca];
   // Padrão: 7 dias depois do fim do teste atual (ou de hoje, se já acabou); nunca encurta sem querer.
   const baseTeste =
     f.testeAte && dataLocal(new Date(f.testeAte)) > hoje ? dataLocal(new Date(f.testeAte)) : hoje;
@@ -409,8 +407,7 @@ function Conteudo({
         <div>
           <dt className="text-xs font-semibold uppercase tracking-wider text-tinta-suave">Plano</dt>
           <dd className="font-semibold">
-            Licença {NOME_LICENCA[f.licenca]} ({vocabulario(f.segmento).nomeSegmento}) ·{' '}
-            {NOME_PLANO[f.plano]} · {f.ciclo} ·{' '}
+            {NOME_PRODUTO[produtoAtual]} · {NOME_PLANO[f.plano]} · {f.ciclo} ·{' '}
             {f.cobrancaAutomatica ? 'cobrança automática' : 'cobrança manual'}
           </dd>
         </div>
@@ -573,28 +570,41 @@ function Conteudo({
 
         {admin && (
           <Acao
-            titulo="Mudar plano"
-            textoBotao="Mudar plano"
-            podeEnviar={motivoOk(motivoPlano) && (plano !== f.plano || ciclo !== f.ciclo)}
+            titulo="Produto e plano"
+            textoBotao="Salvar produto e plano"
+            podeEnviar={
+              motivoOk(motivoPlano) &&
+              planosDoProduto.includes(plano) &&
+              (produto !== produtoAtual || plano !== f.plano || ciclo !== f.ciclo)
+            }
             enviar={async () => {
-              await adminApi(`${base}/plano`, {
+              await adminApi(`${base}/produto`, {
                 metodo: 'PUT',
-                corpo: { plano, ciclo, motivo: motivoPlano },
+                corpo: { produto, plano, ciclo, motivo: motivoPlano },
               });
               setMotivoPlano('');
               await atualizar();
             }}
           >
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Selecao
+                id="conta-produto"
+                rotulo="Produto"
+                value={produto}
+                onChange={(e) => {
+                  const novo = e.target.value as Produto;
+                  setProduto(novo);
+                  const planos = PLANOS_DA_LICENCA[licencaDoProduto(novo, f.segmento).licenca];
+                  if (!planos.includes(plano)) setPlano(planos[0]!);
+                }}
+                opcoes={PRODUTOS.map((p) => ({ valor: p, rotulo: NOME_PRODUTO[p] }))}
+              />
               <Selecao
                 id="conta-plano"
                 rotulo="Plano"
                 value={plano}
                 onChange={(e) => setPlano(e.target.value as typeof plano)}
-                opcoes={PLANOS_DA_LICENCA[f.licenca].map((p) => ({
-                  valor: p,
-                  rotulo: NOME_PLANO[p],
-                }))}
+                opcoes={planosDoProduto.map((p) => ({ valor: p, rotulo: NOME_PLANO[p] }))}
               />
               <Selecao
                 id="conta-ciclo"
@@ -607,62 +617,10 @@ function Conteudo({
                 ]}
               />
             </div>
-            <CampoMotivo id="motivo-plano" valor={motivoPlano} onMudar={setMotivoPlano} />
-          </Acao>
-        )}
-
-        {admin && (
-          <Acao
-            titulo="Mudar licença"
-            textoBotao="Mudar licença"
-            podeEnviar={
-              motivoOk(motivoLicenca) &&
-              segmentoNaLicenca(licenca, segmento) &&
-              (licenca !== f.licenca || segmento !== f.segmento)
-            }
-            enviar={async () => {
-              await adminApi(`${base}/licenca`, {
-                metodo: 'PUT',
-                corpo: { licenca, segmento, motivo: motivoLicenca },
-              });
-              setMotivoLicenca('');
-              await atualizar();
-            }}
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Selecao
-                id="conta-licenca"
-                rotulo="Licença"
-                value={licenca}
-                onChange={(e) => {
-                  const nova = e.target.value as Licenca;
-                  setLicenca(nova);
-                  if (!segmentoNaLicenca(nova, segmento))
-                    setSegmento(segmentoPadraoDaLicenca(nova));
-                }}
-                opcoes={LICENCAS.map((l) => ({ valor: l, rotulo: NOME_LICENCA[l] }))}
-              />
-              <Selecao
-                id="conta-segmento"
-                rotulo="Tipo de negócio"
-                value={segmento}
-                onChange={(e) => setSegmento(e.target.value as Segmento)}
-                opcoes={SEGMENTOS_DA_LICENCA[licenca].map((s) => ({
-                  valor: s,
-                  rotulo: vocabulario(s).nomeSegmento,
-                }))}
-              />
-            </div>
-            {!PLANOS_DA_LICENCA[licenca].includes(f.plano) && (
-              <p className="text-sm text-tinta-suave">
-                A Licença {NOME_LICENCA[licenca]} não tem o plano {NOME_PLANO[f.plano]}: mude o
-                plano antes.
-              </p>
-            )}
             <p className="text-sm text-tinta-suave">
-              Com cobrança automática, o Asaas passa a cobrar o preço da licença nova.
+              Com cobrança automática, o Asaas passa a cobrar o valor novo.
             </p>
-            <CampoMotivo id="motivo-licenca" valor={motivoLicenca} onMudar={setMotivoLicenca} />
+            <CampoMotivo id="motivo-plano" valor={motivoPlano} onMudar={setMotivoPlano} />
           </Acao>
         )}
 

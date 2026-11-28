@@ -18,6 +18,7 @@ import { contasDaPlataforma, faturasDaPlataforma, funilDasContas } from '@pente-
 import {
   entrarAdminSchema,
   mudarLicencaContaSchema,
+  mudarProdutoContaSchema,
   mudarPlanoContaSchema,
   acaoContaSchema,
   contaInternaSchema,
@@ -37,6 +38,7 @@ import {
   type VenderContaEntrada,
   type FichaContaPlataforma,
   type MudarLicencaContaEntrada,
+  type MudarProdutoContaEntrada,
   type MudarPlanoContaEntrada,
   type AcaoContaEntrada,
   type ContaInternaEntrada,
@@ -321,6 +323,20 @@ export class AdminController {
     @IpDaRequisicao() ip: string | null,
   ) {
     return this.contasServico.mudarPlano(id, d, a, ip);
+  }
+
+  @Put('contas/:id/produto')
+  @PapeisPlataforma('admin')
+  @ApiOperation({
+    summary: 'Mudar produto e plano de uma vez (motivo obrigatório; o Asaas acompanha)',
+  })
+  mudarProduto(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Corpo(mudarProdutoContaSchema) d: MudarProdutoContaEntrada,
+    @AdminAtual() a: AdminAutenticado,
+    @IpDaRequisicao() ip: string | null,
+  ) {
+    return this.contasServico.mudarProduto(id, d, a, ip);
   }
 
   @Put('contas/:id/licenca')

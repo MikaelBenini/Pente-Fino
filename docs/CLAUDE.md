@@ -66,7 +66,7 @@ dono, gestor, recepcao, profissional (até 27/11/2026, `barbeiro`; a API ainda a
 
 ## Licenças e planos (limites aplicados pela API)
 
-- **Licença** (ADR 0015, `packages/shared/src/licencas.ts`): o produto contratado. `conta.licenca` (barbearia, beleza, estetica, tatuagem, fitness, atendimento) define preço, planos e recursos; `conta.segmento` define o vocabulário e precisa combinar com a licença (`segmentoNaLicenca`). Só a administração troca (`PUT /admin/contas/:id/licenca`). Preço sempre com a licença: `precoPorMes(..., licenca)`, `valorDaCobranca(..., licenca)`, `limitesDaConta(plano, licenca, unidades)`. Tabela por licença em `docs/gerado/planos.md`.
+- **Licença** (ADR 0015, `packages/shared/src/licencas.ts`): o produto contratado. `conta.licenca` (barbearia, beleza, estetica, tatuagem, fitness, atendimento) define preço, planos e recursos; `conta.segmento` define o vocabulário e precisa combinar com a licença (`segmentoNaLicenca`). Na tela é um campo só, **Produto** (`PRODUTOS`, `licencaDoProduto`, `produtoDaConta`): nunca mostrar licença e tipo de negócio como dois campos. Só a administração troca (`PUT /admin/contas/:id/produto`). Preço sempre com a licença: `precoPorMes(..., licenca)`, `valorDaCobranca(..., licenca)`, `limitesDaConta(plano, licenca, unidades)`. Tabela por licença em `docs/gerado/planos.md`.
 - Licença Atendimento: só o plano Agenda, Automações incluídas, R$ 49,90 por número de WhatsApp (3 profissionais por número); o menu não mostra comanda, caixa, resultados, financeiro, comissões, desempenho, produtos, clube nem site (`menuDaLicenca`). Fitness fora da venda até a Fase 1c.
 
 Planos da Licença Barbearia (e Beleza):

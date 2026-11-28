@@ -4,6 +4,9 @@ import {
   LICENCAS,
   LICENCAS_A_VENDA,
   licencaDaContaNova,
+  licencaDoProduto,
+  produtoDaConta,
+  PRODUTOS,
   menuDaLicenca,
   licencaDoSegmento,
   PLANOS_DA_LICENCA,
@@ -110,5 +113,25 @@ describe('Licença Atendimento: menu enxuto e Automações', () => {
     expect(podeContratarAutomacoes('agenda', true)).toBe(true);
     expect(podeContratarAutomacoes('basico')).toBe(true);
     expect(podeContratarAutomacoes('pro')).toBe(false);
+  });
+});
+
+describe('produto: um campo só no lugar de licença e tipo de negócio', () => {
+  it('cada produto vira licença e tipo de negócio, e volta igual', () => {
+    expect(licencaDoProduto('unhas')).toEqual({ licenca: 'beleza', segmento: 'unhas' });
+    expect(licencaDoProduto('estetica')).toEqual({ licenca: 'estetica', segmento: 'estetica' });
+    expect(licencaDoProduto('atendimento', 'estetica')).toEqual({
+      licenca: 'atendimento',
+      segmento: 'estetica',
+    });
+    expect(licencaDoProduto('atendimento')).toEqual({
+      licenca: 'atendimento',
+      segmento: 'barbearia',
+    });
+    for (const p of PRODUTOS) {
+      const { licenca, segmento } = licencaDoProduto(p, 'estetica');
+      expect(segmentoNaLicenca(licenca, segmento), p).toBe(true);
+      expect(produtoDaConta(licenca, segmento), p).toBe(p);
+    }
   });
 });

@@ -1615,6 +1615,36 @@ describe('pronto quando (etapa 15.1)', () => {
       motivo: 'Abriu a clínica',
     });
 
+    // 4c. Produto e plano de uma vez (um campo "Produto" no lugar de licença + tipo de negócio).
+    await adm
+      .put(`/admin/contas/${contaId}/produto`, {
+        produto: 'atendimento',
+        plano: 'pro',
+        ciclo: 'mensal',
+        motivo: 'Plano que o produto não tem',
+      })
+      .expect(400);
+    await adm
+      .put(`/admin/contas/${contaId}/produto`, {
+        produto: 'unhas',
+        plano: 'basico',
+        ciclo: 'mensal',
+        motivo: 'Virou estúdio de unhas',
+      })
+      .expect(200);
+    const fichaProduto = (await adm.get(`/admin/contas/${contaId}`).expect(200))
+      .body as FichaContaPlataforma;
+    expect(fichaProduto).toMatchObject({ licenca: 'beleza', segmento: 'unhas', plano: 'basico' });
+    expect(fichaProduto.historico[0]).toMatchObject({ acao: 'mudar_produto' });
+    await adm
+      .put(`/admin/contas/${contaId}/produto`, {
+        produto: 'unhas',
+        plano: 'basico',
+        ciclo: 'mensal',
+        motivo: 'Mesma coisa de novo',
+      })
+      .expect(409);
+
     // 5. Nenhuma resposta da administração traz dado de cliente da barbearia.
     const respostas = JSON.stringify([metricas, lista, ficha, fichaLicenca]);
     expect(respostas).not.toContain(clienteSecreto);

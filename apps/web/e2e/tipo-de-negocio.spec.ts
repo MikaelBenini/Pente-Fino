@@ -10,16 +10,16 @@ test('Configurações mostra a licença, sem trocar o tipo de negócio', async (
   await page.waitForURL(/inicio/);
 
   await page.goto('/configuracoes');
-  await expect(page.getByText('Licença', { exact: true })).toBeVisible();
-  await expect(page.getByText('Barbearia. Para trocar, fale com o suporte.')).toBeVisible();
+  await expect(page.getByText('Produto', { exact: true })).toBeVisible();
+  await expect(page.getByText('Para trocar, fale com o suporte.')).toBeVisible();
   await expect(page.getByLabel('Qual é o seu negócio?')).toHaveCount(0);
 });
 
-test('cadastro pelo link da Licença Estética fala com a clínica e mostra o preço dela', async ({
+test('cadastro pelo link da estética fala com a clínica e mostra o preço dela', async ({
   page,
 }) => {
   await page.goto('/cadastro?licenca=estetica&plano=basico');
   await expect(page.getByLabel('Nome da clínica')).toBeVisible();
-  await expect(page.getByText('Licença Estética · plano')).toBeVisible();
+  await expect(page.getByText('Clínica de estética · plano')).toBeVisible();
   await expect(page.getByText('R$ 89,90/mês').first()).toBeVisible();
 });

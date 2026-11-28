@@ -2,7 +2,7 @@
 
 # Rotas da API
 
-337 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
+338 rotas em 48 controllers (`apps/api/src`), por módulo. "Quem" vem do `@Papeis` (constantes como `QUEM_CONVERSA` são listas definidas no próprio módulo) ou `@Publico`. A documentação interativa fica em `/docs` (Swagger) com a API rodando.
 
 ## admin
 
@@ -75,6 +75,7 @@
 | POST | `/admin/contas/:id/suporte` | plataforma: admin,suporte | Abrir o painel da barbearia em modo suporte, só leitura (admin F5) |
 | GET | `/admin/contas/:id` | plataforma: admin,vendedor,suporte,financeiro | Ficha da conta: donos, unidades, plano, datas, cobrança e histórico |
 | PUT | `/admin/contas/:id/plano` | plataforma: admin | Mudar plano e ciclo (motivo obrigatório; o Asaas acompanha) |
+| PUT | `/admin/contas/:id/produto` | plataforma: admin | Mudar produto e plano de uma vez (motivo obrigatório; o Asaas acompanha) |
 | PUT | `/admin/contas/:id/licenca` | plataforma: admin | Trocar a licença e o tipo de negócio (motivo obrigatório; o Asaas acompanha) |
 | PUT | `/admin/contas/:id/teste` | plataforma: admin | Estender o teste ou dar cortesia até uma data (motivo obrigatório) |
 | PUT | `/admin/contas/:id/situacao` | plataforma: admin | Bloquear, desbloquear, cancelar, reativar (com o próximo passo), cortesia ou início da cobrança |

@@ -10,7 +10,8 @@ import {
   LIMITES_PLANO,
   NOME_PLANO,
   LICENCAS_A_VENDA,
-  NOME_LICENCA,
+  NOME_PRODUTO,
+  produtoDaConta,
   PLANOS_DA_LICENCA,
   SEGMENTOS_DA_LICENCA,
   automacoesIncluidasNaLicenca,
@@ -326,7 +327,9 @@ export function FormularioCadastro() {
       </fieldset>
       <fieldset className="min-w-0">
         <legend className="mb-1.5 text-sm font-medium">
-          {licenca === 'barbearia' ? 'Plano' : `Licença ${NOME_LICENCA[licenca]} · plano`}
+          {licenca === 'barbearia'
+            ? 'Plano'
+            : `${NOME_PRODUTO[produtoDaConta(licenca, segmento)]} · plano`}
         </legend>
         <div className="flex flex-col gap-2">
           {planosDaLicenca.map((p) => (

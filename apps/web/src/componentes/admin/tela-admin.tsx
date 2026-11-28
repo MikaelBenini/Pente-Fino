@@ -6,7 +6,8 @@ import {
   NOME_PAPEL_PLATAFORMA,
   ETAPAS_FUNIL,
   faixaDaSaude,
-  NOME_LICENCA,
+  NOME_PRODUTO,
+  produtoDaConta,
   NOME_PLANO,
   PLANOS,
   TOTAL_PASSOS_ATIVACAO,
@@ -349,7 +350,7 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
   const linhas = [
     [
       'Conta',
-      'Licença',
+      'Produto',
       'Plano',
       'Ciclo',
       'Situação',
@@ -369,7 +370,7 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
     ],
     ...contas.map((c) => [
       c.nome,
-      NOME_LICENCA[c.licenca],
+      NOME_PRODUTO[produtoDaConta(c.licenca, c.segmento)],
       NOME_PLANO[c.plano],
       c.ciclo,
       NOME_STATUS[c.status],
@@ -573,7 +574,7 @@ function ContasAdmin({
                     {NOME_PLANO[c.plano]} · {c.ciclo}
                     {c.licenca !== 'barbearia' && (
                       <span className="block text-xs text-tinta-suave">
-                        Licença {NOME_LICENCA[c.licenca]}
+                        {NOME_PRODUTO[produtoDaConta(c.licenca, c.segmento)]}
                       </span>
                     )}
                   </td>
