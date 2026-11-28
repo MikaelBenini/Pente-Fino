@@ -192,3 +192,17 @@ describe('métricas da plataforma', () => {
     expect(com.renovaram).toBe(base.renovaram);
   });
 });
+
+describe('MRR pela licença (ADR 0015)', () => {
+  it('conta de estética e de atendimento entram com o preço da licença', () => {
+    const r = metricasDaPlataforma({
+      agora,
+      contas: [
+        conta('est', { plano: 'basico', licenca: 'estetica' }),
+        conta('atd', { plano: 'agenda', licenca: 'atendimento' }),
+      ],
+      faturas: [paga('est', '2026-11-05', 8990), paga('atd', '2026-11-05', 4990)],
+    });
+    expect(r.receita.mrr).toBe(8990 + 4990);
+  });
+});

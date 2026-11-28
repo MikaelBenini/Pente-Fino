@@ -13,6 +13,8 @@ const conta = (o: Partial<ContaNaPlataforma>): ContaNaPlataforma => ({
   id: 'c1',
   nome: 'Barbearia A',
   plano: 'pro',
+  licenca: 'barbearia',
+  segmento: 'barbearia',
   ciclo: 'mensal',
   status: 'ativa',
   criadaEm: '2026-10-01T12:00:00Z',

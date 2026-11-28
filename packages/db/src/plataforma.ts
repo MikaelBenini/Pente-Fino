@@ -1,6 +1,6 @@
 // Administração do sistema (Etapa 15.1): leitura entre contas só pelas funções do banco
 // (migração "plataforma"), com o usuário de banco da plataforma. Nunca dado de cliente.
-import type { ContaNoFunil } from '@pente-fino/shared';
+import type { ContaNoFunil, Licenca, Segmento } from '@pente-fino/shared';
 import type { PrismaClient } from './generated/prisma/client.js';
 
 export interface LinhaContaPlataforma {
@@ -35,6 +35,9 @@ export interface LinhaContaPlataforma {
   origem: unknown;
   /** Quantos dos 8 primeiros passos do tutorial a barbearia fez (admin U2). */
   ativacao: number;
+  /** Licença e segmento (ADR 0015): preço no MRR, coluna da lista e vocabulário dos e-mails. */
+  licenca: Licenca;
+  segmento: Segmento;
 }
 
 /** Todas as contas, das mais novas para as mais antigas (plataforma_contas()). */

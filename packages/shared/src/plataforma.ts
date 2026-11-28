@@ -87,6 +87,8 @@ export interface ContaNaPlataforma {
   id: string;
   nome: string;
   plano: PlanoConta;
+  licenca: Licenca;
+  segmento: Segmento;
   ciclo: Ciclo;
   status: 'teste' | 'ativa' | 'suspensa' | 'cancelada';
   criadaEm: string;

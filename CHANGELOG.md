@@ -7,6 +7,12 @@ produção (`https://seupentefino.com.br`). Detalhes técnicos e o porquê de ca
 
 ## [Não publicado]
 
+### Mudado (licença na administração)
+
+- **Receita mensal (MRR) pela licença:** as métricas da administração somam o preço da licença de cada conta (Estética, Tatuagem, Atendimento), não mais o da Barbearia para todas.
+- **Lista de contas com a licença:** a coluna do plano mostra a licença quando não é Barbearia, e a exportação em planilha ganhou a coluna "Licença".
+- **E-mail "Ajuda com o próximo passo" no vocabulário do negócio:** fala de esteticista, tatuador e clínica conforme a conta.
+
 ### Adicionado (duas contas, um login)
 
 - **Abrir outro negócio com o mesmo login:** o dono cria mais um negócio pelo menu ("Abrir outro negócio"), de qualquer licença, com o mesmo e-mail e a mesma senha e 20% de desconto na mensalidade dele. Cada negócio tem a sua agenda, clientes, equipe e assinatura.

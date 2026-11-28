@@ -6,6 +6,7 @@ import {
   NOME_PAPEL_PLATAFORMA,
   ETAPAS_FUNIL,
   faixaDaSaude,
+  NOME_LICENCA,
   NOME_PLANO,
   PLANOS,
   TOTAL_PASSOS_ATIVACAO,
@@ -347,7 +348,8 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
   const campo = (v: string | number | null) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const linhas = [
     [
-      'Barbearia',
+      'Conta',
+      'Licença',
       'Plano',
       'Ciclo',
       'Situação',
@@ -367,6 +369,7 @@ function baixarCsv(contas: ContaNaPlataforma[]) {
     ],
     ...contas.map((c) => [
       c.nome,
+      NOME_LICENCA[c.licenca],
       NOME_PLANO[c.plano],
       c.ciclo,
       NOME_STATUS[c.status],
@@ -568,6 +571,11 @@ function ContasAdmin({
                   </th>
                   <td className={td}>
                     {NOME_PLANO[c.plano]} · {c.ciclo}
+                    {c.licenca !== 'barbearia' && (
+                      <span className="block text-xs text-tinta-suave">
+                        Licença {NOME_LICENCA[c.licenca]}
+                      </span>
+                    )}
                   </td>
                   <td className={td}>
                     <Ficha tom={TOM_STATUS[c.status]}>{NOME_STATUS[c.status]}</Ficha>

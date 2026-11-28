@@ -184,6 +184,7 @@ export class AdminController {
         unidades: c.unidades,
         precosDesde: c.precos_desde?.toISOString().slice(0, 10) ?? null,
         descontoBp: c.desconto_bp,
+        licenca: c.licenca,
         interna: c.interna,
         cortesiaAte: c.cortesia_ate?.toISOString().slice(0, 10) ?? null,
         // Admin F2: contas novas por origem, com o mesmo resumo da lista de Contas.

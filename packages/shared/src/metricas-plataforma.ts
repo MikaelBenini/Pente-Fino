@@ -4,6 +4,7 @@
 import { situacaoAssinatura, type FaturaParaSituacao } from './assinatura.js';
 import { dataLocal } from './datas.js';
 import { SEM_ORIGEM } from './ficha-admin.js';
+import type { Licenca } from './licencas.js';
 import {
   aplicarDesconto,
   DIAS_TESTE,
@@ -30,6 +31,8 @@ export interface ContaParaMetricas {
   precosDesde?: string | null;
   /** Desconto do cupom (pontos-base). */
   descontoBp?: number;
+  /** Licença (ADR 0015): o preço do MRR é o da licença. Sem ela, Barbearia. */
+  licenca?: Licenca;
   /** Conta da própria equipe: fica fora de todos os números (admin R5). */
   interna?: boolean;
   /** Cortesia (sem cobrança) até este dia, AAAA-MM-DD. */
@@ -174,6 +177,8 @@ export function metricasDaPlataforma(d: {
         c.ciclo,
         Math.max(1, c.unidades),
         tabelaVigente(tabelas, c.precosDesde ?? null),
+        false,
+        c.licenca,
       ),
       c.descontoBp,
     );
