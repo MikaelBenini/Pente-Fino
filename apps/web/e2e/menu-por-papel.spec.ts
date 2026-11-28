@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { menuPara, type Papel } from '@pente-fino/shared';
+import { menuDasFuncoes, menuPara, type Papel } from '@pente-fino/shared';
 
 const SENHA = 'pentefino123';
 
@@ -62,7 +62,8 @@ for (const { email, papel, inicial, proibida } of PAPEIS) {
     await entrar(page, email);
     await expect(page).toHaveURL(new RegExp(`${inicial}$`));
 
-    const esperado = menuPara([papel]).map((i) => i.id);
+    // A demonstração é uma barbearia: funções como Pacotes ficam desligadas.
+    const esperado = menuDasFuncoes(menuPara([papel]), []).map((i) => i.id);
     expect(await itensDoMenu(page, celular)).toEqual(esperado);
 
     // Endereço digitado à mão também não abre tela de outro papel.
